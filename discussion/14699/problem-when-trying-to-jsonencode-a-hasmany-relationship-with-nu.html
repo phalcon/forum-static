@@ -1,0 +1,216 @@
+---
+layout: default
+title: 'problem when trying to json_encode a hasMany relationship with NULL column - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">problem when trying to json_encode a hasMany relationship with NULL column</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3222/mikacalvo" class="user-moderator-N"><span itemprop="name">mikacalvo</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-11-03T09:07:17-07:00">Nov '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-11-03T09:07:17-07:00">Nov '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>602</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/54a706158246e21eade48e73e743a60a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3222/mikacalvo" class="user-moderator-N"><span itemprop="name">mikacalvo</span></a></span>
+                <span class="karma">2.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C14699" href="#C14699">
+        <time class="action-date">Nov '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,</p>
+<p>I have a model which is basically</p>
+<pre><code>class Products extends \Phalcon\Mvc\Model
+{
+  /**
+   *
+   * @var integer
+   */
+  public $id;
+
+  /**
+   *
+   * @var string
+   */
+  public $json;
+
+/**
+ * Initialize method for model.
+ */
+public function initialize()
+{
+    $this-&gt;useDynamicUpdate(true);
+    $this-&gt;hasMany('id', 'ProductsParts', 'product_id', array('alias' =&gt; 'Parts'));
+}</code></pre>
+<p>the ProductsParts is the same adding the product_id  column.</p>
+<p>both models implements the following</p>
+<pre><code>public function afterFetch()
+{
+    $this-&gt;json = json_decode($this-&gt;json, true);
+}</code></pre>
+<p>I recently updated my volt code from</p>
+<pre><code>var productParts = [
+    {% raw %}{%{% endraw %} if productParts {% raw %}%}{% endraw %}{% raw %}{%{% endraw %} for pp in productParts {% raw %}%}{% endraw %}
+        {% raw %}{{{% endraw %} pp | json_encode {% raw %}}}{% endraw %}{% raw %}{%{% endraw %} if !loop.last {% raw %}%}{% endraw %},{% raw %}{%{% endraw %} endif {% raw %}%}{% endraw %}
+
+    {% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}{% raw %}{%{% endraw %} endif {% raw %}%}{% endraw %}
+];</code></pre>
+<p>to</p>
+<pre><code>var productsParts = {% raw %}{{{% endraw %} productParts | json_encode {% raw %}}}{% endraw %};</code></pre>
+<p>as allowed in Phalcon 3.0, and that's why I had my problem which is, if my json column is set to NULL (the real one, not a string), when I'm trying to do </p>
+<pre><code>json_encode($product-&gt;Parts);</code></pre>
+<p>it returns bool(false) with a JSON<em><em>ERROR</em></em>SYNTAX</p>
+<p>As a workaround, I tried with a loop, here is the entire (ugly debug) code</p>
+<pre><code>protected function myAction()
+{
+    $product = Product::findFirst(1);
+    echo '&lt;pre&gt;';
+    var_dump(json_encode($product-&gt;Parts)); // WHAT SHOULD WORK
+    $this-&gt;lastJson(json_last_error());
+    foreach ($product-&gt;Parts as $part) {
+        var_dump($part-&gt;json);
+        var_dump(json_encode($part)); // WHAT'S WORKING
+        $this-&gt;lastJson(json_last_error());
+    }
+    die;
+}
+
+protected function lastJson($error) {
+    switch ($error) {
+        case JSON_ERROR_NONE:
+            echo ' - No errors';
+        break;
+        case JSON_ERROR_DEPTH:
+            echo ' - Maximum stack depth exceeded';
+        break;
+        case JSON_ERROR_STATE_MISMATCH:
+            echo ' - Underflow or the modes mismatch';
+        break;
+        case JSON_ERROR_CTRL_CHAR:
+            echo ' - Unexpected control character found';
+        break;
+        case JSON_ERROR_SYNTAX:
+            echo ' - Syntax error, malformed JSON';
+        break;
+        case JSON_ERROR_UTF8:
+            echo ' - Malformed UTF-8 characters, possibly incorrectly encoded';
+        break;
+        default:
+            echo ' - Unknown error';
+        break;
+    }
+    echo '&lt;br/&gt;';
+    echo '&lt;br/&gt;';
+}</code></pre>
+<p>and the result :</p>
+<pre><code>bool(false)
+ - Syntax error, malformed JSON
+
+array(1) {
+  ["test"]=&gt;
+  string(4) "test"
+}
+string(80) "{"id":"1","product_id":"1","json":{"test":"test"{% raw %}}}{% endraw %}"
+ - No errors
+
+NULL
+string(69) "{"id":"2","product_id":"3","json":null}"
+ - No errors</code></pre>
+<p>In my data set, there's a NULL json and another one with the string &quot;{&quot;test&quot;:&quot;test&quot;}&quot;</p>
+<p>I think this is a framework problem because if my line
+$this-&gt;json = json_decode($this-&gt;json, true);
+was faulty, it shouldn't work when looping through the &quot;Parts&quot; either.</p>
+<p>I just tried the following</p>
+<pre><code>$this-&gt;json = !is_null($this-&gt;json) ? json_decode($this-&gt;json, true) : NULL;</code></pre>
+<p>and it actually worked !</p>
+<p>what difference can it be between the NULL returned by json_decode($this-&gt;json, true) and an actual NULL ?</p>
+<p>If anybody sees, you're welcome ! Thank you</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-24c9f76e9402867c3197feab-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-24c9f76e9402867c3197feab-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2be7b5d170f5e65ee64b6378b91d3c48?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9019/409H" class="user-moderator-N"><span itemprop="name">H</span></a>        </span>
+        <br>
+
+        <span class="karma">3.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="46865" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '17</span>
+              </span><br/><a name="C46865" href="#C46865">
+                <time itemprop="dateCreated" datetime="2017-03-23T03:56:53-07:00" class="action-date">Mar '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>When you do <code>var productsParts = {% raw %}{{{% endraw %} productParts | json_encode {% raw %}}}{% endraw %};</code> in your volt file, you're making <code>null</code> become <code>(string) "null"</code>. You can't loop over a string like you tried. </p>
+<p>I'd do something like this;</p>
+<pre><code>public function afterFetch()
+{
+    $json = json_decode($this-&gt;json, true);
+    if( json_last_error() ) {
+        $json = json_decode([]);
+    }
+    $this-&gt;json = $json;
+}</code></pre>
+<p>Now when you try to use <code>json</code> property, you just need to check the length of it.</p>
+<pre><code>{% raw %}{%{% endraw %} if productParts|length &gt; 0 {% raw %}%}{% endraw %}
+    {% raw %}{%{% endraw %} for product in productParts {% raw %}%}{% endraw %}
+       &lt;p&gt;Product Id: {% raw %}{{{% endraw %} product.id {% raw %}}}{% endraw %} &lt;br /&gt;&lt;/p&gt;
+    {% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}
+{% raw %}{%{% endraw %} else {% raw %}%}{% endraw %}
+    &lt;p&gt;No product parts&lt;/p&gt;
+{% raw %}{%{% endraw %} endif {% raw %}%}{% endraw %}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="46865" data-cf-modified-24c9f76e9402867c3197feab-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="46865" data-cf-modified-24c9f76e9402867c3197feab-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="14699" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,146 @@
+---
+layout: default
+title: 'Beanstalk Queue performance - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/7/jobs">Jobs</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Beanstalk Queue performance</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/702/dompie" class="user-moderator-N"><span itemprop="name">dompie</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-03-08T01:48:47-07:00">Mar '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-03-08T01:48:47-07:00">Mar '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>873</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/6f2dcf80b3a50fbab60f01e56d57e650?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/702/dompie" class="user-moderator-N"><span itemprop="name">dompie</span></a></span>
+                <span class="karma">8.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6116" href="#C6116">
+        <time class="action-date">Mar '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm receiving strange numbers from my test...can anyone confirm? Is there an error somewhere?
+I use the following code:</p>
+<pre><code class="language-php">
+&lt;?php
+// Composer
+//{
+//  "require": {
+//      "pda/pheanstalk": "~3.0"
+//  }
+//}
+
+require_once __DIR__ . '/vendor/autoload.php';
+
+/**
+ * This file belongs to streepoly.com
+ * Created by Dominik Piekarski
+ */
+
+//Connect to the queue
+$queue = new Phalcon\Queue\Beanstalk(array(
+    'host' =&gt; '127.0.0.1'
+));
+$queue-&gt;choose('default');
+$targetTime = time() + 60;
+$stime = microtime(TRUE);
+for ($i = 0; $i &lt; 1000; $i++) {
+    $dtSerialized = serialize(new \DateTime('+'.mt_rand(1, 22).' hour +'.mt_rand(1, 59).' minutes + '.mt_rand(1, 59).' seconds'));
+    $queue-&gt;put(array('userTask' =&gt; 123456789, 'body' =&gt; $dtSerialized),
+        array('priority' =&gt; 999, 'delay' =&gt; ($targetTime-time()), 'ttr' =&gt; 3600)
+    );
+
+}
+var_dump('PhalconQueue:' . $i . ' -- ' . (microtime(TRUE) - $stime));
+
+use Pheanstalk\Pheanstalk;
+
+$pheanstalk = new Pheanstalk('127.0.0.1');
+$stime = microtime(TRUE);
+for ($i = 0; $i &lt;= 1000; $i++) {
+    $dtSerialized = serialize(new \DateTime('+'.mt_rand(1, 22).' hour +'.mt_rand(1, 59).' minutes + '.mt_rand(1, 59).' seconds'));
+    $res = $pheanstalk-&gt;put(serialize(array('userTask' =&gt; 123456789, 'body' =&gt; $dtSerialized)),
+        999, mt_rand(0, 300), 3600
+    );
+}
+var_dump('PheanstalkQueue:' . $i . ' -- ' . (microtime(TRUE) - $stime));
+</code></pre>
+<p>Output is:</p>
+<pre><code class="language-bash">$ php5 -f beanstalk-producer.php
+string(36) "PhalconQueue:1000 -- 40.334742069244"
+string(40) "PheanstalkQueue:1001 -- 0.22178196907043"
+</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-bdb7abfe21792941c15edcc7-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-bdb7abfe21792941c15edcc7-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/533985d102feef881f5c41933bd43bfb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/283/calinrada" class="user-moderator-N"><span itemprop="name">Calin Rada</span></a>        </span>
+        <br>
+
+        <span class="karma">51.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16455" href="#C16455">
+                <time itemprop="dateCreated" datetime="2015-03-09T06:15:17-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I can confirm with:</p>
+<pre><code class="language-php">string(36) "PhalconQueue:1000 -- 40.201565027237"
+string(38) "PheanstalkQueue:1001 -- 0.329185962677"</code></pre>
+<ul>
+<li>I use a vagrant machine</li>
+</ul></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16455" data-cf-modified-bdb7abfe21792941c15edcc7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16455" data-cf-modified-bdb7abfe21792941c15edcc7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6116" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

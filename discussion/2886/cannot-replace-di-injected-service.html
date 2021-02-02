@@ -1,0 +1,224 @@
+---
+layout: default
+title: 'Cannot replace DI-injected service - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/10/di-ioc">DI/IoC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Cannot replace DI-injected service</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1982/deadkrolik" class="user-moderator-N"><span itemprop="name">Nevidimka</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-07-21T05:02:49-07:00">Jul '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-07-21T05:02:49-07:00">Jul '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>799</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/7513bf5666e9dfff30f7f7f9743af49b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1982/deadkrolik" class="user-moderator-N"><span itemprop="name">Nevidimka</span></a></span>
+                <span class="karma">885</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2886" href="#C2886">
+        <time class="action-date">Jul '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>For tests I'm trying to replace injected service. But can't do it.</p>
+<pre><code class="language-php">&lt;?php
+error_reporting(E_ALL | E_NOTICE | E_STRICT);
+
+$di = new \Phalcon\DI\FactoryDefault();
+$di-&gt;set('inst', '\\Instance1');
+
+class Instance1 {}
+class Instance2 {}
+
+$di-&gt;set('view', function() {
+    return new \Phalcon\Mvc\View();
+});
+
+class IndexController extends \Phalcon\Mvc\Controller
+{
+    public function indexAction()
+    {
+        echo get_class($this-&gt;inst) . '&lt;br /&gt;'; //outputs "Instance1"
+
+        //trying to replace
+        $this-&gt;getDi()-&gt;remove('inst');
+        $this-&gt;getDi()-&gt;set('inst', '\\Instance2');
+
+        echo get_class($this-&gt;inst) . '&lt;br /&gt;'; //still outputs "Instance1"
+    }
+}
+
+$application = new \Phalcon\Mvc\Application();
+$application-&gt;setDI($di);
+echo $application-&gt;handle()-&gt;getContent();</code></pre>
+<p>Is there a right way to replace a service?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-748eb996e044705b343bb5d6-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-748eb996e044705b343bb5d6-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9607" href="#C9607">
+                <time itemprop="dateCreated" datetime="2014-07-21T09:40:56-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The service is replaced, but the first time $this-&gt;inst is accessed the service is resolved and the property is updated with the returned instance.</p>
+<p>This will work as you expect:</p>
+<pre><code class="language-php">&lt;?php
+error_reporting(E_ALL | E_NOTICE | E_STRICT);
+
+$di = new \Phalcon\DI\FactoryDefault();
+$di-&gt;set('inst', '\\Instance1');
+
+class Instance1 {}
+class Instance2 {}
+
+$di-&gt;set('view', function() {
+    return new \Phalcon\Mvc\View();
+});
+
+class IndexController extends \Phalcon\Mvc\Controller
+{
+    public function indexAction()
+    {
+        echo $this-&gt;getDi()-&gt;getInst() . '&lt;br /&gt;';
+
+        //trying to replace
+        $this-&gt;getDi()-&gt;remove('inst');
+        $this-&gt;getDi()-&gt;set('inst', '\\Instance2');
+
+        echo $this-&gt;getDi()-&gt;getInst() . '&lt;br /&gt;';
+    }
+}
+
+$application = new \Phalcon\Mvc\Application();
+$application-&gt;setDI($di);
+echo $application-&gt;handle()-&gt;getContent();</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9607" data-cf-modified-748eb996e044705b343bb5d6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9607" data-cf-modified-748eb996e044705b343bb5d6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/7513bf5666e9dfff30f7f7f9743af49b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1982/deadkrolik" class="user-moderator-N"><span itemprop="name">Nevidimka</span></a>        </span>
+        <br>
+
+        <span class="karma">885</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9624" href="#C9624">
+                <time itemprop="dateCreated" datetime="2014-07-21T22:57:46-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you. As I understand it's an issue with $this-&gt;inst call, because it always returns cached value. Is there a way to unset this cached instance, because I have a code and I use $this-&gt;smth everywhere. This trick won't help me.</p>
+<pre><code class="language-php">&lt;?php
+error_reporting(E_ALL | E_NOTICE | E_STRICT);
+
+$di = new \Phalcon\DI\FactoryDefault();
+$di-&gt;set('inst', '\\Instance2');
+
+class Instance2 {
+    private $inc = 0;
+    public function get()
+    {
+        $this-&gt;inc++;
+        return $this-&gt;inc;
+    }
+}
+class Instance3 {
+    private $inc = 0;
+    public function get()
+    {
+        $this-&gt;inc++;
+        return $this-&gt;inc;
+    }
+}
+
+$di-&gt;set('view', function() {
+    return new \Phalcon\Mvc\View();
+});
+
+class IndexController extends \Phalcon\Mvc\Controller
+{
+    public function indexAction()
+    {
+        echo $this-&gt;getDi()-&gt;getInst()-&gt;get() . '&lt;br /&gt;';// outputs 1
+        echo $this-&gt;getDi()-&gt;getInst()-&gt;get() . '&lt;br /&gt;';// outputs 1
+
+        echo $this-&gt;inst-&gt;get() . '&lt;br /&gt;';//1
+        echo $this-&gt;inst-&gt;get() . '&lt;br /&gt;';//starting to increment value: 2
+
+        $this-&gt;getDi()-&gt;remove('inst');
+        $this-&gt;getDi()-&gt;set('inst', '\\Instance3');
+
+        echo $this-&gt;getDi()-&gt;getInst()-&gt;get() . '&lt;br /&gt;';// new object: 1
+        echo $this-&gt;getDi()-&gt;getInst()-&gt;get() . '&lt;br /&gt;';// outputs 1
+
+        echo $this-&gt;inst-&gt;get() . '&lt;br /&gt;';//increment of OLD CACHED object: 3
+        echo $this-&gt;inst-&gt;get() . '&lt;br /&gt;';//4
+    }
+}
+
+$application = new \Phalcon\Mvc\Application();
+$application-&gt;setDI($di);
+echo $application-&gt;handle()-&gt;getContent();</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9624" data-cf-modified-748eb996e044705b343bb5d6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9624" data-cf-modified-748eb996e044705b343bb5d6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2886" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

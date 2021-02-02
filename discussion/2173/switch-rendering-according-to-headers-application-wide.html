@@ -1,0 +1,134 @@
+---
+layout: default
+title: 'Switch rendering according to headers, application-wide - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Switch rendering according to headers, application-wide</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1539/fverry" class="user-moderator-N"><span itemprop="name">François Verry</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-04-25T05:09:11-07:00">Apr '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-04-25T05:09:11-07:00">Apr '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>727</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/5fb005a5415b06c9a771953d9551f76e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1539/fverry" class="user-moderator-N"><span itemprop="name">François Verry</span></a></span>
+                <span class="karma">859</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2173" href="#C2173">
+        <time class="action-date">Apr '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>This question is a case in hand.</p>
+<p>Let's imagine a website page that displays a filtered products list :</p>
+<ol>
+<li>
+<p>If I request <code>/products?foo=bar</code> in my browser, I get a full page wrapped in a layout, the layout contains a header with a form allowing to change search criterias.</p>
+</li>
+<li>
+<p>If I change <code>foo</code> value to <code>baz</code> and submit the form, it reloads dynamically the results (with a jQuery <code>$.load()</code>, for example), calling <code>/products?foo=baz</code> in Ajax.</p>
+</li>
+<li>If I enter the  same criteria into my iPhone app, the app requests <code>/products?foo=bar</code> to the server, which replies with a json object.</li>
+</ol>
+<p>All 3 calls refer to the same resource (&quot;the products list&quot;, <em>resource</em> is intended as in <em>REST resource</em>), but all need different rendering.</p>
+<ol>
+<li>In the first case, I need a full HTML page (with layout)</li>
+<li>In the second case, I need a partial HTML page (without layout)</li>
+<li>In the third case, I need a plain json response</li>
+</ol>
+<p>This rendering switch can be triggered by the headers <code>X-Requested-With</code> (with or without layout) and <code>Accept</code> (html/json).</p>
+<p>In Phalcon, the given example could be implemented as :</p>
+<pre><code class="language-php">class ProductsController extends \Phalcon\Mvc\Controller
+{
+
+    public function indexAction()
+    {
+        // Build data
+        $products = Products::find(array(
+            'foo' =&gt; $this-&gt;request-&gt;get('foo')
+        ));
+
+        // JSON is identified
+        if ($this-&gt;request-&gt;getBestAccept() == 'application/json')
+        {
+            // JSON rendering (case 3)
+            $this-&gt;response-&gt;setContentType('application/json');
+            $this-&gt;response-&gt;setJsonContent($products);
+            $this-&gt;view-&gt;disable();
+            return $this-&gt;response;
+        }
+        // Otherwise, defaults to HTML
+        else
+        {
+            // Passing data to the view
+            $this-&gt;view-&gt;products = $products;
+
+            // Ajax call is identified
+            if ($this-&gt;request-&gt;isAjax())
+            {
+                // Partial rendering (case 2)
+                $view-&gt;disableLevel(array(
+                    View::LEVEL_LAYOUT =&gt; true,
+                    View::LEVEL_MAIN_LAYOUT =&gt; true
+                ));
+            }
+            // Defaults to normal rendering
+            else
+            {
+                // Layout rendering (case 1)
+            }
+        }
+    }
+
+}</code></pre>
+<p>How could I implement this mechanism application-wide, rather than duplicate this behavior in every single action ?</p>
+<p>Originally posted at <a href="http://stackoverflow.com/questions/23291132/switch-rendering-according-to-headers-application-wide">http://stackoverflow.com/questions/23291132/switch-rendering-according-to-headers-application-wide</a></p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-c9381035e327f9cf54e1f4e6-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-c9381035e327f9cf54e1f4e6-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2173" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

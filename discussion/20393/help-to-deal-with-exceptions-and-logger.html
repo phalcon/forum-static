@@ -1,0 +1,229 @@
+---
+layout: default
+title: 'help to deal with exceptions and logger - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">help to deal with exceptions and logger</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/13095/Sa1ch" class="user-moderator-N"><span itemprop="name">Sa1ch</span></a></span>
+            <time itemprop="dateCreated" datetime="2020-02-24T14:43:21-07:00">Feb '20</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2020-02-24T14:43:21-07:00">Feb '20</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Feb '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>169</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/a13e1d123aaaaa6cb473d79216f1cb32?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/13095/Sa1ch" class="user-moderator-N"><span itemprop="name">Sa1ch</span></a></span>
+                <span class="karma">4.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C20393" href="#C20393">
+        <time class="action-date">Feb '20</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have declared the logger via DI</p>
+<blockquote>
+<p>$di-&gt;set(
+'logger',
+function () use ($config) {</p>
+<pre><code>    $fileNameMain = strtr($config-&gt;logger-&gt;fileNames-&gt;cli-&gt;main, ['[%date%]' =&gt; date('Y-m-d')]);
+    $fileNameEaisto = strtr($config-&gt;logger-&gt;fileNames-&gt;cli-&gt;eaisto, ['[%date%]' =&gt; date('Y-m-d')]);
+    $adapterMain = new Stream($fileNameMain);
+    $adapterEaisto = new Stream($fileNameEaisto);
+
+    $logger = new Logger(
+        'messages',
+        [
+            'main' =&gt; $adapterMain,
+            'eaisto' =&gt; $adapterEaisto
+        ]
+    );
+
+    return $logger;
+}</code></pre>
+<p>);</p>
+</blockquote>
+<p>and there is a class for handling exceptions:</p>
+<blockquote>
+<p>namespace App\Services\Exceptions;</p>
+<p>class EaistoException extends \Exception
+{
+public function __construct($msg){
+$this-&gt;logger-&gt;critical($msg);
+}
+}</p>
+</blockquote>
+<p>How do I pass the exception object to the logger?
+The above code causes an error:</p>
+<blockquote>
+<p>Undefined property: App\Services\Exceptions\EaistoException::$logger</p>
+</blockquote>
+<p>sorry for the stupid question :)</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-9c5f4c5cc60e93cd3ef57655-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-9c5f4c5cc60e93cd3ef57655-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C62323" href="#C62323">
+                <time itemprop="dateCreated" datetime="2020-02-25T05:01:08-07:00" class="action-date">Feb '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You would have to create a base <code>Exception</code> class that is <code>Phalcon\Di\Injectable</code>, and then inherit all your errors from there, that way the <code>Exception</code> will have a logger property.</p>
+<p>The tricky part is that you must inherit from either <code>\Throwable</code> or <code>\Exception</code>, so you must implement your own Injectable methods (setDI, getDI, __get).</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62323" data-cf-modified-9c5f4c5cc60e93cd3ef57655-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62323" data-cf-modified-9c5f4c5cc60e93cd3ef57655-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a13e1d123aaaaa6cb473d79216f1cb32?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/13095/Sa1ch" class="user-moderator-N"><span itemprop="name">Sa1ch</span></a>        </span>
+        <br>
+
+        <span class="karma">4.3k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C62323"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Lajos Bencz                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C62327" href="#C62327">
+                <time itemprop="dateCreated" datetime="2020-02-25T23:33:16-07:00" class="action-date">Feb '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>You would have to create a base <code>Exception</code> class that is <code>Phalcon\Di\Injectable</code>, and then inherit all your errors from there, that way the <code>Exception</code> will have a logger property.</p>
+<p>The tricky part is that you must inherit from either <code>\Throwable</code> or <code>\Exception</code>, so you must implement your own Injectable methods (setDI, getDI, __get).</p>
+</blockquote>
+<p>thanks! maybe you have an example? I will be very grateful to you.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62327" data-cf-modified-9c5f4c5cc60e93cd3ef57655-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62327" data-cf-modified-9c5f4c5cc60e93cd3ef57655-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="62329" data-toggle="modal" data-target="#historyModal">
+                edited <span>Feb '20</span>
+              </span><br/><a name="C62329" href="#C62329">
+                <time itemprop="dateCreated" datetime="2020-02-26T04:28:16-07:00" class="action-date">Feb '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>A very simple example. though not quite what i was talking aboug:</p>
+<pre><code class="language-php">abstract class LoggingException extends \Exception {
+    const LOGGER_SVC = 'logger';
+
+    public function __construct($message='', $code=0, $previous=null) {
+        $di = \Phalcon\Di\FactoryDefault::getDefault();
+        $logger = $di-&gt;getShared(self::LOGGER_SVC);
+        $logger-&gt;critical($message);
+        parent::__construct($message, $code, $previous);
+    }
+}</code></pre>
+<p>The caveat is that this will always use the globally set default di - you cannot specify your own.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62329" data-cf-modified-9c5f4c5cc60e93cd3ef57655-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62329" data-cf-modified-9c5f4c5cc60e93cd3ef57655-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a13e1d123aaaaa6cb473d79216f1cb32?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/13095/Sa1ch" class="user-moderator-N"><span itemprop="name">Sa1ch</span></a>        </span>
+        <br>
+
+        <span class="karma">4.3k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C62329"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Lajos Bencz                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C62333" href="#C62333">
+                <time itemprop="dateCreated" datetime="2020-02-26T07:50:04-07:00" class="action-date">Feb '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>A very simple example. though not quite what i was talking aboug:</p>
+<pre><code class="language-php">abstract class LoggingException extends \Exception {
+  const LOGGER_SVC = 'logger';
+
+  public function __construct($message='', $code=0, $previous=null) {
+      $di = \Phalcon\Di\FactoryDefault::getDefault();
+      $logger = $di-&gt;getShared(self::LOGGER_SVC);
+      $logger-&gt;critical($message);
+      parent::__construct($message, $code, $previous);
+  }
+}</code></pre>
+<p>The caveat is that this will always use the globally set default di - you cannot specify your own.</p>
+</blockquote>
+<p>thanks! I have a couple of days will return to this issue, I try your example. you helped me.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62333" data-cf-modified-9c5f4c5cc60e93cd3ef57655-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62333" data-cf-modified-9c5f4c5cc60e93cd3ef57655-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="20393" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

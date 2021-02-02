@@ -1,0 +1,122 @@
+---
+layout: default
+title: 'How to implement memcache for handling session storage? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/8/cache">Cache</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How to implement memcache for handling session storage?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3707/theguxi" class="user-moderator-N"><span itemprop="name">Ante Gulin</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-04-21T03:32:15-07:00">Apr '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-04-21T03:32:15-07:00">Apr '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Apr '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>720</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/1af0ae84e5cd5c91e9f4b34066555e0a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3707/theguxi" class="user-moderator-N"><span itemprop="name">Ante Gulin</span></a></span>
+                <span class="karma">2.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6471" href="#C6471">
+        <time class="action-date">Apr '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I need to implement Memcache session storage so that i could authorize websockets (ratchet).
+I'm a beginner in web dev, so i have some hard time understanding how libraries, classes, etc are being implemented into the project.</p>
+<p>My project is based on <a href="https://github.com/phalcon/vokuro">Vokuro</a>.
+What i want to achieve is, session storage in memcache rather than native phalcon adapter.
+I've seen this <a href="https://github.com/phalcon/incubator/blob/master/Library/Phalcon/Session/Adapter/Memcache.php">memcache adapter</a>, but i don't understand how to implement it in my project. </p>
+<p>Also, finally when i get adapter memcache adapter functioning, will i have to modify Vokuro's authentication classes or will it still work as it was with native adapter.</p>
+<p>Thanks in advance!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-ea764c2691ed1fa57ee18051-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-ea764c2691ed1fa57ee18051-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e984ca5d22935b577e77fcbb53edb3e2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1653/stefanchiriac" class="user-moderator-N"><span itemprop="name">Stefan Chiriac</span></a>        </span>
+        <br>
+
+        <span class="karma">16.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C17490" href="#C17490">
+                <time itemprop="dateCreated" datetime="2015-04-21T23:55:45-07:00" class="action-date">Apr '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Register the incubator namespace in bootstrap</p>
+<pre><code>$loader = new Phalcon\Loader();
+
+$loader-&gt;registerNamespaces(array(
+    'Phalcon' =&gt; '/path/to/incubator/Library/Phalcon/'
+));
+
+$loader-&gt;register();</code></pre>
+<p>Set the session details in bootstrap and phalcon will do the rest.</p>
+<pre><code>$di-&gt;set('session', function(){
+
+    $memcache = new Phalcon\Session\Adapter\Memcache(array(
+        'host'          =&gt; '127.0.0.1',     // mandatory
+        'port'          =&gt; 11211,           // optional (standard: 11211)
+        'lifetime'      =&gt; 8600,            // optional (standard: 8600)
+        'prefix'        =&gt; 'my-app'         // optional (standard: [empty_string]), means memcache key is my-app_31231jkfsdfdsfds3
+        'persistent'    =&gt; false            // optional (standard: false)
+    ));
+    $memcache-&gt;start();
+    return $memcache;
+});</code></pre>
+<p><a href="https://github.com/phalcon/incubator">https://github.com/phalcon/incubator</a></p>
+<p><a href="https://github.com/phalcon/incubator/tree/master/Library/Phalcon/Session/Adapter">https://github.com/phalcon/incubator/tree/master/Library/Phalcon/Session/Adapter</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17490" data-cf-modified-ea764c2691ed1fa57ee18051-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17490" data-cf-modified-ea764c2691ed1fa57ee18051-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6471" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

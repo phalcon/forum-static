@@ -1,0 +1,158 @@
+---
+layout: default
+title: 'Protect image so that only auth user can access image - help! - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/3/volt">Volt</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Protect image so that only auth user can access image - help!</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10924/kwedsd" class="user-moderator-N"><span itemprop="name">kwedsd</span></a></span>
+            <time itemprop="dateCreated" datetime="2019-07-04T11:52:46-07:00">Jul '19</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2019-07-04T11:52:46-07:00">Jul '19</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '19</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>224</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/81ba6e3855a6f893abd2327e069681c6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10924/kwedsd" class="user-moderator-N"><span itemprop="name">kwedsd</span></a></span>
+                <span class="karma">6.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C19809" href="#C19809">
+        <time class="action-date">Jul '19</time>
+    </a>
+</div>
+<div class="post-content"><div><p>When a user logs in they can view images they have uploaded  (these images are not in a public folder), a user cannot see another users images. </p>
+<p>In procedural php i can use something like this (i'll also check whether the user can have access to the image): </p>
+<pre><code>$file_path ='my-private-folder/avatar.jpg';
+header("Content-Type: image/jpeg");
+readfile($file_path);
+exit();</code></pre>
+<p>and then I would call it by &lt;img src=&quot;image.php&quot;&gt;</p>
+<p>The problem i'm having is:</p>
+<ol>
+<li>
+<p>The above would display a blank page and just the image, but I need this to be accessible so I can place the image in a table (ie. place the image in full web template wherever I want).</p>
+</li>
+<li>I need to do the above in oop in phalcon, so how do I access the image from the view?</li>
+</ol>
+<p>Thanks</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-030578200e01f3470bee0697-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-030578200e01f3470bee0697-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C60243" href="#C60243">
+                <time itemprop="dateCreated" datetime="2019-07-05T02:17:33-07:00" class="action-date">Jul '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You can do the same with Phalcon:</p>
+<pre><code class="language-php">class ImageController extends \Phalcon\Mvc\Controller
+{
+    const IMAGE_MISSING = __DIR__ . '/../../../../../web/assets/image-missing.png';
+
+    public function serveAction($id)
+    {
+        $this-&gt;view-&gt;disable();
+        $image = Image::findFirstById($id);
+        $path = self::IMAGE_MISSING;
+        if ($image) {
+            if ($image-&gt;isLocal()) {
+                $path = $this-&gt;config-&gt;application-&gt;imgDir . $image-&gt;getPath();
+                if (!is_readable($path)) {
+                    $path = self::IMAGE_MISSING;
+                }
+            } else {
+                $path = $image-&gt;getPath();
+            }
+        }
+        $mime = mime_content_type($path);
+        $baseName = basename($path);
+        $disposition = 'inline';
+        if ($this-&gt;request-&gt;hasQuery('download')) {
+            $disposition = 'attachment';
+        }
+        $this-&gt;response-&gt;setFileToSend($path);
+        $this-&gt;response-&gt;setHeader('Content-Type', $mime);
+        $this-&gt;response-&gt;setHeader('Content-Disposition', $disposition . "; filename=" . $baseName . "");
+        $this-&gt;response-&gt;send();
+        exit;
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60243" data-cf-modified-030578200e01f3470bee0697-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60243" data-cf-modified-030578200e01f3470bee0697-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C60299" href="#C60299">
+                <time itemprop="dateCreated" datetime="2019-07-09T13:39:22-07:00" class="action-date">Jul '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>In case it's not clear to everyone, Lajos' code would be referenced in Volt like this:</p>
+<pre><code class="language-volt">&lt;img src = "{% raw %}{{{% endraw %} url('/image/serve/23') {% raw %}}}{% endraw %}" /&gt;</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60299" data-cf-modified-030578200e01f3470bee0697-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60299" data-cf-modified-030578200e01f3470bee0697-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="19809" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

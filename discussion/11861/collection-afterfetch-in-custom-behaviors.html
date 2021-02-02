@@ -1,0 +1,150 @@
+---
+layout: default
+title: 'Collection &quot;afterFetch&quot; in custom Behaviors - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/23/odm">ODM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Collection &quot;afterFetch&quot; in custom Behaviors</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2293/kastnermario" class="user-moderator-N"><span itemprop="name">Kastner Mario</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-06-17T03:26:00-07:00">Jun '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-06-17T03:26:00-07:00">Jun '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>500</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/cc44b5fad28ab2b673491a5e7964d768?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2293/kastnermario" class="user-moderator-N"><span itemprop="name">Kastner Mario</span></a></span>
+                <span class="karma">3.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C11861" href="#C11861">
+        <time class="action-date">Jun '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p><em>afterFetch</em> is well implemented in collections. But there is another annoying  <em>missing feature</em>:
+I really like it a lot working with behaviors. The <em>notify</em> method is straight forwarded. But <em>afterFetch</em> is not emited in behaviors. If I implement the <em>afterFetch</em> method directly in my collection, everything works like expected. But the <em>afterFetch</em> event isn't fired/captured. What did I wrong?</p>
+<pre><code class="language-php">public function notify($type, \Phalcon\Mvc\CollectionInterface $collection)
+        {
+
+            if($this-&gt;mustTakeAction($type) == null) { return; }
+
+            if($type == "beforeCreate") {
+                $collection-&gt;created_at = date('d-m-Y H:i:s');
+                $collection-&gt;modified_at = date('d-m-Y H:i:s');
+            }
+
+            if($type == "beforeUpdate") {
+                $collection-&gt;modified_at = date('d-m-Y H:i:s');
+            }
+
+            if($type == "afterFetch") {
+                // Never get called
+            }
+
+        }</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-20aaadfba86cb1b78d6e5bf4-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-20aaadfba86cb1b78d6e5bf4-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/cc44b5fad28ab2b673491a5e7964d768?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2293/kastnermario" class="user-moderator-N"><span itemprop="name">Kastner Mario</span></a>        </span>
+        <br>
+
+        <span class="karma">3.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C35711" href="#C35711">
+                <time itemprop="dateCreated" datetime="2016-06-17T05:31:23-07:00" class="action-date">Jun '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Found something interessting on <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/collection.zep">Github</a>:</p>
+<pre><code class="language-zephir">public static function cloneResult(&lt;CollectionInterface&gt; collection, array! document) -&gt; &lt;CollectionInterface&gt;
+    {
+        var clonedCollection, key, value;
+
+        let clonedCollection = clone collection;
+        for key, value in document {
+            clonedCollection-&gt;writeAttribute(key, value);
+        }
+
+        if method_exists(clonedCollection, "afterFetch") {
+            clonedCollection-&gt;{"afterFetch"}();
+        }
+
+        return clonedCollection;
+    }</code></pre>
+<p><em>cloneResult</em> is used for any fetched data. But it does not fire an event. Instead it checks if a method called &quot;afterFetch&quot; exists in the current collection and executes it. So it would be neccessary to iterate over the behaviors too.</p>
+<p>Did someone already addresses this issue?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="35711" data-cf-modified-20aaadfba86cb1b78d6e5bf4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="35711" data-cf-modified-20aaadfba86cb1b78d6e5bf4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/cc44b5fad28ab2b673491a5e7964d768?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2293/kastnermario" class="user-moderator-N"><span itemprop="name">Kastner Mario</span></a>        </span>
+        <br>
+
+        <span class="karma">3.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C35723" href="#C35723">
+                <time itemprop="dateCreated" datetime="2016-06-17T08:34:13-07:00" class="action-date">Jun '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I have opened a ticket for this issue:
+<a href="https://github.com/phalcon/cphalcon/issues/11905">Ticket on Github</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="35723" data-cf-modified-20aaadfba86cb1b78d6e5bf4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="35723" data-cf-modified-20aaadfba86cb1b78d6e5bf4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="11861" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

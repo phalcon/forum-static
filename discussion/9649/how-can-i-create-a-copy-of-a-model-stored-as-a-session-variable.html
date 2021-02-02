@@ -1,0 +1,214 @@
+---
+layout: default
+title: 'How can I create a copy of a model stored as a session variable? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/28/session">Session</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How can I create a copy of a model stored as a session variable?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/5569/50bbx" class="user-moderator-N"><span itemprop="name">50bbx</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-11-28T19:16:01-07:00">Nov '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-11-28T19:16:01-07:00">Nov '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>529</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9932bd898baa706e7d69c9d246e4474f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/5569/50bbx" class="user-moderator-N"><span itemprop="name">50bbx</span></a></span>
+                <span class="karma">637</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C9649" href="#C9649">
+        <time class="action-date">Nov '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,
+I'm trying to create a copy of a model, a user profile I have in session. But I cannot get my head around it. The reason is that the user can use a form where he can edit the email address, but I check first if the new email is already registered by someone else before saving the profile. If it is already registered, the user is brought back to the edit profile form with the unsaved new email in the form and an error message (but the old email address is the one in session, not displayed). This beacase if a user refreshes the page, the correct old email will be shown in the form and the error message will not be displayed anymore.
+This is the model:</p>
+<pre><code class="language-php">&lt;?php
+namespace MyApp\Model;
+
+use MyApp\Model\BaseModel;
+
+use Phalcon\Mvc\Model\Validator\Uniqueness;
+use Phalcon\Mvc\Model\Validator\PresenceOf;
+
+class Users extends BaseModel
+{
+    protected $id;
+
+    protected $email;
+
+    /**
+     * Validate that emails are unique across users
+     */
+    public function validation()
+    {
+        $this-&gt;validate(
+            new Uniqueness(
+                array(
+                    "field" =&gt; "email",
+                    "message" =&gt; "Email already registered"
+                )
+            )
+        );
+
+        return $this-&gt;validationHasFailed() != true;
+    }
+
+    public function getEmail()
+    {
+        return $this-&gt;email;
+    }
+
+    public function setEmail($e)
+    {
+        $this-&gt;email = $e;
+    }
+
+}</code></pre>
+<p>This is the controller:</p>
+<pre><code class="language-php">&lt;?php
+
+public function someAction()
+{
+    $profile = $this-&gt;session-&gt;profile;
+    $oldEmail = $this-&gt;session-&gt;profile-&gt;getEmail(); //email adress from session
+    $newEmail = $this-&gt;request-&gt;getPost('email', 'email'); //email address from user form
+    $this-&gt;session-&gt;profile-&gt;setEmail($newEmail); //assign new email address to model
+    if(!$this-&gt;session-&gt;profile-&gt;save()){ //trying to save
+        $form-&gt;setEntity($profile); //email already registered! filling the form with old info
+        $this-&gt;session-&gt;profile-&gt;setEmail($oldEmail); //re-assigning old email address
+    } else {
+        $form-&gt;setEntity($this-&gt;session-&gt;profile); //everyting ok, filling form with new info
+    }
+}</code></pre>
+<p>I expected to see the old email andress if the validation failed, instead I see the new one. I tried to simplify my example:</p>
+<pre><code class="language-php">&lt;?php
+public function someAction()
+{
+    //profile from session
+    $this-&gt;logger-&gt;info($this-&gt;session-&gt;profile-&gt;getEmail()); //logs OLD email address
+    $profile = $this-&gt;session-&gt;profile;
+    $form-&gt;setEntity($profile); //filling the form with old info (old email address)
+    $this-&gt;logger-&gt;info($profile-&gt;getEmail()); //logs OLD email address
+    $this-&gt;session-&gt;profile-&gt;setEmail($this-&gt;request-&gt;getPost('email', 'email'));
+    $this-&gt;logger-&gt;info($profile-&gt;getEmail()); //logs NEW email &lt;--- here's my problem
+}</code></pre>
+<p>How can it be possible? Is the variable passed as reference?</p>
+<p>Thanks for your help.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-5e1b87ce0f62ee421a513cea-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-5e1b87ce0f62ee421a513cea-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C27109" href="#C27109">
+                <time itemprop="dateCreated" datetime="2015-11-29T07:51:42-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>What is this:</p>
+<p>$this-&gt;requeste-&gt;getPost('email', 'email'); ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27109" data-cf-modified-5e1b87ce0f62ee421a513cea-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27109" data-cf-modified-5e1b87ce0f62ee421a513cea-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9932bd898baa706e7d69c9d246e4474f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5569/50bbx" class="user-moderator-N"><span itemprop="name">50bbx</span></a>        </span>
+        <br>
+
+        <span class="karma">637</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C27111" href="#C27111">
+                <time itemprop="dateCreated" datetime="2015-11-29T09:15:52-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Sorry, it's a typo. First param is the value of <code>$_POST["user_email"]</code>, the second is the sanitizer.
+From the <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Http_Request.html">docs</a></p>
+<pre><code class="language-php">&lt;?php
+//Returns value from $_POST["user_email"] with sanitizing
+$userEmail = $request-&gt;getPost("user_email", "email");</code></pre>
+<p>I will change that line to</p>
+<pre><code class="language-php">&lt;?php
+$this-&gt;request-&gt;getPost('email', 'email'); </code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27111" data-cf-modified-5e1b87ce0f62ee421a513cea-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27111" data-cf-modified-5e1b87ce0f62ee421a513cea-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C27123" href="#C27123">
+                <time itemprop="dateCreated" datetime="2015-11-29T12:23:14-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Oh okay, i just didnt know what is requeste :D</p>
+<p>Maybe try :     $profile = clone $this-&gt;session-&gt;profile;</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27123" data-cf-modified-5e1b87ce0f62ee421a513cea-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27123" data-cf-modified-5e1b87ce0f62ee421a513cea-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="9649" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

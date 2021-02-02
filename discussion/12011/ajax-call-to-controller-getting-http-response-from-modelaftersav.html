@@ -1,0 +1,204 @@
+---
+layout: default
+title: 'AJax call to controller getting HTTP response from model-&gt;afterSave() rather than \Phalcon\Http\Response(); - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/26/http-environment">HTTP Environment</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">AJax call to controller getting HTTP response from model-&gt;afterSave() rather than \Phalcon\Http\Response();</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/7651/ctaylo21" class="user-moderator-N"><span itemprop="name">Caleb Taylor</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-07-02T11:09:31-07:00">Jul '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-07-02T11:09:31-07:00">Jul '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>950</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/33640377a3a9dc42eac91c4363465551?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/7651/ctaylo21" class="user-moderator-N"><span itemprop="name">Caleb Taylor</span></a></span>
+                <span class="karma">1.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C12011" href="#C12011">
+        <time class="action-date">Jul '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,</p>
+<p>I am making an Ajax call to a controller/action on form submission. The controller action does basic validation and saves the content to the database.  </p>
+<pre><code class="language-php">    public function indexAction()
+    {
+        $form = new ContactsForm();
+        $this-&gt;view-&gt;disable();
+        $message = "Oops! Something went wrong. Please try again later.";
+
+        $response = new \Phalcon\Http\Response();
+        $response-&gt;setStatusCode(400, "Bad Request");
+
+        if ($this-&gt;request-&gt;isPost() &amp;&amp; $this-&gt;request-&gt;isAjax()) {
+
+            $params = array(
+                'name' =&gt; 'emailFooter',
+                'email' =&gt; $this-&gt;request-&gt;getPost('email'),
+                'businessSize' =&gt; 'N/A'
+            );
+
+            if ($form-&gt;isValid($params) != false) {
+
+                $user = new Contacts();
+
+                $user-&gt;assign($params);
+
+                if ($user-&gt;save()) { // Here is where a network call is made in model-&gt;afterSave()
+                    $message = "Thanks - We'll let you know when the product is available!";
+                    $response-&gt;setStatusCode(200);
+                }
+
+            } else {
+                $message = $form-&gt;getMessages()[0]-&gt;getMessage();
+            }
+        }
+
+        $response-&gt;setJsonContent($message);
+        $response-&gt;send();
+        exit;
+    }
+</code></pre>
+<p>The issues comes when I call $user-&gt;save() because that model has an afterSave() method that will send an email to the user via a API request to AWS SES. This means that instead of me returning the explicit message/status I want the javascsript always gets the response from email API network call instead.</p>
+<pre><code class="language-php">    /**
+     * Send a confirmation e-mail to the user
+     */
+    public function afterSave()
+    {
+        // Get first name if possible
+        $nameParts = explode(" ", $this-&gt;name);
+        $this-&gt;getDI()
+            -&gt;getMail()
+            -&gt;send(array(
+            $this-&gt;email =&gt; $this-&gt;name
+        ), "Welcome", 'general-submission', array("name" =&gt; $nameParts[0]));
+    }</code></pre>
+<p>Is there anyway to have Phalcon/Ajax ignore the HTTP response of the AWS mail API call so I can explicitely return what I want?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-d01728c2b2dbc618501925b4-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-d01728c2b2dbc618501925b4-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="36307" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '16</span>
+              </span><br/><a name="C36307" href="#C36307">
+                <time itemprop="dateCreated" datetime="2016-07-02T17:48:25-07:00" class="action-date">Jul '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You're not clear whenever you want to explicitly return response data OR you'd prefer to return the actual response of the API remote call happening in your model <code>afterSave()</code> method?</p>
+<p><code>I want the javascsript always gets the response from email API network call instead.</code></p>
+<p>So, AJAX calls your <code>indexAction</code> and that action should return response from remote endpoint / API? In that case, you need to put into session response which is now executing in your <code>afterSave()</code> method. That way, after mail is sent, and you have response from remote endpoint, you put it in either in a regular session or temporary in <code>persistent</code> session storage, and then read that data from your controller and return it in Response object as regular to the AJAX client/browser.</p>
+<p>Also, some comments for your code:</p>
+<pre><code class="language-php">$response = new \Phalcon\Http\Response(); //here you don't need new instance as response is already instantiated by services container and you can access it via $this-&gt;response...
+$response-&gt;setStatusCode(400, "Bad Request"); //first numeric argument is enough, you don't need to specify string message
+
+$response-&gt;setJsonContent($message);
+$this-&gt;response-&gt;setContentType('application/json');  // prior to 2.1.x PhalconPHP you need to set content type HTTP header to application/json
+$response-&gt;send();
+exit; //do not kill stack here, it can cause you issues and unexpected behaviour</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="36307" data-cf-modified-d01728c2b2dbc618501925b4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="36307" data-cf-modified-d01728c2b2dbc618501925b4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/33640377a3a9dc42eac91c4363465551?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/7651/ctaylo21" class="user-moderator-N"><span itemprop="name">Caleb Taylor</span></a>        </span>
+        <br>
+
+        <span class="karma">1.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C36309" href="#C36309">
+                <time itemprop="dateCreated" datetime="2016-07-02T18:13:50-07:00" class="action-date">Jul '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Sorry I wasn't more clear. I don't want my ajax call to get the response from the API endpoint. I want to be able to specify exactly what it gets back in the controller itself by setting the response body/code. But as soon as the API response comes back from the <code>afterSave()</code> method that appears to be what is returned to the calling javascript even though I haven't sent the response from the controller yet or sent it.</p>
+<p>I'm not sure how to not have that response sent back from the <code>afterSave()</code> method.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="36309" data-cf-modified-d01728c2b2dbc618501925b4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="36309" data-cf-modified-d01728c2b2dbc618501925b4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="36369" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '16</span>
+              </span><br/><a name="C36369" href="#C36369">
+                <time itemprop="dateCreated" datetime="2016-07-04T01:48:54-07:00" class="action-date">Jul '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well, in that case your response object gets returned before your logic. That's odd since your <code>afterSave()</code> method does not return value (void).
+Does that happen only via AJAX/JS calls, have you tried to hit <code>indexAction</code> via plain GET w/o <code>XMLHttpRequest</code>?</p>
+<p>I believe your validation fails i.e. your response is empty here:</p>
+<pre><code class="language-php">$response-&gt;setJsonContent($message); // do var_dump of $message here and exit it to see raw result
+$response-&gt;send();</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="36369" data-cf-modified-d01728c2b2dbc618501925b4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="36369" data-cf-modified-d01728c2b2dbc618501925b4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="12011" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,103 @@
+---
+layout: default
+title: 'Bad column escape for query conditions - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Bad column escape for query conditions</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3222/mikacalvo" class="user-moderator-N"><span itemprop="name">mikacalvo</span></a></span>
+            <time itemprop="dateCreated" datetime="2020-06-05T09:36:05-07:00">Jun '20</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2020-06-05T09:36:05-07:00">Jun '20</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>155</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/54a706158246e21eade48e73e743a60a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3222/mikacalvo" class="user-moderator-N"><span itemprop="name">mikacalvo</span></a></span>
+                <span class="karma">2.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C20675" href="#C20675">
+        <time class="action-date">Jun '20</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have a table in my database :</p>
+<pre><code>subscription_notification
+    id | subscription_id | notification_id | created</code></pre>
+<p>nothing special in the model, just a columnMap for camelCase : </p>
+<pre><code>public function columnMap()
+{
+    return [
+        'id' =&gt; 'id',
+        'subscription_period_id' =&gt; 'subscriptionPeriodId',
+        'notification_id' =&gt; 'notificationId',
+        'created' =&gt;  'created'
+    ];
+}</code></pre>
+<p>When I want to do a simple count : </p>
+<pre><code>    SubscriptionNotification::count(
+            [
+                "subscriptionPeriodId = ?0 and notificationId = ?1",
+                ApplicationEnum::BIND =&gt; [1, 1],
+            ]
+        );</code></pre>
+<p>I get an error :</p>
+<pre><code>[Phalcon\Mvc\Model\Exception] Column 'ificationId' doesn't belong to any of the selected models (1), when preparing: SELECT COUNT(*) AS rowcount FROM [Models\SubscriptionNotification] WHERE subscriptionPeriodId = ?0 and notificationId = ?1</code></pre>
+<p>Same happens with the queryBuilder</p>
+<pre><code>    $queryBuilder = $this-&gt;modelsManager-&gt;createBuilder();
+    $queryBuilder
+        -&gt;from(SubscriptionNotification::class)
+        -&gt;columns(['id'])
+        -&gt;where("subscriptionPeriodId = ?0", [$this-&gt;subscriptionPeriod-&gt;getId()])
+        -&gt;andWhere("notificationId = ?0", [$notificationId]);
+
+    echo $queryBuilder-&gt;getQuery()-&gt;getSql(); die;</code></pre>
+<p>I'm feeling like there is a bad escaping and the 'not' in notificationId is considered as a mysql key word. It works if I put brackets around my column name. But isn't it a bug after all ? It's new since I made (yesterday) Phalcon v4.0 migration, I noticed it in my unit tests.</p>
+<p>Thank you for guiding me to the best solution</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-48245e12df9c23f92d43082e-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-48245e12df9c23f92d43082e-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="20675" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

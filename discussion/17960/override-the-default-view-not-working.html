@@ -1,0 +1,419 @@
+---
+layout: default
+title: 'Override the default view not working - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Override the default view not working</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10924/kwedsd" class="user-moderator-N"><span itemprop="name">kwedsd</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-03-20T08:07:28-07:00">Mar '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-03-20T08:07:28-07:00">Mar '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>793</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/81ba6e3855a6f893abd2327e069681c6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10924/kwedsd" class="user-moderator-N"><span itemprop="name">kwedsd</span></a></span>
+                <span class="karma">6.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17960" href="#C17960">
+        <time class="action-date">Mar '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>I'm having a problem overriding the default view thats being rendered. I have tried using :</p>
+<p>$this-&gt;view-&gt;pick('example');</p>
+<p>here is my full code:</p>
+<p><code>config.php</code></p>
+<pre><code>&lt;?php
+/*
+ * Modified: prepend directory path of current file, because of this file own different ENV under between Apache and command line.
+ * NOTE: please remove this comment.
+ */
+defined('BASE_PATH') || define('BASE_PATH', getenv('BASE_PATH') ?: realpath(dirname(__FILE__) . '/../..'));
+defined('APP_PATH') || define('APP_PATH', BASE_PATH . '/app');
+return new \Phalcon\Config([
+    'database' =&gt; [
+        'adapter'     =&gt; 'Mysql',
+        'host'        =&gt; 'localhost',
+        'username'    =&gt; 'root',
+        'password'    =&gt; '',
+        'dbname'      =&gt; 'example',
+        'charset'     =&gt; 'utf8',
+    ],
+    'application' =&gt; [
+        'appDir'         =&gt; APP_PATH . '/',
+        'controllersDir' =&gt; APP_PATH . '/controllers/',
+        'modelsDir'      =&gt; APP_PATH . '/models/',
+        'migrationsDir'  =&gt; APP_PATH . '/migrations/',
+        'viewsDir'       =&gt; APP_PATH . '/views/example/',
+        'pluginsDir'     =&gt; APP_PATH . '/plugins/',
+        'libraryDir'     =&gt; APP_PATH . '/library/',
+        'cacheDir'       =&gt; BASE_PATH . '/cache/',
+        // This allows the baseUri to be understand project paths that are not in the root directory
+        // of the webpspace.  This will break if the public/index.php entry point is moved or
+        // possibly if the web server rewrite rules are changed. This can also be set to a static path.
+        'baseUri'        =&gt; preg_replace('/public([\/\\\\])index.php$/', '', $_SERVER["PHP_SELF"]),
+    ]
+]);</code></pre>
+<p><code>loader.php</code></p>
+<pre><code>&lt;?php
+$loader = new \Phalcon\Loader();
+/**
+ * We're a registering a set of directories taken from the configuration file
+ */
+$loader-&gt;registerDirs(
+    [
+        $config-&gt;application-&gt;controllersDir,
+        $config-&gt;application-&gt;modelsDir
+    ]
+)-&gt;register();</code></pre>
+<p><code>services.php</code></p>
+<pre><code>&lt;?php
+
+use Phalcon\Mvc\View;
+use Phalcon\Mvc\View\Engine\Php as PhpEngine;
+use Phalcon\Mvc\Url as UrlResolver;
+use Phalcon\Mvc\View\Engine\Volt as VoltEngine;
+use Phalcon\Mvc\Model\Metadata\Memory as MetaDataAdapter;
+use Phalcon\Session\Adapter\Files as SessionAdapter;
+use Phalcon\Flash\Direct as Flash;
+
+/**
+ * Shared configuration service
+ */
+$di-&gt;setShared('config', function () {
+    return include APP_PATH . "/config/config.php";
+});
+
+/**
+ * The URL component is used to generate all kind of urls in the application
+ */
+$di-&gt;setShared('url', function () {
+    $config = $this-&gt;getConfig();
+
+    $url = new UrlResolver();
+    $url-&gt;setBaseUri($config-&gt;application-&gt;baseUri);
+
+    return $url;
+});
+
+/**
+ * Setting up the view component
+ */
+$di-&gt;setShared('view', function () {
+    $config = $this-&gt;getConfig();
+
+    $view = new View();
+    $view-&gt;setDI($this);
+    $view-&gt;setViewsDir($config-&gt;application-&gt;viewsDir);
+
+    $view-&gt;registerEngines([
+        '.volt' =&gt; function ($view) {
+            $config = $this-&gt;getConfig();
+
+            $volt = new VoltEngine($view, $this);
+
+            $volt-&gt;setOptions([
+                'compiledPath' =&gt; $config-&gt;application-&gt;cacheDir,
+                'compiledSeparator' =&gt; '_'
+            ]);
+
+            return $volt;
+        },
+        '.phtml' =&gt; PhpEngine::class
+
+    ]);
+
+    return $view;
+});
+
+/**
+ * Database connection is created based in the parameters defined in the configuration file
+ */
+$di-&gt;setShared('db', function () {
+    $config = $this-&gt;getConfig();
+
+    $class = 'Phalcon\Db\Adapter\Pdo\\' . $config-&gt;database-&gt;adapter;
+    $params = [
+        'host'     =&gt; $config-&gt;database-&gt;host,
+        'username' =&gt; $config-&gt;database-&gt;username,
+        'password' =&gt; $config-&gt;database-&gt;password,
+        'dbname'   =&gt; $config-&gt;database-&gt;dbname,
+        'charset'  =&gt; $config-&gt;database-&gt;charset
+    ];
+
+    if ($config-&gt;database-&gt;adapter == 'Postgresql') {
+        unset($params['charset']);
+    }
+
+    $connection = new $class($params);
+
+    return $connection;
+});
+
+/**
+ * If the configuration specify the use of metadata adapter use it or use memory otherwise
+ */
+$di-&gt;setShared('modelsMetadata', function () {
+    return new MetaDataAdapter();
+});
+
+/**
+ * Register the session flash service with the Twitter Bootstrap classes
+ */
+$di-&gt;set('flash', function () {
+    return new Flash([
+        'error'   =&gt; 'alert alert-danger',
+        'success' =&gt; 'alert alert-success',
+        'notice'  =&gt; 'alert alert-info',
+        'warning' =&gt; 'alert alert-warning'
+    ]);
+});
+
+/**
+ * Start the session the first time some component request the session service
+ */
+$di-&gt;setShared('session', function () {
+    $session = new SessionAdapter();
+    $session-&gt;start();
+
+    return $session;
+});</code></pre>
+<p><code>ExampleController.php</code></p>
+<pre><code>&lt;?php
+
+class ExampleController extends ControllerBase
+{
+
+    public function indexAction()
+    {
+      // $result = Test::findFirst([
+      //   'columns'    =&gt; 'id, name',
+      //   'conditions' =&gt; 'active = ?1',
+      //   'bind'       =&gt; [
+      //       1=&gt; 1,
+      //   ]
+      // ])-&gt;toArray();
+$this-&gt;view-&gt;pick('example');
+    }
+}</code></pre>
+<p>Currently the ExampleController is still outputting the index.volt file, I would like to output the example.volt file instead. I have tried clearing the cache as well any help with thi would be appreciated.</p>
+<p>Thanks</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-fb869fb4a6a5beaf17c3c02f-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-fb869fb4a6a5beaf17c3c02f-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/81ba6e3855a6f893abd2327e069681c6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10924/kwedsd" class="user-moderator-N"><span itemprop="name">kwedsd</span></a>        </span>
+        <br>
+
+        <span class="karma">6.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C54452" href="#C54452">
+                <time itemprop="dateCreated" datetime="2018-03-20T08:13:29-07:00" class="action-date">Mar '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi,</p>
+<p>Just tried using:</p>
+<p><code>$this-&gt;view-&gt;setMainView("example");</code></p>
+<p>And it worked with that but is this the ideal way way of changing the default view?</p>
+<p>Thans</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="54452" data-cf-modified-fb869fb4a6a5beaf17c3c02f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="54452" data-cf-modified-fb869fb4a6a5beaf17c3c02f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C54454" href="#C54454">
+                <time itemprop="dateCreated" datetime="2018-03-20T10:01:12-07:00" class="action-date">Mar '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>hey you have to use full path from viewDir like this <code>$this-&gt;view-&gt;pick('example/index');</code></p>
+<p>Good luck</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="54454" data-cf-modified-fb869fb4a6a5beaf17c3c02f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="54454" data-cf-modified-fb869fb4a6a5beaf17c3c02f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/81ba6e3855a6f893abd2327e069681c6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10924/kwedsd" class="user-moderator-N"><span itemprop="name">kwedsd</span></a>        </span>
+        <br>
+
+        <span class="karma">6.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C54460" href="#C54460">
+                <time itemprop="dateCreated" datetime="2018-03-20T17:12:55-07:00" class="action-date">Mar '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi,
+Thanks for the response, I changed the file structure slightly for the views,  my config is:</p>
+<p><code>'viewsDir'       =&gt; APP_PATH . '/views/example/'</code></p>
+<p>So based on this config, the file that I wish to call would normally be located at:</p>
+<p><code>views-&gt;example-&gt;example-&gt;index.volt</code></p>
+<p>But I would like the structure as:</p>
+<p><code>views-&gt;example-&gt;example.volt</code></p>
+<p>Hence when I call:</p>
+<p><code>$this-&gt;view-&gt;setMainView("example");</code></p>
+<p>The view is loaded but If I try:</p>
+<p><code>$this-&gt;view-&gt;pick('example');</code></p>
+<p>The default home page view is loaded (index.volt), do you know why this is occurring? And also is there any techincal difference between these two commands:</p>
+<p><code>$this-&gt;view-&gt;pick('example');</code> and  <code>$this-&gt;view-&gt;setMainView("example");</code></p>
+<p>Thanks for helping a noob :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="54460" data-cf-modified-fb869fb4a6a5beaf17c3c02f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="54460" data-cf-modified-fb869fb4a6a5beaf17c3c02f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C54462" href="#C54462">
+                <time itemprop="dateCreated" datetime="2018-03-20T18:32:19-07:00" class="action-date">Mar '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><code>pick("dirName/viewName")</code> Choose a different view to render instead of last-controller/last-action</p>
+<p><code>setMainView("viewName")</code> Sets default view name. Must be a file without extension in the views directory</p>
+<p>Read <a href="https://docs.phalcon.io/en/3.3/views">view docs</a> and <a href="https://docs.phalcon.io/en/3.3/api/Phalcon_Mvc_View">api view</a></p>
+<p>Good luck</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="54462" data-cf-modified-fb869fb4a6a5beaf17c3c02f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="54462" data-cf-modified-fb869fb4a6a5beaf17c3c02f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c897fab3d4f3e07ca673337a1efa9cbf?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6133/corentin-begne" class="user-moderator-N"><span itemprop="name">corentin-begne</span></a>        </span>
+        <br>
+
+        <span class="karma">12.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="54486" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '18</span>
+              </span><br/><a name="C54486" href="#C54486">
+                <time itemprop="dateCreated" datetime="2018-03-22T16:25:56-07:00" class="action-date">Mar '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>What about using partial ?
+Including example partial in your index view to keep the usual logic ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="54486" data-cf-modified-fb869fb4a6a5beaf17c3c02f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="54486" data-cf-modified-fb869fb4a6a5beaf17c3c02f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/81ba6e3855a6f893abd2327e069681c6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10924/kwedsd" class="user-moderator-N"><span itemprop="name">kwedsd</span></a>        </span>
+        <br>
+
+        <span class="karma">6.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C54554" href="#C54554">
+                <time itemprop="dateCreated" datetime="2018-03-27T16:18:21-07:00" class="action-date">Mar '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks, for the answers I have decided to go with <code>pick("dirName/viewName")</code> I changed <code>'viewsDir'       =&gt; APP_PATH . '/views/',</code> so now I have a dynamic value for <code>dirName</code> which gives me the option to switch themes.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="54554" data-cf-modified-fb869fb4a6a5beaf17c3c02f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="54554" data-cf-modified-fb869fb4a6a5beaf17c3c02f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4d1384d668711e6153ed4c6f05e29216?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/286/trentramseyer" class="user-moderator-N"><span itemprop="name">Trent Ramseyer</span></a>        </span>
+        <br>
+
+        <span class="karma">22.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C54566" href="#C54566">
+                <time itemprop="dateCreated" datetime="2018-03-27T20:04:37-07:00" class="action-date">Mar '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes remember that Phalcon views in general do a Controller View, then a Layout View, then a Main View.   </p>
+<p>pick() will choose a controller view, but the main view will still render, and if you don't have getContent() in there it won't display what was done in the Controller view.</p>
+<p>So the examples above of selecting setMainView() will change the final view in the chain.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="54566" data-cf-modified-fb869fb4a6a5beaf17c3c02f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="54566" data-cf-modified-fb869fb4a6a5beaf17c3c02f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17960" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

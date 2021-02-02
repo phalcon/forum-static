@@ -1,0 +1,243 @@
+---
+layout: default
+title: 'Setter injection problem - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/10/di-ioc">DI/IoC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Setter injection problem</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10463/Berger92" class="user-moderator-N"><span itemprop="name">Berger92</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-11-22T03:50:00-07:00">Nov '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-11-22T03:50:00-07:00">Nov '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>458</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/e365e6185e25f99740f9cef685f92f25?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10463/Berger92" class="user-moderator-N"><span itemprop="name">Berger92</span></a></span>
+                <span class="karma">541</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17337" href="#C17337">
+        <time class="action-date">Nov '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi Guys, </p>
+<p>I am using Phalcon 3.2 (php 7.0.2).
+I created an AbstractController for all my controllers to collect similar codes into one place. I would like to inject a service to the AbstractController, so it will be available to each other ones. I am using setter injection, but my method never gets called. (My controllers are not in any namespace. I debugged it, and ImgStorage is in the DI)</p>
+<p>Any help will be appreciated:</p>
+<p><a href="https://pastebin.com/fbqi46RD">Here is a codesnippet</a></p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-f0e580d88d115a1df64f9618-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-f0e580d88d115a1df64f9618-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="52379" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '17</span>
+              </span><br/><a name="C52379" href="#C52379">
+                <time itemprop="dateCreated" datetime="2017-11-22T06:30:42-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I'm not sure what kind of pattern you're trying to acheive...</p>
+<p>This is fine, creates a global service by the name of ImgStorage:</p>
+<pre><code class="language-php">$di-&gt;set('ImgStorage',
+    [
+        'className' =&gt; 'Gallery\Classes\AmazonS3'
+    ]
+);</code></pre>
+<p>You can acces it like this:</p>
+<pre><code class="language-php">// controller context
+$this-&gt;ImgStorage-&gt;someMethodOfAmazonS3();</code></pre>
+<hr />
+<p>This will be your cuplrit, you shouldn't create a controller class as a service. Even though it will be instantiated, that instance will be a different from what the Phalcon dispatcher will create.</p>
+<pre><code class="language-php">$di-&gt;set('AbstractController',
+    [
+        'className' =&gt; 'AbstractController',
+        'calls' =&gt; [
+            [
+                'method'    =&gt; 'setStorage',
+                'arguments' =&gt; [
+                    [
+                        'type'  =&gt; 'service',
+                        'name'  =&gt; 'ImgStorage'
+                    ]
+                ]
+            ]
+        ]
+    ]
+);</code></pre>
+<p>For this functionality (as i understand), you don't have to subclass an abstract controller, you can access the ImgStorage service from any controller:</p>
+<pre><code class="language-php">// AbstractController.php:
+abstract class AbstractController extends Controller { 
+    // ???
+}
+
+// IndexController.php:
+class IndexController extends AbstractController { 
+    public function indexAction() {
+        $this-&gt;ImgStorage-&gt;someMethodOfAmazonS3();
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52379" data-cf-modified-f0e580d88d115a1df64f9618-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52379" data-cf-modified-f0e580d88d115a1df64f9618-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e365e6185e25f99740f9cef685f92f25?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10463/Berger92" class="user-moderator-N"><span itemprop="name">Berger92</span></a>        </span>
+        <br>
+
+        <span class="karma">541</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52381" href="#C52381">
+                <time itemprop="dateCreated" datetime="2017-11-22T07:05:21-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi,
+Thank you for your comment.
+The reason I would not like to have service injection like this (but rather have constructor or setter injection) is because you need to mock the DI container too, if you want to do unit tests.
+Also, it is advised to check the ImgStorage each time you use it if it comes from the DI container (and not from constructor injection).</p>
+<p>However, if it is not possible I guess I had just better check ImgStorage in the AbstractController like this:</p>
+<pre><code>abstract class AbstractController enxtends Controller {
+    protected $imgStorage;
+
+    public function initialize() {
+        $this-&gt;imgStorage = $this-&gt;getDI()-&gt;get('ImgStorage');
+        if(!$this-&gt;imgStorage instanceof ImgStorage) 
+            throw new Exception('Some message to dev channel');
+    }   
+    // ...
+}</code></pre>
+<pre><code> class AlbumController extends AbstractController {
+    public function indexAction() {
+        $this-&gt;imgStorage-&gt;getAlbums();
+        // ...
+    }
+}</code></pre>
+<p>But I really am guessing. I am new to phalcon.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52381" data-cf-modified-f0e580d88d115a1df64f9618-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52381" data-cf-modified-f0e580d88d115a1df64f9618-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52385" href="#C52385">
+                <time itemprop="dateCreated" datetime="2017-11-22T07:36:56-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>The reason I would not like to have service injection like this (but rather have constructor or setter injection) is because you need to mock the DI container too, if you want to do unit tests.</p>
+</blockquote>
+<p>Yes, that is a valid concern, and I see now what you're trying to acheive. Your only problem was using a controller as a service.</p>
+<p>I'd rather create an intermediate class for handling the setter/constructor injection. Basically, it would be a wrapper around the AmazonS3 class.</p>
+<pre><code class="language-php">class AmazonGallery
+{
+    protected $storage;
+    function setStorage($storage) {
+        $this-&gt;storage = $storage;
+    }
+    function getStorage() {
+        return $this-&gt;storage;
+    }
+    // custom logic
+}</code></pre>
+<pre><code class="language-php">$di-&gt;set('ImgStorage',
+    [
+        'className' =&gt; 'Gallery\Classes\AmazonS3'
+    ]
+);
+$di-&gt;set('MyService',
+    [
+        'className' =&gt; 'AmazonGallery',
+        'calls' =&gt; [
+            [
+                'method'    =&gt; 'setStorage',
+                'arguments' =&gt; [
+                    [
+                        'type'  =&gt; 'service',
+                        'name'  =&gt; 'ImgStorage'
+                    ]
+                ]
+            ]
+        ]
+    ]
+);</code></pre>
+<pre><code class="language-php">class AbstractController {
+    // empty
+}
+
+class GalleryController extends AbstractController {
+    public function indexAction() {
+        // access AmazonGallery instance
+        $this-&gt;MyService-&gt;getStorage();
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52385" data-cf-modified-f0e580d88d115a1df64f9618-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52385" data-cf-modified-f0e580d88d115a1df64f9618-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17337" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,154 @@
+---
+layout: default
+title: 'How set dynamic viewCache dir? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/3/volt">Volt</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How set dynamic viewCache dir?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/5459/moledet" class="user-moderator-N"><span itemprop="name">moledet</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-02-22T02:08:21-07:00">Feb '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-02-22T02:08:21-07:00">Feb '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Feb '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>345</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/eccaa895d8f0ec8396a466a4c2f73a89?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/5459/moledet" class="user-moderator-N"><span itemprop="name">moledet</span></a></span>
+                <span class="karma">17.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C10541" href="#C10541">
+        <time class="action-date">Feb '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I config a cache dir like:</p>
+<pre><code class="language-php">$di-&gt;set('viewCache', function () use ($config) {
+
+    $frontendOptions = array(
+        'lifetime' =&gt; $config-&gt;cache-&gt;html-&gt;lifetime
+    );
+
+    //Create a output cache
+    $frontCache = new FrontOutput($frontendOptions);
+
+    //Set the cache directory
+    $backendOptions = array(
+        'cacheDir' =&gt; $config-&gt;cache-&gt;html-&gt;dir
+    );
+
+    //Create the File backend
+    $cache = new \Phalcon\Cache\Backend\File($frontCache, $backendOptions);
+
+    return $cache;
+});
+</code></pre>
+<p>but will be a lot of saved files in one directory. Need put them on sub dirs by the hash. For example:
+cacheDir/aa/
+cacheDir/ab/
+cacheDir/ac/
+...</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-657dc0ed86ca1ba7c737085b-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-657dc0ed86ca1ba7c737085b-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3a303b625f8d3aa02e7b69d28a13870e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3945/christianallred" class="user-moderator-N"><span itemprop="name">Christian Allred</span></a>        </span>
+        <br>
+
+        <span class="karma">18.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C30179" href="#C30179">
+                <time itemprop="dateCreated" datetime="2016-02-22T17:34:04-07:00" class="action-date">Feb '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>What do you need the sub dirs for? its a caceh directory as it is not ever meant to be viewed. its just there to speed up render times. </p>
+<p>If you are doing frontend/backend you might consider multimodule. you can set a cache dir for each app. </p>
+<pre><code class="language-php">$di-&gt;setShared('view', function () use ($config) {
+    $view = new View();
+    $view-&gt;setViewsDir($config-&gt;application-&gt;viewsDir);
+    $view-&gt;registerEngines(array(
+        '.volt' =&gt; function ($view, $di) use ($config) {
+            $volt = new VoltEngine($view, $di);
+            $volt-&gt;setOptions(array(
+                'compiledPath' =&gt; $config-&gt;application-&gt;cacheDir,
+                'compiledSeparator' =&gt; '_'
+            ));
+            return $volt;
+        }
+    ));
+    return $view;
+});</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="30179" data-cf-modified-657dc0ed86ca1ba7c737085b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="30179" data-cf-modified-657dc0ed86ca1ba7c737085b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/eccaa895d8f0ec8396a466a4c2f73a89?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5459/moledet" class="user-moderator-N"><span itemprop="name">moledet</span></a>        </span>
+        <br>
+
+        <span class="karma">17.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C30193" href="#C30193">
+                <time itemprop="dateCreated" datetime="2016-02-23T06:00:35-07:00" class="action-date">Feb '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I have not a multimodule and this is a standart of filecaching.</p>
+<p>For example, ext3 can have many thousands of files; but after a couple of thousands, it used to be very slow. Mostly when listing a directory, but also when opening a single file. A few years ago, it gained the 'htree' option, that dramatically shortened the time needed to get an inode given a filename.
+see <a href="http://stackoverflow.com/a/466561/3564896">stackoverflow.com</a>.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="30193" data-cf-modified-657dc0ed86ca1ba7c737085b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="30193" data-cf-modified-657dc0ed86ca1ba7c737085b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="10541" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

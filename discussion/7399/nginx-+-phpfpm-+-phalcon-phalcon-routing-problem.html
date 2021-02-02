@@ -1,0 +1,287 @@
+---
+layout: default
+title: 'nginx + php-fpm + phalcon, phalcon routing problem - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/25/configuration">Configuration</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">nginx + php-fpm + phalcon, phalcon routing problem</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2758/morningmemo" class="user-moderator-N"><span itemprop="name">morningmemo</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-07-01T20:40:43-07:00">Jul '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-07-01T20:40:43-07:00">Jul '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '19</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1357</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/037cf326fa9cef9ae1e2ea7cc9765739?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2758/morningmemo" class="user-moderator-N"><span itemprop="name">morningmemo</span></a></span>
+                <span class="karma">4.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C7399" href="#C7399">
+        <time class="action-date">Jul '15</time>
+    </a>
+</div>
+<div class="post-content"><div><h1>user  nobody;</h1>
+<p>worker_processes  2;</p>
+<h1>error_log  logs/error.log;</h1>
+<h1>error_log  logs/error.log  notice;</h1>
+<h1>error_log  logs/error.log  info;</h1>
+<h1>pid        logs/nginx.pid;</h1>
+<p>events {
+worker_connections  1024;
+multi_accept        on;
+use                 epoll;
+}</p>
+<p>http {
+include       mime.types;
+default_type  application/octet-stream;</p>
+<pre><code>#log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+#                  '$status $body_bytes_sent "$http_referer" '
+#                  '"$http_user_agent" "$http_x_forwarded_for"';
+
+#access_log  logs/access.log  main;
+
+sendfile        on;
+#tcp_nopush      on;
+#tcp_nodelay     on;
+
+client_body_timeout 12;
+client_header_timeout 12;
+keepalive_timeout  5;
+send_timeout 10;
+
+# HTTPS server
+#
+server {
+    #listen       443 ssl spdy;
+    #listen [::]:443 ssl spdy;
+    listen       443 ssl;
+    #listen [::]:443 ssl;
+    server_name  localhost;
+
+    access_log off;
+
+    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+    ssl_certificate      /etc/ssl/certs/bundle.crt;
+    ssl_certificate_key  /etc/ssl/private/_tasteshop_co_kr.pem;
+
+    ssl_session_cache    shared:SSL:20m;
+    ssl_session_timeout  10m;
+
+    ssl_ciphers  HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers  on;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains";
+
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    ssl_trusted_certificate /etc/ssl/certs/AddTrustExternalCARoot.crt;
+    resolver 8.8.8.8 8.8.4.4;
+
+    location = /favicon.ico {
+        log_not_found  off;
+    }
+
+    location ~ /\.ht  {
+        deny all;
+    }
+
+    location / {
+        root   /var/www/img;
+    }
+
+    location ^~ /upload {
+        root  /var/www/img_server;
+
+        #try_files $uri $uri/ @rewrite;
+
+        rewrite ^/(.*)$ /index.php?_url=/$1 break;
+
+        include        fastcgi.conf;
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        fastcgi_pass   127.0.0.1:9000;
+        fastcgi_index  index.php;
+        fastcgi_param  SCRIPT_FILENAME $request_filename;
+        fastcgi_param  REQUEST_URI $uri?$args;
+        include        fastcgi_params;
+
+        gzip on;
+        gzip_comp_level 2;
+        gzip_proxied any;
+        gzip_min_length  1000;
+        gzip_disable     "MSIE [1-6]\."
+        gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript;
+
+        client_max_body_size 10m;
+    }
+}</code></pre>
+<p>}</p>
+<hr />
+<p>this is my nginx.conf(nginx + php-fpm + phalcon =&gt; for img server(static file(img file) with image uploading)).</p>
+<p>but i got this errmsg 'That route was not found on the server.'</p>
+<p>[folder structure]</p>
+<p>/var/www/img =&gt; collection of img files</p>
+<p>/var/www/img_server =&gt; phalcon upload module root
+(/var/www/img_server/index.php)</p>
+<p>What's wrong?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-6ca28cd301fdd7b987c2f31d-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-6ca28cd301fdd7b987c2f31d-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/97cfdb3586f82c3e1e4fe562bda688b8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/571/duythien" class="user-moderator-Y"><span itemprop="name">Thien Tran</span></a>        </span>
+        <br>
+
+        <span class="karma">58.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C20105" href="#C20105">
+                <time itemprop="dateCreated" datetime="2015-07-01T22:35:06-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi man</p>
+<p>You can refer my config for my app</p>
+<pre><code class="language-php">server {
+    listen      80;
+    server_name phalcontip.com;
+    rewrite     ^   https://$server_name$request_uri? permanent;
+}
+server {
+
+    listen   443 ssl;
+ssl    on;
+ssl_certificate    /etc/nginx/ssl/csr/phalconjobs_com.crt;
+ssl_certificate_key    /etc/nginx/ssl/private/phalconjobs.com.key;
+ssl_session_timeout  5m;
+ssl_session_cache    shared:SSL:10m;
+ssl_ciphers  RC4:HIGH:!aNULL:!MD5:!kEDH;
+ssl_prefer_server_ciphers   on;
+
+    server_name phalconjobs.com www.phalconjobs.com;
+
+    index index.php index.html index.htm;
+    set $root_path '/usr/share/nginx/html/phalconjobs/public';
+    root $root_path;
+
+    try_files $uri $uri/ @rewrite;
+
+    location @rewrite {
+        rewrite ^/(.*)$ /index.php?_url=/$1;
+    }
+    location ~ \.php$ {
+            try_files $uri =404;
+            fastcgi_split_path_info ^(.+\.php)(/.+)$;
+            fastcgi_pass unix:/var/run/php-fpm.sock;
+            fastcgi_index index.php;
+            fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+            include fastcgi_params;
+    }
+
+    location ~* ^/(css|img|js|flv|swf|download)/(.+)$ {
+        root $root_path;
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+}
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="20105" data-cf-modified-6ca28cd301fdd7b987c2f31d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="20105" data-cf-modified-6ca28cd301fdd7b987c2f31d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6f2079fc06bddb2585bd5b990d270842?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/12189/michsturm" class="user-moderator-N"><span itemprop="name">michsturm</span></a>        </span>
+        <br>
+
+        <span class="karma">65</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C59341" href="#C59341">
+                <time itemprop="dateCreated" datetime="2019-03-20T12:23:58-07:00" class="action-date">Mar '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/Thien">@Thien</a>: Great job. This line did it for me! Thanks a lot.</p>
+<pre><code>rewrite ^/(.*)$ /index.php?_url=/$1</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="59341" data-cf-modified-6ca28cd301fdd7b987c2f31d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="59341" data-cf-modified-6ca28cd301fdd7b987c2f31d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/97cfdb3586f82c3e1e4fe562bda688b8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/571/duythien" class="user-moderator-Y"><span itemprop="name">Thien Tran</span></a>        </span>
+        <br>
+
+        <span class="karma">58.3k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C59341"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/6f2079fc06bddb2585bd5b990d270842?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        michsturm                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C59367" href="#C59367">
+                <time itemprop="dateCreated" datetime="2019-03-23T08:46:57-07:00" class="action-date">Mar '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You are wellcome</p>
+<blockquote>
+<p><a href="https://forum.phalcon.io/user/0/Thien">@Thien</a>: Great job. This line did it for me! Thanks a lot.</p>
+<pre><code>rewrite ^/(.*)$ /index.php?_url=/$1</code></pre>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="59367" data-cf-modified-6ca28cd301fdd7b987c2f31d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="59367" data-cf-modified-6ca28cd301fdd7b987c2f31d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="7399" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

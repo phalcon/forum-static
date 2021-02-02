@@ -1,0 +1,251 @@
+---
+layout: default
+title: 'How to do redirect back/previous in Phalcon? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How to do redirect back/previous in Phalcon?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3982/PlentyPeeps" class="user-moderator-N"><span itemprop="name">PlentyPeeps</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-06-16T05:35:51-07:00">Jun '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-06-16T05:35:51-07:00">Jun '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>4628</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/deae60c0c71d15369b3caca051c9c0e2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3982/PlentyPeeps" class="user-moderator-N"><span itemprop="name">PlentyPeeps</span></a></span>
+                <span class="karma">11.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C7181" href="#C7181">
+        <time class="action-date">Jun '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello!</p>
+<p><em>Tldr: How to redirect to previous view? Or only call a controller and update database without effecting view.</em></p>
+<p>I have a view which produces a follow button. Quite simply:</p>
+<pre><code class="language-html">{% raw %}{%{% endraw %} if user.id !== auth_user.id {% raw %}%}{% endraw %}
+    {% raw %}{%{% endraw %} if user.isFollowedBy(user) {% raw %}%}{% endraw %}
+        {% raw %}{{{% endraw %} link_to("friends/new/" ~ user.id, '&lt;i class="glyphicon glyphicon-edit"&gt;&lt;/i&gt; Follow', "class": "btn btn-success") {% raw %}}}{% endraw %}
+    {% raw %}{%{% endraw %} else {% raw %}%}{% endraw %}
+        {% raw %}{{{% endraw %} link_to("friends/delete/" ~ user.id, '&lt;i class="glyphicon glyphicon-edit"&gt;&lt;/i&gt; Unfollow', "class": "btn btn-primary") {% raw %}}}{% endraw %}
+    {% raw %}{%{% endraw %} endif {% raw %}%}{% endraw %}
+{% raw %}{%{% endraw %} endif {% raw %}%}{% endraw %}
+</code></pre>
+<p>This button appears on a lot of different views in my site. For example on a status or someones profile. Therefore I want it to redirect to the previous page where it came from. For example if you clicked follow on somones profile, it should return to their profile (Basically call the controller perform database changes and nothing else).</p>
+<p>In laravel I used:</p>
+<pre><code class="language-php">return Redirect()-&gt;back();</code></pre>
+<p>But I can't get something similar to work in Phalcon, only defined paths by controller and action.</p>
+<p>Here is my controller:</p>
+<pre><code class="language-php">    public function newAction($id){
+        $returnUser = Users::findFirstById($id);
+        if($returnUser){
+            $userID = $this-&gt;user-&gt;id;
+            $friend = Friends::findDeleted(
+                "user_id = " . $userID . " AND followed_id = " . $id
+                );
+            if(!$friend){
+                $friend = new Friends();
+                $friend-&gt;user_id = $userID;
+                $friend-&gt;followed_id = $id;
+                $friend-&gt;deleted = 0;
+            }
+            else{
+                $friend-&gt;deleted = 0;
+            }
+            if (!$friend-&gt;save()) {
+                foreach ($friend-&gt;getMessages() as $message) {
+                    $this-&gt;flash-&gt;error($message);
+                }
+            }
+            else {
+                $this-&gt;flash-&gt;success("You are now following " . $returnUser-&gt;username);
+                return $this-&gt;forward('profile/show/' . $returnUser-&gt;username);
+                //return $this-&gt;response-&gt;redirectBack();
+            }
+        }
+        else{
+            $this-&gt;flash-&gt;error("User by that id does not exist.");
+            return $this-&gt;forward('profile/show/');   
+        }
+    }
+</code></pre>
+<p>In every redirect I want the previous, not a defined path which I'm currently using. Since if you call the controller from a status, I want to return to that status and not their profile.</p>
+<p>Thank you!!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-dfed243bd2c2ce78b683b6e1-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-dfed243bd2c2ce78b683b6e1-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b52c43b0b233d4aac50998c0d2f13e9a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3685/mattvb91" class="user-moderator-N"><span itemprop="name">Matthias von Bargen</span></a>        </span>
+        <br>
+
+        <span class="karma">3.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C19545" href="#C19545">
+                <time itemprop="dateCreated" datetime="2015-06-16T07:40:54-07:00" class="action-date">Jun '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I use the following in my base controller:</p>
+<pre><code>     /**
+ * Go Back from whence you came
+ * @return type
+ */
+protected function _redirectBack() {
+    return $this-&gt;response-&gt;redirect($_SERVER['HTTP_REFERER']);
+}</code></pre>
+<p>So in your case wherever you want to go back to previous action just use return $this-&gt;_redirectBack()</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="19545" data-cf-modified-dfed243bd2c2ce78b683b6e1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="19545" data-cf-modified-dfed243bd2c2ce78b683b6e1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/deae60c0c71d15369b3caca051c9c0e2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3982/PlentyPeeps" class="user-moderator-N"><span itemprop="name">PlentyPeeps</span></a>        </span>
+        <br>
+
+        <span class="karma">11.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C19545"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/b52c43b0b233d4aac50998c0d2f13e9a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Matthias von Bargen                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C19551" href="#C19551">
+                <time itemprop="dateCreated" datetime="2015-06-16T08:33:03-07:00" class="action-date">Jun '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Works like a charm. Thank you! :)</p>
+<blockquote>
+<p>I use the following in my base controller:</p>
+<pre><code>    /**
+* Go Back from whence you came
+* @return type
+*/</code></pre>
+<p>protected function _redirectBack() {
+return $this-&gt;response-&gt;redirect($_SERVER['HTTP_REFERER']);
+}</p>
+<p>So in your case wherever you want to go back to previous action just use return $this-&gt;_redirectBack()</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="19551" data-cf-modified-dfed243bd2c2ce78b683b6e1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="19551" data-cf-modified-dfed243bd2c2ce78b683b6e1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b52c43b0b233d4aac50998c0d2f13e9a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3685/mattvb91" class="user-moderator-N"><span itemprop="name">Matthias von Bargen</span></a>        </span>
+        <br>
+
+        <span class="karma">3.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="19721" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '15</span>
+              </span><br/><a name="C19721" href="#C19721">
+                <time itemprop="dateCreated" datetime="2015-06-19T14:44:24-07:00" class="action-date">Jun '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Even better! </p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="19721" data-cf-modified-dfed243bd2c2ce78b683b6e1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="19721" data-cf-modified-dfed243bd2c2ce78b683b6e1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6221c81c81cd357c818daec1bb8b17ff?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4153/nikolay-mihaylov" class="user-moderator-N"><span itemprop="name">Nikolay Mihaylov</span></a>        </span>
+        <br>
+
+        <span class="karma">93.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="25383" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '15</span>
+              </span><br/><a name="C25383" href="#C25383">
+                <time itemprop="dateCreated" datetime="2015-10-29T03:13:19-07:00" class="action-date">Oct '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Also there is a built in method in phalcon request, which you can use:</p>
+<pre><code class="language-php">return $this-&gt;response-&gt;redirect($this-&gt;request-&gt;getHTTPReferer());</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="25383" data-cf-modified-dfed243bd2c2ce78b683b6e1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="25383" data-cf-modified-dfed243bd2c2ce78b683b6e1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">3</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1db2d2ea61f39b1e96767b9b0d8b7d24?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8575/sasa-b" class="user-moderator-N"><span itemprop="name">Sasa B.</span></a>        </span>
+        <br>
+
+        <span class="karma">431</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C48653" href="#C48653">
+                <time itemprop="dateCreated" datetime="2017-06-09T01:06:15-07:00" class="action-date">Jun '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>is it possible to dispatch-&gt;forward to a previous action?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48653" data-cf-modified-dfed243bd2c2ce78b683b6e1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48653" data-cf-modified-dfed243bd2c2ce78b683b6e1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="7181" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

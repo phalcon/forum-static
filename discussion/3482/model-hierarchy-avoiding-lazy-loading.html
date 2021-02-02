@@ -1,0 +1,582 @@
+---
+layout: default
+title: 'Model hierarchy, avoiding lazy loading - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Model hierarchy, avoiding lazy loading</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2319/dexx086" class="user-moderator-N"><span itemprop="name">dexx086</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-09-18T01:22:56-07:00">Sep '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-09-18T01:22:56-07:00">Sep '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Apr '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">11</span>
+                </td>
+                <td>
+                    <label>Views</label><br>3057</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">3</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/41f112ce3fb66bb31f9489ec33e43480?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2319/dexx086" class="user-moderator-N"><span itemprop="name">dexx086</span></a></span>
+                <span class="karma">3.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3482" href="#C3482">
+        <time class="action-date">Sep '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>I've just started learning Phalcon, so forgive me if I'm posting an already discussed topic.</p>
+<p>What I'd like to achieve with the model hierarchy, is to <strong>load multiple entity records organized in the expected model hieararchy</strong>. Maybe it's not clear, I show a very basic sample.</p>
+<p>Let's have a User and an Address entity where a user can have multiple addresses. The generated models:</p>
+<pre><code class="language-php">class User extends \Phalcon\Mvc\Model
+{
+    public $id;
+    public $name;
+
+    public function initialize()
+    {
+        $this-&gt;hasMany('id', 'Address', 'user_id', NULL);
+    }   
+}
+
+class Address extends \Phalcon\Mvc\Model
+{
+    public $id;
+    public $city;
+    public $user_id;
+
+    public function initialize()
+    {
+        $this-&gt;belongsTo('user_id', 'User', 'id', NULL);
+    }   
+}</code></pre>
+<p>My task would be to list all users with all their addresses. So what I'd like is to go through all User records,  display their name and in a list, display city fields from ALL of their address records.</p>
+<p>First thought, let's query User records:</p>
+<pre><code class="language-php">$users = User::find();
+foreach ($users as $user)
+{
+    echo "\n" . $user-&gt;name . ", cities: ";
+    foreach ($user-&gt;address as $address)
+        echo $address-&gt;city . ", ";
+}</code></pre>
+<p>It's trivial, the output is generated as expected. What's not good with this solution is the <strong>number of SQL commands generated</strong>! This way the addresses are lazy loaded, therefore extra SQL query is generated for EACH user record. For long lists (let's say 100 user records) we would have 100 extra SQL commands! </p>
+<p>I think it arises 2 problems:</p>
+<ol>
+<li>performance problems (too many database activity because of lazy loading, for many users it could kill the db)</li>
+<li>integrity problems</li>
+</ol>
+<p>1st is obvious I think, 2nd means that while I go through all the user records, some of them could be deleted meanwhile, and when I reach such deleted user, no addresses will be loaded by the lazy <code>$user-&gt;address</code>, I will see that this user exists but has no address.  But that's not true, that user doesn't exists... So the integrity of my data is corrupted!  I maybe could avoid it be special isolation levels and putting the whole processing in transaction (by I guess only for multi versioning databases).</p>
+<p>What I imagine to work, would solve both problems.</p>
+<p>I'm looking for a solution where only one SQL is generated, and all the records are loaded in User records and all User records have all corresponding Address records loaded in their 'address' properties (as the hierachy is constructed).</p>
+<p>I've tried with PHQL inner joining, I see the result but each entity is loaded independently in the result set, couldn't find a solution where the hierarchy is loaded up fully in their corresponding list properties.</p>
+<p>What I'd imagine is a way to tell PHSQL to loaded User records, load it's 'address' list as well (could befurther filtered as well?), this way a full hierarchy could be described that we'd like to load and work with and could avoid lazy loading each lists (and of course 'hasone', single references as well)!</p>
+<p>I know, I could trick a few things (load users, gather their IDs, issue only one more SQL with the gathered IDs and load all the needed address record), but none of them would solve organizing them in the model hierarchy and not even persistency which I have with the mentioned basic method.</p>
+<p><strong>Is it possible somehow to solve this example by avoiding lazy loading and executing only one query?</strong> Of course I'm looking for a general solution for more complex hierarchies (even with multiple relations) but this sample could be a good start to have a solution for.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-eab587103da1683dbd29923b-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-eab587103da1683dbd29923b-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">3</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bdee79ea2680ec179fa34b9201fc74b7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1873/RompePC" class="user-moderator-N"><span itemprop="name">RompePC</span></a>        </span>
+        <br>
+
+        <span class="karma">33.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11421" href="#C11421">
+                <time itemprop="dateCreated" datetime="2014-09-18T03:13:50-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>As far as I know, you retrieve all from the DB and set it into the variable (so, your <code>$user-&gt;address</code> would be an bidimensional array), not executing SQL every time you want to know a related record.</p>
+<p>I think that's what you want to know.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11421" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11421" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/41f112ce3fb66bb31f9489ec33e43480?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2319/dexx086" class="user-moderator-N"><span itemprop="name">dexx086</span></a>        </span>
+        <br>
+
+        <span class="karma">3.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="11422" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '14</span>
+              </span><br/><a name="C11422" href="#C11422">
+                <time itemprop="dateCreated" datetime="2014-09-18T03:30:24-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thx for your reponse.</p>
+<p>Do you mean I should load all related records once and store them separately and find the corresponding ones in this list when I loop through the users list? If so, that's the main thing I want to avoid. The model hierarchy should work the way it automatically assigns the related entities to their corresponding entities. For complex hierarchies I would need to manage multiple lists for multiple related object which is not efficient and even not easy to manage.</p>
+<p>If it's not what you said, please describe it.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11422" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11422" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bdee79ea2680ec179fa34b9201fc74b7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1873/RompePC" class="user-moderator-N"><span itemprop="name">RompePC</span></a>        </span>
+        <br>
+
+        <span class="karma">33.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11424" href="#C11424">
+                <time itemprop="dateCreated" datetime="2014-09-18T07:22:48-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The fact is that <strong>the model loads automatically the related records when finding one of them</strong>. Do this to see an example:</p>
+<pre><code>After you setted belongsTo, hasMany, etc.
+...
+$model = Model::find();
+echo "&lt;pre&gt;";
+var_dump($model-&gt;nameOfTheModel);
+die();</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11424" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11424" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/41f112ce3fb66bb31f9489ec33e43480?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2319/dexx086" class="user-moderator-N"><span itemprop="name">dexx086</span></a>        </span>
+        <br>
+
+        <span class="karma">3.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="11427" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '14</span>
+              </span><br/><a name="C11427" href="#C11427">
+                <time itemprop="dateCreated" datetime="2014-09-18T08:26:37-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think you misunderstood my post.</p>
+<p>I know that the model will load automatically the related model's instance on demand (lazy loading at your <code>$mode-&gt;nameOfTheModel</code> statement), that's what <strong>I want to avoid</strong>, because it generates as many extra SQL commands in the background to the DB server, as many lazy loading happens. I want to avoid lazy loading and force the model to auto load the relations that I define somehow, and the question is if I can achieve it somehow or not. Do you see my point?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11427" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11427" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bdee79ea2680ec179fa34b9201fc74b7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1873/RompePC" class="user-moderator-N"><span itemprop="name">RompePC</span></a>        </span>
+        <br>
+
+        <span class="karma">33.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11428" href="#C11428">
+                <time itemprop="dateCreated" datetime="2014-09-18T08:32:13-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>So, when you init the app, you want to automatically bring all that relations to the model, and then search from that result instead of on the DB, isn't it?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11428" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11428" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/41f112ce3fb66bb31f9489ec33e43480?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2319/dexx086" class="user-moderator-N"><span itemprop="name">dexx086</span></a>        </span>
+        <br>
+
+        <span class="karma">3.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11434" href="#C11434">
+                <time itemprop="dateCreated" datetime="2014-09-18T13:29:24-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I don't want this on init app, it's just in a case of a simple query. I just need to have <code>$user-&gt;address</code> relations to already be ready for all the queried User objects and don't want Phalcon to lazy load them only when I access the <code>$user-&gt;address</code> field. So basically I just want to turn off lazy loading for this field and force Phalcon to preload elements for this relation.</p>
+<p>I expected the &quot;join&quot; to make this happen by the <code>$this-&gt;modelsManager-&gt;createBuilder()-&gt;from("User")-&gt;join("Address")</code> command, but I get the same user object as many times in a result of this command as many address object belongs to each user objects. So if user (id#1) has 3 related address objects, 3 row will contain the id#1 user with the different address object (as a simple SQL inner join would return 3 rows for such join, which is normal). But Phalcon, as a model mapper, should build the hierarchy from this, I guess. So I should get only 1 User object returned with its 3 address objects already loaded in its <code>$user-&gt;address</code> field!</p>
+<p>Do you see the goal I'd like to achieve?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11434" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11434" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bdee79ea2680ec179fa34b9201fc74b7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1873/RompePC" class="user-moderator-N"><span itemprop="name">RompePC</span></a>        </span>
+        <br>
+
+        <span class="karma">33.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11438" href="#C11438">
+                <time itemprop="dateCreated" datetime="2014-09-18T14:07:40-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I don't get it.</p>
+<p>But when reading this...</p>
+<blockquote>
+<p>I know that the model will load automatically the related model's instance on demand...</p>
+</blockquote>
+<p>I think you didn't get it. Phalcon related models instance are stored when you find a model record, not when you want to access it. So, where doing <code>Model::find()</code>, you are also retrieving the records of the related model, and setting them into the variable.</p>
+<p>But as I said, I don't see the point.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11438" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11438" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/41f112ce3fb66bb31f9489ec33e43480?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2319/dexx086" class="user-moderator-N"><span itemprop="name">dexx086</span></a>        </span>
+        <br>
+
+        <span class="karma">3.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="11440" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '14</span>
+              </span><br/><a name="C11440" href="#C11440">
+                <time itemprop="dateCreated" datetime="2014-09-18T15:16:13-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Aha, here is our misunderstanding of each other!</p>
+<p>You're saying that when I query for all User records then all the related <code>$user-&gt;address</code> resultsets (list of associated Address records) will also be loaded at once with the User reocrds itselves? <strong>Because in this case I have to say NO! It won't!</strong> Exactly that's my problem! <strong>It will load from the DB only when PHP executes the <code>$user-&gt;address</code> statement!</strong> This is lazy loading, exactly that's what I'd like to avoid!</p>
+<p>To make you believe me, I'm showing you the logged SQL commands that I see after each executed PHP statement (from the first sample in my original post):</p>
+<pre><code class="language-php">$users = User::find();</code></pre>
+<blockquote>
+<p>SQL: &quot;SELECT <code>user</code>.<code>id</code>, <code>user</code>.<code>name</code> FROM <code>user</code></p>
+</blockquote>
+<pre><code class="language-php">foreach ($users as $user)
+{
+    echo "\n" . $user-&gt;name . ", cities: ";
+    foreach ($user-&gt;address as $address)</code></pre>
+<p><strong>HERE IT IS!!!</strong> An SQL command is executed right after calling <code>$user-&gt;address</code> in this foreach:</p>
+<blockquote>
+<p>SQL: SELECT <code>address</code>.<code>id</code>, <code>address</code>.<code>city</code>, <code>address</code>.<code>user_id</code> FROM <code>address</code> WHERE <code>address</code>.<code>user_id</code> = :0</p>
+</blockquote>
+<p>This is where lazy loading happens, and will happen as many times as many iteration the outer <code>foreach($users as $user)..</code> record will produce, so as many User records we have! This is the wasting I wanna avoid. Test it if you don't believe me.</p>
+<p>Maybe I'm doing something wrong in the setup of my DbAdapter, but lazy loading happens by default and I didn't find a way to specify some relations at particular queries where I know I will need that relationship and I don't want to waste DB resources to query the related models one-by-one in the background via lazy loading!</p>
+<p>Now do you see my point?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11440" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11440" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bdee79ea2680ec179fa34b9201fc74b7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1873/RompePC" class="user-moderator-N"><span itemprop="name">RompePC</span></a>        </span>
+        <br>
+
+        <span class="karma">33.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11441" href="#C11441">
+                <time itemprop="dateCreated" datetime="2014-09-18T16:08:00-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>AHHHHHHHHHHHHHHHHHHHH now I see it! I thinked that it was loaded automatically in the <code>find()</code> method.</p>
+<p>BTW, how I see the SQL commands? So I can tell you if your DbAdapter is bad (if you did it as the tutorial, I think I will also get that commands).</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11441" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11441" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/41f112ce3fb66bb31f9489ec33e43480?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2319/dexx086" class="user-moderator-N"><span itemprop="name">dexx086</span></a>        </span>
+        <br>
+
+        <span class="karma">3.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11444" href="#C11444">
+                <time itemprop="dateCreated" datetime="2014-09-18T23:21:11-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I don't think either that this behaviour can depend on adapter settings.
+Btw. I set up sql query logging from the documentation:</p>
+<p><a href="http://docs.phalcon.io/en/latest/reference/db.html#logging-sql-statements">http://docs.phalcon.io/en/latest/reference/db.html#logging-sql-statements</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11444" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11444" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bdee79ea2680ec179fa34b9201fc74b7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1873/RompePC" class="user-moderator-N"><span itemprop="name">RompePC</span></a>        </span>
+        <br>
+
+        <span class="karma">33.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11447" href="#C11447">
+                <time itemprop="dateCreated" datetime="2014-09-19T03:31:41-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I did it and yes, you are right, Phalcon does lazy loading.</p>
+<p>But it's logic: when you want a record from a table that has related tables, maybe you only want some of the data from it, not related data from the other tables. This is an advantage in the way that you do not overload in a unnecessary way the model variable. But for you, is a disadvantage.</p>
+<p>Maybe you could try a workaround creating your own <code>find()</code> method (with other name), that calls the original <code>find()</code>, and then, do the lazy loading you want to avoid, so it returns to you the model variable full loaded.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11447" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11447" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/41f112ce3fb66bb31f9489ec33e43480?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2319/dexx086" class="user-moderator-N"><span itemprop="name">dexx086</span></a>        </span>
+        <br>
+
+        <span class="karma">3.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11448" href="#C11448">
+                <time itemprop="dateCreated" datetime="2014-09-19T03:56:38-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes, the other side is true as well: it wouldn't be efficient if all related models would be loaded. That's why I'm looking for a solution where I can define the list of related models I need to be loaded automatically. If a relation is not defined this way, should work as already works: through lazy loading.</p>
+<p>Overloading the <code>find()</code> method is my only thought as well, I possibly could (and if I find no other solution I will) implement my own way, but I'd be glad if it's implemented in Phalcon already (mostly for performance reasons). But after checking the documentation many times, I see no chance for solving it through basic Phalcon behaviour.</p>
+<p>Or does somebody see chance for a built-in solution?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11448" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11448" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bdee79ea2680ec179fa34b9201fc74b7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1873/RompePC" class="user-moderator-N"><span itemprop="name">RompePC</span></a>        </span>
+        <br>
+
+        <span class="karma">33.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11450" href="#C11450">
+                <time itemprop="dateCreated" datetime="2014-09-19T04:00:07-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Maybe you could do a push with that feature in the github repo. But let's wait to<a href="https://forum.phalcon.io/user/0/phalcon"> @phalcon</a> to appear here and say something about if it isn't implement what you want.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11450" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11450" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/60ffc0e01551cc5809445076da642103?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1058/humugus" class="user-moderator-N"><span itemprop="name">humugus</span></a>        </span>
+        <br>
+
+        <span class="karma">7.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="11494" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '14</span>
+              </span><br/><a name="C11494" href="#C11494">
+                <time itemprop="dateCreated" datetime="2014-09-22T01:00:40-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>whenever i have such scenarios, where i need records from nested tables i create a VIEW in mySQL and then a model to describe the view    </p>
+<p>model users -&gt;describes Users table, has many addresses<br />
+model addresses -&gt;describes addresses and belongs to users<br />
+the above two models are used for editing the data (add, edit, delete)   </p>
+<p>and then i create a view in mySQL and also a model in phalcon<br />
+model DetailedUsers describes the view in MySQL where the data are created by a query<br />
+i use the above model whenever i have to present the data to a visitor, just like your example  </p>
+<p>there are a few advantages in performance and consistency, at least from my point of view  </p>
+<p>i do not know if that helps in your case<br />
+i can provide an example if you think it is helpfull</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11494" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11494" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/41f112ce3fb66bb31f9489ec33e43480?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2319/dexx086" class="user-moderator-N"><span itemprop="name">dexx086</span></a>        </span>
+        <br>
+
+        <span class="karma">3.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="11498" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '14</span>
+              </span><br/><a name="C11498" href="#C11498">
+                <time itemprop="dateCreated" datetime="2014-09-22T02:22:24-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I understand your solution, it really has performance and most importantly consistency advantage. The consistency is also a big problem for me in Phalcon, because if we use lazy loading, our loaded model 'hierarchy' could end up in an incosistent state. Imagine an Address record belonging to the first User record we're processing, and meanwhile we process all User records, this Address object gets reassigned to the LAST User record (in the database, through a different request). If after this modification (while we're going through the User objects) we reach the last User, we will see this Address record again, and our User list will contain this Address object twice! This is obviously an inconsistency.</p>
+<p>Maybe we could surround our processing in a transaction, but because of long processing of each User record one-by-one (and lazy loading each Address relation), it could take long, and could lead to performance problems.</p>
+<p>So compared to these problems, your solution is better. However, I don't prefer to have Views (in DB) for each relations I need to have together (preloaded). Such a View is related to displaying, I wouldn't like it to be present in a database, because it's not a structural data thing, it's only for displaying! Which, I think, should be independent from models and databases. I know that views are kind of for this situation, but for separating model / view, I don't like the idea to have as many views in my DB as many relations I need for models. It could end up in a huge amount of Views which could be difficult to manage (especially with additional Model object in Phalcon).</p>
+<p>What I'm looking for is a <strong>general solution</strong>, where I can have the needed models ready in the loaded models. Phalcon's ORM is exactly about it: models and relations, that's why it's a bit suprising for me that Phalcon can handle relations <strong>only by lazy-loading</strong> the relations and only on demand! There should be a way where Phalcon (both for performance and consistency reasons) would prepare (preload) the needed models and I could receive a fully consistent and complete hierarchy with loaded models that I need to work with.</p>
+<p>The only solution I see now is to extend the <code>Model::find()</code> method and accept a list of relations to 'preload' for a query. This could work, however with a small performance impact (because I'm extending it in PHP, not in C and there always will be an extra SQL in the background but in an optimized way so there will be only one SQL / relation, not one SQL / model instance like with lazy-loading). I'm working on it, will share if I have something working.</p>
+<p>But still hoping for a built in, core solution :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11498" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11498" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/60ffc0e01551cc5809445076da642103?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1058/humugus" class="user-moderator-N"><span itemprop="name">humugus</span></a>        </span>
+        <br>
+
+        <span class="karma">7.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="11500" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '14</span>
+              </span><br/><a name="C11500" href="#C11500">
+                <time itemprop="dateCreated" datetime="2014-09-22T03:13:05-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>i understand that flooding a database with views is not very attractive, i actually use more generic views and use the same view in different spots of the application. Overkill in general but on the other hand no need to edit an sql query or mySQL view  whenever i decide to change the columns of a table.  </p>
+<p>anyway, another option I use is the Model Manager, where i provide raw SQL queries to get complicatet data.<br />
+Phalcon\Mvc\Model\Manager();
+the resutl is almost the same as with views, you get data from nested tables and use them for presentation purposes<br />
+I actually use manager where i need to setup queries that are hard to describe in a model, or have aggregation functions such as AVG, MAX, SUM etc</p>
+<p>it has some pros and cons as well, it might be suitable for your case</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11500" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11500" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/41f112ce3fb66bb31f9489ec33e43480?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2319/dexx086" class="user-moderator-N"><span itemprop="name">dexx086</span></a>        </span>
+        <br>
+
+        <span class="karma">3.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11501" href="#C11501">
+                <time itemprop="dateCreated" datetime="2014-09-22T04:06:23-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I found another topic with the same problem, the keyword for my problem was 'eager loading':</p>
+<p><a href="https://github.com/phalcon/cphalcon/issues/1117">https://github.com/phalcon/cphalcon/issues/1117</a></p>
+<p>Dear<a href="https://forum.phalcon.io/user/0/phalcon"> @phalcon</a>, I hope the core team will take consideration about the importance of this feature. It's really a MUST HAVE thing when working with entity relations.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11501" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11501" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/820d6aa837c7ba4e1584dd5b338e43ac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1527/boedy" class="user-moderator-N"><span itemprop="name">Boudewijn Geiger</span></a>        </span>
+        <br>
+
+        <span class="karma">8.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="11518" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '14</span>
+              </span><br/><a name="C11518" href="#C11518">
+                <time itemprop="dateCreated" datetime="2014-09-22T06:08:16-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I also really want the abiltiy to eager load models! As said in the this <a href="http://forum.phalcon.io/discussion/629/eager-loading">post</a> eager loading isn't possible and should be done with the query builder.</p>
+<p>I'm guessing you should implement your own function in the model class which uses the query builder to get related records. This won't be one query, but it sure will be allot faster instead of running a single query foreach record. Would like to see an example of how this would be done though. </p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11518" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11518" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d6143a9ff65d2d5222c30fb0d76664a7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3646/Surt" class="user-moderator-N"><span itemprop="name">Erik Wiesenthal</span></a>        </span>
+        <br>
+
+        <span class="karma">23.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="17308" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '15</span>
+              </span><br/><a name="C17308" href="#C17308">
+                <time itemprop="dateCreated" datetime="2015-04-15T05:21:12-07:00" class="action-date">Apr '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I look forward to it too. We need to avoid unnecesary db queries.
+It must be easy to phalcon framework to do it since there is already all the needed foundation.</p>
+<p>Related to the interface I really like the eloquent one. It uses the method &quot;with&quot; to especify the related models to eager load. (I implemented it on <a href="https://github.com/Surt/Granada">https://github.com/Surt/Granada</a> too)
+<a href="http://laravel.com/docs/5.0/eloquent#eager-loading">http://laravel.com/docs/5.0/eloquent#eager-loading</a></p>
+<p>On Granada it was as easy as using the with parameters to assign the relations resultset to the parent property. Don't have any idea on zephyr though.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17308" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17308" data-cf-modified-eab587103da1683dbd29923b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3482" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

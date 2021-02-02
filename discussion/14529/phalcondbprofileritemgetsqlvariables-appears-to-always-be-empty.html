@@ -1,0 +1,191 @@
+---
+layout: default
+title: 'Phalcon\Db\Profiler\Item-&gt;getSQLVariables appears to always be empty. - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Phalcon\Db\Profiler\Item-&gt;getSQLVariables appears to always be empty.</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1985/jellisii" class="user-moderator-N"><span itemprop="name">jellisii</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-10-19T13:07:29-07:00">Oct '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-10-19T13:07:29-07:00">Oct '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>649</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/56cc3a54c7f5211b9473a40c8ec83981?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1985/jellisii" class="user-moderator-N"><span itemprop="name">jellisii</span></a></span>
+                <span class="karma">7.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C14529" href="#C14529">
+        <time class="action-date">Oct '16</time>
+    </a>
+</div>
+<div class="post-content"><div><h3>Expected and Actual Behavior</h3>
+<p>\Phalcon\Db\Profiler\Item-&gt;getSQLVariables() is expected to return a list of variables used in the profile's SQL statement bound parameters. This doesn't appear to be true.</p>
+<p>Relevant di configuration:</p>
+<pre><code class="language-php">$di-&gt;setShared('profiler', function () {
+    return new \Phalcon\Db\Profiler();
+});
+$di-&gt;setShared('db', function() use ($di) {
+    $connection = new Connection(array(
+        "host" =&gt; $db_creds-&gt;host,
+        "username" =&gt; $db_creds-&gt;username,
+        "password" =&gt; $db_creds-&gt;password,
+        "dbname" =&gt; $db_creds-&gt;dbname,
+    ));
+    $eventsManager = new Phalcon\Events\Manager();
+    $profiler = $di-&gt;getProfiler();
+    $eventsManager-&gt;attach('db', function ($evt, $conn) use ($profiler) {
+        if ($evt-&gt;getType() === "beforeQuery") {
+            $profiler-&gt;startProfile($conn-&gt;getSQLStatement());
+        }
+        if ($evt-&gt;getType() === "afterQuery") {
+            $profiler-&gt;stopProfile();
+        }
+    });
+    $connection-&gt;setEventsManager($eventsManager);
+    return $connection;
+});</code></pre>
+<p>This is in a controller afterExecuteRoute()</p>
+<pre><code class="language-php">// in the example below, an insert was successful on the books table at this point.
+$profiles = $this-&gt;profiler-&gt;getProfiles();
+foreach ($profiles as $profile) {
+    error_log(
+        "SQL Statement: ". $profile-&gt;getSQLStatement() .
+        " with variables " . $profile-&gt;getSQLVariables() .
+        " Total Elapsed Time: ". $profile-&gt;getTotalElapsedSeconds()
+    );
+}</code></pre>
+<p>Output: </p>
+<pre><code>[Wed Oct 19 15:17:22.804249 2016] [:error] [pid 23792] [client 98.191.80.75:47708] SQL Statement: INSERT INTO `books` (`full_name`, `summary`, `vendor_id`, `category_tag_id`, `date_created`, `banner`, `thumbnail`, `activated`) VALUES (?, ?, ?, ?, ?, ?, ?, DEFAULT) with variables  Total Elapsed Time: 0.00037097930908203, referer: REDACTED</code></pre>
+<h3>Details</h3>
+<p>Phalcon version: (php --ri phalcon)</p>
+<pre><code>~$ php --ri phalcon
+
+phalcon
+
+Web framework delivered as a C-extension for PHP
+phalcon =&gt; enabled
+Author =&gt; Phalcon Team and contributors
+Version =&gt; 3.0.1
+Build Date =&gt; Sep  1 2016 18:08:54
+Powered by Zephir =&gt; Version 0.9.4a-dev-7e304ba18c
+
+Directive =&gt; Local Value =&gt; Master Value
+phalcon.db.escape_identifiers =&gt; On =&gt; On
+phalcon.db.force_casting =&gt; Off =&gt; Off
+phalcon.orm.events =&gt; On =&gt; On
+phalcon.orm.virtual_foreign_keys =&gt; On =&gt; On
+phalcon.orm.column_renaming =&gt; On =&gt; On
+phalcon.orm.not_null_validations =&gt; On =&gt; On
+phalcon.orm.exception_on_failed_save =&gt; Off =&gt; Off
+phalcon.orm.enable_literals =&gt; On =&gt; On
+phalcon.orm.late_state_binding =&gt; Off =&gt; Off
+phalcon.orm.enable_implicit_joins =&gt; On =&gt; On
+phalcon.orm.cast_on_hydrate =&gt; Off =&gt; Off
+phalcon.orm.ignore_unknown_columns =&gt; Off =&gt; Off</code></pre>
+<p>PHP Version: (php -v)</p>
+<pre><code>~$ php -v
+PHP 5.5.9-1ubuntu4.20 (cli) (built: Oct  3 2016 13:00:37) 
+Copyright (c) 1997-2014 The PHP Group
+Zend Engine v2.5.0, Copyright (c) 1998-2014 Zend Technologies
+    with the ionCube PHP Loader v4.7.5, Copyright (c) 2002-2014, by ionCube Ltd., and
+    with Zend OPcache v7.0.3, Copyright (c) 1999-2014, by Zend Technologies</code></pre>
+<p>Operating System:</p>
+<pre><code>~$ cat /etc/lsb-release 
+DISTRIB_ID=Ubuntu
+DISTRIB_RELEASE=14.04
+DISTRIB_CODENAME=trusty
+DISTRIB_DESCRIPTION="Ubuntu 14.04.5 LTS"</code></pre>
+<p>Installation type:</p>
+<pre><code>~$ cat /etc/apt/sources.list.d/phalcon_stable.list 
+deb https://packagecloud.io/phalcon/stable/ubuntu trusty main</code></pre>
+<p>Zephir version (if any): N/A</p>
+<p>Server:</p>
+<pre><code>~$ apache2 -version
+Server version: Apache/2.4.7 (Ubuntu)
+Server built:   Jul 15 2016 15:34:04
+</code></pre>
+<p>Other related info (Database, table schema):</p>
+<pre><code>~$ mysql --version
+mysql  Ver 14.14 Distrib 5.5.52, for debian-linux-gnu (x86_64) using readline 6.3</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-887b2a7bb7a5431e32cf9823-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-887b2a7bb7a5431e32cf9823-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/56cc3a54c7f5211b9473a40c8ec83981?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1985/jellisii" class="user-moderator-N"><span itemprop="name">jellisii</span></a>        </span>
+        <br>
+
+        <span class="karma">7.5k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C42321" href="#C42321">
+                <time itemprop="dateCreated" datetime="2016-10-28T07:03:32-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Upon further research, to get the variables into the profile, apparently you need to pass said variables into the profiler when you start the profile:</p>
+<pre><code class="language-php">    $eventsManager-&gt;attach('db', function ($evt, $conn) use ($profiler) {
+        if ($evt-&gt;getType() === "beforeQuery") {
+            $profiler-&gt;startProfile($conn-&gt;getSQLStatement(), $conn-&gt;getSQLVariables());
+        }
+
+        if ($evt-&gt;getType() === "afterQuery") {
+            $profiler-&gt;stopProfile();
+        }
+    });</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="42321" data-cf-modified-887b2a7bb7a5431e32cf9823-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="42321" data-cf-modified-887b2a7bb7a5431e32cf9823-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="14529" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

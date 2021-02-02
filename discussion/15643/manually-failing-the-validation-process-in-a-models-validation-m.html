@@ -1,0 +1,417 @@
+---
+layout: default
+title: 'Manually &quot;failing&quot; the validation process in a Model&#039;s validation() method? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Manually &quot;failing&quot; the validation process in a Model&#039;s validation() method?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/9189/reloaded" class="user-moderator-N"><span itemprop="name">Jason Harris</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-03-03T21:21:14-07:00">Mar '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-03-03T21:21:14-07:00">Mar '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>490</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/b4a5587307ce82c34777b837178afee2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/9189/reloaded" class="user-moderator-N"><span itemprop="name">Jason Harris</span></a></span>
+                <span class="karma">2.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C15643" href="#C15643">
+        <time class="action-date">Mar '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm separating chunks of my validation code from my model's validation() method into reusable \Phalcon\Validation components. A realistic scenario for why i'm doing this is I have a set of Validators for validating an account email (using StringLength and Email validators). I need to reuse this &quot;account email validator&quot; that's consisted of many validators to validate an email passed in to a login action method.</p>
+<p>I ran into a problem where appending messages to my model via the mode's appendMessage() method does not cause the model validation to fail. So it appears Phalcon doesn't look at the length of the validation messages in a model before determining if validation failed?</p>
+<p>So my question is: How can I manually trigger a model's validation to fail in the mode's validation() method after I manually append new validation messages?</p>
+<p>Here's my custom email validator:</p>
+<pre><code class="language-php">
+/**
+ * Validates an email that is associated to a Player model.
+ *
+ * @package App\Validators\Players
+ */
+class PlayerEmailValidator extends Validation
+{
+    public function initialize()
+    {
+        $this-&gt;add('Email', new Email([
+            'message' =&gt; 'Please enter a valid email.'
+        ]));
+
+        $this-&gt;add('Email', new StringLength([
+            'message' =&gt; 'We only accept emails up to 255 characters long.',
+            'max' =&gt; 255,
+            'min' =&gt; 300 // this is only for testing! I'm intentionally setting this to 300 so I don't have to put in a 300 char email to fail this validation
+        ]));
+    }
+}
+</code></pre>
+<p>Here's my AbstractModel class (all models inherit from this):</p>
+<pre><code class="language-php">
+abstract class AbstractModel extends Model
+{
+    /**
+     * Appends a list of messages in a \Phalcon\Validation\Message\Group object to the models validation messages.
+     *
+     * @param Group $messages
+     * @return AbstractModel
+     */
+    protected function appendValidationMessages(Group $messages)
+    {
+        foreach($messages as $message)
+        {
+            $this-&gt;appendMessage(new Message(
+                $message-&gt;getMessage(),
+                $message-&gt;getField(),
+                $message-&gt;getType()
+            ));
+        }
+
+        return $this;
+    }
+}
+</code></pre>
+<p>Here's my AbstractPlayers class (abstract model class generated by Phalcon):</p>
+<pre><code class="language-php">
+abstract class AbstractPlayers extends AbstractModel
+{
+
+    /**
+     *
+     * @var string
+     * @Column(type="string", length=255, nullable=false)
+     */
+    protected $Email;
+
+}
+</code></pre>
+<p>Here's my Players model:</p>
+<pre><code class="language-php">
+class Players extends AbstractPlayers
+{
+    public function validation()
+    {
+        $validation = new Validation();
+
+//        $validation-&gt;add('Email', new Email([
+//            'message' =&gt; 'Please enter a valid email.'
+//        ]));
+//
+//        $validation-&gt;add('Email', new StringLength([
+//            'message' =&gt; 'We only accept emails up to 255 characters long.',
+//            'max' =&gt; 255,
+//            'min' =&gt; 6
+//        ]));
+
+        $emailValidator = new PlayerEmailValidator();
+
+        $this-&gt;appendValidationMessages($emailValidator-&gt;validate($this));
+
+        var_dump($this-&gt;validate($validation), $this-&gt;getMessages());
+
+        return $this-&gt;validate($validation);
+    }
+}
+</code></pre>
+<p>Here's the result of <code>var_dump($this-&gt;validate($validation), $this-&gt;getMessages())</code> in my Players model.</p>
+<pre><code>bool(true)
+
+array(1) {
+  [0]=&gt;
+  object(Phalcon\Mvc\Model\Message)#94 (5) {
+    ["_type":protected]=&gt;
+    string(8) "TooShort"
+    ["_message":protected]=&gt;
+    string(48) "Field Email must be at least 300 characters long"
+    ["_field":protected]=&gt;
+    string(5) "Email"
+    ["_model":protected]=&gt;
+    NULL
+    ["_code":protected]=&gt;
+    int(0)
+  }
+}
+</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-904a7645a8e4c9f9d001352d-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-904a7645a8e4c9f9d001352d-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="46315" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '17</span>
+              </span><br/><a name="C46315" href="#C46315">
+                <time itemprop="dateCreated" datetime="2017-03-04T04:05:57-07:00" class="action-date">Mar '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yea i agree, the problem with validate method in model that count is done on messages returned from <strong>validation</strong>, not from <strong>model</strong>, it should be changed imho.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="46315" data-cf-modified-904a7645a8e4c9f9d001352d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="46315" data-cf-modified-904a7645a8e4c9f9d001352d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C46323" href="#C46323">
+                <time itemprop="dateCreated" datetime="2017-03-04T07:02:41-07:00" class="action-date">Mar '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Actually there is <code>validationHasFailed</code> which will do exactly what you want.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="46323" data-cf-modified-904a7645a8e4c9f9d001352d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="46323" data-cf-modified-904a7645a8e4c9f9d001352d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b4a5587307ce82c34777b837178afee2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9189/reloaded" class="user-moderator-N"><span itemprop="name">Jason Harris</span></a>        </span>
+        <br>
+
+        <span class="karma">2.9k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C46323"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C46337" href="#C46337">
+                <time itemprop="dateCreated" datetime="2017-03-04T15:46:56-07:00" class="action-date">Mar '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I tried using the result of <code>validationHasFailed()</code>  and it doesn't work.</p>
+<p>Looks like Phalcon model doesn't use the length of <code>getMessages()</code> or the result of <code>validationHasFailed()</code> to determine if validation fails... Starting to feel like this validation process is tightly closed and there's little room to customize it.</p>
+<p>I updated my Players model to this:</p>
+<pre><code class="language-php">
+class Players extends AbstractPlayers
+{
+    public function validation()
+    {
+        $validation = new Validation();
+
+//        $validation-&gt;add('Email', new Email([
+//            'message' =&gt; 'Please enter a valid email.'
+//        ]));
+//
+//        $validation-&gt;add('Email', new StringLength([
+//            'message' =&gt; 'We only accept emails up to 255 characters long.',
+//            'max' =&gt; 255,
+//            'min' =&gt; 6
+//        ]));
+
+        $emailValidator = new PlayerEmailValidator();
+
+        $this-&gt;appendValidationMessages($emailValidator-&gt;validate($this));
+
+        $this-&gt;validate($validation);
+        var_dump($this-&gt;getMessages(), $this-&gt;validationHasFailed());
+        exit;
+        return $this-&gt;validationHasFailed();
+    }
+}
+</code></pre>
+<p>The result of the <code>var_dumps</code> are below, as you can see <code>validationHasFailed()</code> is indeed returning true.</p>
+<pre><code>
+array(1) {
+  [0]=&gt;
+  object(Phalcon\Mvc\Model\Message)#94 (5) {
+    ["_type":protected]=&gt;
+    string(8) "TooShort"
+    ["_message":protected]=&gt;
+    string(48) "Field Email must be at least 300 characters long"
+    ["_field":protected]=&gt;
+    string(5) "Email"
+    ["_model":protected]=&gt;
+    NULL
+    ["_code":protected]=&gt;
+    int(0)
+  }
+}
+bool(true)
+</code></pre>
+<blockquote>
+<p>Actually there is <code>validationHasFailed</code> which will do exactly what you want.</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="46337" data-cf-modified-904a7645a8e4c9f9d001352d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="46337" data-cf-modified-904a7645a8e4c9f9d001352d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b4a5587307ce82c34777b837178afee2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9189/reloaded" class="user-moderator-N"><span itemprop="name">Jason Harris</span></a>        </span>
+        <br>
+
+        <span class="karma">2.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C46339" href="#C46339">
+                <time itemprop="dateCreated" datetime="2017-03-04T17:01:00-07:00" class="action-date">Mar '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I found a solution that works. All you need to do is create a custom Validation class for your model and from within that validation class you can run your validations and optionally use <a href="https://docs.phalcon.io/en/latest/reference/validation.html#recursive-validation">recursive validation</a>.</p>
+<p>Here is my Players model:</p>
+<pre><code class="language-php">
+class Players extends AbstractPlayers
+{
+    public function validation()
+    {
+        $validation = new PlayerModelValidator();
+
+        return $this-&gt;validate($validation);
+    }
+}
+</code></pre>
+<p>Here is my PlayerModelValidator:</p>
+<pre><code class="language-php">
+class PlayerModelValidator extends Validation
+{
+    /** @var PlayerEmailValidator */
+    protected $emailValidation;
+
+    public function initialize()
+    {
+        $this-&gt;emailValidation = new PlayerEmailValidator();
+
+        $this-&gt;setFilters('InGameName', 'trim');
+
+        $this-&gt;add('InGameName', new StringLength([
+            'max' =&gt; 25,
+            'min' =&gt; 4
+        ]));
+
+        $this-&gt;add('InGameName', new Alnum([
+            'message' =&gt; 'In-Game Name must contain only alphanumeric characters.'
+        ]));
+
+        $this-&gt;setFilters(['FirstName', 'LastName'], 'trim');
+
+        $this-&gt;add(['FirstName', 'LastName'], new StringLength([
+            'max' =&gt; 50,
+            'min' =&gt; 2,
+            'messageMaximum' =&gt; [
+                'FirstName' =&gt; 'First name can only be up to 50 characters long.',
+                'LastName' =&gt; 'Last name can only be up to 50 characters long.'
+            ],
+            'messageMinimum' =&gt; [
+                'FirstName' =&gt; 'First name must be at least 2 characters.',
+                'LastName' =&gt; 'Last name must be at least 2 characters.'
+            ]
+        ]));
+
+        $this-&gt;add(['FirstName', 'LastName'], new Alpha([
+            'message' =&gt; [
+                'FirstName' =&gt; 'First name can only contain alphabetic characters.',
+                'LastName' =&gt; 'Last name can only contain alphabetic characters.'
+            ]
+        ]));
+    }
+
+    /**
+     * Executed after validation
+     *
+     * @param array $data
+     * @param object $entity
+     * @param Group $messages
+     */
+    public function afterValidation($data, $entity, $messages)
+    {
+        /** @var Validation\Message[] $emailMessages */
+        $emailMessages = $this-&gt;emailValidation-&gt;validate($data, $entity);
+
+        $messages-&gt;appendMessages($emailMessages);
+    }
+}
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="46339" data-cf-modified-904a7645a8e4c9f9d001352d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="46339" data-cf-modified-904a7645a8e4c9f9d001352d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="46343" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '17</span>
+              </span><br/><a name="C46343" href="#C46343">
+                <time itemprop="dateCreated" datetime="2017-03-05T03:20:35-07:00" class="action-date">Mar '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><code>validationHasFailed</code> return true IF validation failed, false if not. You need to return here just <code>return !this-&gt;validationHasFailed();</code> and your previous code should work. <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/model.zep#L1548">https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/model.zep#L1548</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="46343" data-cf-modified-904a7645a8e4c9f9d001352d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="46343" data-cf-modified-904a7645a8e4c9f9d001352d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="15643" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

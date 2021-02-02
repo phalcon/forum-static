@@ -1,0 +1,397 @@
+---
+layout: default
+title: 'Cookies() won&#039;t set unless I disable Encryption - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/16/security">Security</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Cookies() won&#039;t set unless I disable Encryption</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1369/punneke" class="user-moderator-N"><span itemprop="name">Jeroen Evers</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-03-29T12:02:32-07:00">Mar '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-03-29T12:02:32-07:00">Mar '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">10</span>
+                </td>
+                <td>
+                    <label>Views</label><br>4311</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/3ebadf11122f36f864de2d9f871ffc20?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1369/punneke" class="user-moderator-N"><span itemprop="name">Jeroen Evers</span></a></span>
+                <span class="karma">5.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1944" href="#C1944">
+        <time class="action-date">Mar '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>I was having a really hard time figuring out why <code>$this-&gt;cookies-&gt;get(token)-&gt;getValue()</code> returned NULL all the time.
+Somehow the cookies were not being set.</p>
+<p>I used <code>return $this-&gt;response-&gt;redirect(index);</code> and that surpressed the following error</p>
+<pre><code>Size of key is too large for this algorithm
+0 [internal function]: Phalcon\Crypt-&gt;encrypt('1', NULL)
+1 [internal function]: Phalcon\Crypt-&gt;encryptBase64('1')
+2 [internal function]: Phalcon\Http\Cookie-&gt;send()
+3 [internal function]: Phalcon\Http\Response\Cookies-&gt;send()
+4 [internal function]: Phalcon\Http\Response-&gt;sendCookies()
+5 X:\path\public\index.php(33): Phalcon\Mvc\Application-&gt;handle()
+6 {main}</code></pre>
+<p>Notice <code>Phalcon\Crypt-&gt;encrypt(1, NULL)</code> where the key is empty!</p>
+<p>Only after disabling encryption in the DI, the cookies were correctly set.</p>
+<pre><code class="language-php">$di-&gt;set('cookies', function() {
+    $cookies = new Phalcon\Http\Response\Cookies();
+    $cookies-&gt;useEncryption(false);
+    return $cookies;
+});</code></pre>
+<p>What could be the problem? I am using phalcon 1.2.6 because 1.3.1 wil not hash passwords for me (returns empty)</p>
+<p>Thanx!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-28da6eae6671069be074fc2f-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-28da6eae6671069be074fc2f-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/64a31ffa601d7121d20d9c6eb49b7812?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1322/BhSimon" class="user-moderator-N"><span itemprop="name">Simon Paterson</span></a>        </span>
+        <br>
+
+        <span class="karma">1.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6799" href="#C6799">
+                <time itemprop="dateCreated" datetime="2014-04-02T22:25:23-07:00" class="action-date">Apr '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The <code>Phalcon\Crypt</code> component, which is what is being used to encrypt the cookies, hasn't been given a key (it appears to be using <code>NULL</code>).</p>
+<p>There is an easy way around this. You can set a key globally when the service is registered:</p>
+<pre><code>$di-&gt;set('crypt', function() {
+    $crypt = new Phalcon\Crypt();
+    $crypt-&gt;setKey('ReallyRandomKey');
+    return $crypt;
+});</code></pre>
+<p>Obviously you would change ‘ReallyRandomKey’ to something of your choosing. A good place to generate a key is at <a href="https://www.grc.com/passwords.htm">GRC</a>. I just use any 16 characters of the ‘63 random printable ASCII characters’ line, excluding any single primes (quote marks).</p>
+<p>I also recommend that this service is not registered in the bootstrap <code>index.php</code> file and, if it must be, use a configuration file placed outside the <code>public</code> web-accessible folder.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6799" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6799" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3ebadf11122f36f864de2d9f871ffc20?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1369/punneke" class="user-moderator-N"><span itemprop="name">Jeroen Evers</span></a>        </span>
+        <br>
+
+        <span class="karma">5.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6800" href="#C6800">
+                <time itemprop="dateCreated" datetime="2014-04-02T23:57:02-07:00" class="action-date">Apr '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you for the reply!</p>
+<p>I have based my code on <a href="https://github.com/phalcon/vokuro">Vokuro</a>, so <code>Phalcon\Crypt</code> is registered in my application. Strange thing is that a clean Vokuro install also won't set COOKIES for me. Could it be a specific php.ini setting of php version issue? I am struggling with this on 2 different XAMPP installations.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6800" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6800" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/64a31ffa601d7121d20d9c6eb49b7812?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1322/BhSimon" class="user-moderator-N"><span itemprop="name">Simon Paterson</span></a>        </span>
+        <br>
+
+        <span class="karma">1.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="6858" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '14</span>
+              </span><br/><a name="C6858" href="#C6858">
+                <time itemprop="dateCreated" datetime="2014-04-05T17:24:33-07:00" class="action-date">Apr '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The only thing I can think is that the <code>mcrypt</code> extension is not installed or not working correctly. <code>Phalcon\Crypt</code> requires the <code>mcrypt</code> extension and your symptoms sound very much like this is not working properly. You can check using <code>echo extension_loaded("mcrypt");</code>. If it is installed, you should see <code>1</code> in the output.</p>
+<p>Sorry I can’t be of more help.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6858" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6858" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3ebadf11122f36f864de2d9f871ffc20?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1369/punneke" class="user-moderator-N"><span itemprop="name">Jeroen Evers</span></a>        </span>
+        <br>
+
+        <span class="karma">5.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6862" href="#C6862">
+                <time itemprop="dateCreated" datetime="2014-04-06T03:00:07-07:00" class="action-date">Apr '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I does show a <code>1</code> as a result.
+I'll just go try and check some other php/xampp versions. I'm currently running a fresh install so i guess something must be wrong on my end, as this is appearantly not a common issue!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6862" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6862" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fcae2565ce4d1ed7240231932dec115a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/659/oleg578" class="user-moderator-N"><span itemprop="name">Oleg</span></a>        </span>
+        <br>
+
+        <span class="karma">8.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="6872" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '14</span>
+              </span><br/><a name="C6872" href="#C6872">
+                <time itemprop="dateCreated" datetime="2014-04-06T07:20:47-07:00" class="action-date">Apr '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You can try</p>
+<pre><code class="language-php">$di-&gt;setShared('crypt', function() use($di) {
+            $crypt = new \Phalcon\Crypt();
+            $crypt-&gt;setMode(MCRYPT_MODE_CFB);
+            $crypt-&gt;setKey('ReallyRandomKey');
+            return $crypt;
+        });</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6872" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6872" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d6ac2602ee348aac43092f6045fcdf2a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/934/jr2wolfgang" class="user-moderator-N"><span itemprop="name">jr2wolfgang</span></a>        </span>
+        <br>
+
+        <span class="karma">70</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="7621" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '14</span>
+              </span><br/><a name="C7621" href="#C7621">
+                <time itemprop="dateCreated" datetime="2014-05-05T03:12:15-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Same issue here.. I can't set the cookies... I don't know what's the problem. I'll try to check if my mcrypt is the main issue.</p>
+<p>I tried to do this: </p>
+<blockquote>
+<p>$di-&gt;set('cookies', function() {
+$cookies = new Phalcon\Http\Response\Cookies();
+$cookies-&gt;useEncryption(false);
+return $cookies;
+}, true);</p>
+</blockquote>
+<p>Still my cookies is not setting... :(</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7621" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7621" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d6ac2602ee348aac43092f6045fcdf2a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/934/jr2wolfgang" class="user-moderator-N"><span itemprop="name">jr2wolfgang</span></a>        </span>
+        <br>
+
+        <span class="karma">70</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7622" href="#C7622">
+                <time itemprop="dateCreated" datetime="2014-05-05T03:22:43-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This cookie thing is not working for me really... too bad</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7622" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7622" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/891b437c76a276c8aa301d3490e961dc?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3346/jasonsocha" class="user-moderator-N"><span itemprop="name">Jason Socha</span></a>        </span>
+        <br>
+
+        <span class="karma">3.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16230" href="#C16230">
+                <time itemprop="dateCreated" datetime="2015-02-27T23:01:18-07:00" class="action-date">Feb '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>As of 2015-02-27 this problem still exists in v1.3.4.  Phalcon\Http\Response\Cookies will not set a cookie unless encryption is disabled.</p>
+<pre><code class="language-php">$di-&gt;set('cookies', function () {
+  $cookies = new Phalcon\Http\Response\Cookies();
+  $cookies-&gt;useEncryption(false);
+  return $cookies;
+});</code></pre>
+<p>This can be tested by using the &quot;Remember Me&quot; checkbox on the Vokuro sample app.  Out of the box, the feature doesn't work.  If you add the above code to the services.php file, it will start to work and you can see the cookies being set in your browser's inspector.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16230" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16230" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4a9237c7875c5aed7dc32b6806ed82c0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3387/ipadavic" class="user-moderator-N"><span itemprop="name">Ivan Padavic</span></a>        </span>
+        <br>
+
+        <span class="karma">162</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16274" href="#C16274">
+                <time itemprop="dateCreated" datetime="2015-03-02T11:15:19-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I'm not sure if this is your case but we had similar issue, due to upgrade to php 5.6. Mcrypt extension now supports key sizes of 16, 24 or 32, and will throw error when using non supported size.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16274" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16274" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3ebadf11122f36f864de2d9f871ffc20?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1369/punneke" class="user-moderator-N"><span itemprop="name">Jeroen Evers</span></a>        </span>
+        <br>
+
+        <span class="karma">5.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16321" href="#C16321">
+                <time itemprop="dateCreated" datetime="2015-03-04T05:43:54-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I sitll have this problem on multiple php and phalcon versions. Maybe its because i use windows?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16321" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16321" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f0db0ab90f7fcf07364517c305e95e2e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3404/mervynwang" class="user-moderator-N"><span itemprop="name">mervynwang</span></a>        </span>
+        <br>
+
+        <span class="karma">70</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16334" href="#C16334">
+                <time itemprop="dateCreated" datetime="2015-03-04T08:59:26-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I encounter same problem,<br />
+PHP 5.6,
+phalcon 1.3.4 .
+When I change key to 16 , decrypt cookie is ok.
+$crypt-&gt;setKey('ReallyRandomKey');</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16334" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16334" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3831a6b5bcfe6e42b8f1bbce8b705e4f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3497/metalevs" class="user-moderator-N"><span itemprop="name">metalevs</span></a>        </span>
+        <br>
+
+        <span class="karma">636</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16673" href="#C16673">
+                <time itemprop="dateCreated" datetime="2015-03-18T12:44:08-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I have exactly same issue... It doesn't work with wamp or vagrant...</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16673" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16673" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a9d5fe7c3042136bc1d15380b1d2c9dd?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3965/osse76" class="user-moderator-N"><span itemprop="name">osse76</span></a>        </span>
+        <br>
+
+        <span class="karma">1.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="18977" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '15</span>
+              </span><br/><a name="C18977" href="#C18977">
+                <time itemprop="dateCreated" datetime="2015-06-02T01:25:52-07:00" class="action-date">Jun '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Still the same Issue. No solution for this?
+Edit:
+ok, key was too long. max 32 characters.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="18977" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="18977" data-cf-modified-28da6eae6671069be074fc2f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1944" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

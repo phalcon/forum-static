@@ -1,0 +1,253 @@
+---
+layout: default
+title: 'View cache not working - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/8/cache">Cache</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">View cache not working</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/5247/HessianZ" class="user-moderator-N"><span itemprop="name">Hessian</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-11-30T22:48:14-07:00">Nov '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-11-30T22:48:14-07:00">Nov '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>717</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/ac53de901013bc443a83868fb2f85d7a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/5247/HessianZ" class="user-moderator-N"><span itemprop="name">Hessian</span></a></span>
+                <span class="karma">993</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C9673" href="#C9673">
+        <time class="action-date">Nov '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>My code</p>
+<pre><code class="language-php">use Phalcon\Mvc\View\Simple as SimpleView;
+use Phalcon\Cache\Frontend\Json as CacheFrontend;
+use Phalcon\Cache\Backend\Redis as CacheBackend;
+
+$di-&gt;setShared('view', function () use ($config) {
+    $view = new SimpleView();
+    $view-&gt;setViewsDir($config-&gt;application-&gt;viewsDir);
+    return $view;
+});
+
+$di-&gt;set('viewCache', function () use ($config) {
+
+    $frontCache = new CacheFrontend(["lifetime" =&gt; 86400]);
+
+    $cache = new CacheBackend(
+        $frontCache,
+        $config-&gt;redis-&gt;toArray()
+    );
+
+    return $cache;
+});
+
+$vars = ['foo' =&gt; 'bar'];
+$this-&gt;view-&gt;cache([
+"lifetime" =&gt; 86400,
+"key"      =&gt; "prefix:key"
+]);
+
+echo $this-&gt;view-&gt;render("materials/templates/xyz.phtml", $vars);
+</code></pre>
+<p>Redis monitor</p>
+<pre><code class="language-bash">1448949074.138914 [0 127.0.0.1:39714] "SELECT" "0"
+1448949074.139034 [0 127.0.0.1:39714] "GET" "_PHCRprefix:key"
+1448949074.141211 [0 127.0.0.1:39714] "SET" "_PHCRprefix:key" "null"
+1448949074.141335 [0 127.0.0.1:39714] "EXPIRE" "_PHCRprefix:key" "86400"
+1448949074.141455 [0 127.0.0.1:39714] "SADD" "_PHCR" "prefix:key"</code></pre>
+<p>The content set into redis is always &quot;null&quot;, why?</p>
+<hr />
+<p><strong>I tried to find reason in Phalcon source code.</strong></p>
+<p>phalcon/mvc/view/simple.zep</p>
+<pre><code class="language-zephir">    public function render(string! path, params = null)
+    {
+        ...
+        if typeof cache == "object" {
+            if cache-&gt;isStarted() === true {
+                if cache-&gt;isFresh() === true {
+                    cache-&gt;save();
+                } else {
+                    cache-&gt;stop();
+                }
+            } else {
+                cache-&gt;stop();
+            }
+        }
+
+        ...
+    }</code></pre>
+<p>phalcon/cache/backend/redis.zep</p>
+<pre><code class="language-zephir">public function save(keyName = null, content = null, lifetime = null, boolean stopBuffer = true)
+{
+...
+        if !content {
+            let cachedContent = frontend-&gt;getContent();
+        } else {
+            let cachedContent = content;
+        }
+
+        /**
+         * Prepare the content in the frontend
+         */
+        if !is_numeric(cachedContent) {
+            let preparedContent = frontend-&gt;beforeStore(cachedContent);
+        }
+...
+        if is_numeric(cachedContent) {
+            let success = redis-&gt;set(lastKey, cachedContent);
+        } else {
+            let success = redis-&gt;set(lastKey, preparedContent);
+        }
+</code></pre>
+<p>phalcon/cache/frontend/json.zep</p>
+<pre><code class="language-zephir">class Json implements FrontendInterface
+{
+...
+    public function getContent()
+    {
+        return null;
+    }
+...
+}</code></pre>
+<p>Em......</p>
+<p>Always return null... why?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-5809d91c30d94375b7bc448a-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-5809d91c30d94375b7bc448a-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bf2876998907a5932aa609a948720862?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/241/gsouf" class="user-moderator-N"><span itemprop="name">Soufiane Ghzal</span></a>        </span>
+        <br>
+
+        <span class="karma">21.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C27193" href="#C27193">
+                <time itemprop="dateCreated" datetime="2015-12-01T02:49:21-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Looks like it was not implemented. Investigating...</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27193" data-cf-modified-5809d91c30d94375b7bc448a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27193" data-cf-modified-5809d91c30d94375b7bc448a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bf2876998907a5932aa609a948720862?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/241/gsouf" class="user-moderator-N"><span itemprop="name">Soufiane Ghzal</span></a>        </span>
+        <br>
+
+        <span class="karma">21.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C27199" href="#C27199">
+                <time itemprop="dateCreated" datetime="2015-12-01T03:06:19-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Nevermind, returning null is normal for the frontend cache.
+About your question, does the view &quot;materials/templates/xyz.phtml&quot; work and does it actually render something ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27199" data-cf-modified-5809d91c30d94375b7bc448a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27199" data-cf-modified-5809d91c30d94375b7bc448a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ac53de901013bc443a83868fb2f85d7a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5247/HessianZ" class="user-moderator-N"><span itemprop="name">Hessian</span></a>        </span>
+        <br>
+
+        <span class="karma">993</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C27199"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/bf2876998907a5932aa609a948720862?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Soufiane Ghzal                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C27219" href="#C27219">
+                <time itemprop="dateCreated" datetime="2015-12-02T00:30:07-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks for your anwser, but the view rendered correctly and no error or something else happend.</p>
+<blockquote>
+<p>Nevermind, returning null is normal for the frontend cache.
+About your question, does the view &quot;materials/templates/xyz.phtml&quot; work and does it actually render something ?</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27219" data-cf-modified-5809d91c30d94375b7bc448a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27219" data-cf-modified-5809d91c30d94375b7bc448a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d516c7391759f1a9253aa2f60337a10f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4921/thiagolcks" class="user-moderator-N"><span itemprop="name">Thiago Locks</span></a>        </span>
+        <br>
+
+        <span class="karma">1.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C27391" href="#C27391">
+                <time itemprop="dateCreated" datetime="2015-12-07T11:46:57-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi!</p>
+<p>Any news? I'm having the same problem.</p>
+<p>Thanks</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27391" data-cf-modified-5809d91c30d94375b7bc448a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27391" data-cf-modified-5809d91c30d94375b7bc448a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="9673" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

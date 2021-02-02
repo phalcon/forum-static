@@ -1,0 +1,191 @@
+---
+layout: default
+title: 'Cache and process synchronisation - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/8/cache">Cache</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Cache and process synchronisation</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1320/tztztztz" class="user-moderator-N"><span itemprop="name">Tomasz Zadora</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-03-22T09:11:44-07:00">Mar '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-03-22T09:11:44-07:00">Mar '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Feb '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>861</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/07dedd51671291aca4f3f84a115c534e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1320/tztztztz" class="user-moderator-N"><span itemprop="name">Tomasz Zadora</span></a></span>
+                <span class="karma">10.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1873" href="#C1873">
+        <time class="action-date">Mar '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Do Phalcon Cache do any synchronisation? Im refering to <a href="http://docs.phalcon.io/en/latest/reference/cache.html">http://docs.phalcon.io/en/latest/reference/cache.html</a>.</p>
+<p>For Example, i have busy site with about 50 requests per second at peek, now i want to cache something which creating taking very long time, lets say: 2 seconds.</p>
+<p>In scenarion when item does not exists in the cache and must be created, without any synchronisation it will cause about 100 php-fpm processes during that 2 sec , to create the item in the same time, and then put it 100 times into cache, causing massive performance-down spike.</p>
+<p>With proper synchronisation only one process is creating item for particular key at the same time (other processes can create other items for other keys at the same time) and rest of them waiting/sleeping until item is created and cached, checking let's say every 50 ms if the item is already created or not. </p>
+<p>So is synchro implemented in Phalcon cache in any way - semaphores or something?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-f4cad5b63a2244033863a1ab-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-f4cad5b63a2244033863a1ab-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/693cd29a926f2659ccec45ba126abd71?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11/doit76" class="user-moderator-N"><span itemprop="name">Karol Marcinkiewicz</span></a>        </span>
+        <br>
+
+        <span class="karma">40.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="6462" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '14</span>
+              </span><br/><a name="C6462" href="#C6462">
+                <time itemprop="dateCreated" datetime="2014-03-22T12:04:35-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think that there are no one and only way to do it automagicaly.<br />
+Phalcon have got multi level cache <a href="http://docs.phalcon.io/en/latest/reference/cache.html#multi-level-cache">http://docs.phalcon.io/en/latest/reference/cache.html#multi-level-cache</a></p>
+<p>At your case 50 request per second i advice you to register redis in DI</p>
+<pre><code class="language-php">$di-&gt;setShared("redis", function() {
+        $redis = new Redis();
+        $redis-&gt;connect('127.0.0.1', 6379);
+        return $redis;
+    });</code></pre>
+<p>and do something like this</p>
+<pre><code class="language-php">class IndexController extends \Phalcon\Mvc\Controller
+{
+    public function testAction()
+    {
+        $this-&gt;view-&gt;setVar("part",$this-&gt;get_cached_data());
+    }
+
+    public function get_cached_data()
+    {
+        if($this-&gt;redis-&gt;exist('key'))
+        {
+            if($this-&gt;redis-&gt;ttl('key') &lt; 60)
+            {
+                $this-&gt;redis-&gt;setTimeout('key',360); //set ttl to max that other requests don't execute set_cached_data()
+                return $this-&gt;set_cached_data();
+            }
+            return $this-&gt;redis-&gt;get('key');
+        }
+        else
+        {
+            $this-&gt;redis-&gt;setex('key',360,'soon'); //some request (2s) will return soon than real data
+            return return $this-&gt;set_cached_data();
+        }
+    }
+
+    public function set_cached_data()
+    {
+        /*
+            time consuming things to create cache
+        */
+        $generated_data = "hello";
+        sleep(2);
+
+        $this-&gt;redis-&gt;setex('key',360,$generated_data);
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6462" data-cf-modified-f4cad5b63a2244033863a1ab-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6462" data-cf-modified-f4cad5b63a2244033863a1ab-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2e22ff2e1a2b82db82eba2fda263ea8d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8393/spinmar" class="user-moderator-N"><span itemprop="name">spinmar</span></a>        </span>
+        <br>
+
+        <span class="karma">2.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C45829" href="#C45829">
+                <time itemprop="dateCreated" datetime="2017-02-10T08:15:23-07:00" class="action-date">Feb '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I'm interested in this question too.
+I'm in the same situation with a new busy site.
+I hoped that phalcon had some lock mechanism in the cache backend.
+Is it this problem solved?
+Does the developer solve this problem?
+Thanks</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="45829" data-cf-modified-f4cad5b63a2244033863a1ab-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="45829" data-cf-modified-f4cad5b63a2244033863a1ab-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/07dedd51671291aca4f3f84a115c534e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1320/tztztztz" class="user-moderator-N"><span itemprop="name">Tomasz Zadora</span></a>        </span>
+        <br>
+
+        <span class="karma">10.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="51915" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '17</span>
+              </span><br/><a name="C51915" href="#C51915">
+                <time itemprop="dateCreated" datetime="2017-10-30T04:41:00-07:00" class="action-date">Oct '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hello, to resolve this issue I have created the PHP No Slam Cache library, give it a try:</p>
+<p><a href="https://github.com/tztztztz/php-no-slam-cache">https://github.com/tztztztz/php-no-slam-cache</a></p>
+<p>If you have any question or need additional cache backend (like Redis) let me know.</p>
+<p>Edit: Wow... i just realised the last answer was in Feb... but I've received notification about it few minutes ago, lol...</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51915" data-cf-modified-f4cad5b63a2244033863a1ab-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51915" data-cf-modified-f4cad5b63a2244033863a1ab-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1873" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

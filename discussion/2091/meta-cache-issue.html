@@ -1,0 +1,457 @@
+---
+layout: default
+title: 'meta cache issue - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/8/cache">Cache</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">meta cache issue</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/605/mywebcontent" class="user-moderator-N"><span itemprop="name">mywebcontent</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-04-15T12:04:32-07:00">Apr '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-04-15T12:04:32-07:00">Apr '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>909</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/2c57e2dc89834feb92114a8c9985652c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/605/mywebcontent" class="user-moderator-N"><span itemprop="name">mywebcontent</span></a></span>
+                <span class="karma">17.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2091" href="#C2091">
+        <time class="action-date">Apr '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,</p>
+<p>I have implemented a meta cache for my modesl based on the tutorial-models-init example <a href="https://github.com/phalcon/tutorial-models-init">here</a></p>
+<p>I have now:</p>
+<pre><code>&lt;?php
+use Phalcon\Mvc\ModelInterface,
+    Phalcon\DiInterface,
+    Phalcon\Mvc\Model\MetaData,
+    Phalcon\Db\Column;
+
+class MetaDataInitializer
+{
+
+    /**
+     * Initializes the model's meta-data
+     *
+     * @param Phalcon\Mvc\ModelInterface $model
+     * @param Phalcon\DiInterface $di
+     * @return array
+     */
+    public function getMetaData(ModelInterface $model, DiInterface $di)
+    {
+
+        $reflection = $di['annotations']-&gt;get($model);
+        $properties = $reflection-&gt;getPropertiesAnnotations();
+        if (!$properties) 
+        {
+            throw new Exception("There are no properties defined on the class");
+        }
+
+        $attributes = array();
+        $nullables = array();
+        $dataTypes = array();
+        $dataTypesBind = array();
+        $numericTypes = array();
+        $primaryKeys = array();
+        $nonPrimaryKeys = array();
+        $identity = false;
+
+        foreach ($properties as $name =&gt; $collection) 
+        {
+
+            if ($collection-&gt;has('Column')) {
+
+                $arguments = $collection-&gt;get('Column')-&gt;getArguments();
+
+                /**
+                 * Get the column's name
+                 */
+                if (isset($arguments['column'])) 
+                {
+                    $columnName = $arguments['column'];
+                } 
+                else {
+                    $columnName = $name;
+                }
+
+                /**
+                 * Check for the 'type' parameter in the 'Column' annotation
+                 */
+                if (isset($arguments['type'])) 
+                {
+                    switch ($arguments['type']) 
+                    {
+                        case 'integer':
+                            $dataTypes[$columnName] = Column::TYPE_INTEGER;
+                            $dataTypesBind[$columnName] = Column::BIND_PARAM_INT;
+                            $numericTypes[$columnName] = true;
+                            break;
+                        case 'string':
+                            $dataTypes[$columnName] = Column::TYPE_VARCHAR;
+                            $dataTypesBind[$columnName] = Column::BIND_PARAM_STR;
+                            break;
+                        case 'text':
+                            $dataTypes[$columnName] = Column::TYPE_TEXT;
+                            $dataTypesBind[$columnName] = Column::BIND_PARAM_STR;
+                            break;
+                        case 'decimal':
+                            $dataTypes[$columnName] = Column::TYPE_DECIMAL;
+                            $dataTypesBind[$columnName] = Column::BIND_PARAM_DECIMAL;
+                            break;                          
+                        case 'enum':
+                            $dataTypes[$columnName] = Column::TYPE_VARCHAR;
+                            $dataTypesBind[$columnName] = Column::BIND_PARAM_STR;
+                            break;                        
+                        case 'boolean':
+                            $dataTypes[$columnName] = Column::TYPE_BOOLEAN;
+                            $dataTypesBind[$columnName] = Column::BIND_PARAM_BOOL;
+                            break;
+                        case 'date':
+                            $dataTypes[$columnName] = Column::TYPE_DATE;
+                            $dataTypesBind[$columnName] = Column::BIND_PARAM_STR;
+                            break;
+                        case 'datetime':
+                            $dataTypes[$columnName] = Column::TYPE_DATETIME;
+                            $dataTypesBind[$columnName] = Column::BIND_PARAM_STR;
+                            break;
+                    }
+                } 
+                else 
+                {
+                    $dataTypes[$columnName] = Column::TYPE_VARCHAR;
+                    $dataTypesBind[$columnName] = Column::BIND_PARAM_STR;
+                }
+
+                /**
+                 * Check for the 'nullable' parameter in the 'Column' annotation
+                 */
+                if (!$collection-&gt;has('Identity')) 
+                {
+                    if (isset($arguments['nullable'])) 
+                    {
+                        if (!$arguments['nullable']) 
+                        {
+                            $nullables[] = $columnName;
+                        }
+                    }
+                }
+
+                $attributes[] = $columnName;
+
+                /**
+                 * Check if the attribute is marked as primary
+                 */
+                if ($collection-&gt;has('Primary')) 
+                {
+                    $primaryKeys[] = $columnName;
+                } 
+                else 
+                {
+                    $nonPrimaryKeys[] = $columnName;
+                }
+
+                /**
+                 * Check if the attribute is marked as identity
+                 */
+                if ($collection-&gt;has('Identity')) {
+                    $identity = $columnName;
+                }
+
+            }
+
+        }
+
+        return array(
+
+            //Every column in the mapped table
+            MetaData::MODELS_ATTRIBUTES =&gt; $attributes,
+
+            //Every column part of the primary key
+            MetaData::MODELS_PRIMARY_KEY =&gt; $primaryKeys,
+
+            //Every column that isn't part of the primary key
+            MetaData::MODELS_NON_PRIMARY_KEY =&gt; $nonPrimaryKeys,
+
+            //Every column that doesn't allows null values
+            MetaData::MODELS_NOT_NULL =&gt; $nullables,
+
+            //Every column and their data types
+            MetaData::MODELS_DATA_TYPES =&gt; $dataTypes,
+
+            //The columns that have numeric data types
+            MetaData::MODELS_DATA_TYPES_NUMERIC =&gt; $numericTypes,
+
+            //The identity column, use boolean false if the model doesn't have
+            //an identity column
+            MetaData::MODELS_IDENTITY_COLUMN =&gt; $identity,
+
+            //How every column must be bound/casted
+            MetaData::MODELS_DATA_TYPES_BIND =&gt; $dataTypesBind,
+
+            //Fields that must be ignored from INSERT SQL statements
+            MetaData::MODELS_AUTOMATIC_DEFAULT_INSERT =&gt; array(),
+
+            //Fields that must be ignored from UPDATE SQL statements
+            MetaData::MODELS_AUTOMATIC_DEFAULT_UPDATE =&gt; array()
+
+        );
+    }
+
+    /**
+     * Initializes the model's column map
+     *
+     * @param Phalcon\Mvc\ModelInterface $model
+     * @param Phalcon\DiInterface $di
+     * @return array
+     */
+    public function getColumnMaps(ModelInterface $model, DiInterface $di)
+    {
+        $reflection = $di['annotations']-&gt;get($model);
+
+        $columnMap = array();
+        $reverseColumnMap = array();
+
+        $renamed = false;
+        foreach ($reflection-&gt;getPropertiesAnnotations() as $name =&gt; $collection) 
+        {
+
+            if ($collection-&gt;has('Column')) {
+
+                $arguments = $collection-&gt;get('Column')-&gt;getArguments();
+
+                /**
+                 * Get the column's name
+                 */
+                if (isset($arguments['column'])) 
+                {
+                    $columnName = $arguments['column'];
+                } 
+                else 
+                {
+                    $columnName = $name;
+                }
+
+                $columnMap[$columnName] = $name;
+                $reverseColumnMap[$name] = $columnName;
+
+                if (!$renamed) 
+                {
+                    if ($columnName != $name) 
+                    {
+                        $renamed = true;
+                    }
+                }
+            }
+        }
+
+        if ($renamed) 
+        {
+            return array(
+                MetaData::MODELS_COLUMN_MAP =&gt; $columnMap,
+                MetaData::MODELS_REVERSE_COLUMN_MAP =&gt; $reverseColumnMap
+            );
+        }
+        return null;
+    }
+}</code></pre>
+<p>and </p>
+<pre><code>&lt;?php
+use Phalcon\Events\Event,
+    Phalcon\Mvc\Model\Manager as ModelsManager;
+
+class AnnotationsInitializer extends Phalcon\Mvc\User\Plugin
+{
+    /**
+     * This is called after initialize the model
+     *
+     * @param Phalcon\Events\Event $event
+     */
+    public function afterInitialize(Event $event, ModelsManager $manager, $model)
+    {
+        $reflector = $this-&gt;annotations-&gt;get($model);
+        $annotations = $reflector-&gt;getClassAnnotations();
+        if ($annotations) 
+        {
+            foreach ($annotations as $annotation) 
+            {
+                switch ($annotation-&gt;getName()) 
+                {
+                    case 'Source':
+                        $arguments = $annotation-&gt;getArguments();
+                        $manager-&gt;setModelSource($model, $arguments[0]);
+                        break;
+
+                    case 'hasOne':
+                        $arguments = $annotation-&gt;getArguments();
+                        if (isset($arguments[3])) 
+                        {
+                            $manager-&gt;addHasOne($model, $arguments[0], $arguments[1], $arguments[2], $arguments[3]);
+                        } 
+                        else 
+                        {
+                            $manager-&gt;addHasOne($model, $arguments[0], $arguments[1], $arguments[2]);
+                        }
+                        break;
+
+                    case 'hasMany':
+                        $arguments = $annotation-&gt;getArguments();
+                        if (isset($arguments[3])) 
+                        {
+                            $manager-&gt;addHasMany($model, $arguments[0], $arguments[1], $arguments[2], $arguments[3]);
+                        } 
+                        else 
+                        {
+                            $manager-&gt;addHasMany($model, $arguments[0], $arguments[1], $arguments[2]);
+                        }
+                        break;
+
+                    case 'hasManyToMany':
+                        $arguments = $annotation-&gt;getArguments();
+                        if (isset($arguments[6])) 
+                        {
+                            $manager-&gt;addHasManyToMany($model, $arguments[0], $arguments[1], $arguments[2], $arguments[3], $arguments[4], $arguments[5], $arguments[6]);
+                        } 
+                        else 
+                        {
+                            $manager-&gt;addHasManyToMany($model, $arguments[0], $arguments[1], $arguments[2], $arguments[3], $arguments[4], $arguments[5]);
+                        }
+                        break;
+
+                    case 'belongsTo':
+                        $arguments = $annotation-&gt;getArguments();
+                        if (isset($arguments[3])) 
+                        {
+                            $manager-&gt;addBelongsTo($model, $arguments[0], $arguments[1], $arguments[2], $arguments[3]);
+                        } 
+                        else 
+                        {
+                            $manager-&gt;addBelongsTo($model, $arguments[0], $arguments[1], $arguments[2]);
+                        }
+                        break;
+
+                }
+            }
+        }
+    }
+}</code></pre>
+<p>I have a model like this:</p>
+<pre><code>&lt;?php
+/**
+ * Articles
+ *
+ * Model Articles
+ *
+ * @Source('articles');
+ * @useDynamicUpdate(true);
+ * @belongsTo('publishid','Users','id', {'alias': 'publisher'});
+ * @hasOne('iconid','Images','id', {'alias': 'icon'});
+ */
+class Articles extends \Phalcon\Mvc\Model
+{
+    /**
+     * @Primary
+     * @Identity
+     * @Column(type="integer", nullable=false, column="id", size="11")
+     */
+    public $id;
+
+    /**
+     * @Column(type="string", nullable=false, column="languagekey", size="3")
+     */
+    public $languagekey;
+
+    /**
+     * @Column(type="integer", nullable=false, column="iconid", size="11")
+     */
+    public $iconid;
+
+    /**
+     * @Column(type="integer", nullable=false, column="publishid")
+     */
+    public $publishid;  
+
+    /**
+     * @Column(type="string", nullable=false, column="pagetitle", size="100")
+     */
+    public $pagetitle;
+
+    /**
+     * @Column(type="string", nullable=false, column="listtitle", size="100")
+     */
+    public $listtitle;
+
+    /**
+     * @Column(type="string", nullable=false, column="listdescription", size="250")
+     */
+    public $listdescription;
+
+    /**
+     * @Column(type="text", nullable=false, column="content")
+     */
+    public $content;
+}</code></pre>
+<p>The cache works perfect. There are files written, but the hasOne relations does not work.
+when I use for example</p>
+<pre><code>
+$article=Article::findFirst(12);
+echo $article-&gt;listtitle."&lt;br /&gt;";
+echo $article-&gt;icon-&gt;thumbnail."&lt;br /&gt;";
+
+It says:
+Notice: Trying to get property of non-object in /hosts/application/frontend/app/controllers/ArticlesController.php on line 24
+(where $article-&gt;icon-&gt;thumbnail is on line 24)
+
+The belonsgTo relation works fine.
+
+My question:
+Do I forgot something, or is there a fix for this?</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-ff1ddc308c5a9c992dffa461-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-ff1ddc308c5a9c992dffa461-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2091" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

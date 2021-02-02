@@ -1,0 +1,368 @@
+---
+layout: default
+title: 'Adding minimalist token authentication to the REST Tutorial - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/22/micro">Micro</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Adding minimalist token authentication to the REST Tutorial</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10715/wmac" class="user-moderator-N"><span itemprop="name">wmac</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-01-26T23:13:32-07:00">Jan '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-01-26T23:13:32-07:00">Jan '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>3807</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/807e93895446bfaed9ab1f573b625248?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10715/wmac" class="user-moderator-N"><span itemprop="name">wmac</span></a></span>
+                <span class="karma">5.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17691" href="#C17691">
+        <time class="action-date">Jan '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello</p>
+<p>I have looked at the HMAC authentication (<a href="https://phalcon-rest.redound.org/">https://phalcon-rest.redound.org/</a>) users suggested here but it looks too excessive for me and it does not use Micro framework. I just want to add a very simple and minimaist authentication to the REST example of the phalcon website.</p>
+<p>The only thing I need is when a call arrives (to specific API functions that require auth) I can somehow find which user is behind the call.</p>
+<p>So I need to:</p>
+<p>1- Intercept calls and &quot;if they require authentication&quot; but the request does not provide a valid token (i.e. one that belongs to a user) I can send back a json error message.</p>
+<p>2- Inside api functions I can call  a getUser function (looks which user is the owner of current token) and get the user info. Even if I can get just the token, I can do the rest.</p>
+<p>That's it.</p>
+<p>So, is there a minimalist example that has implemented just that? </p>
+<p>Thanks.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-5380c4e14fc1bdcb1d556460-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-5380c4e14fc1bdcb1d556460-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6221c81c81cd357c818daec1bb8b17ff?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4153/nikolay-mihaylov" class="user-moderator-N"><span itemprop="name">Nikolay Mihaylov</span></a>        </span>
+        <br>
+
+        <span class="karma">93.7k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C53693" href="#C53693">
+                <time itemprop="dateCreated" datetime="2018-01-27T05:21:43-07:00" class="action-date">Jan '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hey,
+I think I have just the thing you need. One of my clients has an API only for internal use.
+Everything is only for local network, so I needed to know which user did the request, nothing more...</p>
+<p>For this I used <code>Authorization: Bearer UNIQUE_TOKEN</code> header which is sent with every API request.</p>
+<p>Sample code that does the job:</p>
+<p>BaseController - this is the controller that all other API Controllers extend.</p>
+<pre><code class="language-php">
+public function beforeExecuteRoute()
+{
+    // Route names that do not need authorization
+    $authorizeExceptions = [
+        'api-documentation'
+    ];
+    if (!in_array($this-&gt;router-&gt;getMatchedRoute()-&gt;getName(), $authorizeExceptions)) {
+        // Authorize
+        $result = $this-&gt;authorize();
+        if (is_null($result)) {
+            $this-&gt;_response['messages'] = 'Please authorize with valid API token!';
+            $this-&gt;_response['statusCode'] = 401;
+            $this-&gt;afterExecuteRoute();
+            die();
+        }
+    }
+
+    // We accept only application/json content in POST and PUT methods
+    if (in_array($this-&gt;request-&gt;getMethod(), ['POST', 'PUT']) AND $this-&gt;request-&gt;getHeader('Content-Type') != 'application/json') {
+        $this-&gt;_response['messages'] = 'Only application/json is accepted for Content-Type in POST requests.';
+        $this-&gt;_response['statusCode'] = 400;
+        $this-&gt;afterExecuteRoute();
+        die();
+    }
+}
+
+// Return the API response.
+public function afterExecuteRoute()
+{
+    // Status code &amp; Response header
+    $this-&gt;_response['statusMessage'] = $this-&gt;_statusCodes[$this-&gt;_response['statusCode']];
+    $this-&gt;response-&gt;setStatusCode($this-&gt;_response['statusCode'], $this-&gt;_statusCodes[$this-&gt;_response['statusCode']]);
+    $this-&gt;response-&gt;setHeader('Access-Control-Allow-Origin', '*');
+    $this-&gt;response-&gt;setHeader('X-Content-Type-Options', 'nosniff');
+    $this-&gt;response-&gt;setHeader('X-Frame-Options', 'deny');
+    $this-&gt;response-&gt;setHeader('Content-Security-Policy', 'default-src \'none\''); 
+
+    // Set content
+    $this-&gt;response-&gt;setContentType('application/json', 'UTF-8'); 
+    $this-&gt;response-&gt;setJsonContent($this-&gt;_response, JSON_UNESCAPED_UNICODE); 
+
+    // Log
+    if (!is_null($this-&gt;user) AND $this-&gt;user-&gt;id != 1) {
+        $request = $this-&gt;request-&gt;get();
+        $request['accept'] = $this-&gt;request-&gt;getHeader('Accept');
+        $this-&gt;db-&gt;insertAsDict('api_access_logs', [
+            'api_user_id' =&gt; $this-&gt;user-&gt;id,
+            'endpoint' =&gt; $this-&gt;request-&gt;getMethod() .' '. getCurrentUrl(false, false),
+            'request' =&gt; json_encode($request, JSON_UNESCAPED_UNICODE),
+            'response' =&gt; json_encode($this-&gt;_response, JSON_UNESCAPED_UNICODE),
+        ]);
+    }
+    return $this-&gt;response-&gt;send();
+}
+
+// Check if valid Token is given
+private function authorize()
+{
+    $this-&gt;user = null;
+    $authorizationHeader = $this-&gt;request-&gt;getHeader('Authorization');
+    if ($authorizationHeader AND preg_match('/Bearer\s(\S+)/', $authorizationHeader, $matches)) {
+        $tokenParts = explode('|', \Helpers\Common::decodeString($matches[1]));
+        // For now token has 3 parts. Update here if you modify token
+        // IMPORTANT: Here you can make your custom logic to check for valid token
+        if (count($tokenParts) === 3) {
+            $this-&gt;user = (object) [
+                'id' =&gt; $tokenParts[0],
+                'level' =&gt; $tokenParts[1],
+            ];
+        }
+    }
+    return $this-&gt;user;
+}
+</code></pre>
+<p>In the <code>authorize()</code> method I'm encoding/decoding the token with <code>\Phalcon\Crypt</code> library.</p>
+<pre><code class="language-php">
+class Common
+{
+    private static $cryptKey = 'i$1^&amp;/:%<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c2f082a3f3">[email&#160;protected]</a>!R1Q&lt;@{(<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="a9cce9">[email&#160;protected]</a>*!&lt;7u|R2~0';
+    public static function encodeString($string)
+    {
+        return (new \Phalcon\Crypt)-&gt;encryptBase64($string, self::$cryptKey, true);
+    }
+    public static function decodeString($string)
+    {
+        return (new \Phalcon\Crypt)-&gt;decryptBase64($string, self::$cryptKey, true);
+    }
+    ...
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="53693" data-cf-modified-5380c4e14fc1bdcb1d556460-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="53693" data-cf-modified-5380c4e14fc1bdcb1d556460-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/807e93895446bfaed9ab1f573b625248?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10715/wmac" class="user-moderator-N"><span itemprop="name">wmac</span></a>        </span>
+        <br>
+
+        <span class="karma">5.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C53703" href="#C53703">
+                <time itemprop="dateCreated" datetime="2018-01-27T12:01:57-07:00" class="action-date">Jan '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Nikolay, Thank you very much. </p>
+<p>All I should do now is to convert it to a middleware (since I am using Micro Framework).</p>
+<p>May I ask what might go wrong if I use that for an internet api? Is there a risk (if I use https with all calls)?</p>
+<p>Thanks again for generus sharing of your code.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="53703" data-cf-modified-5380c4e14fc1bdcb1d556460-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="53703" data-cf-modified-5380c4e14fc1bdcb1d556460-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6221c81c81cd357c818daec1bb8b17ff?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4153/nikolay-mihaylov" class="user-moderator-N"><span itemprop="name">Nikolay Mihaylov</span></a>        </span>
+        <br>
+
+        <span class="karma">93.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C53705" href="#C53705">
+                <time itemprop="dateCreated" datetime="2018-01-27T14:52:18-07:00" class="action-date">Jan '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well all depends on what you want to achieve.</p>
+<p>I found an article where its explained better then i ever will :)</p>
+<p><a href="https://zapier.com/engineering/apikey-oauth-jwt/">https://zapier.com/engineering/apikey-oauth-jwt/</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="53705" data-cf-modified-5380c4e14fc1bdcb1d556460-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="53705" data-cf-modified-5380c4e14fc1bdcb1d556460-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/807e93895446bfaed9ab1f573b625248?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10715/wmac" class="user-moderator-N"><span itemprop="name">wmac</span></a>        </span>
+        <br>
+
+        <span class="karma">5.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C53707" href="#C53707">
+                <time itemprop="dateCreated" datetime="2018-01-28T02:25:17-07:00" class="action-date">Jan '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Just converted the code provided by Nicolay to a very minimal middleware:</p>
+<pre><code class="language-php">&lt;?php
+use Phalcon\Mvc\Micro;
+use Phalcon\Mvc\Router;
+use Phalcon\Events\Event;
+use Phalcon\Events\Manager;
+use Phalcon\Mvc\Micro\MiddlewareInterface;
+
+class AuthMiddleware implements MiddlewareInterface
+{
+    public function beforeExecuteRoute(Event $event, Micro $application)
+    {
+        $authorizeExceptions = [
+            'doc'
+        ];
+        if (!in_array($application-&gt;router-&gt;getMatchedRoute()-&gt;getName(), $authorizeExceptions)) {
+            $result = $this-&gt;authorize($application);
+            if (is_null($result)) {
+                $application-&gt;response-&gt;setStatusCode(401,'Please authorize with valid API token!');
+                $application-&gt;response-&gt;setContent('Please authorize with valid API token!');
+                $application-&gt;response-&gt;send();
+                die();
+                //return false;
+            }
+        }
+
+        if (in_array($application-&gt;request-&gt;getMethod(), ['POST', 'PUT']) AND $application-&gt;request-&gt;getHeader('Content-Type') != 'application/json') {
+            $application-&gt;response-&gt;setStatusCode(400,'Only application/json is accepted for Content-Type in POST requests.');
+            $application-&gt;response-&gt;send();
+            die();
+            //return false;
+        }
+
+        return true;
+    }
+
+    private function authorize(Micro $application)
+    {
+        $application-&gt;token = null;
+        $authorizationHeader = $application-&gt;request-&gt;getHeader('api-token');
+
+        if (strlen($authorizationHeader)&gt;5) {  //check token validity and find from database what user has the token
+            $application-&gt;token = $authorizationHeader;
+            //$application-&gt;userid = ?;
+        }
+
+        return $application-&gt;token;
+    }    
+
+    public function call(Micro $application)
+    {
+        return true;
+    }    
+}
+
+$app = new Micro();
+
+$eventsManager = new Manager();
+$eventsManager-&gt;attach('micro', new AuthMiddleware());
+$app-&gt;before(new AuthMiddleware());
+$app-&gt;after(new AuthMiddleware());
+$app-&gt;setEventsManager($eventsManager);
+
+$app-&gt;get(
+    '/',
+    function () use ($app){
+        echo '&lt;h1&gt;Welcome!&lt;/h1&gt; token: '. $app-&gt;token ."&lt;br&gt;";
+    }
+);
+
+$app-&gt;get(
+    '/doc',
+    function () {
+        echo '&lt;h1&gt;api-documentation!&lt;/h1&gt;';
+    }
+)-&gt;setName('doc');
+
+$app-&gt;get(
+    '/profile/{username}',
+    function ($username) use ($app) {
+        $content = "&lt;h1&gt;This is profile of: {$username}!&lt;/h1&gt;";
+        $app-&gt;response-&gt;setContent($content);
+        $app-&gt;response-&gt;send();
+    }
+);
+
+$app-&gt;handle();</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="53707" data-cf-modified-5380c4e14fc1bdcb1d556460-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="53707" data-cf-modified-5380c4e14fc1bdcb1d556460-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c0ce8f5e133750a4dfea4712e533a178?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/15/le51" class="user-moderator-N"><span itemprop="name">le51</span></a>        </span>
+        <br>
+
+        <span class="karma">43.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C53713" href="#C53713">
+                <time itemprop="dateCreated" datetime="2018-01-29T15:26:40-07:00" class="action-date">Jan '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>thanks for sharing.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="53713" data-cf-modified-5380c4e14fc1bdcb1d556460-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="53713" data-cf-modified-5380c4e14fc1bdcb1d556460-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17691" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

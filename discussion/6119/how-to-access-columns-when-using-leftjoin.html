@@ -1,0 +1,190 @@
+---
+layout: default
+title: 'How to access columns when using leftJoin - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/23/odm">ODM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How to access columns when using leftJoin</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3391/matheustav" class="user-moderator-N"><span itemprop="name">Matheus Tavares</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-03-08T08:51:02-07:00">Mar '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-03-08T08:51:02-07:00">Mar '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1042</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9375e9aff4062092b13443d97ff6af9e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3391/matheustav" class="user-moderator-N"><span itemprop="name">Matheus Tavares</span></a></span>
+                <span class="karma">7.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6119" href="#C6119">
+        <time class="action-date">Mar '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi!
+I have these two tables:</p>
+<pre><code>CREATE TABLE `administradores` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `nome` varchar(50) NOT NULL DEFAULT '',
+  `email` varchar(100) NOT NULL DEFAULT '',
+  `senha` char(64) NOT NULL DEFAULT '',
+  `criado_em` datetime DEFAULT NULL,
+  `modificado_em` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email` (`email`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
+---------------------------------------------------------------------
+CREATE TABLE `lista_negra` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `ip` varchar(15) NOT NULL DEFAULT '',
+  `agente` varchar(255) DEFAULT NULL,
+  `data` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `motivo` varchar(100) DEFAULT NULL,
+  `usuario` int(11) unsigned NOT NULL DEFAULT '0',
+  `criado_em` datetime DEFAULT NULL,
+  `modificado_em` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `usuario` (`usuario`),
+  CONSTRAINT `lista_negra_ibfk_1` FOREIGN KEY (`usuario`) REFERENCES `administradores` (`id`) ON DELETE NO ACTION ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8;
+---------------------------------------------------------------------</code></pre>
+<p>I'm trying to list all rows on <code>lista_negra</code> with some data of <code>administradores</code>.
+First I just used:</p>
+<pre><code>$builder = $this-&gt;getQueryBuilder()
+            -&gt;leftJoin( 'Reserver\\Models\\Administradores' );
+
+$this-&gt;view-&gt;setVar( 'paginator', $Crud-&gt;getListagem( $builder ) );
+
+public function getListagem( \Phalcon\Mvc\Model\Query\Builder $builder ) {
+        $paginator = (
+        new \Phalcon\Paginator\Adapter\QueryBuilder( [
+            'builder'   =&gt; $builder,
+            'limit'     =&gt; 12,
+            'page'      =&gt; 1
+        ] )
+        );
+        return $paginator-&gt;getPaginate();
+    }</code></pre>
+<p>Then I was listing like this:</p>
+<pre><code>foreach( $paginator-&gt;items as $row ):
+    printf(
+        '....',
+        $row-&gt;getId(),
+        $row-&gt;getIp(),
+        $row-&gt;getMotivo(),
+        $row-&gt;getAdministradores()-&gt;getNome(),
+    )</code></pre>
+<p>But when I did this, for each getAdministradores() I was calling a different SELECT:</p>
+<pre><code>    77 Query    SELECT administradores.id, administradores.nome, administradores.email, administradores.senha, administradores.criado_em, administradores.modificado_em FROM administradores WHERE administradores.id = '2' LIMIT 1
+    77 Query    SELECT administradores.id, administradores.nome, administradores.email, administradores.senha, administradores.criado_em, administradores.modificado_em FROM administradores WHERE administradores.id = '3' LIMIT 1
+    77 Query    SELECT administradores.id, administradores.nome, administradores.email, administradores.senha, administradores.criado_em, administradores.modificado_em FROM administradores WHERE administradores.id = '2' LIMIT 1
+    77 Query    SELECT administradores.id, administradores.nome, administradores.email, administradores.senha, administradores.criado_em, administradores.modificado_em FROM administradores WHERE administradores.id = '2' LIMIT 1</code></pre>
+<p>I would like to know how to access properly the joined columns from the Query Builder.</p>
+<p>I already tried some variations, like using the columns(), addFrom() or join(), but I really I'm confused about how to get this working.</p>
+<p>Thanks!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-eedf281179c75c1f6c58b97b-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-eedf281179c75c1f6c58b97b-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9375e9aff4062092b13443d97ff6af9e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3391/matheustav" class="user-moderator-N"><span itemprop="name">Matheus Tavares</span></a>        </span>
+        <br>
+
+        <span class="karma">7.1k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="16429" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '15</span>
+              </span><br/><a name="C16429" href="#C16429">
+                <time itemprop="dateCreated" datetime="2015-03-08T13:15:30-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Finally I figured out how to get this working. I hope it helps someone:</p>
+<pre><code>$builder = $this-&gt;modelsManager-&gt;createBuilder();
+$join1 = 'Administradores';
+$builder
+    -&gt;addFrom( 'Reserver\\Models\\ListaNegra', 'ListaNegra' );
+    -&gt;columns( [ 'ListaNegra.*', "{$join1}.*" ] )
+    -&gt;leftJoin( "Reserver\\Models\\{$join1}", null, $join1 );</code></pre>
+<p>And to read it's simple:</p>
+<pre><code>foreach( $paginator-&gt;items as $row ):
+    echo $row-&gt;ListaNegra-&gt;getId();
+    echo $row-&gt;ListaNegra-&gt;getIp();
+    echo $row-&gt;ListaNegra-&gt;getMotivo();
+    echo $row-&gt;Administradores-&gt;getNome();
+endforeach;</code></pre>
+<p>Thanks!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16429" data-cf-modified-eedf281179c75c1f6c58b97b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16429" data-cf-modified-eedf281179c75c1f6c58b97b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2b891f8ed6874e0ff0ea1374bcee24ab?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2659/ShadMickelberry" class="user-moderator-N"><span itemprop="name">Shad Mickelberry</span></a>        </span>
+        <br>
+
+        <span class="karma">4.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16432" href="#C16432">
+                <time itemprop="dateCreated" datetime="2015-03-08T14:19:24-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Cool solution. Thanks</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16432" data-cf-modified-eedf281179c75c1f6c58b97b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16432" data-cf-modified-eedf281179c75c1f6c58b97b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6119" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

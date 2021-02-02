@@ -1,0 +1,288 @@
+---
+layout: default
+title: 'Bug with Criteria::fromInput and Model::columnMap? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Bug with Criteria::fromInput and Model::columnMap?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2415/sventunus" class="user-moderator-N"><span itemprop="name">sventunus</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-10-10T06:18:43-07:00">Oct '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-10-10T06:18:43-07:00">Oct '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>503</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/ac092c450c8eb55b187c4b63af35daee?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2415/sventunus" class="user-moderator-N"><span itemprop="name">sventunus</span></a></span>
+                <span class="karma">3.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3656" href="#C3656">
+        <time class="action-date">Oct '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi everyone,</p>
+<p>I think I might have hit a bug in Phalcon with Criteria::fromInput and Model::columnMap.</p>
+<p>I have a database table called <strong>&quot;localized_languages&quot;</strong> with fields <strong>&quot;id&quot;</strong>, <strong>&quot;language_id&quot;</strong>, <strong>&quot;localized_language_id&quot;</strong> and <strong>&quot;name&quot;</strong>. In my controller I have the following code to search for localized languages:</p>
+<pre><code class="language-php">    $this-&gt;view-&gt;pick("localized-languages/search");
+         $numberPage = 1;
+         if ($this-&gt;request-&gt;isPost()) {
+             $query = Criteria::fromInput($this-&gt;di, 'My\Models\LocalizedLanguages', $this-&gt;request-&gt;getPost());
+             echo var_dump($query);
+             $this-&gt;persistent-&gt;searchParams = $query-&gt;getParams();
+         } else {
+             $numberPage = $this-&gt;request-&gt;getQuery("page", "int");
+         }
+
+         $parameters = array();
+         if ($this-&gt;persistent-&gt;searchParams) {
+             $parameters = $this-&gt;persistent-&gt;searchParams;
+         }
+
+         $localizedLanguages = LocalizedLanguages::find($parameters);
+        (...)</code></pre>
+<p>Now in my model I have the following column mappings:</p>
+<pre><code class="language-php">      public function columnMap()
+      {
+          return array(
+              'id' =&gt; 'id',
+              'language_id' =&gt; 'languageId',
+              'localization_language_id' =&gt; 'localizationLanguageId',
+              'name' =&gt; 'name'
+          );
+      }</code></pre>
+<p>If I execute this code, a <strong>var_dump</strong> of the <strong>$query</strong> object gives me the following:</p>
+<pre><code>object(Phalcon\Mvc\Model\Criteria)#138 (3) { ["_model":protected]=&gt; string(34) "My\Models\LocalizedLanguages" ["_params":protected]=&gt; NULL ["_hiddenParamNumber":protected]=&gt; int(0) } </code></pre>
+<p>As a result, $parameters remains an empty array and I get back the complete list of &quot;Localized Languages&quot; instead of a list filtered by localizationLanguageId.</p>
+<p>The following query is generated: </p>
+<pre><code>[Fri, 10 Oct 14 14:56:05 +0200][INFO] SELECT `localized_languages`.`id`, `localized_languages`.`language_id`, `localized_languages`.`localization_language_id`, `localized_languages`.`name` FROM `localized_languages`</code></pre>
+<p>BUT: if I comment the columnMap function and delete the metadata, then var_dump($query) gives me the following:</p>
+<pre><code>object(Phalcon\Mvc\Model\Criteria)#138 (3) { ["_model":protected]=&gt; string(34) "My\Models\LocalizedLanguages" ["_params":protected]=&gt; array(2) { ["conditions"]=&gt; string(51) "localization_language_id=:localization_language_id:" ["bind"]=&gt; array(1) { ["localization_language_id"]=&gt; string(2) "39" } } ["_hiddenParamNumber":protected]=&gt; int(0) } </code></pre>
+<p>Criteria now has parameters, so I get back the correct list.
+The following query is generated: </p>
+<pre><code>[Fri, 10 Oct 14 14:51:37 +0200][INFO] SELECT `localized_languages`.`id`, `localized_languages`.`language_id`, `localized_languages`.`localization_language_id`, `localized_languages`.`name` FROM `localized_languages` WHERE `localized_languages`.`localization_language_id` = :localization_language_id</code></pre>
+<p>Am I missing something very obvious here, or is this indeed a bug?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-af38769fde7bc2f0984ab6cb-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-af38769fde7bc2f0984ab6cb-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12083" href="#C12083">
+                <time itemprop="dateCreated" datetime="2014-10-10T08:06:09-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>What version of Phalcon are you using?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12083" data-cf-modified-af38769fde7bc2f0984ab6cb-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12083" data-cf-modified-af38769fde7bc2f0984ab6cb-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ac092c450c8eb55b187c4b63af35daee?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2415/sventunus" class="user-moderator-N"><span itemprop="name">sventunus</span></a>        </span>
+        <br>
+
+        <span class="karma">3.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12084" href="#C12084">
+                <time itemprop="dateCreated" datetime="2014-10-10T08:09:46-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Phalcon 1.3.2 on Windows x64 for PHP 5.5.0 (VC11)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12084" data-cf-modified-af38769fde7bc2f0984ab6cb-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12084" data-cf-modified-af38769fde7bc2f0984ab6cb-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12085" href="#C12085">
+                <time itemprop="dateCreated" datetime="2014-10-10T08:10:08-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Could you try again using 1.3.3?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12085" data-cf-modified-af38769fde7bc2f0984ab6cb-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12085" data-cf-modified-af38769fde7bc2f0984ab6cb-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ac092c450c8eb55b187c4b63af35daee?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2415/sventunus" class="user-moderator-N"><span itemprop="name">sventunus</span></a>        </span>
+        <br>
+
+        <span class="karma">3.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="12087" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '14</span>
+              </span><br/><a name="C12087" href="#C12087">
+                <time itemprop="dateCreated" datetime="2014-10-10T08:27:26-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi Phalcon,</p>
+<p>I just tried with Phalcon 1.3.3.
+Now I get an Exception when the columnMap is there.
+Please see the generated metadata files attached.
+<a href="https://dl.dropboxusercontent.com/u/30446781/webshots/phalcon/map-dragenda_models_localizedlanguages.php">meta 1</a>
+<a href="https://dl.dropboxusercontent.com/u/30446781/webshots/phalcon/meta-dragenda_models_localizedlanguages-localized_languages.php">meta 2</a></p>
+<p>Here is a screenshot of the exception that is thrown in the debugger: <a href="https://dl.dropboxusercontent.com/u/30446781/webshots/phalcon/phalcon-criteria.PNG">debugger screenshot</a>.
+As you can see, this makes no sense, because the column the exception complains about IS defined in the model, exists in the database, and is in the mapping files.</p>
+<p>If I comment the columnMap function and delete the generated metadata files, it works again.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12087" data-cf-modified-af38769fde7bc2f0984ab6cb-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12087" data-cf-modified-af38769fde7bc2f0984ab6cb-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ac092c450c8eb55b187c4b63af35daee?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2415/sventunus" class="user-moderator-N"><span itemprop="name">sventunus</span></a>        </span>
+        <br>
+
+        <span class="karma">3.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12088" href="#C12088">
+                <time itemprop="dateCreated" datetime="2014-10-10T08:41:29-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>And a bug in the forum too apparently :)</p>
+<p>Using the &quot;attachment&quot; button, the underscores in the URL's get replaced by &lt;em&gt;.
+These links to the metadata files should work:
+<a href="https://dl.dropboxusercontent.com/u/30446781/webshots/phalcon/map-dragenda_models_localizedlanguages.php">https://dl.dropboxusercontent.com/u/30446781/webshots/phalcon/map-dragenda_models_localizedlanguages.php</a>
+<a href="https://dl.dropboxusercontent.com/u/30446781/webshots/phalcon/meta-dragenda_models_localizedlanguages-localized_languages.php">https://dl.dropboxusercontent.com/u/30446781/webshots/phalcon/meta-dragenda_models_localizedlanguages-localized_languages.php</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12088" data-cf-modified-af38769fde7bc2f0984ab6cb-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12088" data-cf-modified-af38769fde7bc2f0984ab6cb-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ac092c450c8eb55b187c4b63af35daee?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2415/sventunus" class="user-moderator-N"><span itemprop="name">sventunus</span></a>        </span>
+        <br>
+
+        <span class="karma">3.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12090" href="#C12090">
+                <time itemprop="dateCreated" datetime="2014-10-10T08:55:37-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi Phalcon,</p>
+<p>I am now 100% certain that is is indeed a bug.
+I have changed my model's variable names to match the database table field names, updated my controller and form, and now everything works as expected, with or without the columnMap function. So Criteria::fromInput + custom column mappings via Model::columnMap produces errors.</p>
+<p>I can send you a demo project if you'd like, so that you can reproduce the problem.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12090" data-cf-modified-af38769fde7bc2f0984ab6cb-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12090" data-cf-modified-af38769fde7bc2f0984ab6cb-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12091" href="#C12091">
+                <time itemprop="dateCreated" datetime="2014-10-10T08:57:04-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks, please submit the description of the bug on Github <a href="https://github.com/phalcon/cphalcon/">https://github.com/phalcon/cphalcon/</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12091" data-cf-modified-af38769fde7bc2f0984ab6cb-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12091" data-cf-modified-af38769fde7bc2f0984ab6cb-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ac092c450c8eb55b187c4b63af35daee?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2415/sventunus" class="user-moderator-N"><span itemprop="name">sventunus</span></a>        </span>
+        <br>
+
+        <span class="karma">3.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12092" href="#C12092">
+                <time itemprop="dateCreated" datetime="2014-10-10T08:59:01-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Will do, thanks!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12092" data-cf-modified-af38769fde7bc2f0984ab6cb-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12092" data-cf-modified-af38769fde7bc2f0984ab6cb-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3656" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

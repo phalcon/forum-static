@@ -1,0 +1,191 @@
+---
+layout: default
+title: 'Caching the Orm result question - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Caching the Orm result question</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3162/Graphmatic" class="user-moderator-N"><span itemprop="name">graphmatic</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-05-17T09:44:54-07:00">May '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-05-17T09:44:54-07:00">May '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>May '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>292</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/a20d655bbeff97e2c393510348ddb7cd?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3162/Graphmatic" class="user-moderator-N"><span itemprop="name">graphmatic</span></a></span>
+                <span class="karma">11.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C11559" href="#C11559">
+        <time class="action-date">May '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Stupid question probably..When using a cache system to cache a resultset, does it's needed to explicitely ask the cache (here Redis) if the key exist before triggering the query or the framework do that automaticaly?</p>
+<p>example, in my action to retrieve all clients: does this is enough:</p>
+<pre><code class="language-php">    $clients = Clients::find(
+            array(
+                "cache" =&gt; array(
+                    "key" =&gt; "clients-list"
+                )
+            ));</code></pre>
+<p>or do I need to write :</p>
+<pre><code class="language-php">
+    $clients   = $this-&gt;di-&gt;cache-&gt;get("clients-list");
+    if(!$clients){
+            $clients = Clients::find(
+                    array(
+                        "cache" =&gt; array(
+                            "key" =&gt; "clients-list"
+                        )
+                    ));
+            }</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-772b9be3d4b6be8255f1d2be-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-772b9be3d4b6be8255f1d2be-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="34203" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '16</span>
+              </span><br/><a name="C34203" href="#C34203">
+                <time itemprop="dateCreated" datetime="2016-05-17T16:27:00-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If you're satisfied with 3600 seconds (1 hour) as cache lifetime, then sure, first example is good.</p>
+<p>Otherwise, provide lifetime and custom service which will be responsibile for ORM caching:</p>
+<pre><code class="language-php">'cache' =&gt; ['lifetime' =&gt; 15 * 60 , 'key' =&gt; 'my-query-alias', 'service' =&gt; 'myOrmCacheService']  
+//'modelsCache' is the default name for the models cache service</code></pre>
+<p>Note: you don't have to supply service key, since it will use default 'modelsCache'. I'm using my own service, thus I supply it's name in order to be fetched by IoC.</p>
+<p>This is how Phalcon handles it by default:</p>
+<p>Class <a href="https://api.phalcon.io/source/Phalcon/Mvc/Model/Query.html">Phalcon\Mvc\Model\Query</a> will get result set from cache for you:</p>
+<pre><code>    let result = cache-&gt;get(key, lifetime);
+                if result !== null {
+                .... do it...
+                }</code></pre>
+<p>So no, you don't have to call cache object manually.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34203" data-cf-modified-772b9be3d4b6be8255f1d2be-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34203" data-cf-modified-772b9be3d4b6be8255f1d2be-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a20d655bbeff97e2c393510348ddb7cd?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3162/Graphmatic" class="user-moderator-N"><span itemprop="name">graphmatic</span></a>        </span>
+        <br>
+
+        <span class="karma">11.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C34219" href="#C34219">
+                <time itemprop="dateCreated" datetime="2016-05-18T03:29:09-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>thank you for the clarification..magic is everywhere!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34219" data-cf-modified-772b9be3d4b6be8255f1d2be-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34219" data-cf-modified-772b9be3d4b6be8255f1d2be-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C34343" href="#C34343">
+                <time itemprop="dateCreated" datetime="2016-05-19T09:20:57-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Question: have you tried with lifetime &gt; 1 day (86400 seconds), does it work/refresh after that time?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34343" data-cf-modified-772b9be3d4b6be8255f1d2be-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34343" data-cf-modified-772b9be3d4b6be8255f1d2be-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a20d655bbeff97e2c393510348ddb7cd?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3162/Graphmatic" class="user-moderator-N"><span itemprop="name">graphmatic</span></a>        </span>
+        <br>
+
+        <span class="karma">11.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C34343"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Jonathan Aaron Steel                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C34351" href="#C34351">
+                <time itemprop="dateCreated" datetime="2016-05-19T11:35:33-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I'm using redis cache without lifetime, only manual cleaning when some operations are done that then need the cached query to be rebuild</p>
+<blockquote>
+<p>Question: have you tried with lifetime &gt; 1 day (86400 seconds), does it work/refresh after that time?</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34351" data-cf-modified-772b9be3d4b6be8255f1d2be-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34351" data-cf-modified-772b9be3d4b6be8255f1d2be-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="11559" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

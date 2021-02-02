@@ -1,0 +1,421 @@
+---
+layout: default
+title: 'Get field from related model in Volt - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/3/volt">Volt</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Get field from related model in Volt</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1020/Frederik10k" class="user-moderator-N"><span itemprop="name">Frederik10k</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-12-04T01:45:01-07:00">Dec '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-12-04T01:45:01-07:00">Dec '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1761</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/56f053ce616c5b9dd3d6c9a160666116?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1020/Frederik10k" class="user-moderator-N"><span itemprop="name">Frederik10k</span></a></span>
+                <span class="karma">8.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4170" href="#C4170">
+        <time class="action-date">Dec '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hei,</p>
+<p>I try to understand related models, so I created a small setup for a gallery. Now I want to get an ID from a related model. But I do not know how to use it in volt.</p>
+<p>So I would like to create a menu with links to the categories. Working. And I want to display the pictures; also working. <strong>But now I want to display the corresponding category-ID to each picture. How can I get the ID within the loop for the pictures?</strong></p>
+<p>This is my <strong>database</strong> setup:</p>
+<pre><code class="language-sql">CREATE TABLE IF NOT EXISTS `gallery_categories` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  `icon` varchar(64) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=3 ;
+
+INSERT INTO `gallery_categories` (`id`, `name`, `icon`) VALUES
+(1, 'Default', 'fa-bars'),
+(2, 'Testcat', 'fa-angle-down');
+
+-- --------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `gallery_items` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `path` varchar(128) NOT NULL,
+  `title` varchar(32) NOT NULL,
+  `subtitle` varchar(64) NOT NULL,
+  `description` varchar(512) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=6 ;
+
+INSERT INTO `gallery_items` (`id`, `path`, `title`, `subtitle`, `description`) VALUES
+(1, 'http://lorempixel.com/262/262/technics/', 'Title #1', 'This is a small placeholder', 'This placeholder is holding place. A place that could be filled with some thing else.'),
+(2, 'http://lorempixel.com/262/262/technics/', 'Title #1', 'This is a small placeholder', 'This placeholder is holding place. A place that could be filled with some thing else.'),
+(3, 'http://lorempixel.com/262/262/technics/', 'Title #1', 'This is a small placeholder', 'This placeholder is holding place. A place that could be filled with some thing else.');
+
+-- --------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `gallery_memberships` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `gallery_item_id` int(10) NOT NULL,
+  `gallery_category_id` int(10) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `robots_id` (`gallery_item_id`),
+  KEY `parts_id` (`gallery_category_id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=6 ;
+
+INSERT INTO `gallery_memberships` (`id`, `gallery_item_id`, `gallery_category_id`) VALUES
+(1, 1, 1),
+(2, 1, 2),
+(4, 2, 1),
+(5, 3, 1);
+</code></pre>
+<p>So here we go with the <strong>models</strong>:</p>
+<pre><code class="language-php">// GalleryCategories.php
+&lt;?php
+namespace Vokuro\Models;
+use Phalcon\Mvc\Model;
+
+class GalleryCategories extends Model
+{
+    public $id;
+
+    public $name;
+
+    public $icon;
+
+    public function initialize()
+    {
+        $this-&gt;hasMany("id", "Vokuro\Models\GalleryMemberships", "gallery_category_id", array( "alias" =&gt; "GalleryMemberships"));
+    }
+
+}
+
+// GalleryItems.php
+&lt;?php
+namespace Vokuro\Models;
+use Phalcon\Mvc\Model;
+
+class GalleryItems extends Model
+{
+    public $id;
+
+    public $path;
+
+    public $title;
+
+    public $subtitle;
+
+    public $description;
+
+    public function initialize()
+    {
+        $this-&gt;hasMany("id", "Vokuro\Models\GalleryMemberships", "gallery_item_id", array( "alias" =&gt; "GalleryMemberships"));
+    }
+
+}
+
+// GalleryMemberships.php
+&lt;?php
+namespace Vokuro\Models;
+use Phalcon\Mvc\Model;
+
+class GalleryMemberships extends Model
+{
+    public $id;
+
+    public $gallery_item_id;
+
+    public $gallery_category_id;
+
+    public function initialize()
+    {
+        $this-&gt;belongsTo("gallery_item_id", "Vokuro\Models\GalleryItems", "id", array( "alias" =&gt; "GalleryItems"));
+        $this-&gt;belongsTo("gallery_category_id", "Vokuro\Models\GalleryCategories", "id", array( "alias" =&gt; "GalleryCategories"));
+    }
+
+}
+</code></pre>
+<p>And the <strong>controller</strong>:</p>
+<pre><code class="language-php">&lt;?php
+namespace Vokuro\Controllers;
+use Vokuro\Models\GalleryItems;
+use Vokuro\Models\GalleryCategories;
+/**
+ * Display the default index page.
+ */
+class GalleryController extends ControllerBase
+{
+    public function initialize()
+    {
+        $this-&gt;view-&gt;setTemplateBefore('public');
+    }
+
+    /**
+     * Default action. Set the public layout (layouts/public.volt)
+     */
+    public function indexAction()
+    {
+        // Get all categories
+        $this-&gt;view-&gt;setVar("gallery_categories", GalleryCategories::find());
+        $this-&gt;view-&gt;setVar("gallery_items", Galleryitems::find());
+    }
+}</code></pre>
+<p>And here comes the <strong>template index.volt</strong></p>
+<pre><code class="language-html">    /////////////////////////////////////////////////////
+    {% raw %}{{{% endraw %} codeblock to display a menu based on categories {% raw %}}}{% endraw %}
+    /////////////////////////////////////////////////////
+
+    {% raw %}{%{% endraw %} for gallery_category in gallery_categories {% raw %}%}{% endraw %}
+    &lt;li&gt;
+        &lt;a class="" href="#filter" data-option-value=".category-{% raw %}{{{% endraw %} gallery_category.id {% raw %}}}{% endraw %}"&gt;
+            &lt;i class="fa {% raw %}{{{% endraw %} gallery_category.icon {% raw %}}}{% endraw %}"&gt;&lt;/i&gt;
+            &lt;span class="title"&gt;{% raw %}{{{% endraw %} gallery_category.name {% raw %}}}{% endraw %}&lt;/span&gt;
+        &lt;/a&gt;
+    &lt;/li&gt; 
+    {% raw %}{%{% endraw %} endfor  {% raw %}%}{% endraw %}
+
+    /////////////////////////////////////////////////////
+    {% raw %}{{{% endraw %} codeblock to display pictures {% raw %}}}{% endraw %}
+    /////////////////////////////////////////////////////
+
+    {% raw %}{%{% endraw %} for gallery_item in gallery_items {% raw %}%}{% endraw %}
+
+    &lt;div class="col-md-3 col-xs-12 col-sm-6 bottom-30 element category-{% raw %}{{{% endraw %} HERE I NEED THE CATEGORY ID {% raw %}}}{% endraw %}" data-my-order="1"&gt;
+        &lt;div class="portfolio-item white"&gt;
+            &lt;div class="portfolio-info"&gt;
+                &lt;h4&gt;&lt;a href="#"&gt;{% raw %}{{{% endraw %} gallery_item.title {% raw %}}}{% endraw %}&lt;/a&gt;&lt;/h4&gt;
+                &lt;a href="#"&gt;{% raw %}{{{% endraw %} gallery_item.subtitle {% raw %}}}{% endraw %}&lt;/a&gt;
+            &lt;/div&gt;
+            &lt;div class="portfolio-image"&gt;
+                &lt;a href="#"&gt;&lt;img src="{% raw %}{{{% endraw %} gallery_item.path {% raw %}}}{% endraw %}" alt=""&gt;&lt;/a&gt;
+            &lt;/div&gt;
+            &lt;div class="portfolio-link"&gt;
+                &lt;a href="#"&gt;&lt;i class="fa fa-eye"&gt;&lt;/i&gt;View Detail&lt;/a&gt;
+                &lt;a title="{% raw %}{{{% endraw %} gallery_item.description {% raw %}}}{% endraw %}" class="image-popup" href="http://placehold.it/800x800"&gt;&lt;i class="fa fa-search-plus"&gt;&lt;/i&gt;Quick View&lt;/a&gt;
+            &lt;/div&gt; 
+        &lt;/div&gt; 
+    &lt;/div&gt; 
+
+    {% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}
+</code></pre>
+<p>Hope you get my idea. :)</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-d2fb60fb807292394e68c728-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-d2fb60fb807292394e68c728-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bdee79ea2680ec179fa34b9201fc74b7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1873/RompePC" class="user-moderator-N"><span itemprop="name">RompePC</span></a>        </span>
+        <br>
+
+        <span class="karma">33.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C13882" href="#C13882">
+                <time itemprop="dateCreated" datetime="2014-12-04T04:21:49-07:00" class="action-date">Dec '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Maybe <code>gallery_item.galleryMemberships.galleryCategories.id</code>?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13882" data-cf-modified-d2fb60fb807292394e68c728-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13882" data-cf-modified-d2fb60fb807292394e68c728-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/56f053ce616c5b9dd3d6c9a160666116?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1020/Frederik10k" class="user-moderator-N"><span itemprop="name">Frederik10k</span></a>        </span>
+        <br>
+
+        <span class="karma">8.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C13887" href="#C13887">
+                <time itemprop="dateCreated" datetime="2014-12-04T05:41:26-07:00" class="action-date">Dec '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I thought so, too. But it just spits out this message: </p>
+<pre><code class="language-php">Notice: Undefined property: Phalcon\Mvc\Model\Resultset\Simple::$galleryCategories in /var/www/gallery_index.volt.php on line 51</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13887" data-cf-modified-d2fb60fb807292394e68c728-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13887" data-cf-modified-d2fb60fb807292394e68c728-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bdee79ea2680ec179fa34b9201fc74b7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1873/RompePC" class="user-moderator-N"><span itemprop="name">RompePC</span></a>        </span>
+        <br>
+
+        <span class="karma">33.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C13891" href="#C13891">
+                <time itemprop="dateCreated" datetime="2014-12-04T06:56:23-07:00" class="action-date">Dec '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Then, in the controller, search for the related models, assign then to the property I said before, and try again.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13891" data-cf-modified-d2fb60fb807292394e68c728-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13891" data-cf-modified-d2fb60fb807292394e68c728-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/56f053ce616c5b9dd3d6c9a160666116?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1020/Frederik10k" class="user-moderator-N"><span itemprop="name">Frederik10k</span></a>        </span>
+        <br>
+
+        <span class="karma">8.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C13923" href="#C13923">
+                <time itemprop="dateCreated" datetime="2014-12-05T00:45:31-07:00" class="action-date">Dec '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hm this is kinda breaking my logics. Can you explain a bit what is going on and how the models influence each other?</p>
+<p>Right now I defined all 3 models in Volt like this:</p>
+<pre><code class="language-php">    public function indexAction()
+    {
+        // Get all categories
+        $this-&gt;view-&gt;setVar("gallery_categories", GalleryCategories::find());
+        $this-&gt;view-&gt;setVar("gallery_items", GalleryItems::find());
+        $this-&gt;view-&gt;setVar("gallery_memberships", GalleryMemberships::find());
+    }</code></pre>
+<p>Now in the template I use the property like you wrote:</p>
+<pre><code class="language-php">{% raw %}{%{% endraw %} for gallery_item in gallery_items {% raw %}%}{% endraw %}
+{% raw %}{{{% endraw %} gallery_item.gallery_memberships.gallery_categories.id {% raw %}}}{% endraw %}
+{% raw %}{%{% endraw %} endfor  {% raw %}%}{% endraw %}</code></pre>
+<p>But the framework just shows up:</p>
+<pre><code class="language-php">Notice: Undefined property: Phalcon\Mvc\Model\Resultset\Simple::$GalleryCategories in /var/www/gallery_index.volt.php on line 4</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13923" data-cf-modified-d2fb60fb807292394e68c728-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13923" data-cf-modified-d2fb60fb807292394e68c728-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c0ce8f5e133750a4dfea4712e533a178?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/15/le51" class="user-moderator-N"><span itemprop="name">le51</span></a>        </span>
+        <br>
+
+        <span class="karma">43.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="13925" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '14</span>
+              </span><br/><a name="C13925" href="#C13925">
+                <time itemprop="dateCreated" datetime="2014-12-05T02:24:05-07:00" class="action-date">Dec '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi,
+you are using many to many relationships, firstly, in GalleryMemberships model definition I would have used singular aliases in relation definitions:</p>
+<pre><code class="language-php">$this-&gt;belongsTo("gallery_item_id", "Vokuro\Models\GalleryItems", "id", array( "alias" =&gt; "GalleryItem"));
+$this-&gt;belongsTo("gallery_category_id", "Vokuro\Models\GalleryCategories", "id", array( "alias" =&gt; "GalleryCategory"));
+</code></pre>
+<p>so code below won't work</p>
+<pre><code class="language-php">{% raw %}{{{% endraw %} gallery_item.gallery_memberships.gallery_categories.id {% raw %}}}{% endraw %}</code></pre>
+<p>rather use (for displaying all the categories related to a single image):</p>
+<pre><code class="language-php">{% raw %}{%{% endraw %} for gallery_category in gallery_item.GalleryMemberships {% raw %}%}{% endraw %} // looping through image related categories as defined in GalleryItems Model
+{% raw %}{{{% endraw %} gallery_category.GalleryCategory.id {% raw %}}}{% endraw %} // gallery_category is a GalleryMemberships object, so getting the related category id by using alias definition
+{% raw %}{%{% endraw %} endfor  {% raw %}%}{% endraw %}
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13925" data-cf-modified-d2fb60fb807292394e68c728-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13925" data-cf-modified-d2fb60fb807292394e68c728-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">3</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/56f053ce616c5b9dd3d6c9a160666116?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1020/Frederik10k" class="user-moderator-N"><span itemprop="name">Frederik10k</span></a>        </span>
+        <br>
+
+        <span class="karma">8.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C13931" href="#C13931">
+                <time itemprop="dateCreated" datetime="2014-12-05T03:15:25-07:00" class="action-date">Dec '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Super! That worked pretty well. :)</p>
+<p>I renamed all aliases to singular. And I changed the index.volt-loop to this:</p>
+<p>&lt;simplified code&gt;</p>
+<pre><code class="language-html">{% raw %}{%{% endraw %} for gallery_category in gallery_category {% raw %}%}{% endraw %}
+&lt;li&gt;
+    &lt;a class="category-{% raw %}{{{% endraw %} gallery_category.id {% raw %}}}{% endraw %}"&gt;{% raw %}{{{% endraw %} gallery_category.name {% raw %}}}{% endraw %}&lt;/a&gt;
+&lt;/li&gt; 
+{% raw %}{%{% endraw %} endfor  {% raw %}%}{% endraw %}
+
+{% raw %}{%{% endraw %} for gallery_item in gallery_item {% raw %}%}{% endraw %}
+&lt;div class="
+{% raw %}{%{% endraw %} for gallery_category in gallery_item.GalleryMembership {% raw %}%}{% endraw %}
+    category-{% raw %}{{{% endraw %} gallery_category.GalleryCategory.id {% raw %}}}{% endraw %}
+{% raw %}{%{% endraw %} endfor  {% raw %}%}{% endraw %}
+"&gt;
+    &lt;h1&gt;{% raw %}{{{% endraw %} gallery_item.title {% raw %}}}{% endraw %}&lt;/h1&gt;
+    &lt;a href="#"&gt;{% raw %}{{{% endraw %} gallery_item.subtitle {% raw %}}}{% endraw %}&lt;/a&gt;
+    &lt;a href="#"&gt;&lt;img src="{% raw %}{{{% endraw %} gallery_item.path {% raw %}}}{% endraw %}"&gt;&lt;/a&gt;
+    &lt;a title="{% raw %}{{{% endraw %} gallery_item.description {% raw %}}}{% endraw %}" href="http://placehold.it/800x800"&gt;Quick View&lt;/a&gt;
+&lt;/div&gt; 
+{% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}</code></pre>
+<p>So each category is listed to generate a manu. Then, each row of the table &quot;gallery_items&quot; is listed as a separate element. Each loop of &quot;gallery_item&quot; contains another &quot;gallery_category&quot; loop which is in relation to &quot;gallery_item.GalleryMembership&quot;. Thus, each item-loop is assigned with its own cat-id.</p>
+<p>Thank you! :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13931" data-cf-modified-d2fb60fb807292394e68c728-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13931" data-cf-modified-d2fb60fb807292394e68c728-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4170" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

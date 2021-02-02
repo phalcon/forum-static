@@ -1,0 +1,213 @@
+---
+layout: default
+title: 'Related models, rollbacks and afterCreate events - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Related models, rollbacks and afterCreate events</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2105/sszdh" class="user-moderator-N"><span itemprop="name">Soheil Samadzadeh</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-06-01T01:35:51-07:00">Jun '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-06-01T01:35:51-07:00">Jun '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1174</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/8eb214b0608f667d22a4fbbd030ae36e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2105/sszdh" class="user-moderator-N"><span itemprop="name">Soheil Samadzadeh</span></a></span>
+                <span class="karma">14.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6954" href="#C6954">
+        <time class="action-date">Jun '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,
+I have tree related models <code>users</code> &amp; <code>courses</code> &amp; <code>EmailConfirmations</code> as follow:</p>
+<pre><code>Users -&gt; hasManyToMant -&gt; Courses
+Users-&gt; hasMany -&gt; EmailConfirmations</code></pre>
+<p>In my Users model I have afterCreate method:</p>
+<pre><code class="language-php">    /**
+     * Send a confirmation e-mail to the user if the account is not active
+     */
+    public function afterCreate()
+    {
+        if ($this-&gt;isActive == self::NOT_ACTIVE) {
+
+            $emailConfirmation = new EmailConfirmations();
+
+            $emailConfirmation-&gt;userId = $this-&gt;id;
+
+            if ($emailConfirmation-&gt;save()) {
+                $this-&gt;getDI()
+                    -&gt;getFlashSession()
+                    -&gt;notice('A confirmation mail has been sent to ' . $this-&gt;email);
+            } else {
+                $this-&gt;getDI()
+                    -&gt;getFlashSession()
+                    -&gt;error($emailConfirmation-&gt;getMessages());
+            }
+        }
+    }</code></pre>
+<p>and In EmailConfirmations, I have:</p>
+<pre><code class="language-php">    /**
+     * Send a confirmation e-mail to the user after save the user confirmation params
+     */
+    public function afterCreate()
+    {
+        $this-&gt;getDI()
+            -&gt;getMail()
+            -&gt;send(array(
+                $this-&gt;user-&gt;email =&gt; $this-&gt;user-&gt;getFullName()
+            ), "Please confirm your email", 'confirmation', array(
+                'confirmUrl' =&gt; 'confirm/' . $this-&gt;code . '/' . $this-&gt;user-&gt;email
+            ));
+    }</code></pre>
+<p>In controller I'm trying to create a new user and assign a course to him:</p>
+<pre><code class="language-php">$user = new Users();
+
+$user-&gt;assign(array(
+  'firstName' =&gt; $this-&gt;request-&gt;getPost('firstName', 'striptags'),
+  'lastName' =&gt; $this-&gt;request-&gt;getPost('lastName', 'striptags'),
+  'email' =&gt; $this-&gt;request-&gt;getPost('email'),
+  'password' =&gt; $this-&gt;security-&gt;hash($this-&gt;request-&gt;getPost('password')),
+  'registeredIP' =&gt; $this-&gt;request-&gt;getClientAddress()
+));
+
+$course = new Courses();
+$user-&gt;teachingCourses = array($course); // &lt;-- many to many alias
+
+if ($user-&gt;save()) {
+  return $this-&gt;dispatcher-&gt;forward(array(
+  'controller' =&gt; 'index',
+  'action' =&gt; 'index'
+));
+}</code></pre>
+<p>Problem is when there is an error in course insertion (such as missing model required fields and virtual foreignKey errors), all insertion rollback but afterCreate event in <code>Users</code> model &amp; <code>EmailConfirmations</code> model  calls and email sent to user without any record in confirmation table!</p>
+<p>Why thoes events run if nothing inserted into tables, and what can I do to make this works?</p>
+<p>Thanks</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-07a90bb96a428513488ed627-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-07a90bb96a428513488ed627-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8eb214b0608f667d22a4fbbd030ae36e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2105/sszdh" class="user-moderator-N"><span itemprop="name">Soheil Samadzadeh</span></a>        </span>
+        <br>
+
+        <span class="karma">14.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C18966" href="#C18966">
+                <time itemprop="dateCreated" datetime="2015-06-01T01:39:52-07:00" class="action-date">Jun '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If I change <code>afterCreate</code> to <code>afterSave</code> everything work perfectly! I do not understand why!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="18966" data-cf-modified-07a90bb96a428513488ed627-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="18966" data-cf-modified-07a90bb96a428513488ed627-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8eb214b0608f667d22a4fbbd030ae36e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2105/sszdh" class="user-moderator-N"><span itemprop="name">Soheil Samadzadeh</span></a>        </span>
+        <br>
+
+        <span class="karma">14.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C18968" href="#C18968">
+                <time itemprop="dateCreated" datetime="2015-06-01T01:55:16-07:00" class="action-date">Jun '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Browsing the source I found that (<a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/model.zep#L2776">https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/model.zep#L2776</a>)</p>
+<p>It seams the <code>_postSave()</code> calls before <code>rollback</code>, so if we have any rollback <code>afterUpdate</code> or <code>afterCreate</code> already calls anyway!</p>
+<pre><code class="language-php">    /**
+     * Executes internal events after save a record
+     */
+    protected function _postSave(boolean success, boolean exists) -&gt; boolean
+    {
+        if success === true {
+            if exists {
+                this-&gt;fireEvent("afterUpdate");
+            } else {
+                this-&gt;fireEvent("afterCreate");
+            }
+        }
+
+        return success;
+    }</code></pre>
+<p>But <code>afterSave</code> calls after rollback success! (<a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/model.zep#L2795">https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/model.zep#L2795</a>)
+I think <code>_postSave</code> should be call after rollback and just before emitting <code>afterSave</code> event.</p>
+<p>Bug o feature?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="18968" data-cf-modified-07a90bb96a428513488ed627-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="18968" data-cf-modified-07a90bb96a428513488ed627-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c567f1cde19d339cb943006794449528?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10437/bahadirbirsoz" class="user-moderator-N"><span itemprop="name">bahadirbirsoz</span></a>        </span>
+        <br>
+
+        <span class="karma">79</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C64101" href="#C64101">
+                <time itemprop="dateCreated" datetime="2020-08-24T23:55:09-07:00" class="action-date">Aug '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If an exception is thrown in one of the afterCreate events ( or anywhere before transaction gets committed), transaction rollbacks. So the email may be sent but the transaction gets rollback after that and rows gets deleted. I would add a status column to EmailConfirmations. Default value can be 'queued' and I would write a simple CLI task (of course with CliDi) to send queued emails. When an email gets sent, then I would change the status to sent.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64101" data-cf-modified-07a90bb96a428513488ed627-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64101" data-cf-modified-07a90bb96a428513488ed627-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6954" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,321 @@
+---
+layout: default
+title: 'Full App In Phalcon v4.0 Not Working! - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Full App In Phalcon v4.0 Not Working!</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/11939/v00v" class="user-moderator-N"><span itemprop="name">v00v</span></a></span>
+            <time itemprop="dateCreated" datetime="2019-01-05T08:39:51-07:00">Jan '19</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2019-01-05T08:39:51-07:00">Jan '19</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '19</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>970</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/44f65edc4114f7e7a7453d5d36d11e05?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/11939/v00v" class="user-moderator-N"><span itemprop="name">v00v</span></a></span>
+                <span class="karma">1.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C19171" href="#C19171">
+        <time class="action-date">Jan '19</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I got micro app working as per this post [1] but full app that worked fine in phalcon v3 doesn't work anymore in v4. How can I use this same &quot;Request&quot; if it required by v4 to get this app going?  Software Used: PHP v7.3.0, Phalcon v4.0.0-alpha1. This is the stracture and code I have now. </p>
+<p>Structure:</p>
+<pre><code>|- test/
+|--&gt; app/
+|-----&gt; app/cache/ (volt cache files)
+|-----&gt; app/config/
+|---------&gt; app/config/bootstrap.php
+|---------&gt; app/config/routes.php
+|-----&gt; app/controllers/
+|---------&gt; app/controllers/Base.php
+|---------&gt; app/controllers/Index.php
+|-----&gt; app/views/
+|---------&gt; app/views/main.volt
+|---------&gt; app/views/menu.volt
+|---------&gt; app/views/hello.volt
+|--&gt; public/index.php</code></pre>
+<pre><code class="language-php">&lt;?php // index.php
+
+$debug = new \Phalcon\Debug();
+$debug-&gt;listen();
+
+require '../app/config/bootstrap.php';
+echo $app-&gt;handle()-&gt;getContent();
+
+// EOF: ./test/public/index.php</code></pre>
+<pre><code class="language-php">&lt;?php // bootstrap.php
+
+use Phalcon\Loader;
+use Phalcon\DI\FactoryDefault;
+use Phalcon\Mvc\Dispatcher;
+use Phalcon\Mvc\View;
+use Phalcon\Mvc\View\Engine\Volt;
+use Phalcon\Mvc\Router;
+use Phalcon\Mvc\Application;
+
+$ld = new Loader();
+$di = new FactoryDefault();
+$app = new Application($di);
+
+$ld-&gt;registerNamespaces([
+    'Test\Models' =&gt; '../app/models/',
+    'Test\Libraries' =&gt; '../app/libraries/',
+    'Test\Controllers' =&gt; '../app/controllers/',
+])-&gt;register();
+
+$di-&gt;set('dispatcher', function() {
+    $dp = new Dispatcher();
+    $dp-&gt;setControllerSuffix('');
+    $dp-&gt;setActionSuffix('');
+    $dp-&gt;setDefaultNamespace('Test\Controllers');
+    return $dp;
+}); #dispatcher
+
+$di-&gt;set('view', function() {
+    $view = new View();
+    $view-&gt;setViewsDir('../app/views/');
+    $view-&gt;registerEngines([
+        '.volt' =&gt; function($view, $di) {
+            $volt = new Volt($view, $di);
+            $volt-&gt;setOptions([
+                'compiledPath' =&gt; '../app/cache/',
+                'compiledExtension' =&gt; '.html',
+                'compiledSeparator' =&gt; '_',
+                'stat' =&gt; true,
+                'compileAlways' =&gt; true,
+            ]); #options
+            return $volt;
+        } #volt
+    ]); #engines
+    return $view;
+}); #view
+
+$di-&gt;set('router', function() {
+    $rt = new Router(false);
+    require '../app/config/routes.php';
+    return $rt;
+}); #router
+
+// EOF: ./test/app/config/boostrap.php</code></pre>
+<pre><code class="language-php">&lt;?php //routes.php
+
+$rt-&gt;notFound([
+    'controller' =&gt; 'base',
+    'action' =&gt; 'error'
+]);
+
+$rt-&gt;add('/', [
+    'controller' =&gt; 'index',
+    'action' =&gt; 'index'
+]);
+
+// EOF: ./test/app/config/routes.php</code></pre>
+<pre><code class="language-php">&lt;?php // Base.php
+
+namespace Test\Controllers;
+
+class Base extends Controller {
+
+  function initialize() {
+
+    $this-&gt;view-&gt;web = 'http://test/';
+    $this-&gt;view-&gt;cdn = 'http://cdn.test/';
+
+  } #initialize
+
+  function error() {
+    exit('404');
+  } #error
+
+} #class
+
+// EFO: ./test/app/controllers/Base.php</code></pre>
+<pre><code class="language-php">&lt;?php // Index.php
+
+namespace Test\Controllers;
+
+class Index extends Base {
+
+    function index() {
+
+        $this-&gt;view-&gt;pick('hello');
+
+    } #index
+
+} #class
+
+// EOF: ./test/app/controllers/Index.php</code></pre>
+<p>// menu.volt</p>
+<pre><code class="language-volt">&lt;a href="{% raw %}{{{% endraw %}web{% raw %}}}{% endraw %}home"&gt;Home&lt;/a&gt;
+&lt;a href="{% raw %}{{{% endraw %}web{% raw %}}}{% endraw %}about"&gt;About&lt;/a&gt;</code></pre>
+<p>// main.volt</p>
+<pre><code class="language-volt">&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+  &lt;head&gt;
+    &lt;title&gt;Test&lt;/title&gt;
+    &lt;meta charset="utf-8"&gt;
+    &lt;link rel="stylesheet" href="{% raw %}{{{% endraw %}cdn{% raw %}}}{% endraw %}styles.css"&gt;
+    &lt;script src="{% raw %}{{{% endraw %}cdn{% raw %}}}{% endraw %}scripts.js"&gt;&lt;/script&gt;
+  &lt;/head&gt;
+&lt;body&gt;
+&lt;div id="wrap"&gt;
+{% raw %}{%{% endraw %} include 'menu.volt' {% raw %}%}{% endraw %}
+{% raw %}{%{% endraw %} block content {% raw %}%}{% endraw %}{% raw %}{%{% endraw %} endblock {% raw %}%}{% endraw %}
+&lt;/div&gt; &lt;!--wrap--&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+<p>// hello.volt</p>
+<pre><code class="language-volt">{% raw %}{%{% endraw %} extends 'main.volt' {% raw %}%}{% endraw %}
+{% raw %}{%{% endraw %} block content {% raw %}%}{% endraw %}
+
+&lt;h1&gt; Hello, Phalcon v4.0 &lt;/h1&gt;
+
+{% raw %}{%{% endraw %} endblock {% raw %}%}{% endraw %}</code></pre>
+<p><strong>I get this following error:</strong></p>
+<pre><code class="language-php">BadMethodCallException: Wrong number of parameters
+// ERROR LINE: echo $app-&gt;handle()-&gt;getContent();</code></pre>
+<p>Any help is appreciated. Thank You!</p>
+<p>[1] <a href="https://forum.phalcon.io/discussion/19169/phalcon-v40-doesnt-work">https://forum.phalcon.io/discussion/19169/phalcon-v40-doesnt-work</a></p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-c479c2e40cf7a00ee511742d-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-c479c2e40cf7a00ee511742d-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/44f65edc4114f7e7a7453d5d36d11e05?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11939/v00v" class="user-moderator-N"><span itemprop="name">v00v</span></a>        </span>
+        <br>
+
+        <span class="karma">1.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="58323" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '19</span>
+              </span><br/><a name="C58323" href="#C58323">
+                <time itemprop="dateCreated" datetime="2019-01-05T09:37:41-07:00" class="action-date">Jan '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Just found this on [1] blog post. But how do I use this with above code example? Anyone!?
+There is no examples given O_O</p>
+<pre><code>Applications
+The Phalcon\Mvc\Application, Phalcon\Mvc\Micro and Phalcon\Mvc\Router now must have a URI to process</code></pre>
+<p>[1] <a href="https://blog.phalcon.io/post/upgrading-to-v4-alpha-1">https://blog.phalcon.io/post/upgrading-to-v4-alpha-1</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="58323" data-cf-modified-c479c2e40cf7a00ee511742d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="58323" data-cf-modified-c479c2e40cf7a00ee511742d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d01ce04a6be1a8b86c3546969d241bd2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1632/ruudboon" class="user-moderator-N"><span itemprop="name">Ruud Boon</span></a>        </span>
+        <br>
+
+        <span class="karma">10.1k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C58325" href="#C58325">
+                <time itemprop="dateCreated" datetime="2019-01-05T09:45:57-07:00" class="action-date">Jan '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>In index.php</p>
+<pre><code>echo $app-&gt;handle($_SERVER['REQUEST_URI'])-&gt;getContent();</code></pre>
+<p>or</p>
+<pre><code>$request = new Phalcon\Http\Request();
+echo $app-&gt;handle($request-&gt;getURI())-&gt;getContent();</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="58325" data-cf-modified-c479c2e40cf7a00ee511742d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="58325" data-cf-modified-c479c2e40cf7a00ee511742d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/44f65edc4114f7e7a7453d5d36d11e05?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11939/v00v" class="user-moderator-N"><span itemprop="name">v00v</span></a>        </span>
+        <br>
+
+        <span class="karma">1.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C58327" href="#C58327">
+                <time itemprop="dateCreated" datetime="2019-01-05T09:53:08-07:00" class="action-date">Jan '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you buddy, it works now. But why this change in v4 ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="58327" data-cf-modified-c479c2e40cf7a00ee511742d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="58327" data-cf-modified-c479c2e40cf7a00ee511742d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d01ce04a6be1a8b86c3546969d241bd2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1632/ruudboon" class="user-moderator-N"><span itemprop="name">Ruud Boon</span></a>        </span>
+        <br>
+
+        <span class="karma">10.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C58329" href="#C58329">
+                <time itemprop="dateCreated" datetime="2019-01-05T10:04:37-07:00" class="action-date">Jan '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Not sure, probally because an application can also have other inputs then uri. For example a cmd-line application.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="58329" data-cf-modified-c479c2e40cf7a00ee511742d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="58329" data-cf-modified-c479c2e40cf7a00ee511742d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="19171" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

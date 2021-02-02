@@ -1,0 +1,217 @@
+---
+layout: default
+title: 'An example of how I set up my application - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">An example of how I set up my application</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1795/fsando" class="user-moderator-N"><span itemprop="name">Finn Sandø</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-05-05T14:31:52-07:00">May '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-05-05T14:31:52-07:00">May '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>559</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/21697c9beb69ab1f65753c880a077141?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1795/fsando" class="user-moderator-N"><span itemprop="name">Finn Sandø</span></a></span>
+                <span class="karma">9.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6638" href="#C6638">
+        <time class="action-date">May '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>The purpose is to have sections of controllers automatically recognized/loaded byt the autoloader, and having uris and actions automatically created/recognized</p>
+<p>File structure</p>
+<p>Controllers has several subdirs, one for each subsection of the site. Here &quot;Subdir&quot; is an example.</p>
+<pre><code>app/controllers/Subdir/SomeController.php</code></pre>
+<p>view file structure, this needs special treatment in the controllers (see below). &quot;view/subdir&quot; is paired to the controllers/Subdir controllers, the &quot;some&quot; folders corresponds to the SomeController and the &quot;show.volt&quot; file corresponds to the SomeController::someAction().</p>
+<pre><code>app/view/subdir/some/show.volt
+</code></pre>
+<p>Loader, tells phalcon the correlation between folders and namespaces. Phalcon now translates everything into namespaces as a pseudo file structure.</p>
+<pre><code class="language-php">$loader = new \Phalcon\Loader();
+
+$loader-&gt;registerNamespaces(
+    array(
+        'MyApp\Controllers' =&gt; dirname(__DIR__) ."/controllers",
+        'MyApp\Models'      =&gt; dirname(__DIR__) ."/models",
+        'MyApp\Library'     =&gt; dirname(__DIR__) ."/library",
+        'MyApp\Forms'       =&gt; dirname(__DIR__) ."/forms",
+    )
+);
+
+$loader-&gt;register();
+</code></pre>
+<p>Router, each subdir route needs three versions of the route:</p>
+<pre><code class="language-php"># router
+
+$router = new Phalcon\Mvc\Router();
+$router-&gt;removeExtraSlashes(true);
+$router-&gt;setDefaultNamespace('MyApp\Controllers');
+
+#-----------------------------------------------------------
+# catch all/index routes (effectively the default route)
+#-----------------------------------------------------------
+
+/**
+ * effectively the default namespace regardless of other settings
+ * at least for routes
+ */
+$router-&gt;add(
+    "(.*)",
+    array(
+        'namespace' =&gt; 'MyApp\Controllers',
+        "controller" =&gt; "index",
+        "action" =&gt; "index",
+    )
+);
+# index with action, params
+$router-&gt;add(
+    "/index/:action/:params",
+    array(
+        "namespace" =&gt; 'MyApp\Controllers',
+        "controller" =&gt; "index",
+        "action" =&gt; 1,
+        "params" =&gt; 2,
+    )
+);
+
+# index with action
+$router-&gt;add(
+    "/index/:action",
+    array(
+        "namespace" =&gt; 'MyApp\Controllers',
+        "controller" =&gt; "index",
+        "action" =&gt; 1,
+    )
+);
+
+#-----------------------------------------------------------
+# mysite/subdir/ routes
+#-----------------------------------------------------------
+
+# controller with action, params
+$router-&gt;add(
+    "/subdir/:controller/:action/:params",
+    array(
+        "namespace" =&gt; 'MyApp\Controllers\Subdir',
+        "controller" =&gt; 1,
+        "action" =&gt; 2,
+        "params" =&gt; 3,
+    )
+);
+#  subdir/:controller/index
+$router-&gt;add(
+    "/subdir/:controller",
+    array(
+        "namespace" =&gt; 'MyApp\Controllers\Subdir',
+        "controller" =&gt; 1,
+    )
+);
+# subdir/index/index
+$router-&gt;add(
+    "/subdir",
+    array(
+        "namespace" =&gt; 'MyApp\Controllers\Subdir',
+        "controller" =&gt; "index",
+    )
+);
+</code></pre>
+<p>The controller. </p>
+<p>Note how a view is picked based on the matched route, this was the only way I could find to make this automatic. This plays together with the way controllers are automatically loaded.</p>
+<pre><code class="language-php">
+&lt;?php
+#-----------------------------------------------------------
+# base controller for all controllers in Subdir
+#-----------------------------------------------------------
+namespace MyApp\Controllers\Subdir;
+
+use Phalcon\Mvc\Controller;
+
+class SubdirControllerBase extends Controller
+{
+  public function initialize()
+  {
+      # trick to emulate selection of view according to class structure
+      $cname = $this-&gt;router-&gt;getControllerName();
+      $aname = $this-&gt;router-&gt;getActionName()?:'index';
+      $this-&gt;view-&gt;pick("subdir/$cname/$aname");
+  }
+}
+
+#--------------- 
+</code></pre>
+<pre><code class="language-php">&lt;?php
+#--------------- SomeController.php -----------------
+namespace MyApp\Controllers\Subdir;
+
+class SomeController extends SubdirControllerBase
+{
+  public function initialize()
+  {
+      parent::initialize();
+  }
+
+  public function showAction()
+  {
+    $x = "hello";
+    $this-&gt;view-&gt;x = $x;
+  }
+}
+
+#--------------- </code></pre>
+<p>The volt template</p>
+<pre><code class="language-twig">{#--------------- show.volt -----------------#}
+{% raw %}{{{% endraw %} content() {% raw %}}}{% endraw %}
+
+{% raw %}{%{% endraw %} if x is defined {% raw %}%}{% endraw %}
+  {% raw %}{{{% endraw %} x {% raw %}}}{% endraw %}
+{% raw %}{%{% endraw %} endif {% raw %}%}{% endraw %}
+{#---------------#} </code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-3c80a2e273cd8bf59c0c7f0a-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-3c80a2e273cd8bf59c0c7f0a-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6638" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,565 @@
+---
+layout: default
+title: '$model-&gt;save(); saves not the entire model, return &quot;xy is required&quot; - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">$model-&gt;save(); saves not the entire model, return &quot;xy is required&quot;</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10345/Nyde" class="user-moderator-N"><span itemprop="name">Nyde</span></a></span>
+            <time itemprop="dateCreated" datetime="2020-05-29T13:14:16-07:00">May '20</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2020-05-29T13:14:16-07:00">May '20</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">5</span>
+                </td>
+                <td>
+                    <label>Views</label><br>249</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9842e74678b8a899c45d1c57223d12c9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10345/Nyde" class="user-moderator-N"><span itemprop="name">Nyde</span></a></span>
+                <span class="karma">4.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C20661" href="#C20661">
+        <time class="action-date">May '20</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Good evening,</p>
+<p>I got some columns in my table that must not be null:</p>
+<pre><code class="language-php">CREATE TABLE `articles` (
+  `aid` int(11) NOT NULL AUTO_INCREMENT,
+  `sysartno` int(11) NOT NULL,
+  `sku` varchar(20) COLLATE utf8_bin NOT NULL,
+  `localartno` int(11) NOT NULL,
+  `articlename` varchar(255) COLLATE utf8_bin DEFAULT NULL,
+  `shortdesc` varchar(255) COLLATE utf8_bin DEFAULT NULL,
+  `desc` text COLLATE utf8_bin,
+  `brand` int(11) DEFAULT NULL,
+  `HAN` varchar(45) COLLATE utf8_bin DEFAULT NULL,
+  `priceNetto` double DEFAULT NULL,
+  `tax` double DEFAULT NULL,
+  `priceBrutto` double DEFAULT NULL,
+  `searchTerms` varchar(255) COLLATE utf8_bin DEFAULT NULL,
+  `metaKeywords` varchar(255) COLLATE utf8_bin DEFAULT NULL,
+  `metaTitle` varchar(255) COLLATE utf8_bin DEFAULT NULL,
+  `metaDesc` text COLLATE utf8_bin,
+  `gid` int(11) NOT NULL,
+  `sid` int(11) NOT NULL,
+  PRIMARY KEY (`aid`),
+  UNIQUE KEY `sysartno_UNIQUE` (`sysartno`),
+  UNIQUE KEY `localartno_UNIQUE` (`localartno`),
+  KEY `grundFK_idx` (`gid`),
+  KEY `statusFK_idx` (`sid`),
+  KEY `brandFK_idx` (`brand`),
+  CONSTRAINT `grundFK` FOREIGN KEY (`gid`) REFERENCES `irrelevanttable1` (`gid`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `markeFK` FOREIGN KEY (`brand`) REFERENCES `irrelevanttable2` (`mid`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `statusFK` FOREIGN KEY (`sid`) REFERENCES `irrelevanttable3` (`sid`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin;</code></pre>
+<p>The model file created on top of this is from the webtools.php; the <code>initalize()</code>:</p>
+<pre><code class="language-php">public function initialize()
+{   
+    $this-&gt;setSource("articles");
+    $this-&gt;hasMany('aid', 'irrelevanttable4', 'aid', ['alias' =&gt; 'irrelevanttable4']);
+    $this-&gt;hasMany('aid', 'irrelevanttable5', 'aid', ['alias' =&gt; 'irrelevanttable5']);
+    $this-&gt;hasMany('aid', 'irrelevanttable6', 'aid', ['alias' =&gt; 'irrelevanttable6']);
+    $this-&gt;belongsTo('gid', '\irrelevanttable1', 'gid', ['alias' =&gt; 'irrelevanttable1']);
+    $this-&gt;belongsTo('brand', '\irrelevanttable2', 'mid', ['alias' =&gt; 'irrelevanttable2']);
+    $this-&gt;belongsTo('sid', '\irrelevanttable3', 'sid', ['alias' =&gt; 'irrelevanttable3']);
+}</code></pre>
+<p>Now, I populate a new instance of the model with the data:</p>
+<pre><code class="language-php">$article = new articles();
+
+$article-&gt;setSysartno($art-&gt;sysartno);
+$article-&gt;setSku($art-&gt;sku);
+$article-&gt;setLocalartno($art-&gt;localartno);
+$article-&gt;setArticlename($art-&gt;articlename);
+...
+(all the fields get populated)</code></pre>
+<p>Now, when I <code>$article-&gt;save();</code> the model, I get a error message &quot;Articlename is required&quot;.
+My first thought was &quot;oh no, not THAT again&quot; (see this, might be related: <a href="https://forum.phalcon.io/discussion/20567/query-tells-field-is-required-but-is-set">https://forum.phalcon.io/discussion/20567/query-tells-field-is-required-but-is-set</a>)</p>
+<p>Then I checked the values of <code>$article</code> BEFORE the <code>save()</code>, and it shows me all fields well populated, just like the data provided in <code>$art</code> (which is always populated by the way, so no random null values from there).</p>
+<p>Then I made NULL values in articlename possible (just for testing). This way, the query sent from the <code>save()</code> looks like this:</p>
+<pre><code class="language-php">INSERT INTO `articles` (all the field names) VALUES (105144, 'DE-105144', 105144, null, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, 9, 1)</code></pre>
+<p>If I now check <code>$article</code> AFTER the <code>save()</code>, all values except the first four (aid, sysartno, sku, localartno) and the last two (gid, sid) are set to <code>null</code> (the last two fields contain hardcoded values).
+So the data seems to get lost inside the <code>save()</code>-call.</p>
+<p>Also:</p>
+<pre><code class="language-php">$tmp = $article; 
+var_dump($tmp); // fine
+var_dump($article); // fine
+echo $article-&gt;getArticlename(); // fine
+echo $tmp-&gt;getArticlename(); // fine
+$tmp-&gt;save(); // Articlename required</code></pre>
+<p>This will probably work with raw SQL, but I want to make use of the foreign keys from the model, so this isn't really an option.
+I do know this problem with &quot;xy is required&quot; has been asked some times on this forum, but none of the solutions helped me.
+Hard coding the &quot;problematic values&quot; doesn't change anything, too.</p>
+<hr />
+<p>Oh and another thing; why does the output of <code>var_dump($modelInstance)</code> contain ALL the application data, like metaDataCache, configiguration values, paths, or in short: EVERYTHING thats inside the DI?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-7bee6ecd259a896dae5c776f-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-7bee6ecd259a896dae5c776f-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="63279" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '20</span>
+              </span><br/><a name="C63279" href="#C63279">
+                <time itemprop="dateCreated" datetime="2020-06-01T15:14:22-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Do you have custom validation set on your model?  I don't know if webtools creates the <code>validation()</code> method.</p>
+<p>As for the other thing:  Models extend a bunch of stuff that has access to all those things mentioned, which makes dumping them pretty much useless.  However, dumping <code>toArray()</code> works great:</p>
+<pre><code class="language-php">var_dump($Model-&gt;toArray());</code></pre>
+<p>Personally, I use this custom function that automatically calls <code>toArray()</code> if an object has it defined:</p>
+<pre><code class="language-php">function dump($passed,$use_vardump = FALSE,$backtrace_offset = 0)
+{
+    $is_cli = (php_sapi_name() == 'cli');
+    $newline = ($is_cli) ? "\n" : '&lt;br /&gt;';
+    $backtrace = debug_backtrace();
+    $file = $backtrace[$backtrace_offset]['file'];
+    $line = $backtrace[$backtrace_offset]['line'];
+
+    if(!$is_cli){
+        echo '&lt;pre&gt;';
+    }
+    echo "File: $file$newline";
+    echo "Line: $line$newline";
+
+    if($use_vardump){
+        var_dump($passed);
+    }
+    else{
+        if(is_array($passed)){
+            print_r($passed);
+        }
+        else if(is_object($passed)){
+            if(method_exists($passed, 'toArray')){
+                print_r($passed-&gt;toArray());
+            }
+            else{
+                print_r($passed);
+            }
+        }
+        else{
+            echo $passed;
+        }
+    }
+    if(!$is_cli){
+        echo '&lt;/pre&gt;';
+    }
+
+    if(count(ob_get_status()) != 0){
+        ob_flush();
+    }
+}</code></pre>
+<pre><code class="language-php">dump($Model);</code></pre>
+<p>It also outputs where it was called, so I never have to hunt through my code trying to find debugging statements.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63279" data-cf-modified-7bee6ecd259a896dae5c776f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63279" data-cf-modified-7bee6ecd259a896dae5c776f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9842e74678b8a899c45d1c57223d12c9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10345/Nyde" class="user-moderator-N"><span itemprop="name">Nyde</span></a>        </span>
+        <br>
+
+        <span class="karma">4.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="63287" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '20</span>
+              </span><br/><a name="C63287" href="#C63287">
+                <time itemprop="dateCreated" datetime="2020-06-02T00:36:23-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Webtools only generates validators for fields like &quot;email&quot;, which returns the correct EmailValidator then (obviously). I don't have any custom validators set.</p>
+<p>I felt free to use your dump function with surprising results.</p>
+<pre><code class="language-php">...
+(all the setters get called)
+echo $article-&gt;getArticlename();
+$this-&gt;dump($article);
+$this-&gt;dump($article, true);
+echo $article-&gt;getArticlename();</code></pre>
+<p>Output:</p>
+<pre><code class="language-php">(the correct articlename gets displayed)
+
+File: D:\path\to\app\controllers\SomeController.php
+Line: 173
+Array
+(
+    [aid] =&gt; 
+    [sysartno] =&gt; 105144
+    [sku] =&gt; 105144
+    [localartno] =&gt; 105144
+    [articlename] =&gt; 
+    [shortdesc] =&gt; 
+    [desc] =&gt; 
+    [brand] =&gt; 
+    [HAN] =&gt; 
+    [priceNetto] =&gt; 
+    [tax] =&gt; 
+    [priceBrutto] =&gt; 
+    [searchTerms] =&gt; 
+    [metaKeywords] =&gt; 
+    [metaTitle] =&gt; 
+    [metaDesc] =&gt; 
+    [gid] =&gt; 9
+    [sid] =&gt; 1
+)
+File: D:\path\to\app\controllers\SomeController.php
+Line: 174
+D:\path\to\app\controllers\ControllerBase.php:63:
+object(articles)[191]
+  protected 'aid' =&gt; null (gets filled in by the database)
+  protected 'sysartno' =&gt; int 105144 (correct value)
+  protected 'sku' =&gt; int 105144 (correct value)
+  protected 'localartno' =&gt; int 105144 (correct value)
+  protected 'articlename' =&gt; (correct value)
+  protected 'shortDesc' =&gt; (correct value)
+  protected 'desc' =&gt; (correct value)
+  protected 'brand' =&gt; (correct value)
+  protected 'hAN' =&gt;  (correct value)
+  protected 'priceNetto' =&gt; (correct value)
+  protected 'tax' =&gt; (correct value)
+  protected 'priceBrutto' =&gt;  (correct value)
+  protected 'searchTerms' =&gt;  (correct value)
+  protected 'metaKeywords' =&gt; null  (correct value)
+  protected 'metaTitle' =&gt; null  (correct value)
+  protected 'metaDesc' =&gt; null  (correct value)
+  protected 'gid' =&gt; int 9 (correct value)
+  protected 'sid' =&gt; int 1 (correct value)
+
+(the correct articlename gets displayed)</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63287" data-cf-modified-7bee6ecd259a896dae5c776f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63287" data-cf-modified-7bee6ecd259a896dae5c776f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="63289" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '20</span>
+              </span><br/><a name="C63289" href="#C63289">
+                <time itemprop="dateCreated" datetime="2020-06-02T11:05:30-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It looks like the article name doesn't get displayed when calling <code>print_r</code>, but it does when calling <code>var_dump</code>?</p>
+<p>So just to recap - you've got a model with a property <code>articleName</code> that defaults to NULL.  Even when setting <code>articleName</code> to a string, you get a validation error?</p>
+<p>Not a permanent solution, but what if you just bypassed validation by writing your own validation method?  That could at least get the query sent to the database, so you can see exactly what values it's dealing with.</p>
+<pre><code class="language-php">public function validation(){ 
+    return TRUE; 
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63289" data-cf-modified-7bee6ecd259a896dae5c776f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63289" data-cf-modified-7bee6ecd259a896dae5c776f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9842e74678b8a899c45d1c57223d12c9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10345/Nyde" class="user-moderator-N"><span itemprop="name">Nyde</span></a>        </span>
+        <br>
+
+        <span class="karma">4.0k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C63289"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Dylan Anderson                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C63291" href="#C63291">
+                <time itemprop="dateCreated" datetime="2020-06-02T14:43:00-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>It looks like the article name doesn't get displayed when calling <code>print_r</code>, but it does when calling <code>var_dump</code>?</p>
+</blockquote>
+<p>This.</p>
+<blockquote>
+<p>So just to recap - you've got a model with a property <code>articleName</code> that defaults to NULL.  Even when setting <code>articleName</code> to a string, you get a validation error?</p>
+</blockquote>
+<p>It doesn't <em>default</em> to null, it <em>sets</em> to null (atleast for <code>print_r</code> and <code>save()</code>). See the table definition and the query above; the fields that have default null also get this default value in the query, instead of their real values. So for the recap: If I set the value to a string (as desired), <code>save()</code> and <code>print_r</code> treat it as null.</p>
+<blockquote>
+<p>Not a permanent solution, but what if you just bypassed validation by writing your own validation method?  That could at least get the query sent to the database, so you can see exactly what values it's dealing with.</p>
+<pre><code class="language-php">public function validation(){ 
+  return TRUE; 
+}</code></pre>
+</blockquote>
+<p>Still yields <code>Articlename is required</code>, with no query sent.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63291" data-cf-modified-7bee6ecd259a896dae5c776f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63291" data-cf-modified-7bee6ecd259a896dae5c776f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C63293" href="#C63293">
+                <time itemprop="dateCreated" datetime="2020-06-02T15:01:13-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Can you post the entirety of your model?  I'll see if I can reproduce.</p>
+<p>Are you using Phalcon v4 or v3.4?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63293" data-cf-modified-7bee6ecd259a896dae5c776f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63293" data-cf-modified-7bee6ecd259a896dae5c776f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9842e74678b8a899c45d1c57223d12c9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10345/Nyde" class="user-moderator-N"><span itemprop="name">Nyde</span></a>        </span>
+        <br>
+
+        <span class="karma">4.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C63295" href="#C63295">
+                <time itemprop="dateCreated" datetime="2020-06-02T15:17:34-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>4.0.6 on Windows 10 with PHP 7.4.4., MySQL 5.7.11.</p>
+<p>I have the same problem with another model, but it behaves exactly like the article model. I opened a Github issue about it (before your first answer), so I suggest you use the (much smaller) model in the issue:</p>
+<p><a href="https://github.com/phalcon/cphalcon/issues/15061">https://github.com/phalcon/cphalcon/issues/15061</a></p>
+<pre><code class="language-php">CREATE TABLE `barcodes` (
+  `cid` int(11) NOT NULL AUTO_INCREMENT,
+  `aid` int(11) NOT NULL,
+  `Barcode` varchar(20) COLLATE utf8_bin NOT NULL,
+  PRIMARY KEY (`cid`),
+  KEY `articleFK_idx` (`aid`),
+  CONSTRAINT `articleFK` FOREIGN KEY (`aid`) REFERENCES `articles` (`aid`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;</code></pre>
+<pre><code class="language-php">&lt;?php
+
+class barcodes extends \Phalcon\Mvc\Model
+{
+    protected $cid;
+    protected $aid;
+    protected $barcode;
+
+    public function setCid($cid)
+    {
+        $this-&gt;cid = $cid;
+
+        return $this;
+    }
+
+    public function setAid($aid)
+    {
+        $this-&gt;aid = $aid;
+
+        return $this;
+    }
+
+    public function setBarcode($barcode)
+    {
+        $this-&gt;barcode = $barcode;
+
+        return $this;
+    }
+
+    public function getCid()
+    {
+        return $this-&gt;cid;
+    }
+
+    public function getAid()
+    {
+        return $this-&gt;aid;
+    }
+
+    public function getBarcode()
+    {
+        return $this-&gt;barcode;
+    }
+
+    public function initialize()
+    {
+        $this-&gt;setSource("barcodes");
+        $this-&gt;belongsTo('aid', '\articles', 'aid', ['alias' =&gt; 'articles']);
+    }
+
+    public static function find($parameters = null): \Phalcon\Mvc\Model\ResultsetInterface
+    {
+        return parent::find($parameters);
+    }
+
+    public static function findFirst($parameters = null)
+    {
+        return parent::findFirst($parameters);
+    }
+
+    public function columnMap()
+    {
+        return [
+            'cid' =&gt; 'cid',
+            'aid' =&gt; 'aid',
+            'Barcode' =&gt; 'Barcode'
+        ];
+    }
+
+}</code></pre>
+<pre><code class="language-php">$barcodeArray = array('123', '456');
+
+foreach($barcodeArray as $code)
+{
+    $bc = new barcodes();
+
+    $bc-&gt;setAid($aid);
+    $bc-&gt;setBarcode($code);
+
+    var_dump($bc-&gt;barcode);
+    echo $bc-&gt;getBarcode()."&lt;br /&gt;";
+
+    if ($bc-&gt;save() == false) 
+    {
+        foreach ($bc-&gt;getMessages() as $message)
+            echo $message."&lt;br /&gt;";
+    }
+
+    echo $bc-&gt;getBarcode();
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63295" data-cf-modified-7bee6ecd259a896dae5c776f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63295" data-cf-modified-7bee6ecd259a896dae5c776f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C63301" href="#C63301">
+                <time itemprop="dateCreated" datetime="2020-06-03T09:05:39-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Ok, I think I have it figured out.  And you're going to kick yourself.</p>
+<p><code>setBarcode()</code> sets <code>$this-&gt;barcode</code>, but the model has <code>$this-&gt;Barcode</code> defined.  Capital B.  The model has also explicitly declared <code>protected $barcode</code>, but the column map uses <code>Barcode</code>.</p>
+<p>So when you're calling <code>setBarcode()</code> and dumping <code>$bc-&gt;barcode</code>, yes it's working - it's setting the object's property <code>$barcode</code>.  But that property is completely separate from the property that is mapped to a database column - <code>Barcode</code>.</p>
+<p>By changing <code>$barcode</code> to <code>$Barcode</code> everywhere, the code worked.</p>
+<p>This sounds like a bug in webtools.php rather than Phalcon.</p>
+<p>If I were you, I'd go through and normalize all database columns and variables to lowercase, and all class names to capital case.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63301" data-cf-modified-7bee6ecd259a896dae5c776f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63301" data-cf-modified-7bee6ecd259a896dae5c776f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9842e74678b8a899c45d1c57223d12c9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10345/Nyde" class="user-moderator-N"><span itemprop="name">Nyde</span></a>        </span>
+        <br>
+
+        <span class="karma">4.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="63303" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '20</span>
+              </span><br/><a name="C63303" href="#C63303">
+                <time itemprop="dateCreated" datetime="2020-06-03T09:31:27-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This hurts a bit.</p>
+<p>Solution works for <code>articles</code> too, also for the other tables from my post some week ago. I'll make an issue about this in the webtools repo. This is my fault in some ways, but I think webtools should take something like this in account.</p>
+<p>Thank you so much for pointing this out, I'd never have seen this. :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63303" data-cf-modified-7bee6ecd259a896dae5c776f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63303" data-cf-modified-7bee6ecd259a896dae5c776f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C63305" href="#C63305">
+                <time itemprop="dateCreated" datetime="2020-06-03T10:08:43-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yeah, it totally should.  Someone put in an extra <code>strtolower()</code></p>
+<p>The only reason I noticed it is because lowercase classes and capitalized non-objects go against my personal coding style, so it stood out.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63305" data-cf-modified-7bee6ecd259a896dae5c776f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63305" data-cf-modified-7bee6ecd259a896dae5c776f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="20661" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

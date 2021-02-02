@@ -1,0 +1,174 @@
+---
+layout: default
+title: 'Pagination of &quot;page class&quot; problem - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Pagination of &quot;page class&quot; problem</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/6273/vince-db" class="user-moderator-N"><span itemprop="name">Vincent D.</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-04-24T08:42:47-07:00">Apr '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-04-24T08:42:47-07:00">Apr '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>485</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/4b62ac5f833d86aede6c6669a78dbbfa?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/6273/vince-db" class="user-moderator-N"><span itemprop="name">Vincent D.</span></a></span>
+                <span class="karma">1.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C11269" href="#C11269">
+        <time class="action-date">Apr '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>I face a problem with a class scaffolded with the devtools : the class is called &quot;page&quot; and in my volt search result view, I cannot access &quot;page.total_pages&quot;. </p>
+<pre><code class="language-php">&lt;?php
+namespace Application\Cms\Controllers;
+use Phalcon\Mvc\Model\Criteria,
+    Phalcon\Paginator\Adapter\Model as Paginator,
+    Cocur\Slugify\Slugify as Slugify,
+    Application\Cms\Models\Page as Page;
+class PageController extends ControllerBase
+{
+    public function searchAction()
+    {
+        $numberPage = 1;
+        if ($this-&gt;request-&gt;isPost()) {
+            $query = Criteria::fromInput($this-&gt;di, Page::class, $_POST);
+            $this-&gt;persistent-&gt;parameters = $query-&gt;getParams();
+        } else {
+            $numberPage = $this-&gt;request-&gt;getQuery("page", "int");
+        }
+        $parameters = $this-&gt;persistent-&gt;parameters;
+        if (!is_array($parameters)) {
+            $parameters = array();
+        }
+        $parameters["order"] = "id";
+        $page = Page::find($parameters);
+        if (count($page) == 0) {
+            $this-&gt;flash-&gt;notice("The search did not find any page");
+            $this-&gt;dispatcher-&gt;forward(array(
+                "controller" =&gt; "page",
+                "action" =&gt; "index"
+            ));
+            return;
+        }
+        $paginator = new Paginator(array(
+            'data' =&gt; $page,
+            'limit'=&gt; 10,
+            'page' =&gt; $numberPage
+        ));
+        $this-&gt;view-&gt;page = $paginator-&gt;getPaginate();
+    }
+}</code></pre>
+<p>Up until here, I can access <code>$paginator-&gt;get_paginate()-&gt;total_pages</code></p>
+<pre><code class="language-volt">&lt;div class="page-header"&gt;
+    &lt;h1&gt;Search result&lt;/h1&gt;
+&lt;/div&gt;
+{% raw %}{{{% endraw %} content() {% raw %}}}{% endraw %}
+&lt;div class="row"&gt;
+    &lt;table class="table table-bordered"&gt;
+        &lt;thead&gt;
+            &lt;tr&gt;
+                &lt;th&gt;Id&lt;/th&gt;
+            &lt;th&gt;Title&lt;/th&gt;
+            &lt;th&gt;Slug&lt;/th&gt;
+            &lt;th&gt;Body&lt;/th&gt;
+            &lt;th&gt;Date Of Create&lt;/th&gt;
+            &lt;th&gt;Date Of Publish&lt;/th&gt;
+            &lt;th&gt;Published&lt;/th&gt;
+            &lt;th&gt;Tracked&lt;/th&gt;
+            &lt;th&gt;Id Of Category&lt;/th&gt;
+                &lt;th&gt;&lt;/th&gt;
+                &lt;th&gt;&lt;/th&gt;
+            &lt;/tr&gt;
+        &lt;/thead&gt;
+        &lt;tbody&gt;
+        {% raw %}{%{% endraw %} if page.items is defined {% raw %}%}{% endraw %}
+        {% raw %}{%{% endraw %} for page in page.items {% raw %}%}{% endraw %}
+            &lt;tr&gt;
+                &lt;td&gt;{% raw %}{{{% endraw %} page.getId() {% raw %}}}{% endraw %}&lt;/td&gt;
+            &lt;td&gt;{% raw %}{{{% endraw %} page.getTitle() {% raw %}}}{% endraw %}&lt;/td&gt;
+            &lt;td&gt;{% raw %}{{{% endraw %} page.getSlug() {% raw %}}}{% endraw %}&lt;/td&gt;
+            &lt;td&gt;{% raw %}{{{% endraw %} page.getBody() {% raw %}}}{% endraw %}&lt;/td&gt;
+            &lt;td&gt;{% raw %}{{{% endraw %} page.getDateCreate() {% raw %}}}{% endraw %}&lt;/td&gt;
+            &lt;td&gt;{% raw %}{{{% endraw %} page.getDatePublish() {% raw %}}}{% endraw %}&lt;/td&gt;
+            &lt;td&gt;{% raw %}{{{% endraw %} page.getPublished() {% raw %}}}{% endraw %}&lt;/td&gt;
+            &lt;td&gt;{% raw %}{{{% endraw %} page.getTracked() {% raw %}}}{% endraw %}&lt;/td&gt;
+            &lt;td&gt;{% raw %}{{{% endraw %} page.getIdCategory() {% raw %}}}{% endraw %}&lt;/td&gt;
+                &lt;td&gt;{% raw %}{{{% endraw %} link_to("page/edit/"~page.getId(), "Edit") {% raw %}}}{% endraw %}&lt;/td&gt;
+                &lt;td&gt;{% raw %}{{{% endraw %} link_to("page/delete/"~page.getId(), "Delete") {% raw %}}}{% endraw %}&lt;/td&gt;
+            &lt;/tr&gt;
+        {% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}
+        {% raw %}{%{% endraw %} endif {% raw %}%}{% endraw %}
+        &lt;/tbody&gt;
+    &lt;/table&gt;
+&lt;/div&gt;
+&lt;div class="row"&gt;
+    &lt;div class="col-sm-1"&gt;
+        &lt;p class="pagination" style="line-height: 1.42857;padding: 6px 12px;"&gt;
+            {% raw %}{{{% endraw %} page.current~"/"~page.total_pages {% raw %}}}{% endraw %}
+        &lt;/p&gt;
+    &lt;/div&gt;
+    &lt;div class="col-sm-11"&gt;
+        &lt;nav&gt;
+            &lt;ul class="pagination"&gt;
+                &lt;li&gt;{% raw %}{{{% endraw %} link_to("page/search", "First") {% raw %}}}{% endraw %}&lt;/li&gt;
+                &lt;li&gt;{% raw %}{{{% endraw %} link_to("page/search?page="~page.before, "Previous") {% raw %}}}{% endraw %}&lt;/li&gt;
+                &lt;li&gt;{% raw %}{{{% endraw %} link_to("page/search?page="~page.next, "Next") {% raw %}}}{% endraw %}&lt;/li&gt;
+                &lt;li&gt;{% raw %}{{{% endraw %} link_to("page/search?page="~page.last, "Last") {% raw %}}}{% endraw %}&lt;/li&gt;
+            &lt;/ul&gt;
+        &lt;/nav&gt;
+    &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+<p>But here, I can access <code>{% raw %}{{{% endraw %} page.total_pages {% raw %}}}{% endraw %}</code> BEFORE the table, but not AFTER. I suspect the class name &quot;page&quot; to be responsible, but I cannot figure out how to debug this without changing the name of the class (which I do not want). </p>
+<p>Can someone point my mistake ? </p>
+<p>Thanks in advance for any help.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-423d173a5ec2b79aa4fc4698-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-423d173a5ec2b79aa4fc4698-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="11269" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

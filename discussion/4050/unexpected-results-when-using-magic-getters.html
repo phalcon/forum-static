@@ -1,0 +1,252 @@
+---
+layout: default
+title: 'Unexpected results when using magic getters - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Unexpected results when using magic getters</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1411/kofkof01" class="user-moderator-N"><span itemprop="name">kofkof01</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-11-22T04:58:42-07:00">Nov '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-11-22T04:58:42-07:00">Nov '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>488</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/604120127bf1e93a71ce5e2fda1f57d6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1411/kofkof01" class="user-moderator-N"><span itemprop="name">kofkof01</span></a></span>
+                <span class="karma">8.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4050" href="#C4050">
+        <time class="action-date">Nov '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>Phalcon ORM's magic getters don't always return the results I expect. See these examples:</p>
+<pre><code class="language-php">Countries           Cities
++----+--------+     +----+------------+------------+------------+
+| id | name   |     | id | name       | country_id | is_capital |
++----+--------+     +----+------------+------------+------------+
+|  1 | UK     |     |  1 | London     |          1 |          1 |
++----+--------+     |  2 | Manchester |          1 |          0 |
+                    |  3 | Liverpool  |          1 |          0 |
+                    +----+------------+------------+------------+
+
+class Countries extends Model {
+    public $id;
+    public $name;
+
+    public function initialize() {
+        $this-&gt;hasMany('id', 'Cities', 'country_id', [
+            'alias' =&gt; 'Cities'
+        ]);
+    }
+}
+
+class Cities extends Model {
+    public $id;
+    public $name;
+    public $country_id;
+    public $is_capital;
+
+    public function initialize() {
+        $this-&gt;belongsTo('country_id', 'Countries', 'id', [
+            'alias' =&gt; 'Country'
+        ]);
+    }
+}
+
+$uk = Countries::findFirstByName("UK");
+
+$r1 = $uk-&gt;getCities("is_capital = 1");
+$r2 = $uk-&gt;getCities(['is_capital' =&gt; 1]);
+// $r1 expectingly returns "London"
+// $r2 surprisingly returns "London Manchester Liverpool"
+
+$r3 = $uk-&gt;getCities("is_capital = 0");
+$r4 = $uk-&gt;getCities(['is_capital' =&gt; 0]);
+// $r3 expectingly returns "Manchester Liverpool"
+// $r4 surprisingly returns "London Manchester Liverpool"
+
+$r5 = $uk-&gt;getCities("is_capital = 'blabla'");
+$r6 = $uk-&gt;getCities(['is_capital' =&gt; 'blabla']);
+// $r5 surprisingly returns "Manchester Liverpool"
+// $r6 surprisingly returns "London Manchester Liverpool"</code></pre>
+<p>Should I conclude that:</p>
+<ul>
+<li>passing an array of parameters to a magic getter is not reliable? ($r2, $r4, $r6)</li>
+<li>and even when passing in a string, I can sometimes get surprises? ($r5)</li>
+</ul>
+<p>Or am I missing something?</p>
+<p>Thanks!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-68c907b81d6e9fbb67e9b5f7-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-68c907b81d6e9fbb67e9b5f7-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C13502" href="#C13502">
+                <time itemprop="dateCreated" datetime="2014-11-22T08:33:03-07:00" class="action-date">Nov '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>These syntax aren't supported by the ORM:</p>
+<pre><code class="language-php">$r2 = $uk-&gt;getCities(['is_capital' =&gt; 1]);
+$r4 = $uk-&gt;getCities(['is_capital' =&gt; 0]);
+$r6 = $uk-&gt;getCities(['is_capital' =&gt; 'blabla'])</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13502" data-cf-modified-68c907b81d6e9fbb67e9b5f7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13502" data-cf-modified-68c907b81d6e9fbb67e9b5f7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/604120127bf1e93a71ce5e2fda1f57d6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1411/kofkof01" class="user-moderator-N"><span itemprop="name">kofkof01</span></a>        </span>
+        <br>
+
+        <span class="karma">8.2k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C13502"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Phalcon                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C13511" href="#C13511">
+                <time itemprop="dateCreated" datetime="2014-11-22T12:14:51-07:00" class="action-date">Nov '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>OK,<a href="https://forum.phalcon.io/user/0/Phalcon"> @Phalcon</a>, thanks.</p>
+<p>Do you have any explanation about my second point (the result I get in <code>$r5</code>)?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13511" data-cf-modified-68c907b81d6e9fbb67e9b5f7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13511" data-cf-modified-68c907b81d6e9fbb67e9b5f7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/011321ad4bf943107062b774140f00e5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2683/brainformatik" class="user-moderator-N"><span itemprop="name">Brainformatik</span></a>        </span>
+        <br>
+
+        <span class="karma">3.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C13552" href="#C13552">
+                <time itemprop="dateCreated" datetime="2014-11-23T23:48:02-07:00" class="action-date">Nov '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I don't know exactly how the magic resolves the query in Phalcon but maybe its PHP logic where a string for comparison is converted to 0.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13552" data-cf-modified-68c907b81d6e9fbb67e9b5f7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13552" data-cf-modified-68c907b81d6e9fbb67e9b5f7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C13511"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/604120127bf1e93a71ce5e2fda1f57d6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        kofkof01                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C13554" href="#C13554">
+                <time itemprop="dateCreated" datetime="2014-11-24T00:29:43-07:00" class="action-date">Nov '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>MySQL applies type coercion converting the &quot;blablabla&quot; to 0:</p>
+<pre><code class="language-php">mysql&gt; select 0 = "blablabla";
++-----------------+
+| 0 = "blablabla" |
++-----------------+
+|               1 |
++-----------------+
+1 row in set, 1 warning (0.01 sec)</code></pre>
+<blockquote>
+<p>OK,<a href="https://forum.phalcon.io/user/0/Phalcon"> @Phalcon</a>, thanks.</p>
+<p>Do you have any explanation about my second point (the result I get in <code>$r5</code>)?</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13554" data-cf-modified-68c907b81d6e9fbb67e9b5f7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13554" data-cf-modified-68c907b81d6e9fbb67e9b5f7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/604120127bf1e93a71ce5e2fda1f57d6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1411/kofkof01" class="user-moderator-N"><span itemprop="name">kofkof01</span></a>        </span>
+        <br>
+
+        <span class="karma">8.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C13567" href="#C13567">
+                <time itemprop="dateCreated" datetime="2014-11-24T02:27:18-07:00" class="action-date">Nov '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>OK, of course, stupid question (facepalm). Thanks anyway for your answers.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13567" data-cf-modified-68c907b81d6e9fbb67e9b5f7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13567" data-cf-modified-68c907b81d6e9fbb67e9b5f7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4050" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

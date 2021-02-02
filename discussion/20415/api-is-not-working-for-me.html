@@ -1,0 +1,244 @@
+---
+layout: default
+title: 'Api is not working for me - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/22/micro">Micro</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Api is not working for me</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2249/Stefjoe" class="user-moderator-N"><span itemprop="name">Stefjoe</span></a></span>
+            <time itemprop="dateCreated" datetime="2020-03-05T04:43:47-07:00">Mar '20</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2020-03-05T04:43:47-07:00">Mar '20</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Apr '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>172</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/95593bdf7bc6c62dbd16767e520f13c8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2249/Stefjoe" class="user-moderator-N"><span itemprop="name">Stefjoe</span></a></span>
+                <span class="karma">59.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C20415" href="#C20415">
+        <time class="action-date">Mar '20</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,
+i tried the Api tutorial, i copied it 1:1 but i get this error message:</p>
+<pre><code>https://docs.phalcon.io/4.0/de-de/tutorial-rest
+
+Fatal error: Uncaught Phalcon\Mvc\Micro\Exception: Not-Found handler is not callable or is not defined in</code></pre>
+<p>I see this line:</p>
+<pre><code class="language-php">     'MyApp\Models' =&gt; __DIR__ . '/models/',</code></pre>
+<p>What is MyApp? The dir at my localhost? </p>
+<p>Also it doesn't jumps into get /api/robots, when i call:</p>
+<pre><code>     http://localhost/phalconapi/api/robots/</code></pre>
+<p>Index.php</p>
+<pre><code class="language-php">     &lt;?php
+
+     use Phalcon\Loader;
+     use Phalcon\Mvc\Micro;
+     use Phalcon\Di\FactoryDefault;
+     use Phalcon\Db\Adapter\Pdo\Mysql as PdoMysql;
+
+     $loader = new Loader();
+     $loader-&gt;registerNamespaces(
+    [
+        'MyApp\Models' =&gt; __DIR__ . '/models/',
+    ]
+    );
+    $loader-&gt;register();
+
+    $container = new FactoryDefault();
+    $container-&gt;set(
+    'db',
+    function () {
+        return new PdoMysql(
+            [
+                'host'     =&gt; 'localhost',
+                'username' =&gt; 'root',
+                'password' =&gt; '',
+                'dbname'   =&gt; 'robotics',
+            ]
+        );
+    }
+    );
+
+    $app = new Micro($container);
+
+    $app-&gt;get(
+    '/api/robots',
+    function () use ($app) {
+        $phql = 'SELECT id, name '
+            . 'FROM MyApp\Models\Robots '
+            . 'ORDER BY name'
+        ;
+
+        $robots = $app
+            -&gt;modelsManager
+            -&gt;executeQuery($phql)
+        ;
+
+        $data = [];
+
+        var_dump($robots);
+        die();
+
+        foreach ($robots as $robot) {
+            $data[] = [
+                'id'   =&gt; $robot-&gt;id,
+                'name' =&gt; $robot-&gt;name,
+            ];
+        }
+
+        echo json_encode($data);
+    }
+    );
+
+    $app-&gt;handle(
+    $_SERVER['REQUEST_URI']
+    );</code></pre>
+<p>Robots.php</p>
+<pre><code class="language-php">     &lt;?php
+
+     namespace MyApp\Models;
+
+     use Phalcon\Mvc\Model;
+     use Phalcon\Messages\Message;
+     use Phalcon\Validation;
+     use Phalcon\Validation\Validator\Uniqueness;
+     use Phalcon\Validation\Validator\InclusionIn;
+
+     class Robots extends Model
+    {
+    public function validation()
+    {
+        $validator = new Validation();
+
+        $validator-&gt;add(
+            "type",
+            new InclusionIn(
+                [
+                    'message' =&gt; 'Type must be "droid", "mechanical", or "virtual"',
+                    'domain' =&gt; [
+                        'droid',
+                        'mechanical',
+                        'virtual',
+                    ],
+                ]
+            )
+        );
+
+        $validator-&gt;add(
+            'name',
+            new Uniqueness(
+                [
+                    'field'   =&gt; 'name',
+                    'message' =&gt; 'The robot name must be unique',
+                ]
+            )
+        );
+
+        if ($this-&gt;year &lt; 0) {
+            $this-&gt;appendMessage(
+                new Message('The year cannot be less than zero')
+            );
+        }
+
+        if ($this-&gt;validationHasFailed() === true) {
+            return false;
+        }
+    }
+     }</code></pre>
+<p>Thx for help :-)</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-2d2093ccc866d6af14e6051d-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-2d2093ccc866d6af14e6051d-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="62435" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '20</span>
+              </span><br/><a name="C62435" href="#C62435">
+                <time itemprop="dateCreated" datetime="2020-03-09T09:50:44-07:00" class="action-date">Mar '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><code>MyApp</code> is part of the namespace.  You're setting up the autoloader like:</p>
+<blockquote>
+<p>When I reference a class that has the namespace <code>MyApp\Model</code> , look in the <code>__DIR__."/models"</code> directory for a file that contains the class defininition.</p>
+</blockquote>
+<p>But I don't think that is your problem.  Evidently you need to define a <code>notFound()</code> route: <a href="https://docs.phalcon.io/4.0/en/application-micro#routing-handlers-not-found">https://docs.phalcon.io/4.0/en/application-micro#routing-handlers-not-found</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62435" data-cf-modified-2d2093ccc866d6af14e6051d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62435" data-cf-modified-2d2093ccc866d6af14e6051d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fabfc8d2f816786b4f7b78a0df4595b2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/13519/Robledo1379" class="user-moderator-N"><span itemprop="name">Robledo1379</span></a>        </span>
+        <br>
+
+        <span class="karma">89</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C62663" href="#C62663">
+                <time itemprop="dateCreated" datetime="2020-04-06T01:58:09-07:00" class="action-date">Apr '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>yup  thats working perfactly fine</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62663" data-cf-modified-2d2093ccc866d6af14e6051d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62663" data-cf-modified-2d2093ccc866d6af14e6051d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="20415" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

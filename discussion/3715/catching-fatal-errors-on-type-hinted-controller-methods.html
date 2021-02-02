@@ -1,0 +1,248 @@
+---
+layout: default
+title: 'Catching fatal errors on type hinted controller methods - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Catching fatal errors on type hinted controller methods</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/702/dompie" class="user-moderator-N"><span itemprop="name">dompie</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-10-18T11:51:38-07:00">Oct '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-10-18T11:51:38-07:00">Oct '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>2364</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/6f2dcf80b3a50fbab60f01e56d57e650?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/702/dompie" class="user-moderator-N"><span itemprop="name">dompie</span></a></span>
+                <span class="karma">8.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3715" href="#C3715">
+        <time class="action-date">Oct '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,</p>
+<p>I have the following router converter defined:</p>
+<pre><code class="language-php">
+    $router-&gt;addGet(...)
+    -&gt;convert('southWest', function($southWest) {
+        $sw = explode(',', $southWest);
+        try{
+            $p = new Point($sw[0], $sw[1]);
+        } catch(Exception $e) {
+            //Impossible to create instance of Point and senseless to use default values
+            $p = NULL
+        }
+        return $p;
+    });
+</code></pre>
+<p>The parameter (Point) will be passed to the following controller method:</p>
+<pre><code class="language-php">    public function fooAction(Point $southWest) {
+        ...mycode
+    }</code></pre>
+<p>In case of an Exception inside the converter, $p = NULL will be returned and then passed to fooAction. Unfortunately then a Catchable fatal error will be thrown by PHP.</p>
+<p>Now my questions:</p>
+<p>Is it possible to redirect to another action before fooAction will be called with a invalid parameter ?
+Is it possible to catch the fatal error and call another action? If yes, where should that be done? </p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-736ae755b86ed97987cdd0ef-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-736ae755b86ed97987cdd0ef-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12320" href="#C12320">
+                <time itemprop="dateCreated" datetime="2014-10-18T16:40:55-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think those fatal <code>E_RECOVERABLE_ERROR</code> errors cannot be catched by a try/catch:</p>
+<pre><code>try {
+  class X
+  {
+          public function b(X $x)
+          {
+          }
+  }
+
+  $a = null;
+  $x = new X;
+  $x-&gt;b($a);
+} catch (\Exception $e) {
+    // this is never executed
+}</code></pre>
+<pre><code class="language-php">PHP Catchable fatal error:  Argument 1 passed to X::b() must be an instance of X, null given, called in /Users/scott/cphalcon/a.php on line 13 and defined in /Users/scott/cphalcon/a.php on line 6</code></pre>
+<p>You can create an error handler to handle these kind of errors:</p>
+<pre><code class="language-php">set_error_handler(function($errno, $errstr, $errfile, $errline) {
+        if (E_RECOVERABLE_ERROR === $errno) {
+                echo "'catched' catchable fatal error\n";
+                return true;
+        }
+        return false;
+})</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12320" data-cf-modified-736ae755b86ed97987cdd0ef-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12320" data-cf-modified-736ae755b86ed97987cdd0ef-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6f2dcf80b3a50fbab60f01e56d57e650?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/702/dompie" class="user-moderator-N"><span itemprop="name">dompie</span></a>        </span>
+        <br>
+
+        <span class="karma">8.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12335" href="#C12335">
+                <time itemprop="dateCreated" datetime="2014-10-19T11:17:54-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes, indeed. They can not be catched. I was hoping there is a build in way in phalcon that makes it possible to elegantly call/redirect to another action in that case. I'll then take another way and send an invalid request response right from the catch block before die()ing.</p>
+<p>Thanks</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12335" data-cf-modified-736ae755b86ed97987cdd0ef-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12335" data-cf-modified-736ae755b86ed97987cdd0ef-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ac092c450c8eb55b187c4b63af35daee?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2415/sventunus" class="user-moderator-N"><span itemprop="name">sventunus</span></a>        </span>
+        <br>
+
+        <span class="karma">3.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="12342" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '14</span>
+              </span><br/><a name="C12342" href="#C12342">
+                <time itemprop="dateCreated" datetime="2014-10-19T14:10:10-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>How about:</p>
+<pre><code class="language-php">$sw = explode(',', $southWest)
+try {
+    $p = new Point($sw[0], $sw[1]);
+    if(!get_class(p) === Point) {
+        // call other action here
+    }
+} catch(Exception $e) {
+    //Impossible to create instance of Point and senseless to use default values
+    $p = NULL
+}
+return $p;</code></pre>
+<p>?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12342" data-cf-modified-736ae755b86ed97987cdd0ef-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12342" data-cf-modified-736ae755b86ed97987cdd0ef-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6f2dcf80b3a50fbab60f01e56d57e650?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/702/dompie" class="user-moderator-N"><span itemprop="name">dompie</span></a>        </span>
+        <br>
+
+        <span class="karma">8.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="12349" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '14</span>
+              </span><br/><a name="C12349" href="#C12349">
+                <time itemprop="dateCreated" datetime="2014-10-19T21:21:15-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>My point class will throw an exception when coordinates are invalid (e.g. 837.23472,-414.128371). I can't do that.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12349" data-cf-modified-736ae755b86ed97987cdd0ef-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12349" data-cf-modified-736ae755b86ed97987cdd0ef-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/deb7c76d1426b6d1d2415c6005b62204?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11339/casaulenbo" class="user-moderator-N"><span itemprop="name">casaulenbo</span></a>        </span>
+        <br>
+
+        <span class="karma">176</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C12349"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/6f2dcf80b3a50fbab60f01e56d57e650?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        dompie                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="56881" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '18</span>
+              </span><br/><a name="C56881" href="#C56881">
+                <time itemprop="dateCreated" datetime="2018-08-04T10:14:44-07:00" class="action-date">Aug '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>My point class will throw an exception when coordinates are invalid (e.g. 837.23472,-414.128371). I can't do that.</p>
+</blockquote>
+<p>in PHP7 now you can using try catch to catch up PHP FATAL ERROR
+try this:</p>
+<pre><code class="language-php">try {
+do somethings will raise falta error
+} catch (Error $e) {
+now you can catch me :)
+}</code></pre>
+<p>Hope this help!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="56881" data-cf-modified-736ae755b86ed97987cdd0ef-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="56881" data-cf-modified-736ae755b86ed97987cdd0ef-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3715" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

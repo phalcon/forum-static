@@ -1,0 +1,215 @@
+---
+layout: default
+title: '$user-&gt;create() breaks action if failed - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">$user-&gt;create() breaks action if failed</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3802/rwinkler" class="user-moderator-N"><span itemprop="name">rwinkler</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-11-15T08:35:13-07:00">Nov '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-11-15T08:35:13-07:00">Nov '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>268</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/ae8f2ccc5d0a5624560db3a349d83239?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3802/rwinkler" class="user-moderator-N"><span itemprop="name">rwinkler</span></a></span>
+                <span class="karma">3.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C9461" href="#C9461">
+        <time class="action-date">Nov '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,</p>
+<p>I'm having a model with a uniqueness validator, an action, and a view with a form, and everything is working fine, records get added etc, but whenever i try to add something to the database with <strong>$this-&gt;create()</strong> that already exists, or anything that makes the query fail, it's breaking the entire code leaving no error message.</p>
+<p>When i wrap the following try/catch around <strong>$user-&gt;create();</strong> in my controller</p>
+<pre><code class="language-php">try {
+
+$user-&gt;create();
+
+} catch (\Exception $e) {
+    echo get_class($e), ": ", $e-&gt;getMessage(), "\n";
+    echo " File=", $e-&gt;getFile(), "\n";
+    echo " Line=", $e-&gt;getLine(), "\n";
+    echo $e-&gt;getTraceAsString();
+}</code></pre>
+<p>..and add a record that already exists, i'm getting</p>
+<pre><code>Phalcon\Mvc\Model\ValidationFailed: Value of field 'username' is already present in another record </code></pre>
+<p>Which is fine and expected.</p>
+<p>However, without the try/catch, if i run the following code, neither &quot;failed&quot;, nor &quot;failed 2&quot; are displayed. The code just breaks and nothing after the if() condition is executed, not even the <strong>echo 'failed 2';</strong>, leaving the action and the view form broken.</p>
+<pre><code class="language-php">if($user-&gt;create())
+        {
+        echo 'success'; // not executed
+        }
+        else
+        {
+        echo 'failed';  // not executed
+        }
+
+echo 'failed 2';  // not executed</code></pre>
+<p>here is my model and the action in my controller:</p>
+<pre><code class="language-php">use Phalcon\Mvc\Model\Validator\Uniqueness;
+
+class Users extends Phalcon\Mvc\Model
+{
+
+    public function validation()
+    {
+
+        $this-&gt;validate(new Uniqueness(array(
+            'field' =&gt; 'email',
+            "message" =&gt; "Value of field 'email' is already present in another record"
+        )));
+
+        $this-&gt;validate(new Uniqueness(array(
+            'field' =&gt; 'username',
+            "message" =&gt; "Value of field 'username' is already present in another record"
+        )));
+
+        if ($this-&gt;validationHasFailed() == true) {
+            return false;
+        }
+    }
+
+    public function initialize() {
+
+        /**
+         *  Skip 'status' on insertion as it is a default value
+         */
+        $this-&gt;skipAttributesOnCreate(array('status'));
+    }
+
+}</code></pre>
+<pre><code class="language-php">public function registerAction() {
+        $form = new RegisterForm();
+
+        if ($this-&gt;request-&gt;isPost()) {
+            if ($this-&gt;security-&gt;checkToken()) {
+                if ($form-&gt;isValid($_POST)) {
+
+                        $user = new Users;
+                        $user-&gt;username =   $this-&gt;request-&gt;getPost('username');
+                        $user-&gt;email =      $this-&gt;request-&gt;getPost('email');
+                        $user-&gt;password =   $this-&gt;security-&gt;hash($this-&gt;request-&gt;getPost('password'));
+                        $user-&gt;created_at = time();
+
+                        if($user-&gt;create())
+                            {
+                            echo 'success';
+                            }
+                            else
+                            {
+                            echo 'failed'; // not executed if $user-&gt;create() fails
+                            }
+
+                        echo 'failed 2'; // not executed if $user-&gt;create() fails
+
+                }
+                else
+                {
+                    echo $form-&gt;getMessages()[0];
+                }
+            }
+        }
+        $this-&gt;view-&gt;form = $form;  // not executed if $user-&gt;create() fails (= breaks registration form)
+    }</code></pre>
+<p>As you see there is also a <strong>$this-&gt;view-&gt;form = $form;</strong> at the end of the action - when the create() fails, this is neither executed, leaving the view broken with the following error message: </p>
+<pre><code>Fatal error: Call to a member function getLabel() on a non-object in C:\wamp\www\test.local\app\views\session\register.phtml on line 11</code></pre>
+<p>Is there anything i'm doing wrong? I don't really know what to do and i'm stuck with this for a while now</p>
+<p>(i have created a topic about this two days ago but i failed at explaining my problem better and i don't know what to do and need to solve this quick)</p>
+<p>Thanks for any replies</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-76502ac97279f75104a3d603-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-76502ac97279f75104a3d603-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5915f25e654c4f9e60fe51700cdee683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4769/Izopi4a" class="user-moderator-Y"><span itemprop="name">Izo</span></a>        </span>
+        <br>
+
+        <span class="karma">85.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C26463" href="#C26463">
+                <time itemprop="dateCreated" datetime="2015-11-16T00:58:17-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>and if you put <code>var_dump($user-&gt;create());exit;</code> before <code>if($user-&gt;create()) ...</code> what's the output ?</p>
+<p>I think you might be getting some sort of mysql error or something like that .. you cna check just to sure the error log in your apache/nginx.</p>
+<p>also make sure you display all the errors.</p>
+<p><code>public/index.php</code></p>
+<pre><code class="language-php">error_reporting(E_ALL);
+ini_set('display_errors', 1);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26463" data-cf-modified-76502ac97279f75104a3d603-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26463" data-cf-modified-76502ac97279f75104a3d603-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ae8f2ccc5d0a5624560db3a349d83239?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3802/rwinkler" class="user-moderator-N"><span itemprop="name">rwinkler</span></a>        </span>
+        <br>
+
+        <span class="karma">3.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C26469" href="#C26469">
+                <time itemprop="dateCreated" datetime="2015-11-16T07:46:41-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I can't believe it. I just found the following code in my public/index.php which was causing it</p>
+<pre><code>ini_set('phalcon.orm.exception_on_failed_save', true);</code></pre>
+<p>I don't remember why i've put this there. I'm going to hide in a corner now, thanks for your help izo, much appreciated :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26469" data-cf-modified-76502ac97279f75104a3d603-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26469" data-cf-modified-76502ac97279f75104a3d603-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="9461" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,244 @@
+---
+layout: default
+title: 'Service &#039;config&#039; was not found in the dependency injection container - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Service &#039;config&#039; was not found in the dependency injection container</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2247/Bitling" class="user-moderator-N"><span itemprop="name">Rakesh</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-09-09T04:26:18-07:00">Sep '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-09-09T04:26:18-07:00">Sep '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1653</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/292af6c3b899d98d8be10a3c0bed9d25?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2247/Bitling" class="user-moderator-N"><span itemprop="name">Rakesh</span></a></span>
+                <span class="karma">8.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3402" href="#C3402">
+        <time class="action-date">Sep '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>This is my index.php</p>
+<pre><code class="language-php">&lt;?php
+
+error_reporting(E_ALL);
+
+try {
+
+    /**
+     * Read the configuration
+     */
+    $config = new Phalcon\Config\Adapter\Ini(__DIR__ . '/../app/config/config.ini');
+
+    $loader = new \Phalcon\Loader();
+    /**
+     * We're a registering a set of directories taken from the configuration file
+     */
+    $loader-&gt;registerDirs(
+        array(
+            __DIR__ . $config-&gt;application-&gt;controllersDir,
+            __DIR__ . $config-&gt;application-&gt;pluginsDir,
+            __DIR__ . $config-&gt;application-&gt;libraryDir,
+            __DIR__ . $config-&gt;application-&gt;modelsDir,
+        )
+    )-&gt;register();
+
+    /**
+     * The FactoryDefault Dependency Injector automatically register the right services providing a full stack framework
+     */
+    $di = new \Phalcon\DI\FactoryDefault();
+
+    /**
+     * We register the events manager
+     */
+    $di-&gt;set('dispatcher', function() use ($di) {
+
+        $eventsManager = $di-&gt;getShared('eventsManager');
+
+        $security = new Security($di);
+
+        /**
+         * We listen for events in the dispatcher using the Security plugin
+         */
+        $eventsManager-&gt;attach('dispatch', $security);
+
+        $dispatcher = new Phalcon\Mvc\Dispatcher();
+        $dispatcher-&gt;setEventsManager($eventsManager);
+
+        return $dispatcher;
+    });
+    //echo $config-&gt;application-&gt;baseUri;
+    /**
+     * The URL component is used to generate all kind of urls in the application
+     */
+    $di-&gt;set('url', function() use ($config){
+        $url = new \Phalcon\Mvc\Url();
+        $url-&gt;setBaseUri($config-&gt;application-&gt;baseUri);
+        return $url;
+    });
+
+    /**
+     * Database connection is created based in the parameters defined in the configuration file
+     */
+    $di-&gt;set('db', function() use ($config) {
+        return new \Phalcon\Db\Adapter\Pdo\Mysql(array(
+            "host" =&gt; $config-&gt;database-&gt;host,
+            "username" =&gt; $config-&gt;database-&gt;username,
+            "password" =&gt; $config-&gt;database-&gt;password,
+            "dbname" =&gt; $config-&gt;database-&gt;name
+        ));
+    });
+
+    /**
+     * If the configuration specify the use of metadata adapter use it or use memory otherwise
+     */
+    $di-&gt;set('modelsMetadata', function() use ($config) {
+        if (isset($config-&gt;models-&gt;metadata)) {
+            $metaDataConfig = $config-&gt;models-&gt;metadata;
+            $metadataAdapter = 'Phalcon\Mvc\Model\Metadata\\'.$metaDataConfig-&gt;adapter;
+            return new $metadataAdapter();
+        }
+        return new Phalcon\Mvc\Model\Metadata\Memory();
+    });
+
+    /**
+     * Start the session the first time some component request the session service
+     */
+    $di-&gt;set('session', function(){
+        $session = new Phalcon\Session\Adapter\Files();
+        $session-&gt;start();
+        return $session;
+    });
+
+    /**
+     * Register the flash service with custom CSS classes
+     */
+    $di-&gt;set('flash', function(){
+        return new Phalcon\Flash\Direct(array(
+            'error' =&gt; 'alert alert-error',
+            'success' =&gt; 'alert alert-success',
+            'notice' =&gt; 'alert alert-info',
+        ));
+    });
+
+    $di-&gt;set(
+    'flashSession',
+    function(){
+    $flash = new \Phalcon\Flash\Session(
+    array(
+    'error' =&gt; 'alert alert-danger',
+    'success' =&gt; 'alert alert-success',
+    'notice' =&gt; 'alert alert-info',
+    'warning' =&gt; 'alert alert-warning',
+    )
+    );
+    return $flash;
+    }
+    );
+
+    $di-&gt;set('view', function() use ($config) {
+
+        $view = new \Phalcon\Mvc\View();
+
+        $view-&gt;setViewsDir(__DIR__ . $config-&gt;application-&gt;viewsDir);
+
+        $view-&gt;registerEngines(array(
+            '.phtml' =&gt; 'Phalcon\Mvc\View\Engine\Php'
+        ));
+
+        return $view;
+    });
+
+    /**
+     * Register a user component
+     */
+    $di-&gt;set('elements', function(){
+        return new Elements();
+    });
+
+    $application = new \Phalcon\Mvc\Application();
+    $application-&gt;setDI($di);
+    echo $application-&gt;handle()-&gt;getContent();
+
+} catch (Phalcon\Exception $e) {
+    echo $e-&gt;getMessage();
+} catch (PDOException $e){
+    echo $e-&gt;getMessage();
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-c4ad5388dadb58fe660a981c-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-c4ad5388dadb58fe660a981c-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/210803d2bf1f658b0d4ca1c7a4877196?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2172/dsabella84" class="user-moderator-N"><span itemprop="name">Dom</span></a>        </span>
+        <br>
+
+        <span class="karma">2.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="11196" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '14</span>
+              </span><br/><a name="C11196" href="#C11196">
+                <time itemprop="dateCreated" datetime="2014-09-09T06:37:00-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You should be able to reference the $config without using the dependency injector unless you are trying to access it outside of your index.php.  If you are attempting to access it outside of your index.php, you will need to add it to the DI Container. Take a look at the link below on how to register it to the DI Container.</p>
+<p><a href="http://docs.phalcon.io/en/latest/reference/di.html#registering-services-in-the-container">http://docs.phalcon.io/en/latest/reference/di.html#registering-services-in-the-container</a></p>
+<pre><code class="language-php">//Using an anonymous function, the instance will be lazy loaded
+$di-&gt;set("config", function($config) {
+    return $config;
+});</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11196" data-cf-modified-c4ad5388dadb58fe660a981c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11196" data-cf-modified-c4ad5388dadb58fe660a981c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3402" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

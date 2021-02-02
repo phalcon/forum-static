@@ -1,0 +1,256 @@
+---
+layout: default
+title: 'Phalcon\Cli\Console and Namespace support - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Phalcon\Cli\Console and Namespace support</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/9317/kornerita" class="user-moderator-N"><span itemprop="name">kornerita</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-03-23T08:22:54-07:00">Mar '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-03-23T08:22:54-07:00">Mar '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>772</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/e9e5ed1871780948099978e46bcce4ec?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/9317/kornerita" class="user-moderator-N"><span itemprop="name">kornerita</span></a></span>
+                <span class="karma">1.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C15801" href="#C15801">
+        <time class="action-date">Mar '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,</p>
+<p>Firt of all this is a long post and it's something that I sould be contributing (make it myself and share) but well, maybe someone else did it, it's pending, or Im doing things the way I'm not suposed to.</p>
+<p>Long short story, I need to use <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Cli_Console.html">Phalcon\Cli\Console</a> with namespaces on a nice orderly module integrated fassion.</p>
+<p>So, here it goes:</p>
+<p>I'm developing a multi module, multi mode (MVC/Console) Application.</p>
+<p>I'm currently having two modules named &quot;base&quot; and &quot;billing&quot;.</p>
+<p>The base module is for the MVC Application only and the billing module is to be used by both MVC and Console Applications.</p>
+<p>To get the two of them working &quot;together&quot; as you don't have a unified instance of Application that handles both things, I've implemented a builder pattern to “build” one or another as follows:</p>
+<p>ApplicationBuilder: parent class, has three methods that implements and to be implemented as well for it's children; one to register services, another to register the loaders and the last one is an initialization method. Here is the definition of all the common modules, services and loaders required for both applications. It registers i.e. the logger, database,  billing module, etc. There is another method called “build&quot; (the only public) that returns the specialized instance of  <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Application.html">Phalcon\Application</a> (by it’s children).</p>
+<p>MVCBuilder: child of ApplicationBuilder, registers i.e. &quot;view&quot; service, <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Router.html">Phalcon\Mvc\Router</a> service, <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Dispatcher.html">Phalcon\Mvc\Dispatcher</a>, cookie support (and crypt for cookie), registers the &quot;base&quot; module, etc.</p>
+<p>ConsoleBuilder: child of ApplicationBuilder, implementing the things only required by this Application, the <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Cli_Router.html">Phalcon\Cli\Router</a>, the <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Cli_Dispatcher.html">Phalcon\Cli\Dispatcher</a>, etc.</p>
+<p>MicroBuilder: hey, if I want to add a Micro Application, I can do it by implementing this.</p>
+<p>The idea of implementing the builder pattern here is to delegate the complex building (setting services, loaders, modules and configurations) to a model that you have all the applications together and sharing their components; i.e. if I want to change the <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Logger_Adapter.html">Phalcon\Logger\Adapter</a> service to all the applications I only need to change it on the registerServices()  method of ApplicationBuilder. You get the idea…</p>
+<p>So everything is &quot;nice&quot; and &quot;mostly happy&quot; tied together until I get the following setback:</p>
+<p>The framework is not properly adjusted to be working with Console Applications and Namespaces.</p>
+<p>Phalcon\Cli\Console-&gt;handle requires an array and basically it sends the arguments to Phalcon\Cli\Router-&gt;handle
+<a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/cli/console.zep#L63">phalcon/cli/console.zep#L63</a> and then sets the dispatcher, etc.</p>
+<p>Phalcon\Cli\Router-&gt;handle works with both arrays and strings:</p>
+<ul>
+<li><a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/cli/router.zep#L190">phalcon/cli/router.zep#L190</a>
+if it’s a string (that the Phalcon\Cli\Console-&gt;handle don’t permit), it matches the route as seen <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/cli/router.zep#L217">phalcon/cli/router.zep#L217</a></li>
+<li>If it’s and array, it doesn’t take into account the namespace: <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/cli/router.zep#L376">phalcon/cli/router.zep#L376</a></li>
+</ul>
+<p>Phalcon\Cli\Router\Route-&gt;reConfigure executed by it’s constructor it does correctly support namespaces
+<a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/cli/router/route.zep#L89">router/route.zep#L89</a></p>
+<p>So if we call Phalcon\Cli\Console-&gt;handle with an array it doesn’t work with namespaces.</p>
+<p>If we declare a specific route like “billing/:controller/:action” we can match it to i.e.<code>[“module” =&gt; “billing”, “namespace” =&gt; “My\Billing\Module\TaskNamespace”, “controller” =&gt; 1, “action” =&gt; 2]</code> it will no be processed by the router as this will require to call <code>Phalcon\Cli\Console-&gt;handle(“billing/:controller/:action”)</code> that we cannot do.</p>
+<p>The only thing to do that works out of the box without getting much into trouble is to specify the namespace on the task argument i.e.</p>
+<pre><code class="language-php">&lt;?php
+
+$arguments = [“module” =&gt; “billing”, “task” =&gt; “My\Billing\Module\TaskNamespace\Main”, “action” =&gt; “test”];
+$console-&gt;handle($arguments); /* var $console Phalcon\Cli\Console */</code></pre>
+<p>I don’t like that since I would have to specify the namespace of all modules to be added in the future by hand with each action execution.</p>
+<p>Another fix is to tell the dispatcher where is the namespace of the controller to execute (the thing that the Phalcon\Cli\Console-&gt;handle is not doing)</p>
+<pre><code class="language-php">&lt;?php
+// ...
+$builder = new ConsoleBuilder();
+$app = $builder-&gt;build();
+
+$app-&gt;getDI()-&gt;get(‘dispatcher’)-&gt;setNamespace(“My\Billing\Module\TaskNamespace”); //To be set according to which task i’m executing
+
+$arguments = [“module” =&gt; “billing”, “task” =&gt; “main”, “action” =&gt; “test”];
+$app-&gt;handle($arguments); </code></pre>
+<p>As for what to do to really use namespaces….</p>
+<p>The <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Cli_Router.html">Phalcon\Cli\Router</a> should add namespace support by adding it to it’s default routes, adding a _defaultNamespace property, _namespace property, it’s access methods, and make it work with arrays (with strings it already works as <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Cli_Router_Route.html">Phalcon\Cli\Router\Route</a> does support them properly)</p>
+<p>The Phalcon\Cli\Console-&gt;handle:</p>
+<ul>
+<li>Should set the namespace on the dispatcher as <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Cli_Dispatcher.html">Phalcon\Cli\Dispatcher</a> already supports namespaces as they are implemented on it’s parent.</li>
+<li>Should allow arrays and strings as parameters to be consistent with <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Cli_Router.html">Phalcon\Cli\Router</a>.</li>
+</ul>
+<p>Can yo add support for Namespaces to Console Applications?</p>
+<p>Am I missing something?</p>
+<p>Thanks for your time :)</p>
+<p>EDIT: Added some styling.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-db22a6a731c2a3c973c45961-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-db22a6a731c2a3c973c45961-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C46893" href="#C46893">
+                <time itemprop="dateCreated" datetime="2017-03-24T01:39:45-07:00" class="action-date">Mar '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/discussion/7283/multiple-module-cli">https://forum.phalcon.io/discussion/7283/multiple-module-cli</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="46893" data-cf-modified-db22a6a731c2a3c973c45961-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="46893" data-cf-modified-db22a6a731c2a3c973c45961-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e9e5ed1871780948099978e46bcce4ec?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9317/kornerita" class="user-moderator-N"><span itemprop="name">kornerita</span></a>        </span>
+        <br>
+
+        <span class="karma">1.3k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C46893"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C46961" href="#C46961">
+                <time itemprop="dateCreated" datetime="2017-03-27T05:24:19-07:00" class="action-date">Mar '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p><a href="https://forum.phalcon.io/discussion/7283/multiple-module-cli">https://forum.phalcon.io/discussion/7283/multiple-module-cli</a></p>
+</blockquote>
+<p>Hi, thanks for the reply, the link you sent me is setting the namespace on the dispatcher as one of the solutions I suggested.</p>
+<p>I'm using the same approach, but I added to the registerModule an aditional parameter specifying the namespace of de module tasks, like this:</p>
+<pre><code class="language-code">$application-&gt;registerModules([
+    'billing' =&gt; [
+        'className' =&gt; 'MyNamespace\\BillingModule',
+        'path' =&gt; APP_PATH . '/billing/BillingModule.php',
+        'tasksNamespace' =&gt; 'MyNamespace\\Billing\\Tasks',
+    ]
+]);
+
+// ...
+
+$dispatcher = $application-&gt;getDI()-&gt;get('dispatcher'); /* @var $dispatcher \Phalcon\Cli\Dispatcher */
+$dispatcher-&gt;setNamespaceName($application-&gt;getModule($arguments["module"])["tasksNamespace"]);</code></pre>
+<p>In this approach the namespace of the module tasks are defined on the module registration and leaves a cleaner code on the bootsrap file.</p>
+<p>I think that namespace support in the Phalcon\Cli\Console and their related should be a pretty good addition to avoid this type of workaround, also considering that it's not to much work to add it.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="46961" data-cf-modified-db22a6a731c2a3c973c45961-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="46961" data-cf-modified-db22a6a731c2a3c973c45961-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C46963" href="#C46963">
+                <time itemprop="dateCreated" datetime="2017-03-27T11:25:20-07:00" class="action-date">Mar '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://github.com/phalcon/cphalcon">https://github.com/phalcon/cphalcon</a> feel free to do PR here, zephir is really nice language and so hard to learn, it's very similar to php.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="46963" data-cf-modified-db22a6a731c2a3c973c45961-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="46963" data-cf-modified-db22a6a731c2a3c973c45961-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e9e5ed1871780948099978e46bcce4ec?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9317/kornerita" class="user-moderator-N"><span itemprop="name">kornerita</span></a>        </span>
+        <br>
+
+        <span class="karma">1.3k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C46963"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C46965" href="#C46965">
+                <time itemprop="dateCreated" datetime="2017-03-27T11:45:01-07:00" class="action-date">Mar '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p><a href="https://github.com/phalcon/cphalcon">https://github.com/phalcon/cphalcon</a> feel free to do PR here, zephir is really nice language and so hard to learn, it's very similar to php.</p>
+</blockquote>
+<p>Thanks for the sugestion, I few months I've learn about this framework and the first thing I did before even write a line or install the module was to read about phalcon that lead me to zephyr, then I read about zephyr and learn it's basics.</p>
+<p>I'm on my fourth phalcon application and I've been looking directly into the zep code to find some things that may or may not be on the web docs of phalcon but sometimes it's easier to see how it's made.</p>
+<p>I've never (ever) contribute directly on a open source comunity and since I mainly work on enterprise environment, I never (ever) used GIT for source control (I use svn). So first I need to get in touch with GIT. Furthermore, I need to learn how compile the source zeps into the phalcon zep to build the module for testing purposes etc. And... shame on me, I've never wrote test cases before.. so it's a lot of to-learn checks before I adventure into posting a PR.</p>
+<p>So it may take some time... :/</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="46965" data-cf-modified-db22a6a731c2a3c973c45961-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="46965" data-cf-modified-db22a6a731c2a3c973c45961-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="46967" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '17</span>
+              </span><br/><a name="C46967" href="#C46967">
+                <time itemprop="dateCreated" datetime="2017-03-27T11:53:53-07:00" class="action-date">Mar '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well i think it's good to learn stuff like this to be honest :) I think contributing into open source can improve your skills.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="46967" data-cf-modified-db22a6a731c2a3c973c45961-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="46967" data-cf-modified-db22a6a731c2a3c973c45961-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="15801" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,280 @@
+---
+layout: default
+title: 'Phalcon 4.0.5 FlashSession Issues - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/28/session">Session</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Phalcon 4.0.5 FlashSession Issues</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/13693/JMoodyFWD" class="user-moderator-N"><span itemprop="name">JMoodyFWD</span></a></span>
+            <time itemprop="dateCreated" datetime="2020-05-07T06:10:08-07:00">May '20</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2020-05-07T06:10:08-07:00">May '20</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>180</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/202aa5b349545e67b7dcdcc1abaa5425?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/13693/JMoodyFWD" class="user-moderator-N"><span itemprop="name">JMoodyFWD</span></a></span>
+                <span class="karma">538</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C20617" href="#C20617">
+        <time class="action-date">May '20</time>
+    </a>
+</div>
+<div class="post-content"><div><p>So I'm running into a major headache with using FlashSession in Phalcon 4.0.5. Searched for a couple hours on these forums and on Google, yet I can't seem to find any help on the issue. I'm hoping someone can shed some insight on this.</p>
+<p>I'm running a multi-module setup and currently working on the backend module. I've built a full CMS in Phalcon 3.4 and never had issues setting up and using Flash Session messages before, so it's beyond me why it isn't working now.</p>
+<p>Here's my backend Module code to set the flashSession service:</p>
+<pre><code class="language-php">        $app-&gt;set('flashSession', function() {
+
+            $session = new Manager();
+            $files = new Stream(
+                [
+                    'savePath' =&gt; '../core/tmp',
+                ]
+            );
+            $session-&gt;setAdapter($files);
+
+            $escaper = new Escaper();
+            $flashSession = new FlashSession($escaper, $session);
+
+            return $flashSession;
+        });</code></pre>
+<p>As a note, I am using &quot;setAdapter&quot; rather than &quot;setHandler&quot;, as mentioned in the docs, because using &quot;setHandler&quot; generates an undefined function error.</p>
+<p>And here is my simple DB update function where I want to let the user know with a session message that the update was successful after being sent back to the main index action of the &quot;forms&quot; controller:</p>
+<pre><code class="language-php">    public function updateAction() {
+        $this-&gt;view-&gt;disable();
+
+        if($this-&gt;request-&gt;isPost()) {
+            // Get POST fields (sanitizes them automatically)
+            $formId = $this-&gt;request-&gt;getPost('form_id');
+            $formName = $this-&gt;request-&gt;getPost('form_name');
+
+            // Initialize Database Model and set column values for insert
+            $form = Forms::findFirst($formId);
+            $form-&gt;name         = $formName;
+            $form-&gt;date_updated = time();
+
+            if($form-&gt;update() == false) {
+                $this-&gt;view-&gt;disable();
+                foreach ($form-&gt;getMessages() as $message) {
+                    echo '&lt;p&gt;';
+                    echo 'Message: '.$message-&gt;getMessage().'&lt;br /&gt;';
+                    echo 'Field: '.$message-&gt;getField().'&lt;br /&gt;';
+                    echo 'Type: '.$message-&gt;getType().'&lt;br /&gt;';
+                    echo '&lt;/p&gt;';
+                }
+            } else {
+                $this-&gt;flash-&gt;success('The form has been created successfully!');
+                return $this-&gt;response-&gt;redirect('forms');
+            }           
+        }
+    }</code></pre>
+<p>In my main index.volt layout, I am using <code>{% raw %}{{{% endraw %} flashSession.output() {% raw %}}}{% endraw %}</code>, but I get nothing after being redirected. </p>
+<p>Regardless of using or removing <code>$this-&gt;view-&gt;disable();</code>, the page will just redirect without the message.</p>
+<p>I have tried to use <code>$this-&gt;dispatcher-&gt;forward()</code> with the appropriate array and even then it does not display the flash message.</p>
+<p>The output only works when removing the redirect, but obviously that's not ideal because I need to send them back to the main index action.</p>
+<p>Any help is greatly appreciated.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-1e24ca17c3bed0985ae9203d-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-1e24ca17c3bed0985ae9203d-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/26f29ef2ab85f8c6855381e68ca04fea?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/921/Jeckerson" class="user-moderator-Y"><span itemprop="name">Anton Vasiliev</span></a>        </span>
+        <br>
+
+        <span class="karma">6.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C63091" href="#C63091">
+                <time itemprop="dateCreated" datetime="2020-05-07T06:13:45-07:00" class="action-date">May '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Change</p>
+<pre><code>$this-&gt;flash-&gt;success('The form has been created successfully!');</code></pre>
+<p>To</p>
+<pre><code>$this-&gt;flashSession-&gt;success('The form has been created successfully!');</code></pre>
+<p>As you declared service <code>$app-&gt;set('flashSession'</code></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63091" data-cf-modified-1e24ca17c3bed0985ae9203d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63091" data-cf-modified-1e24ca17c3bed0985ae9203d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/202aa5b349545e67b7dcdcc1abaa5425?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/13693/JMoodyFWD" class="user-moderator-N"><span itemprop="name">JMoodyFWD</span></a>        </span>
+        <br>
+
+        <span class="karma">538</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C63091"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/26f29ef2ab85f8c6855381e68ca04fea?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Anton Vasiliev                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="63093" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '20</span>
+              </span><br/><a name="C63093" href="#C63093">
+                <time itemprop="dateCreated" datetime="2020-05-07T06:22:19-07:00" class="action-date">May '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Change</p>
+<pre><code>$this-&gt;flash-&gt;success('The form has been created successfully!');</code></pre>
+<p>To</p>
+<pre><code>$this-&gt;flashSession-&gt;success('The form has been created successfully!');</code></pre>
+<p>As you declared service <code>$app-&gt;set('flashSession'</code></p>
+</blockquote>
+<p>Good catch! I just changed that and unfortunately it looks like we went a step backwards. </p>
+<p>Now using </p>
+<pre><code class="language-php">$this-&gt;flashSession-&gt;success('The form has been created successfully!');</code></pre>
+<p>doesn't display anything, even when removing the redirect. This is an odd one...</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63093" data-cf-modified-1e24ca17c3bed0985ae9203d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63093" data-cf-modified-1e24ca17c3bed0985ae9203d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/26f29ef2ab85f8c6855381e68ca04fea?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/921/Jeckerson" class="user-moderator-Y"><span itemprop="name">Anton Vasiliev</span></a>        </span>
+        <br>
+
+        <span class="karma">6.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C63103" href="#C63103">
+                <time itemprop="dateCreated" datetime="2020-05-07T07:41:05-07:00" class="action-date">May '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Inside service declaration add line</p>
+<pre><code>$flashSession-&gt;setImplicitFlush(true); // echo instead of return</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63103" data-cf-modified-1e24ca17c3bed0985ae9203d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63103" data-cf-modified-1e24ca17c3bed0985ae9203d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/202aa5b349545e67b7dcdcc1abaa5425?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/13693/JMoodyFWD" class="user-moderator-N"><span itemprop="name">JMoodyFWD</span></a>        </span>
+        <br>
+
+        <span class="karma">538</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C63103"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/26f29ef2ab85f8c6855381e68ca04fea?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Anton Vasiliev                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="63109" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '20</span>
+              </span><br/><a name="C63109" href="#C63109">
+                <time itemprop="dateCreated" datetime="2020-05-07T18:00:11-07:00" class="action-date">May '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Inside service declaration add line</p>
+<pre><code>$flashSession-&gt;setImplicitFlush(true); // echo instead of return</code></pre>
+</blockquote>
+<p>Hey Anton, I tried the following.</p>
+<p>1.) Placed <code>$flashSession-&gt;setImplicitFlush(true);</code> inside the service declaration before returning <code>$flashSession</code></p>
+<p>2.) Using <code>return $flashSession-&gt;setImplicitFlush(true);</code> instead of just <code>return $flashSession;</code></p>
+<p>3.) Defining $session and $escaper outside of the DI of the main bootstrap file and then using them with the <code>use</code> operator when defining the shared service (rather than declaring just in the module). This is a rundown of how it is now in index.php:</p>
+<pre><code class="language-php">
+use Phalcon\Session\Manager;
+use Phalcon\Session\Adapter\Stream;
+use Phalcon\Escaper;
+use Phalcon\Flash\Session as FlashSession;
+$app = new FactoryDefault();
+
+$escaper   = new Escaper();
+$session   = new Manager();
+$files     = new Stream(
+    [
+        'savePath' =&gt; '../core/tmp',
+    ]
+);
+$session-&gt;setAdapter($files);
+
+        $app-&gt;setShared('flashSession', function() use($session, $escaper) {
+
+            $flashSession = new FlashSession($escaper, $session);
+
+            return $flashSession;
+        });</code></pre>
+<p>All three of these methods didn't produce anything, so I'm at a loss. Sorry if I'm dense and just not getting something simple here. I really appreciate you help though! :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63109" data-cf-modified-1e24ca17c3bed0985ae9203d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63109" data-cf-modified-1e24ca17c3bed0985ae9203d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/18507214e5c0a1189b877640a4f1f9c6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/13733/Middltons" class="user-moderator-N"><span itemprop="name">Middltons</span></a>        </span>
+        <br>
+
+        <span class="karma">86</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="63169" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '20</span>
+              </span><br/><a name="C63169" href="#C63169">
+                <time itemprop="dateCreated" datetime="2020-05-14T23:57:06-07:00" class="action-date">May '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>One cool thing about it is that performance-wise, it is arguably much faster than other frameworks out there. The reason is that it is not your ordinary PHP framework whose files you just copy onto your server and you are good to go. It is in fact a PHP extension written in C <a href="https://www.mcdvoice.ltd/">mcdvoice login</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63169" data-cf-modified-1e24ca17c3bed0985ae9203d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63169" data-cf-modified-1e24ca17c3bed0985ae9203d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="20617" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

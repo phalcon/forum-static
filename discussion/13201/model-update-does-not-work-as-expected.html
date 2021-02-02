@@ -1,0 +1,891 @@
+---
+layout: default
+title: 'Model update does not work as expected - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Model update does not work as expected</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3104/Elenthar" class="user-moderator-N"><span itemprop="name">Elenthar</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-08-24T06:12:24-07:00">Aug '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-08-24T06:12:24-07:00">Aug '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">17</span>
+                </td>
+                <td>
+                    <label>Views</label><br>2481</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/3d898541f93e650e1b5da68602b04571?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3104/Elenthar" class="user-moderator-N"><span itemprop="name">Elenthar</span></a></span>
+                <span class="karma">4.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C13201" href="#C13201">
+        <time class="action-date">Aug '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi, let's have a look at this code:</p>
+<pre><code class="language-php">    $product = Products::findFirstById(1);
+    $product-&gt;amount -= 1;
+    sleep(5);
+    if ($product-&gt;update())
+        echo 'ok';
+    else
+        echo 'not ok';</code></pre>
+<p>and now lets assume this scenario:</p>
+<ol>
+<li>&quot;User A&quot; run this script, he gets stuck at sleep command</li>
+<li>One second later, &quot;User B&quot; does the same and also stuck at sleep()</li>
+<li>When script hits update(), then for both users script echoes &quot;ok&quot; but in actual database product amount is decreased only by 1!</li>
+</ol>
+<p>I get why update operation works only for &quot;User A&quot;, but how do i prevent this from happening when i don't even get an error from update()?</p>
+<p>I have MySQL DB, InnoDB with default isolation levels.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-aa879b8ab31a502878d5a848-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-aa879b8ab31a502878d5a848-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="39025" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '16</span>
+              </span><br/><a name="C39025" href="#C39025">
+                <time itemprop="dateCreated" datetime="2016-08-24T06:47:04-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I don't quite understand your problem.</p>
+<p>In terms of concurrency, it is perfectly fine if the amount gets decreased by 1 after both users run the page.
+The reason is, that when the second user fetches the data, it is still the value the first user had seen, because the first user only commits the update 4 seconds later.</p>
+<ol>
+<li>0s user#1 fetches data <strong>from database</strong></li>
+<li>0s user#1 changes data <strong>in memory</strong></li>
+<li>1s user#2 fetches data from database (same as the first, since no UPDATE was issued yet)</li>
+<li>1s user#2 changes data in memory</li>
+<li>5s user#1 saves changes <strong>from memory to database</strong></li>
+<li>6s user#2 saves changes from memory to database</li>
+</ol></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39025" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39025" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3d898541f93e650e1b5da68602b04571?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3104/Elenthar" class="user-moderator-N"><span itemprop="name">Elenthar</span></a>        </span>
+        <br>
+
+        <span class="karma">4.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="39029" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '16</span>
+              </span><br/><a name="C39029" href="#C39029">
+                <time itemprop="dateCreated" datetime="2016-08-24T07:10:26-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you for answer.</p>
+<p>So i guess my question is how to detect for user#2 that he is not performing update on newest &quot;amount&quot; value from database and retry all my logic between selecting data and updating it?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39029" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39029" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/210/andresgutierrez" class="user-moderator-Y"><span itemprop="name">Andres Gutierrez</span></a>        </span>
+        <br>
+
+        <span class="karma">34.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39033" href="#C39033">
+                <time itemprop="dateCreated" datetime="2016-08-24T08:13:51-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You have to use transactions: <a href="https://docs.phalcon.io/en/latest/reference/model-transactions.html">https://docs.phalcon.io/en/latest/reference/model-transactions.html</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39033" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39033" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3d898541f93e650e1b5da68602b04571?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3104/Elenthar" class="user-moderator-N"><span itemprop="name">Elenthar</span></a>        </span>
+        <br>
+
+        <span class="karma">4.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C39033"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Andres Gutierrez                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="39035" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '16</span>
+              </span><br/><a name="C39035" href="#C39035">
+                <time itemprop="dateCreated" datetime="2016-08-24T08:42:43-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>You have to use transactions: <a href="https://docs.phalcon.io/en/latest/reference/model-transactions.html">https://docs.phalcon.io/en/latest/reference/model-transactions.html</a></p>
+</blockquote>
+<p>Yes, I've tried that already but the result was exactly the same as without transaction.</p>
+<p>My code:</p>
+<pre><code class="language-php">
+    try{
+      $manager = new TxManager();
+      $transaction = $manager-&gt;get();
+
+      $product = Products::findFirstById(1);
+      $product-&gt;setTransaction($transaction);
+      $product-&gt;amount -= 1;
+
+      sleep(5);
+      if ($product-&gt;update()){
+          echo 'ok';
+          $transaction-&gt;commit();
+      }
+      else {
+          echo 'not ok';
+          $transaction-&gt;rollback();
+      }
+
+      } catch (TxFailed $e) {
+      echo "Failed, reason: ", $e-&gt;getMessage();
+    }
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39035" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39035" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="39037" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '16</span>
+              </span><br/><a name="C39037" href="#C39037">
+                <time itemprop="dateCreated" datetime="2016-08-24T09:03:06-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This is not phalcon related, this is how php works. If 2 users open page at same time(or otherwise before first update happen) then amount in:</p>
+<pre><code>$product = Products::findFirstById(1);</code></pre>
+<p>Is same value. But if you will access it after 5 seconds, then your script will work correctly.</p>
+<p>You would need to use pthreads or something like this, the simplest solution is having $product in memory like memcached. Like after setting amount - save $product it in memory, and if it's in memory than use this $product from memory, not from database.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39037" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39037" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39043" href="#C39043">
+                <time itemprop="dateCreated" datetime="2016-08-24T09:13:02-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Try the transaction with exclusive locking:
+See the docs for more info: <a href="https://docs.phalcon.io/en/latest/reference/models.html">https://docs.phalcon.io/en/latest/reference/models.html</a></p>
+<pre><code class="language-php">try {
+      $manager = new TxManager();
+      $transaction = $manager-&gt;get();
+
+      $product = Products::findFirst([
+        'conditions' =&gt; 'id=1',
+        'for_update' =&gt; true, // With this option, Phalcon\Mvc\Model reads the latest available data, setting exclusive locks on each row it reads
+      ]);
+      $product-&gt;setTransaction($transaction);
+      $product-&gt;amount -= 1;
+
+      sleep(5);
+      if ($product-&gt;update()){
+          echo 'ok';
+          $transaction-&gt;commit();
+      }
+      else {
+          echo 'not ok';
+          $transaction-&gt;rollback();
+      }
+
+      } catch (TxFailed $e) {
+      echo "Failed, reason: ", $e-&gt;getMessage();
+    }
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39043" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39043" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3d898541f93e650e1b5da68602b04571?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3104/Elenthar" class="user-moderator-N"><span itemprop="name">Elenthar</span></a>        </span>
+        <br>
+
+        <span class="karma">4.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C39037"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="39045" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '16</span>
+              </span><br/><a name="C39045" href="#C39045">
+                <time itemprop="dateCreated" datetime="2016-08-24T09:13:24-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>This is not phalcon related, this is how php works. If 2 users open page at same time(or otherwise before first update happen) then amount in:</p>
+<pre><code>$product = Products::findFirstById(1);</code></pre>
+<p>Is same value. But if you will access it after 5 seconds, then your script will work correctly.</p>
+<p>You would need to use pthreads or something like this, the simplest solution is having $product in memory like memcached. Like after setting amount - save $product it in memory, and if it's in memory than use this $product from memory, not from database.</p>
+</blockquote>
+<p>Thanks! Do you know a common solution to deal with that problem? Because obviously I can't prevent users from accessing same script at the same time. I know that without sleep() function, which is here just for testing,  this situation will rarely happen, but it might and i cannot accept that...</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39045" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39045" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3d898541f93e650e1b5da68602b04571?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3104/Elenthar" class="user-moderator-N"><span itemprop="name">Elenthar</span></a>        </span>
+        <br>
+
+        <span class="karma">4.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C39043"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Lajos Bencz                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="39049" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '16</span>
+              </span><br/><a name="C39049" href="#C39049">
+                <time itemprop="dateCreated" datetime="2016-08-24T09:14:55-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Try the transaction with exclusive locking:
+See the docs for more info: <a href="https://docs.phalcon.io/en/latest/reference/models.html">https://docs.phalcon.io/en/latest/reference/models.html</a></p>
+<pre><code class="language-php">try {
+     $manager = new TxManager();
+     $transaction = $manager-&gt;get();
+
+     $product = Products::findFirst([
+      'conditions' =&gt; 'id=1',
+      'for_update' =&gt; true, // With this option, Phalcon\Mvc\Model reads the latest available data, setting exclusive locks on each row it reads
+    ]);
+     $product-&gt;setTransaction($transaction);
+     $product-&gt;amount -= 1;
+
+     sleep(5);
+     if ($product-&gt;update()){
+         echo 'ok';
+         $transaction-&gt;commit();
+     }
+     else {
+         echo 'not ok';
+         $transaction-&gt;rollback();
+     }
+
+     } catch (TxFailed $e) {
+     echo "Failed, reason: ", $e-&gt;getMessage();
+   }
+</code></pre>
+</blockquote>
+<p>Tried that also, nothing changes :(</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39049" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39049" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39051" href="#C39051">
+                <time itemprop="dateCreated" datetime="2016-08-24T09:16:41-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/andresgutierrez">@andresgutierrez</a><a href="https://forum.phalcon.io/user/0/Jurigag"> @Jurigag</a> could you guys confirm this is the correct usage of exlusive locking:</p>
+<pre><code class="language-php">try {
+      $manager = new TxManager();
+      $transaction = $manager-&gt;get();
+
+      $product = Products::findFirst([
+        'conditions' =&gt; 'id=1',
+        'for_update' =&gt; true, // With this option, Phalcon\Mvc\Model reads the latest available data, setting exclusive locks on each row it reads
+      ]);
+      $product-&gt;setTransaction($transaction);
+      $product-&gt;amount -= 1;
+
+      sleep(5);
+      if ($product-&gt;update()){
+          echo 'ok';
+          $transaction-&gt;commit();
+      }
+      else {
+          echo 'not ok';
+          $transaction-&gt;rollback();
+      }
+
+      } catch (TxFailed $e) {
+      echo "Failed, reason: ", $e-&gt;getMessage();
+    }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39051" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39051" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C39045"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/3d898541f93e650e1b5da68602b04571?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Elenthar                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C39053" href="#C39053">
+                <time itemprop="dateCreated" datetime="2016-08-24T09:21:17-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>No, don't know common solution and can't provide need. But i guess the best solution would be to use real time application, you can achieve this with using ratchet for example or as i wrote above use cache:</p>
+<pre><code class="language-php">    $cache = $di-&gt;get('cache');
+    if($cache-&gt;exists('product_1'); {
+        $product = $cache-&gt;get('product_1');
+    }
+    else {
+        $product = Products::findFirstById(1);
+    }
+    $product-&gt;amount -= 1;
+    $cache-&gt;save('product_1', $product);
+    sleep(5);
+    if ($product-&gt;update())
+        echo 'ok';
+    else
+        echo 'not ok';</code></pre>
+<p>But this is really bad solution i think, but can do a job maybe ?</p>
+<blockquote>
+<blockquote>
+<p>This is not phalcon related, this is how php works. If 2 users open page at same time(or otherwise before first update happen) then amount in:</p>
+<pre><code>$product = Products::findFirstById(1);</code></pre>
+<p>Is same value. But if you will access it after 5 seconds, then your script will work correctly.</p>
+<p>You would need to use pthreads or something like this, the simplest solution is having $product in memory like memcached. Like after setting amount - save $product it in memory, and if it's in memory than use this $product from memory, not from database.</p>
+</blockquote>
+<p>Thanks! Do you know a common solution to deal with that problem? Because obviously I can't prevent users from accessing same script at the same time. I know that without sleep() function, which is here just for testing,  this situation will rarely happen, but it might and i cannot accept that...</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39053" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39053" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39057" href="#C39057">
+                <time itemprop="dateCreated" datetime="2016-08-24T09:23:06-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Exclusive locking SHOULD be a solution for cases like this...</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39057" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39057" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39059" href="#C39059">
+                <time itemprop="dateCreated" datetime="2016-08-24T09:29:31-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yea, i think it should work and it's real solution. Maybe it's something about database ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39059" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39059" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39061" href="#C39061">
+                <time itemprop="dateCreated" datetime="2016-08-24T09:30:47-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/Elenthar">@Elenthar</a> are you sure you also changed <code>findFirstById</code> to <code>findFirst</code>?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39061" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39061" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39063" href="#C39063">
+                <time itemprop="dateCreated" datetime="2016-08-24T09:32:08-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Also to make sure check query log maybe ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39063" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39063" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3d898541f93e650e1b5da68602b04571?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3104/Elenthar" class="user-moderator-N"><span itemprop="name">Elenthar</span></a>        </span>
+        <br>
+
+        <span class="karma">4.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39067" href="#C39067">
+                <time itemprop="dateCreated" datetime="2016-08-24T09:47:41-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/lajosbencz">@lajosbencz</a>
+Yes, i ran exactly your code.</p>
+<p><a href="https://forum.phalcon.io/user/0/Jurigag">@Jurigag</a>
+Phalcon runs queries as expected i guess:</p>
+<pre><code class="language-sql">
+SELECT ... FROM products WHERE id=1 FOR UPDATE;
+SELECT ... FROM products WHERE id=1 FOR UPDATE;
+UPDATE products SET ... WHERE id=1;
+UPDATE products SET ... WHERE id=1;</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39067" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39067" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="39069" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '16</span>
+              </span><br/><a name="C39069" href="#C39069">
+                <time itemprop="dateCreated" datetime="2016-08-24T10:08:32-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>How about removing transactions ? Well im not really sure what is causing this. What is your database ? Can you post table schema ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39069" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39069" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="39071" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '16</span>
+              </span><br/><a name="C39071" href="#C39071">
+                <time itemprop="dateCreated" datetime="2016-08-24T10:12:26-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/Elenthar">@Elenthar</a> btw, what version of Phalcon are you running?</p>
+<p>You could try it without TX as<a href="https://forum.phalcon.io/user/0/Jurigag"> @Jurigag</a> suggested:</p>
+<pre><code class="language-php">try {
+      $product = Products::findFirst([
+        'conditions' =&gt; 'id=1',
+        'for_update' =&gt; true,
+      ]);
+      $product-&gt;amount -= 1;
+      sleep(5);
+      if ($product-&gt;update()){
+          echo 'ok';
+      }
+      else {
+          echo 'not ok';
+      }
+} catch (\Exception $e) {
+      echo "Failed, reason: ", $e-&gt;getMessage();
+}</code></pre>
+<p>EDIT:
+Oh yes, and what sql engine are you using? MyISAM or InnoDB? Only InnoDB supports row level locking!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39071" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39071" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3d898541f93e650e1b5da68602b04571?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3104/Elenthar" class="user-moderator-N"><span itemprop="name">Elenthar</span></a>        </span>
+        <br>
+
+        <span class="karma">4.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="39073" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '16</span>
+              </span><br/><a name="C39073" href="#C39073">
+                <time itemprop="dateCreated" datetime="2016-08-24T10:28:21-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/lajosbencz">@lajosbencz</a> ,<a href="https://forum.phalcon.io/user/0/Jurigag"> @Jurigag</a>
+I've already tried modyfing code in every possible combination (with/without transactions and many many more), result is always the same. </p>
+<p>My Phalcon version is 2.0.8</p>
+<p>I've also tested that code in Windows + Apache + MySQL and Ubuntu + Nginx + MariaDB. Both InnoDB.</p>
+<p>Table scheme is really basic:</p>
+<pre><code class="language-sql">
+CREATE TABLE products(
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    amount INT UNSIGNED NOT NULL
+);
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39073" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39073" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="39075" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '16</span>
+              </span><br/><a name="C39075" href="#C39075">
+                <time itemprop="dateCreated" datetime="2016-08-24T10:40:29-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Wait wait wait. Maybe try this:</p>
+<pre><code class="language-php">try {
+      $db-&gt;begin(); // $db from di for example
+      $product = Products::findFirst([
+        'conditions' =&gt; 'id=1',
+        'for_update' =&gt; true,
+      ]);
+      $product-&gt;amount -= 1;
+      sleep(5);
+      if ($product-&gt;update()){
+          $db-&gt;commit();
+          echo 'ok';
+      }
+      else {
+          $db-&gt;rollback();
+          echo 'not ok';
+      }
+} catch (\Exception $e) {
+      echo "Failed, reason: ", $e-&gt;getMessage();
+}</code></pre>
+<p>For update works as soon there is some transaction i think.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39075" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39075" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3d898541f93e650e1b5da68602b04571?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3104/Elenthar" class="user-moderator-N"><span itemprop="name">Elenthar</span></a>        </span>
+        <br>
+
+        <span class="karma">4.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39077" href="#C39077">
+                <time itemprop="dateCreated" datetime="2016-08-24T10:46:07-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/Jurigag">@Jurigag</a></p>
+<p>Tried that also :) Yesterday i spend almost 3 hours modifing code with every possible combination, without success. I think the problem lies somewhere else, but dont know where...</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39077" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39077" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="39079" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '16</span>
+              </span><br/><a name="C39079" href="#C39079">
+                <time itemprop="dateCreated" datetime="2016-08-24T11:25:13-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Oh w8, you need to remove sleep of course :D The problem is still just this:</p>
+<pre><code class="language-php">      $product = Products::findFirst([
+        'conditions' =&gt; 'id=1',
+        'for_update' =&gt; true,
+      ]);</code></pre>
+<p>Update is not done yet because you have sleep - so there is on new page just value from database returned - <strong>THAT'S IT</strong></p>
+<p>As i already posted, not sure if with locking you can achieve what you want, you probably need some threads or ratchet or store $product in memcached after setting amount.</p>
+<p>Locking is just for <strong>BLOCKING</strong> other user for <strong>UPDATING/REMOVING</strong> record <strong>UNTIL</strong> transaction where record was locked is finished - nothing more, nothing less. They can <strong>STILL SELECT</strong> it.</p>
+<p>The problem is not with phalcon, the problem is your code and how php works. When one user access page, and then second, there are whole diffrent processes handling those requests. They don't know anything about each other etc, so if both are making database query, and lowering amount by 1 then both have product with amount 4.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39079" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39079" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3d898541f93e650e1b5da68602b04571?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3104/Elenthar" class="user-moderator-N"><span itemprop="name">Elenthar</span></a>        </span>
+        <br>
+
+        <span class="karma">4.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C39079"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C39085" href="#C39085">
+                <time itemprop="dateCreated" datetime="2016-08-24T11:46:47-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Locking is just for <strong>BLOCKING</strong> other user for <strong>UPDATING/REMOVING</strong> record <strong>UNTIL</strong> transaction where record was locked is finished - nothing more, nothing less. They can <strong>STILL SELECT</strong> it.</p>
+</blockquote>
+<p>I needed that! Thanks!!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39085" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39085" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39087" href="#C39087">
+                <time itemprop="dateCreated" datetime="2016-08-24T12:05:18-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Phalcon is not aware of MySQL isolation levels, but it is possible to block SELECT too, until the lock is released on the row.</p>
+<p><a href="https://dev.mysql.com/doc/refman/5.6/en/innodb-transaction-isolation-levels.html">https://dev.mysql.com/doc/refman/5.6/en/innodb-transaction-isolation-levels.html</a></p>
+<p>You could try this as a last effort:</p>
+<pre><code class="language-php">try {
+      $db-&gt;begin();
+      $db-&gt;execute("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
+      $product = Products::findFirst([
+        'conditions' =&gt; 'id=1',
+        'for_update' =&gt; true,
+      ]);
+      $product-&gt;amount -= 1;
+      sleep(5);
+      if ($product-&gt;update()){
+          $db-&gt;commit();
+          echo 'ok';
+      }
+      else {
+          $db-&gt;rollback();
+          echo 'not ok';
+      }
+} catch (\Exception $e) {
+      echo "Failed, reason: ", $e-&gt;getMessage();
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39087" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39087" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">3</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3d898541f93e650e1b5da68602b04571?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3104/Elenthar" class="user-moderator-N"><span itemprop="name">Elenthar</span></a>        </span>
+        <br>
+
+        <span class="karma">4.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C39087"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Lajos Bencz                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C39101" href="#C39101">
+                <time itemprop="dateCreated" datetime="2016-08-24T13:11:45-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks for mentioning that! But I was looking for less &quot;dirty&quot; solution :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39101" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39101" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39105" href="#C39105">
+                <time itemprop="dateCreated" datetime="2016-08-24T13:30:52-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Unfortunately any concurrent/parallel processing will be dirty in php. Also, in vanila PHP it's not even a dirty solution :] It may seem &quot;hacky&quot; because Phalcon abstracts the DB layer and only the common functionalities shared among popular engines are implemented.</p>
+<p>But sure, a drawback with locking is that you create a bottleneck and increase response time for the sake of data integrity</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39105" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39105" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb86a03b78026a223f83ca3162cf7eb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4789/xerron" class="user-moderator-N"><span itemprop="name">Edwin Manuel Cerrón Angeles</span></a>        </span>
+        <br>
+
+        <span class="karma">40.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C57601" href="#C57601">
+                <time itemprop="dateCreated" datetime="2018-10-17T15:15:24-07:00" class="action-date">Oct '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Work with MariaDB 10 and not work with mysql 5.0.12.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57601" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57601" data-cf-modified-aa879b8ab31a502878d5a848-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="13201" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

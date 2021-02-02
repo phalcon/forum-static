@@ -1,0 +1,171 @@
+---
+layout: default
+title: 'Howto customize/translate model messages - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Howto customize/translate model messages</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/664/cujo" class="user-moderator-N"><span itemprop="name">Alexandr Dvorin</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-11-12T11:28:00-07:00">Nov '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-11-12T11:28:00-07:00">Nov '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1800</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">2</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/7793cffff4837d0513b384fbac9be246?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/664/cujo" class="user-moderator-N"><span itemprop="name">Alexandr Dvorin</span></a></span>
+                <span class="karma">7.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1169" href="#C1169">
+        <time class="action-date">Nov '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>The problem with model validation messages in my application:
+1) They need to be human-readable and may vary depending on module.
+2) They need to be translated in several languages.</p>
+<p>Here comes the solution. One may ask why don't override Model's getMessages method? The answer is it'll be less configurable and (critical for me) wouldn't affect ValidationFailed::getMessages() as I prefer to throw exceptions on save() failed.</p>
+<p>Hope it will be useful for someone, other solutions are welcome ;-)</p>
+<p>config/services.php:</p>
+<pre><code class="language-php">...
+
+$di['messages'] = function () {
+    $messages = require __DIR__ . '/messages/en.php';
+    return new \Phalcon\Translate\Adapter\NativeArray(array(
+        'content' =&gt; $messages,
+    ));
+};
+
+$di['modelsManager'] = function () use ($di) {
+    $eventsManager = new \Phalcon\Events\Manager();
+    $eventsManager-&gt;attach('model', function ($event, $model) use ($di) {
+        if ('onValidationFails' === $event-&gt;getType()) {
+            if ($t = $di-&gt;get('messages')) {
+                foreach ($model-&gt;getMessages() as $message) {
+                    $message-&gt;setMessage(
+                        $t-&gt;_($message-&gt;getMessage(), $model-&gt;toArray()));
+                }
+            }
+        }
+    });
+    $modelsManager = new \Phalcon\Mvc\Model\Manager();
+    $modelsManager-&gt;setEventsManager($eventsManager);
+    return $modelsManager;
+};</code></pre>
+<p>models/User.php</p>
+<pre><code class="language-php">&lt;?php
+class User extends \Phalcon\Mvc\Model
+{
+    public $login;
+    const E_EXISTS = 'User exists';
+
+    public function validation()
+    {   
+        $this-&gt;validate(new Phalcon\Mvc\Model\Validator\Uniqueness(array(
+            'field'   =&gt; 'login',
+            'message' =&gt; self::E_EXISTS,
+        )));
+        return !$this-&gt;validationHasFailed();
+    }
+}</code></pre>
+<p>messages/en.php</p>
+<pre><code class="language-php">&lt;?php
+return array(
+    User::E_EXISTS =&gt; 'User %login% already exists',
+);</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-00f01c6386c84dfd65db38ef-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-00f01c6386c84dfd65db38ef-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c58542c4c2b9171a023c69e6711c16f1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/662/ogarbe" class="user-moderator-N"><span itemprop="name">Olivier.Garbé</span></a>        </span>
+        <br>
+
+        <span class="karma">24.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4344" href="#C4344">
+                <time itemprop="dateCreated" datetime="2013-11-19T15:28:25-07:00" class="action-date">Nov '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>From our side, we've created a dedicated flash service which does translation on last time :</p>
+<pre><code class="language-php">class Direct extends \Phalcon\Flash\Direct
+{
+public function message($type, $translationKeyword)
+    {
+        return parent::message($type, $this-&gt;di-&gt;get('translate')-&gt;_($translationKeyword));
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4344" data-cf-modified-00f01c6386c84dfd65db38ef-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4344" data-cf-modified-00f01c6386c84dfd65db38ef-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8437efcdef264adc3d44ee11196bcdf3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/7807/raghavgarg1257" class="user-moderator-N"><span itemprop="name">Raghav Garg</span></a>        </span>
+        <br>
+
+        <span class="karma">2.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C41567" href="#C41567">
+                <time itemprop="dateCreated" datetime="2016-10-12T11:57:43-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hey all, I am using Flash session, I have registered it in my service file and using <code>$this-&gt;flash-&gt;error("message_token");</code> in every controller, also there is a service named translator which has been used all over the app to translate the tokens.</p>
+<p>Now i want to translate my flash messages, is there anyway which I can use in service files, or any other suitable method for this task. </p>
+<p>Can someone please guide me how can i do it?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="41567" data-cf-modified-00f01c6386c84dfd65db38ef-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="41567" data-cf-modified-00f01c6386c84dfd65db38ef-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1169" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,256 @@
+---
+layout: default
+title: 'Phalcon session error - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/28/session">Session</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Phalcon session error</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3498/HudsonNicoletti" class="user-moderator-N"><span itemprop="name">Hudson Nicoletti</span></a></span>
+            <time itemprop="dateCreated" datetime="2020-02-06T08:34:22-07:00">Feb '20</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2020-02-06T08:34:22-07:00">Feb '20</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Feb '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>492</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/981e5650b6360ab1e681d0a47916a32e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3498/HudsonNicoletti" class="user-moderator-N"><span itemprop="name">Hudson Nicoletti</span></a></span>
+                <span class="karma">37.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C20335" href="#C20335">
+        <time class="action-date">Feb '20</time>
+    </a>
+</div>
+<div class="post-content"><div><p>well for some reason when i have updated o the new version of phalcon at this time 4.0 , it is throwing me a weird error wich i can not find a solution for since before 4.0 was everything working fine.</p>
+<pre><code class="language-php">
+Fatal error: Uncaught Error: Class 'Phalcon\Session\Adapter\Files' not found in C:\xampp\htdocs\config\services.php:44 ```
+
+and my  services.php is :
+
+```php 
+&lt;?php
+
+use Phalcon\Mvc\Dispatcher\Exception as DispatchException,
+    Phalcon\Session\Adapter\Files as SessionAdapter,
+    Phalcon\Db\Adapter\Pdo\Mysql as DbAdapter,
+    Phalcon\Mvc\Dispatcher as PhDispatcher,
+    Phalcon\Events\Manager as EventsManager,
+    Phalcon\Mvc\Url as UrlResolver,
+    Phalcon\Config\Adapter\Ini,
+    Phalcon\DI\FactoryDefault,
+    Phalcon\Mvc\Router,
+    Phalcon\Dispatcher;
+
+use Phalcon\Mvc\Collection\Manager,
+    Phalcon\Db\Adapter\MongoDB\Client;
+
+use Mustache_Engine as Mustache;
+
+$di = new FactoryDefault();
+$cf = (Object)json_decode(file_get_contents( __DIR__ . "/../config/config.json"));
+
+$di['db'] = function() use ($cf) {
+
+    return new DbAdapter([
+      "host"      =&gt; $cf-&gt;database-&gt;host,
+      "username"  =&gt; $cf-&gt;database-&gt;username,
+      "password"  =&gt; $cf-&gt;database-&gt;password,
+      "dbname"    =&gt; $cf-&gt;database-&gt;dbname,
+      "charset"   =&gt; $cf-&gt;database-&gt;charset
+    ]);
+
+};
+
+#    The URL component is used to generate all kinds of URLs in the application
+$di['url'] = function () {
+    $url = new UrlResolver();
+    $url-&gt;setBaseUri('/');
+
+    return $url;
+};
+
+#   Starts the session the first time some component requests the session service
+$di['session'] = function (){
+    $session = new SessionAdapter();
+    $session-&gt;start();
+
+    return $session;
+};
+
+$di['cookies'] = function() {
+    $cookies = new Phalcon\Http\Response\Cookies();
+    $cookies-&gt;useEncryption(true);
+    return $cookies;
+};
+
+$di['crypt'] = function() {
+    $crypt = new Phalcon\Crypt();
+    $crypt-&gt;setKey('RWMt1Gz8OEDb');
+    return $crypt;
+};
+
+$di['configuration'] = function () use ($cf) {
+    return (object)[
+      "database"      =&gt; $cf-&gt;database ,
+      "mail"          =&gt; $cf-&gt;mail,
+      "debug"         =&gt; $cf-&gt;server-&gt;debug,
+    ];
+};
+
+#   Handles 404
+$di['dispatcher'] = function () {
+    $eventsManager = new EventsManager();
+    $eventsManager-&gt;attach("dispatch:beforeException", function($event, $dispatcher, $exception) {
+
+      if ($exception instanceof DispatchException) {
+        $dispatcher-&gt;forward(array(
+          'controller' =&gt; 'Error',
+          'action'     =&gt; 'NotFound'
+        ));
+        return false;
+      }
+
+    });
+
+    $dispatcher = new PhDispatcher();
+    $dispatcher-&gt;setEventsManager($eventsManager);
+
+    return $dispatcher;
+};
+
+#   Configure PHPMailer ( loaded by composer ) , returning the mail ini config &amp; PHPMailer functions
+$di['mail'] = function () use ($cf) {
+    $mail = new PHPMailer;
+
+    $mail-&gt;isSMTP();
+    $mail-&gt;isHTML(true);
+
+    $mail-&gt;CharSet      = $cf-&gt;mail-&gt;charset;
+    $mail-&gt;Host         = $cf-&gt;mail-&gt;host;
+    $mail-&gt;SMTPAuth     = true;
+    $mail-&gt;Username     = $cf-&gt;mail-&gt;username;
+    $mail-&gt;Password     = $cf-&gt;mail-&gt;password;
+    $mail-&gt;SMTPSecure   = $cf-&gt;mail-&gt;security;
+    $mail-&gt;Port         = $cf-&gt;mail-&gt;port;
+
+    #   Pass as object only MAIL config and PHPMailer Functions.
+    return (object)[
+      "name" =&gt; $cf-&gt;mail-&gt;name ,
+      "email" =&gt; $cf-&gt;mail-&gt;email ,
+      "functions" =&gt; $mail
+    ];
+};
+
+#    Registering a router
+$di['router'] = function () {
+    $router = new Router();
+
+    $router-&gt;setDefaultModule('Website');
+    $router-&gt;setDefaultNamespace('Website\Controllers');
+    $router-&gt;removeExtraSlashes(true);
+
+    require( __DIR__ . "/routes.php" );
+
+    return $router;
+};</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-dd14f2d602f971e66fcc65c9-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-dd14f2d602f971e66fcc65c9-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2023c251e4de842ff430fd91bb6a36a4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/26/Riu" class="user-moderator-N"><span itemprop="name">Radek Muszyński</span></a>        </span>
+        <br>
+
+        <span class="karma">4.1k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C62095" href="#C62095">
+                <time itemprop="dateCreated" datetime="2020-02-07T02:37:37-07:00" class="action-date">Feb '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>From upgrade section from Phalcon docs:</p>
+<blockquote>
+<p>Removed Phalcon\Session\Adapter\Files - replaced by Phalcon\Session\Adapter\Stream</p>
+</blockquote>
+<p>You need make some changes: <a href="https://docs.phalcon.io/4.0/en/session">https://docs.phalcon.io/4.0/en/session</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62095" data-cf-modified-dd14f2d602f971e66fcc65c9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62095" data-cf-modified-dd14f2d602f971e66fcc65c9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fe0ecf6a79d8e2fb0ed17bb682015d70?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10649/kgrammer" class="user-moderator-N"><span itemprop="name">Ken Grammer</span></a>        </span>
+        <br>
+
+        <span class="karma">3.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C62119" href="#C62119">
+                <time itemprop="dateCreated" datetime="2020-02-08T20:12:28-07:00" class="action-date">Feb '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>4.0 is a major upgrade and there are some really significant changes you have to make to migrate to that release.  Have a look at <a href="https://docs.phalcon.io/4.0/en/upgrade">https://docs.phalcon.io/4.0/en/upgrade</a> for some of the things that  need to be changed.</p>
+<p>For the new session code, I used the following:</p>
+<pre><code>$di-&gt;set('session', function() use ($di) {
+    $session = new Phalcon\Session\Manager();
+    $files = new Phalcon\Session\Adapter\Stream();
+    $session-&gt;setAdapter($files)-&gt;start();
+    return $session;
+});</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62119" data-cf-modified-dd14f2d602f971e66fcc65c9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62119" data-cf-modified-dd14f2d602f971e66fcc65c9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="20335" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,285 @@
+---
+layout: default
+title: 'Recently upgraded to php 7.2 from 7.0.32, and now I get an error - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Recently upgraded to php 7.2 from 7.0.32, and now I get an error</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/6439/driscojs" class="user-moderator-N"><span itemprop="name">driscojs</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-11-08T08:48:36-07:00">Nov '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-11-08T08:48:36-07:00">Nov '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>484</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/a5b43087f87fb8c04b5da94d30c489f2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/6439/driscojs" class="user-moderator-N"><span itemprop="name">driscojs</span></a></span>
+                <span class="karma">6.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C18975" href="#C18975">
+        <time class="action-date">Nov '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have a base controller that &quot;all&quot; my controllers inherit from, and it handle login logic,setting of a key for API calls from the browser/views, and destroys the session and forwards them to a logout if it has expired. After hte upgrade, it's failing with an error now: </p>
+<p>Forwarding inside a controller's initialize() method is forbidden
+0 [internal function]: Phalcon\Dispatcher-&gt;forward(Array)
+1 /var/www/html/dashboard/app/controllers/ControllerBase.php(104): Phalcon\Mvc\Dispatcher-&gt;forward(Array)
+2 /var/www/html/dashboard/app/controllers/ControllerBase.php(67): ControllerBase-&gt;logout()
+3 [internal function]: ControllerBase-&gt;initialize()
+4 [internal function]: Phalcon\Dispatcher-&gt;dispatch()
+5 /var/www/html/dashboard/public/index.php(45): Phalcon\Mvc\Application-&gt;handle()
+6 {main}</p>
+<p>Here is my BaseController:</p>
+<pre><code class="language-php">&lt;?php
+
+use Phalcon\Mvc\Controller;
+use Phalcon\Loader;
+
+class ControllerBase extends Controller
+{
+
+    public function initialize()
+    {
+        //This line should be removed in production
+        $this-&gt;enableDebug();
+
+        /* Login logic */
+        if ( $_POST['loginAttempt'] == "true" )
+        {
+            //Store the password the user supplied
+            $this-&gt;session-&gt;set( 'username', $_POST['username'] );
+            $password = $_POST['password'] ;
+
+            //Check stored password against the LDAP server
+            //Load the LdapClass
+            $loader = new \Phalcon\Loader();
+            $loader-&gt;registerClasses(
+                array( "LdapClass" =&gt; "library/LdapClass.php" )
+            );
+            $loader-&gt;register();
+
+            $ldapObj = new LdapClass();
+            $ldapObj-&gt;username = $this-&gt;session-&gt;get('username');
+            $ldapObj-&gt;password = $password;
+            $ldapOk = $ldapObj-&gt;authenticateUser();
+
+            if($ldapOk)
+            {
+
+                //Get userId from db, store in session
+                $user = new UserModel();
+                $userData = $user-&gt;getUserByUsername( $ldapObj-&gt;username );
+
+                //Create API Token, store it in the DB and session
+                $expiry = date_format(date_add(date_create('now'), new DateInterval('P1D')), 'Y-m-d H:i:s' );
+                $token = $this-&gt;getToken();
+                $user-&gt;setApiKey( $token, $expiry, $userData[0]-&gt;userId );                
+
+                if ( isset($userData[0]-&gt;userId) )
+                {
+                    $this-&gt;session-&gt;set( 'userId', $userData[0]-&gt;userId );
+                    $this-&gt;session-&gt;set( 'userData', $userData[0] );
+                    $this-&gt;session-&gt;set( 'apiKey', $token );
+                }
+                else //Makes it blank, which causes the logic later below to kick them
+                {
+                    $this-&gt;session-&gt;set( 'userId', '' );
+                }
+
+                //Get user's groups from the LDAP server
+                $this-&gt;session-&gt;set( 'userGroups', $ldapObj-&gt;memberOf() );
+            }
+        }
+
+        //If no userId is present in the session (or session doesn't exist, so 
+        //it's empty), kick 'em out 
+        if ( empty( $this-&gt;session-&gt;get('userId') ) )
+        {
+            //Log them out/redirect to login page
+            $this-&gt;logout();
+        }
+        /* End Login logic */
+
+    }
+
+    function makePre($vardump = NULL)
+    {
+        echo '&lt;pre&gt;';
+        var_dump($vardump);
+        echo '&lt;/pre&gt;';
+    }
+
+    function enableDebug()
+    {
+        error_reporting(E_ALL);        
+        $debug = new \Phalcon\Debug();
+        $debug-&gt;listen();
+    }
+
+    /**
+    * 
+    * Log out current user
+    */
+    function logout()
+    {
+        //Destroy session if it exists
+        if ( !empty( $this-&gt;session-&gt;get('userId') ) )
+        {
+            $this-&gt;session-&gt;destroy();
+        }
+
+        //Redirect to the login page
+        return $this-&gt;dispatcher-&gt;forward(array( 
+           'controller' =&gt; 'login', 'action' =&gt; 'index' 
+        )); 
+    }
+
+    /*
+     * API token code
+     * 
+     * Call getToken to get the API Token, then you need to put it into the db,
+     * along with the time it should expire
+     */
+    function crypto_rand_secure($min, $max) {
+        $range = $max - $min;
+        if ($range &lt; 0) return $min; // not so random...
+        $log = log($range, 2);
+        $bytes = (int) ($log / 8) + 1; // length in bytes
+        $bits = (int) $log + 1; // length in bits
+        $filter = (int) (1 &lt;&lt; $bits) - 1; // set all lower bits to 1
+        do {
+
+            $rnd = hexdec(bin2hex(openssl_random_pseudo_bytes($bytes)));
+            $rnd = $rnd &amp; $filter; // discard irrelevant bits
+        } while ($rnd &gt;= $range);
+        return $min + $rnd;
+    }
+
+    function getToken($length=32){
+        $token = "";
+        $codeAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        $codeAlphabet.= "abcdefghijklmnopqrstuvwxyz";
+        $codeAlphabet.= "0123456789";
+        for($i=0;$i&lt;$length;$i++){
+            $token .= $codeAlphabet[$this-&gt;crypto_rand_secure(0,strlen($codeAlphabet))];
+        }
+        return $token;
+    }
+
+}</code></pre>
+<p>It's failing when it tries to kick me ot the logut()</p>
+<p>Thanks!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-74cd04d071231751e44881d6-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-74cd04d071231751e44881d6-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C57777" href="#C57777">
+                <time itemprop="dateCreated" datetime="2018-11-08T10:24:14-07:00" class="action-date">Nov '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>why don't you use <code>beforeExecuteRoute</code>? all your code look like a <a href="https://docs.phalcon.io/en/latest/events">plugin</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57777" data-cf-modified-74cd04d071231751e44881d6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57777" data-cf-modified-74cd04d071231751e44881d6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a5b43087f87fb8c04b5da94d30c489f2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6439/driscojs" class="user-moderator-N"><span itemprop="name">driscojs</span></a>        </span>
+        <br>
+
+        <span class="karma">6.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C57777"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Emilio Degiovanni                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C57781" href="#C57781">
+                <time itemprop="dateCreated" datetime="2018-11-08T10:54:36-07:00" class="action-date">Nov '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>why don't you use <code>beforeExecuteRoute</code>? all your code look like a <a href="https://docs.phalcon.io/en/latest/events">plugin</a></p>
+</blockquote>
+<p>I don't know? I think my skills and understanding may not be up to the task. The goal of this controller is to provide the base for all other contorller (almost all of them anyway). Most importantly, to handle the login and forcibly logout any user that needs to be re-logged in.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57781" data-cf-modified-74cd04d071231751e44881d6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57781" data-cf-modified-74cd04d071231751e44881d6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C57795" href="#C57795">
+                <time itemprop="dateCreated" datetime="2018-11-09T05:45:14-07:00" class="action-date">Nov '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Try changing the name of the <code>initialize</code> method to the <code>beforeExecuteRoute</code> method</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57795" data-cf-modified-74cd04d071231751e44881d6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57795" data-cf-modified-74cd04d071231751e44881d6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="18975" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

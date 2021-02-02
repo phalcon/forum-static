@@ -1,0 +1,217 @@
+---
+layout: default
+title: '[LEMP] Namespaces of custom classes doesn&#039;t work - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/25/configuration">Configuration</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">[LEMP] Namespaces of custom classes doesn&#039;t work</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1800/EquaI1ty" class="user-moderator-N"><span itemprop="name">Alexandr Vitruk</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-08-28T14:59:34-07:00">Aug '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-08-28T14:59:34-07:00">Aug '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>730</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/70452aeb2ebcfe5ab6fa38a4f9fb6915?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1800/EquaI1ty" class="user-moderator-N"><span itemprop="name">Alexandr Vitruk</span></a></span>
+                <span class="karma">6.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C8253" href="#C8253">
+        <time class="action-date">Aug '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p><strong>Environment</strong></p>
+<p>Ubuntu 14.04</p>
+<p>Phalcon 2.0.7 (manually compiled/installed from repository)</p>
+<p>LEMP</p>
+<p><strong>Error</strong></p>
+<blockquote>
+<p>Fatal error: Class 'AVCommon\Library\Site\Guest' not found in /home/photochuk/www/photochuk.com/app/common/config/services.php on line 111</p>
+</blockquote>
+<pre><code> 2015/08/29 00:17:32 [error] 9865#0: *1 FastCGI sent in stderr: "PHP message: PHP Fatal error:  Class 'AVCommon\Library\Site\Guest' not found in /home/MY_USER/www/DOMAIN/app/common/config/services.php on line 111" while reading response header from upstream, client: MY_IP, server: www.DOMAIN.com, request: "GET / HTTP/1.1", upstream: "fastcgi://unix:/var/run/php5-fpm.sock:", host: "DOMAIN.com"</code></pre>
+<p><strong>Services.php file</strong></p>
+<pre><code class="language-php">
+&lt;?php
+use \Phalcon\DI\FactoryDefault,
+    \Phalcon\Mvc\Router,
+    \Phalcon\Mvc\Url,
+    \Phalcon\Db\Adapter\Pdo\Mysql as DbAdapter,
+    \Phalcon\Mvc\Model\Metadata\Memory as MetaDataAdapter,
+    \Phalcon\Mvc\Model\Manager as ModelsManager,
+    \Phalcon\Crypt,
+    \Phalcon\Http\Response\Cookies,
+    \Phalcon\Session\Adapter\Files as SessionAdapter,
+    \Phalcon\Flash\Direct as Flash,
+    \Phalcon\Flash\Session as FlashSession,
+    /* more namespaces */
+    \AVCommon\Library\Site\Guest,   //&lt;- namespace, that causes error;
+    \UAParser\Parser as UAParser;
+
+$di = new FactoryDefault();
+
+/* more services */
+
+$di-&gt;set('guest', function () {
+    return new Guest();    // &lt;- Error, line 111
+});</code></pre>
+<p><strong>/app/common/library/site/Guest.php file</strong></p>
+<pre><code class="language-php">
+&lt;?php
+
+namespace AVCommon\Library\Site;
+
+use \Phalcon\Mvc\User\Component,
+    \AVCommon\Models\Settings;
+
+class Guest extends Component {
+
+//some code
+
+}
+</code></pre>
+<p><strong>My nginx config file</strong></p>
+<pre><code>
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server ipv6only=on;
+
+    set $root_path '/home/MY_USER/www/DOMAIN/public';
+    root $root_path;
+
+    index index.php index.html index.htm;
+
+    server_name www.DOMAIN.com DOMAIN.com;
+
+    try_files $uri $uri/ @rewrite;
+
+    location @rewrite {
+        rewrite ^(.*)$ /index.php?_url=$1;
+    }
+
+    location ~ \.php$ {
+        # try_files $uri =404;
+        fastcgi_pass unix:/var/run/php5-fpm.sock;
+        fastcgi_index /index.php;
+
+        include /etc/nginx/fastcgi_params;
+
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        fastcgi_param PATH_INFO       $fastcgi_path_info;
+
+       # fastcgi_param PATH_TRANSLATED $document_root$fastcgi_path_info;
+
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    }
+
+    location ~* ^/(css|img|js|flv|swf|download)/(.+)$ {
+        root $root_path;
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+}
+</code></pre>
+<p>On a local environment everything works fine.
+My error resembles <a href="https://forum.phalcon.io/discussion/8151/namespace-routing-issues-in-staging-nginx">the following case</a></p>
+<p>Could anyone please describe the solution in details? I tried to compile phalcon from sources and to install from a repository but the result didn't change. (Sorry for my bad english, that's not my native language).</p>
+<p>I would be gratefull for any help.  </p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-a547d576dfab175cec059e8f-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-a547d576dfab175cec059e8f-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="22509" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '15</span>
+              </span><br/><a name="C22509" href="#C22509">
+                <time itemprop="dateCreated" datetime="2015-08-28T15:24:54-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>My hunch is that your local environment is windows, which is case-insesitive so the lowercase directory names doesn't matter. Try matching the directories to the actual namespace casings from point of origin, for eg: <strong>/app/common/Library/Site/Guest.php</strong></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="22509" data-cf-modified-a547d576dfab175cec059e8f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="22509" data-cf-modified-a547d576dfab175cec059e8f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/70452aeb2ebcfe5ab6fa38a4f9fb6915?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1800/EquaI1ty" class="user-moderator-N"><span itemprop="name">Alexandr Vitruk</span></a>        </span>
+        <br>
+
+        <span class="karma">6.3k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C22509"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Lajos Bencz                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C22511" href="#C22511">
+                <time itemprop="dateCreated" datetime="2015-08-28T17:32:44-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>My hunch is that your local environment is windows, which is case-insesitive so the lowercase directory names doesn't matter. Try matching the directories to the actual namespace casings from point of origin, for eg: <strong>/app/common/Library/Site/Guest.php</strong></p>
+</blockquote>
+<p>Yes, you were right ... The problem was in the lowercase names of the directories. Shame on me. Thanks for your quick answer!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="22511" data-cf-modified-a547d576dfab175cec059e8f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="22511" data-cf-modified-a547d576dfab175cec059e8f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="8253" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

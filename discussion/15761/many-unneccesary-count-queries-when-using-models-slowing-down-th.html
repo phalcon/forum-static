@@ -1,0 +1,253 @@
+---
+layout: default
+title: 'Many unneccesary count queries when using models slowing down the page load time - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Many unneccesary count queries when using models slowing down the page load time</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3915/Cacodaimon" class="user-moderator-N"><span itemprop="name">Guido Krömer</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-03-19T11:21:11-07:00">Mar '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-03-19T11:21:11-07:00">Mar '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>713</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9d98595fd2d75b41f077bf4286064147?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3915/Cacodaimon" class="user-moderator-N"><span itemprop="name">Guido Krömer</span></a></span>
+                <span class="karma">3.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C15761" href="#C15761">
+        <time class="action-date">Mar '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,</p>
+<p>I am using the Phalcon Model for my Application in combination with SQLite and the number of unneccesary count queries have some a great negative impact on the performance.</p>
+<p>This Query for example took 1324 ms</p>
+<pre><code class="language-sql">SELECT si.* FROM customer si JOIN tag_to_customer tts ON si.id = tts.customer_id JOIN tag t ON t.id = tts.tag_id WHERE t.tag = ?1 EXCEPT SELECT si.* FROM tag_to_customer tts LEFT JOIN customer si ON si.id = tts.customer_id LEFT JOIN tag t ON t.id = tts.tag_id WHERE t.tag IN (?2) LIMIT 1</code></pre>
+<p>Afterwads a count query gets executed, hence I'm using the model's <code>findByRawSql</code> method, which took 1297 ms and makes no sense in this context:</p>
+<pre><code class="language-sql"> SELECT COUNT(*) "numrows" FROM (SELECT si.* FROM customer si JOIN tag_to_customer tts ON si.id = tts.customer_id JOIN tag t ON t.id = tts.tag_id WHERE t.tag = ?1 EXCEPT SELECT si.* FROM tag_to_customer tts LEFT JOIN customer si ON si.id = tts.customer_id LEFT JOIN tag t ON t.id = tts.tag_id WHERE t.tag IN (?2) LIMIT 1)</code></pre>
+<p>This doubles the Page loading time in this case by two.</p>
+<p>Another example is this query which gets executed for loading a related model:</p>
+<pre><code class="language-sql"> SELECT "note"."id", "note"."inserted", "note"."updated", "note"."customer_id", "note"."create_user_id", "note"."user_id", "note"."message", "note"."due_date" FROM "note" WHERE "note"."id" = :APR0 LIMIT :APL0</code></pre>
+<p>Even here a count gets executed.</p>
+<pre><code class="language-sql"> SELECT COUNT(*) "numrows" FROM (SELECT "note"."id", "note"."inserted", "note"."updated", "note"."customer_id", "note"."create_user_id", "note"."user_id", "note"."message", "note"."due_date" FROM "note" WHERE "note"."id" = :APR0 LIMIT :APL0)</code></pre>
+<p>The relation is defined as a <code>has one</code> and an additional count does not makes sense here at all.</p>
+<pre><code class="language-php">$this-&gt;hasOne('note_id', '\ACME\Model\Note', 'id', ['alias' =&gt; 'Note', 'reusable' =&gt; true]);</code></pre>
+<p>Therefore the number of querys needed for showing a single page is nearly doubled, only because of many needless counts. </p>
+<p>Is there a way to tell Phalcon not to perform a count on every query executed by a <strong>model</strong>? </p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-7f27158c3c373e12e39337ac-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-7f27158c3c373e12e39337ac-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="46729" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '17</span>
+              </span><br/><a name="C46729" href="#C46729">
+                <time itemprop="dateCreated" datetime="2017-03-19T16:21:07-07:00" class="action-date">Mar '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Have you ever checked Doctrine's raw queries? </p>
+<p>In general, Active Record (ORM) work in that fashion, and Phalcon's models are built on top of Active Record pattern.</p>
+<p>I dislike this concept too, that's why I still rely on plain PDO (my own ORM version built on top of <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Db_Adapter_Pdo_Mysql.html">Phalcon MySQL adapter</a>). <code>https://docs.phalcon.io/en/latest/api/Phalcon_Db_Adapter_Pdo_Mysql.html</code></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="46729" data-cf-modified-7f27158c3c373e12e39337ac-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="46729" data-cf-modified-7f27158c3c373e12e39337ac-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9d98595fd2d75b41f077bf4286064147?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3915/Cacodaimon" class="user-moderator-N"><span itemprop="name">Guido Krömer</span></a>        </span>
+        <br>
+
+        <span class="karma">3.1k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C46729"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Jonathan Aaron Steel                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C46737" href="#C46737">
+                <time itemprop="dateCreated" datetime="2017-03-20T04:20:26-07:00" class="action-date">Mar '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Have you ever checked Doctrine's raw queries? </p>
+</blockquote>
+<p>I use Hibernate in my Java Project, which had a great influenece on Doctrine, and it does not perform unneccessary queries ;) .</p>
+<blockquote>
+<p>In general, Active Record (ORM) work in that fashion, and Phalcon's models are built on top of Active Record pattern.</p>
+</blockquote>
+<p>I'm not complaining the querys itself, but the counts are not necessary when loading a as <code>has one</code> related child for example.
+Hence I am searching for an way of disabling thoose count queries when they are not needed or if I know that no count is needed in my particular case. </p>
+<blockquote>
+<p>I dislike this concept too, that's why I still rely on plain PDO (my own ORM version built on top of <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Db_Adapter_Pdo_Mysql.html">Phalcon MySQL adapter</a>). <code>https://docs.phalcon.io/en/latest/api/Phalcon_Db_Adapter_Pdo_Mysql.html</code></p>
+</blockquote>
+<p>Writing a own ORM might be a lot of fun, but the Phalcon ORM is quite good in my cases beside thoose counts and a missing eager loading on related models.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="46737" data-cf-modified-7f27158c3c373e12e39337ac-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="46737" data-cf-modified-7f27158c3c373e12e39337ac-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9d98595fd2d75b41f077bf4286064147?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3915/Cacodaimon" class="user-moderator-N"><span itemprop="name">Guido Krömer</span></a>        </span>
+        <br>
+
+        <span class="karma">3.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="46765" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '17</span>
+              </span><br/><a name="C46765" href="#C46765">
+                <time itemprop="dateCreated" datetime="2017-03-20T08:28:46-07:00" class="action-date">Mar '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I finally found the reason why so many count gery gets fired, in <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/db/result/pdo.zep">https://github.com/phalcon/cphalcon/blob/master/phalcon/db/result/pdo.zep</a> the <code>numRows</code> methods fires the count query if the PDO driver is not <strong>pgsql</strong>  or <strong>mysql</strong>.</p>
+<p>According to the documentation of PHP's PDO numRows are not returned by ever DBMs: <a href="http://php.net/manual/en/pdostatement.rowcount.php">http://php.net/manual/en/pdostatement.rowcount.php</a> .</p>
+<p>I try to build my own ResultSet Class which omits the <code>let rowCount = result-&gt;numRows();</code> operation which should solve the problem with the count on the long running query. Maybe I find a way to solve the problem with the related models , too.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="46765" data-cf-modified-7f27158c3c373e12e39337ac-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="46765" data-cf-modified-7f27158c3c373e12e39337ac-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9d98595fd2d75b41f077bf4286064147?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3915/Cacodaimon" class="user-moderator-N"><span itemprop="name">Guido Krömer</span></a>        </span>
+        <br>
+
+        <span class="karma">3.1k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C46769" href="#C46769">
+                <time itemprop="dateCreated" datetime="2017-03-20T09:25:37-07:00" class="action-date">Mar '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This <code>ResultSet</code> class solves on of my problems:</p>
+<pre><code class="language-php">&lt;?php
+namespace ACME\Model;
+
+use Phalcon\Db;
+use Phalcon\Mvc\Model\Resultset\Simple;
+
+/**
+ * Class OmitNumRowsResultSet
+ *
+ * A resultset which omits the expensive count queries using sqlite.
+ *
+ * @package ACME\Model
+ */
+class OmitNumRowsResultSet extends Simple {
+
+    /**
+     * OmitNumRowsResultSet constructor
+     *
+     * @param array $columnMap
+     * @param \Phalcon\Mvc\ModelInterface|\Phalcon\Mvc\Model\Row $model
+     * @param \Phalcon\Db\Result\Pdo|null $result
+     * @param \Phalcon\Cache\BackendInterface $cache
+     * @param boolean $keepSnapshots
+     */
+    public function __construct($columnMap, $model, $result, \Phalcon\Cache\BackendInterface $cache = null, $keepSnapshots = null)
+    {
+        $this-&gt;_model = $model;
+        $this-&gt;_columnMap = $columnMap;
+        $this-&gt;_keepSnapshots = $keepSnapshots;
+
+        $this-&gt;_count = 0;
+        $this-&gt;_rows = [];
+
+        if (!is_object($result)) {
+            return;
+        }
+
+        $this-&gt;_result = $result;
+
+        if ($cache !== null ) {
+            $this-&gt;_cache = $cache;
+        }
+
+        $result-&gt;setFetchMode(Db::FETCH_ASSOC);
+
+        $rows = $result-&gt;fetchAll();
+        if (is_array($rows)) {
+            $this-&gt;_rows = $rows;
+            $this-&gt;_count = count($this-&gt;_rows);
+        }
+    }
+}</code></pre>
+<p>The usage is simple:</p>
+<pre><code class="language-php">$sqlQuery = 'SELECT * FROM customer WHERE query_is_slow = 1'
+
+$customer = new Customer();
+
+return new OmitNumRowsResultSet(
+    null,
+    $customer,
+    $customer-&gt;getReadConnection()-&gt;query($sqlQuery, $params)
+);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="46769" data-cf-modified-7f27158c3c373e12e39337ac-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="46769" data-cf-modified-7f27158c3c373e12e39337ac-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="15761" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

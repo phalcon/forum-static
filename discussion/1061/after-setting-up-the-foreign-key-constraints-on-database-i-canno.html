@@ -1,0 +1,208 @@
+---
+layout: default
+title: 'After setting up the foreign key constraints on database, I cannot use the function of CASCADE. - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">After setting up the foreign key constraints on database, I cannot use the function of CASCADE.</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/49/jarvischen" class="user-moderator-N"><span itemprop="name">jarvischen</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-10-21T08:54:34-07:00">Oct '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-10-21T08:54:34-07:00">Oct '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1169</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/a7039dc2783ef48fc79d229adc9a38ea?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/49/jarvischen" class="user-moderator-N"><span itemprop="name">jarvischen</span></a></span>
+                <span class="karma">5.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1061" href="#C1061">
+        <time class="action-date">Oct '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Model 1:
+<code>class Teacher extends \Phalcon\Mvc\Model { public $id; public $name; public function initialize() { $this-&gt;hasMany( "id", "students", "teacher_id" 'foreignKey' =&gt; array( 'action' =&gt; Relation::ACTION_CASCADE ) ); } }</code>
+Model 2:
+<code>class Students extends \Phalcon\Mvc\Model { public $id; public $teacher_id; public $name; public function initialize() { $this-&gt;belongsTo( "teacher_id", "teacher", "id", array( "foreignKey" =&gt; true ) ); } } $teacher = Teacher::findFirst("id=1"); $teacher-&gt;delete();</code>
+SQLSTATE[HY000]: General error: 2292 OCIStmtExecute: ORA-02292: integrity constraint (TEST.FK_STUDENT_TEACHER_ID) violated - child record found (/root/rpmbuild/BUILD/php-5.5.1/ext/pdo_oci/oci_statement.c:148)</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-2f81c80a9de3e5e2d3ea47ea-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-2f81c80a9de3e5e2d3ea47ea-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a7039dc2783ef48fc79d229adc9a38ea?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/49/jarvischen" class="user-moderator-N"><span itemprop="name">jarvischen</span></a>        </span>
+        <br>
+
+        <span class="karma">5.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3942" href="#C3942">
+                <time itemprop="dateCreated" datetime="2013-10-21T09:13:34-07:00" class="action-date">Oct '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I changed the order of the steps of deletion and then I can use CASCADE.
+Is bug?
+/** </p>
+<ul>
+<li>
+<p>Check if there is virtual foreign keys with cascade action
+*/
+if (PHALCON_GLOBAL(orm).virtual_foreign_keys) {</p>
+<pre><code>        PHALCON_INIT_NVAR(check_foreign_keys);
+        phalcon_call_method(check_foreign_keys, this_ptr, "_checkforeignkeysreversecascade");
+        if (PHALCON_IS_FALSE(check_foreign_keys)) {
+                RETURN_MM_FALSE;
+        }
+}
+
+/**
+ * Do the deletion
+ */
+PHALCON_INIT_VAR(success);
+phalcon_call_method_p4(success, write_connection, "delete", table, delete_conditions, values, bind_types);
+
+if (PHALCON_GLOBAL(orm).events) {
+        if (zend_is_true(success)) {
+                PHALCON_INIT_NVAR(event_name);
+                ZVAL_STRING(event_name, "afterDelete", 1);
+                phalcon_call_method_p1_noret(this_ptr, "fireevent", event_name);
+        }
+}'''</code></pre>
+</li>
+</ul></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3942" data-cf-modified-2f81c80a9de3e5e2d3ea47ea-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3942" data-cf-modified-2f81c80a9de3e5e2d3ea47ea-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/325b7a8cd0a241dc8cac9b1dbbc52e9e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/184/fishjerky" class="user-moderator-N"><span itemprop="name">fishjerky(魚乾)</span></a>        </span>
+        <br>
+
+        <span class="karma">1.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3950" href="#C3950">
+                <time itemprop="dateCreated" datetime="2013-10-22T08:47:55-07:00" class="action-date">Oct '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>need to delete child record before parent record
+i think it is a bug</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3950" data-cf-modified-2f81c80a9de3e5e2d3ea47ea-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3950" data-cf-modified-2f81c80a9de3e5e2d3ea47ea-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3951" href="#C3951">
+                <time itemprop="dateCreated" datetime="2013-10-22T08:52:37-07:00" class="action-date">Oct '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>First, It deletes the students, then it deletes the teacher, maybe it is not finding the students. Could you please set an events manager up in the connection to see what SQL comments are being sent to the database server?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3951" data-cf-modified-2f81c80a9de3e5e2d3ea47ea-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3951" data-cf-modified-2f81c80a9de3e5e2d3ea47ea-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6782ccda136c1efada4ff9c414378142?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/433/gianks" class="user-moderator-N"><span itemprop="name">Gianks</span></a>        </span>
+        <br>
+
+        <span class="karma">20.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4311" href="#C4311">
+                <time itemprop="dateCreated" datetime="2013-11-18T13:02:39-07:00" class="action-date">Nov '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi,</p>
+<p>i'm getting the same problem too: the CASCADE in model initialize is ignored so i've to currently delete children records manually.
+This seems a bug ( regression since no problems were found on 1.2.3 ).</p>
+<p>Regards</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4311" data-cf-modified-2f81c80a9de3e5e2d3ea47ea-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4311" data-cf-modified-2f81c80a9de3e5e2d3ea47ea-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2fc1c12eb664f080bcdd090b59c3f075?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2383/yasharrashedi" class="user-moderator-N"><span itemprop="name">Yashar Rashedi</span></a>        </span>
+        <br>
+
+        <span class="karma">558</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C13724" href="#C13724">
+                <time itemprop="dateCreated" datetime="2014-11-27T10:37:23-07:00" class="action-date">Nov '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>same problem here</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13724" data-cf-modified-2f81c80a9de3e5e2d3ea47ea-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13724" data-cf-modified-2f81c80a9de3e5e2d3ea47ea-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1061" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

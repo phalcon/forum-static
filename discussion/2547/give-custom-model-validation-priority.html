@@ -1,0 +1,157 @@
+---
+layout: default
+title: 'Give custom model validation priority - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Give custom model validation priority</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-06-12T15:36:00-07:00">Jun '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-06-12T15:36:00-07:00">Jun '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1056</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a></span>
+                <span class="karma">125.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2547" href="#C2547">
+        <time class="action-date">Jun '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>I want to override the default messages that are shown to the user when a field is missing or malformed.  So, I have built my own <code>validation()</code> method in my model.  Unfortunately, when a required field is missing, that method never gets called because Phalcon runs its own validation, sees that the fields are missing, then stops.</p>
+<p>Is there any way to make my custom <code>validation()</code> method run first, then have the built-in validation only run if my validation succeeds?  Otherwise I don't see a way to change the messages being displayed to the user.</p>
+<p>Just for reference, my custom validation method looks like this:</p>
+<pre><code class="language-php">public function validation(){
+
+        $this-&gt;validate(new \Phalcon\Mvc\Model\Validator\PresenceOf([
+            'field'=&gt;'first_name',
+            'message' =&gt; 'First name is required'
+        ]));
+
+        return $this-&gt;validationHasFailed() != true;
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-339229d62b673346e803d0ac-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-339229d62b673346e803d0ac-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/24e438429d975d345e4f99e53b740150?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1487/Conradaek" class="user-moderator-N"><span itemprop="name">Conradaek</span></a>        </span>
+        <br>
+
+        <span class="karma">26.3k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C8607" href="#C8607">
+                <time itemprop="dateCreated" datetime="2014-06-13T04:31:20-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi!</p>
+<p>My solution to this has two parts:</p>
+<p><strong>(1) Switch off the default notNullValidations validators</strong> </p>
+<p>Do this in <code>initialize()</code> method</p>
+<pre><code class="language-php">
+public function initialize() {
+
+        //switching off the default notNullValidations validators
+        $this-&gt;setup(
+            array('notNullValidations'=&gt;false)
+        );
+
+    }
+</code></pre>
+<p>Other way to do this is described here <a href="http://forum.phalcon.io/discussion/1497/validation-with-presenceof-not-working"><a href="http://forum.phalcon.io/discussion/1497/validation-with-presenceof-not-working">http://forum.phalcon.io/discussion/1497/validation-with-presenceof-not-working</a></a></p>
+<p><strong>(2) Flush former messages</strong></p>
+<p>Do this at the begining of the <code>validation()</code> method. </p>
+<pre><code class="language-php">public function validation(){
+
+        //flushing the array with error messages
+        $this-&gt;_errorMessages = array();
+
+        $this-&gt;validate(new \Phalcon\Mvc\Model\Validator\PresenceOf([
+            'field'=&gt;'first_name',
+            'message' =&gt; 'First name is required'
+        ]));
+
+        return $this-&gt;validationHasFailed() != true;
+}
+</code></pre>
+<p>This part is not necessary but I am doing it because of some other reasons, <a href="http://forum.phalcon.io/discussion/2073/how-to-manually-reset-delete-all-validation-messages-in-a-model">check this topic</a> Hehe, it is our conversation by the way! ;) (needed to change account).</p>
+<p>This works for me! ;)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8607" data-cf-modified-339229d62b673346e803d0ac-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8607" data-cf-modified-339229d62b673346e803d0ac-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C8616" href="#C8616">
+                <time itemprop="dateCreated" datetime="2014-06-13T07:59:06-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Heh - what goes around comes around.  Good tip - thanks.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8616" data-cf-modified-339229d62b673346e803d0ac-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8616" data-cf-modified-339229d62b673346e803d0ac-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2547" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

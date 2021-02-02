@@ -1,0 +1,317 @@
+---
+layout: default
+title: 'Model-&gt;getTitle() return input value - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Model-&gt;getTitle() return input value</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/9455/elroliv" class="user-moderator-N"><span itemprop="name">elroliv</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-05-15T09:28:37-07:00">May '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-05-15T09:28:37-07:00">May '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>May '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>308</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/e527d7bd9f5a49b921abedad26819841?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/9455/elroliv" class="user-moderator-N"><span itemprop="name">elroliv</span></a></span>
+                <span class="karma">3.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C16135" href="#C16135">
+        <time class="action-date">May '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,  </p>
+<p>to update my database, I'd like to compare input value and database value and do a save action only if needed.  </p>
+<p>The trouble is :<br />
+$pageFromDB = Pages::findFirst($id);<br />
+$pageFromDB-&gt;getTitle() return $data['title'] value and not value from Database</p>
+<pre><code class="language-php">public function updateAction()
+    {
+        try{
+            if (!$this-&gt;request-&gt;isPost()) {
+                /** @noinspection PhpVoidFunctionResultUsedInspection */
+                return $this-&gt;dispatcher-&gt;forward(
+                    [
+                        "controller" =&gt; "pages",
+                        "action"     =&gt; "index",
+                    ]
+                );
+            }
+
+            $id = $this-&gt;request-&gt;getPost("id", "int");
+            $pageFromDB = Pages::findFirst($id);
+
+            if (!$pageFromDB) {
+                $this-&gt;flash-&gt;error(
+                    "Page does not exist"
+                );
+
+                /** @noinspection PhpVoidFunctionResultUsedInspection */
+                return $this-&gt;dispatcher-&gt;forward(
+                    [
+                        "controller" =&gt; "pages",
+                        "action"     =&gt; "index",
+                    ]
+                );
+            }
+
+            $form = new PagesForm();
+            $data = $this-&gt;request-&gt;getPost();
+
+            // TODO : nettoyer les &amp;nbsp et trimer les string
+
+            if (!$form-&gt;isValid($data, $pageFromDB)) {
+                $messages = $form-&gt;getMessages();
+
+                foreach ($messages as $message) {
+                    $this-&gt;flash-&gt;error($message);
+                }
+
+                /** @noinspection PhpVoidFunctionResultUsedInspection */
+                return $this-&gt;dispatcher-&gt;forward(
+                    [
+                        "controller" =&gt; "pages",
+                        "action"     =&gt; "index",
+                    ]
+                );
+            }
+
+            // Create a transaction manager
+            $manager = new TxManager();
+            // Request a transaction
+            $transaction = $manager-&gt;get();
+
+            // on met à jour le titre de page si modifié
+            $titleHasChanged = ($pageFromDB-&gt;getTitle() !== $data['title'] ? true : false);
+            if($titleHasChanged)
+            {
+                $pageFromDB-&gt;setTransaction($transaction);
+                $pageFromDB-&gt;setTitle($data['title']);
+                if ($pageFromDB-&gt;save() === false) {
+                    $messages = $pageFromDB-&gt;getMessages();
+
+                    foreach ($messages as $message) {
+                        $transaction-&gt;rollback(
+                            "Page title cannot be updated : " . $message-&gt;getMessage()
+                        );
+                    }
+                }
+            }
+
+            // on recupere les id des elements à suppress et à ajouter
+            $pagesArticlesToDelete = null;
+            $articlesIdsToDelete = null;
+            $articlesIdsToAdd = null;
+            $this-&gt;compareArticlesToUpdate($pageFromDB, $data, $articlesIdsToDelete, $articlesIdsToAdd);
+
+            // si on a des PagesArticles à supprimer
+            // https://forum.phalcon.io/discussion/13751/how-to-delete-relationships-between-models-many-to-many
+            if(count($articlesIdsToDelete) &gt; 0)
+            {
+                // Get the PagesArticles to be deleted
+                $pagesArticles = PagesArticles::find([
+                    'conditions' =&gt; 'idPages = :id: AND idArticles IN ({articlesIdsToDelete:array})',
+                    'bind' =&gt; [
+                        'id' =&gt; $pageFromDB-&gt;getId(),
+                        'articlesIdsToDelete' =&gt; $articlesIdsToDelete,
+                    ],
+                ]);
+
+                foreach ($pagesArticles as $pagesArticle) {
+                    $pagesArticle-&gt;setTransaction($transaction);
+
+                    // Something's gone wrong, we should rollback the transaction
+                    if ($pagesArticle-&gt;delete() === false) {
+                        $messages = $pagesArticle-&gt;getMessages();
+
+                        foreach ($messages as $message) {
+                            $transaction-&gt;rollback(
+                                "Cannot delete pagesArticles associations : " . $message-&gt;getMessage()
+                            );
+                        }
+                    }
+                }
+            }
+
+            // si on a des PagesArticles à ajouter
+            if(count($articlesIdsToAdd) &gt; 0)
+            {
+                foreach ($articlesIdsToAdd AS $idArticle)
+                {
+                    $pagesArticles = new PagesArticles();
+
+                    $pagesArticles-&gt;setTransaction($transaction);
+
+                    $pagesArticles-&gt;setIdPages($pageFromDB-&gt;getId());
+                    $pagesArticles-&gt;setIdArticles($idArticle);
+
+                    if ($pagesArticles-&gt;save() === false) {
+                        $messages = $pagesArticles-&gt;getMessages();
+
+                        foreach ($messages as $message) {
+                            $transaction-&gt;rollback(
+                                "Cannot save PagesArticles : " . $message-&gt;getMessage()
+                            );
+                        }
+                    }
+                }
+            }
+            if($titleHasChanged || (count($articlesIdsToDelete) &gt; 0) || (count($articlesIdsToAdd) &gt; 0)){
+                // Everything's gone fine, let's commit the transaction
+                if ($transaction-&gt;commit() == false) {
+                    foreach ($transaction-&gt;getMessages() as $message) {
+                        $this-&gt;flash-&gt;error($message);
+                    }
+                    /** @noinspection PhpVoidFunctionResultUsedInspection */
+                    return $this-&gt;dispatcher-&gt;forward(
+                        [
+                            "controller" =&gt; "pages",
+                            "action"     =&gt; "new",
+                        ]
+                    );
+                }
+            }
+            else
+            {
+                $this-&gt;flash-&gt;warning(
+                    "Page was not updated because it's exactly the same"
+                );
+
+                /** @noinspection PhpVoidFunctionResultUsedInspection */
+                return $this-&gt;dispatcher-&gt;forward(
+                    [
+                        "controller" =&gt; "pages",
+                        "action"     =&gt; "index",
+                    ]
+                );
+            }
+
+            $form-&gt;clear();
+
+            $this-&gt;flash-&gt;success(
+                "Page was updated successfully"
+            );
+
+            /** @noinspection PhpVoidFunctionResultUsedInspection */
+            return $this-&gt;dispatcher-&gt;forward(
+                [
+                    "controller" =&gt; "pages",
+                    "action"     =&gt; "index",
+                ]
+            );
+        } catch (TxFailed $e) {
+            // TODO : il faudra mettre un systeme de log pour enregistrer les erreurs
+            echo "Failed, reason: ", $e-&gt;getMessage();
+        }
+    }</code></pre>
+<p>Thanks for your help</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-f7ccbe4b6e15fcd6a1f89570-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-f7ccbe4b6e15fcd6a1f89570-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/62d6b07094c7393d245d5600dbaf37c6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9591/topotru" class="user-moderator-N"><span itemprop="name">topotru</span></a>        </span>
+        <br>
+
+        <span class="karma">109</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="48155" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '17</span>
+              </span><br/><a name="C48155" href="#C48155">
+                <time itemprop="dateCreated" datetime="2017-05-15T14:57:53-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This is because you bind data to your model here</p>
+<blockquote>
+<p>if (!$form-&gt;isValid($data, $pageFromDB)) {</p>
+</blockquote>
+<p>Form::isValid() <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/forms/form.zep#L257">https://github.com/phalcon/cphalcon/blob/master/phalcon/forms/form.zep#L257</a>
+and if entity is given - <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/forms/form.zep#L278">https://github.com/phalcon/cphalcon/blob/master/phalcon/forms/form.zep#L278</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48155" data-cf-modified-f7ccbe4b6e15fcd6a1f89570-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48155" data-cf-modified-f7ccbe4b6e15fcd6a1f89570-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e527d7bd9f5a49b921abedad26819841?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9455/elroliv" class="user-moderator-N"><span itemprop="name">elroliv</span></a>        </span>
+        <br>
+
+        <span class="karma">3.4k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C48155"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/62d6b07094c7393d245d5600dbaf37c6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        topotru                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C48157" href="#C48157">
+                <time itemprop="dateCreated" datetime="2017-05-16T00:25:46-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>This is because you bind data to your model here</p>
+<blockquote>
+<p>if (!$form-&gt;isValid($data, $pageFromDB)) {</p>
+</blockquote>
+<p>Form::isValid() <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/forms/form.zep#L257">https://github.com/phalcon/cphalcon/blob/master/phalcon/forms/form.zep#L257</a>
+and if entity is given - <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/forms/form.zep#L278">https://github.com/phalcon/cphalcon/blob/master/phalcon/forms/form.zep#L278</a></p>
+</blockquote>
+<p>thanks so much !!!   </p>
+<p>sometimes it's so simple but I've my nose too much near the screen ;o))</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48157" data-cf-modified-f7ccbe4b6e15fcd6a1f89570-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48157" data-cf-modified-f7ccbe4b6e15fcd6a1f89570-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="16135" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

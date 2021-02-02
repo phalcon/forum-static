@@ -1,0 +1,451 @@
+---
+layout: default
+title: 'Model::findFirst() causes segmentation fault - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Model::findFirst() causes segmentation fault</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/6827/jstewmc" class="user-moderator-N"><span itemprop="name">Jack Clayton</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-04-24T12:36:54-07:00">Apr '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-04-24T12:36:54-07:00">Apr '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Apr '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">5</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1074</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/4097134b478d395b164b407bb8a03bf9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/6827/jstewmc" class="user-moderator-N"><span itemprop="name">Jack Clayton</span></a></span>
+                <span class="karma">1.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C11271" href="#C11271">
+        <time class="action-date">Apr '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi PhalconPHP!</p>
+<p>My PhalconPHP 2.1.0-RC1 application was working fine, until I started interacting with models. Now, any code that uses a model causes the application to crash with a segmentation fault:</p>
+<pre><code>$ tail /var/log/apache2/error.log
+
+[Sun Apr 24 17:56:33.085807 2016] [core:notice] [pid 17024] AH00051: child pid 17065 exit signal Segmentation fault (11), possible coredump in /etc/apache2</code></pre>
+<p>Apparently, there is a known issue with <a href="https://github.com/phalcon/cphalcon/issues/11661">models and segmentation faults</a>, which is related to <a href="https://github.com/phalcon/cphalcon/issues/11550">PHP 7 test related issues</a>. <strong>However, I'm new to PhalconPHP, and I want to be sure I'm not missing something stupid before I submit an issue on Github</strong>. </p>
+<p>I'm using the following software:</p>
+<ul>
+<li>Ubuntu 14.04 (last <code>apt-get update &amp;&amp; apt-get upgrade</code> 4/24/16)</li>
+<li>Apache 2.4.12</li>
+<li>MySQL 5.6.30</li>
+<li>PHP 7.0.5</li>
+<li>Zephir 0.9.2a-dev</li>
+<li>Phalcon 2.1.0-RC1 (last <code>git pull</code> and <code>zephir build</code> 4/24/16)</li>
+</ul>
+<p>I have a <code>groups</code> table:</p>
+<pre><code class="language-php">mysql&gt; SHOW CREATE TABLE `groups`;
+CREATE TABLE `groups` (
+  `id` tinyint(3) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(15) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `ux_name` (`name`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8</code></pre>
+<p>The <code>groups</code> table has a few groups:</p>
+<pre><code>mysql&gt; SELECT * FROM groups;
++----+------+
+| id | name |
++----+------+
+|  2 | foo  |
+|  1 | bar  |
++----+------+
+2 rows in set (0.05 sec)</code></pre>
+<p>I have a <code>Group</code> model:</p>
+<pre><code class="language-php">&lt;?php
+
+namespace App\Model;
+
+/**
+ * A group
+ */
+class Group extends \Phalcon\Mvc\Model
+{
+    /* !Private properties */
+
+    /**
+     * @var  int  the group's id
+     */
+    private $id;
+
+    /**
+     * @var  string  the group's *unique* name (lower-case and plural by convention)
+     */
+    private $name;
+
+    /* !Get methods */
+
+    /**
+     * Returns the group's id
+     *
+     * @return  int
+     */
+    public function getId(): int
+    {
+        return $this-&gt;id;
+    }
+
+    /**
+     * Returns the group's name
+     *
+     * @return  string
+     */
+    public function getName(): string
+    {
+        return $this-&gt;name;
+    }
+
+    /* !Set methods */
+
+    /**
+     * Sets the group's name
+     *
+     * @param   string  $name
+     * @return  self
+     */
+    public function setName(string $name): self
+    {
+        $this-&gt;name = strtolower($name);
+
+        return $this;
+    }
+
+    /* !Magic methods */
+
+    /**
+     * Called to initialize the model
+     *
+     * @return  self
+     */
+    public function initialize(): self
+    {
+        $this-&gt;setSource('groups');
+
+        return $this;   
+    }
+}
+</code></pre>
+<p>I added <code>App\Model\Group::findFirst(1)</code> to my <code>index.php</code> (of course, it doesn't live here normally):</p>
+<pre><code class="language-php">// define the root directories
+define('ROOT_PROJECT', realpath(__DIR__ . '/../') . DIRECTORY_SEPARATOR);
+define('ROOT_APPLICATION', realpath(__DIR__ . '/../app/') . DIRECTORY_SEPARATOR);
+define('ROOT_DOCUMENT', __DIR__ . DIRECTORY_SEPARATOR);
+
+// include the vendor autoloader
+require ROOT_PROJECT . 'vendor/autoload.php';
+
+// include the application autoloader
+require ROOT_APPLICATION . 'autoload.php';
+
+// include the services configuration (defines $di)
+require ROOT_APPLICATION . 'services/services.php';
+
+// if the application is in development
+if ($di-&gt;get('environment')-&gt;isDevelopment()) {
+    (new \Phalcon\Debug())-&gt;listen();
+}
+
+// this causes a segmentation fault!
+\App\Model\Group::findFirst(1);
+
+// don't start the application; we're debugging stuff
+// echo (new \Phalcon\Mvc\Application($di))-&gt;handle()-&gt;getContent();</code></pre>
+<p>When I go to my development site, the application crashes, and Safari displays an error message saying, &quot;Safari can't open the page, because the server unexpectedly dropped the connection.&quot; </p>
+<p>However, I can <code>tail</code> Apache's error logs and see PHP encountered a segmentation fault:</p>
+<pre><code>$ tail /var/log/apache2/error.log
+
+[Sun Apr 24 17:56:33.085807 2016] [core:notice] [pid 17024] AH00051: child pid 17065 exit signal Segmentation fault (11), possible coredump in /etc/apache2</code></pre>
+<p>I tried to use <code>gdb</code> to troubleshoot the issue:</p>
+<pre><code>$ gdb php
+(gdb) run "path/to/index.php"
+
+Program received signal SIGSEGV, Segmentation fault.
+0xb5e41e76 in zephir_call_user_function () from /usr/lib/php/20151012/phalcon.so
+
+(gdb) bt
+#0  0xb5e41e76 in zephir_call_user_function () from /usr/lib/php/20151012/phalcon.so
+#1  0xb5e431cb in zephir_call_class_method_aparams () from /usr/lib/php/20151012/phalcon.so
+#2  0xb5e44344 in zephir_create_instance_params () from /usr/lib/php/20151012/phalcon.so
+#3  0xb5d01e20 in zim_Phalcon_Di_get () from /usr/lib/php/20151012/phalcon.so
+#4  0x80287668 in execute_internal ()
+#5  0x801edf3f in dtrace_execute_internal ()
+#6  0xb5e42ef5 in zephir_call_user_function () from /usr/lib/php/20151012/phalcon.so
+#7  0xb5e431cb in zephir_call_class_method_aparams () from /usr/lib/php/20151012/phalcon.so
+#8  0xb5c5d0dd in zim_Phalcon_Mvc_Model_Manager_createBuilder () from /usr/lib/php/20151012/phalcon.so
+#9  0x80287668 in execute_internal ()
+#10 0x801edf3f in dtrace_execute_internal ()
+#11 0xb5e42ef5 in zephir_call_user_function () from /usr/lib/php/20151012/phalcon.so
+#12 0xb5e431cb in zephir_call_class_method_aparams () from /usr/lib/php/20151012/phalcon.so
+#13 0xb5dd1cbf in zim_Phalcon_Mvc_Model_find () from /usr/lib/php/20151012/phalcon.so
+#14 0x80287668 in execute_internal ()
+#15 0x801edf3f in dtrace_execute_internal ()
+#16 0x8027cd24 in ?? ()
+#17 0x8023acfa in execute_ex ()
+#18 0x801ede3d in dtrace_execute_ex ()
+#19 0x80288fcb in zend_execute ()
+#20 0x801fd6f0 in zend_execute_scripts ()
+#21 0x8019cc76 in php_execute_script ()
+#22 0x8028b060 in ?? ()
+#23 0x80071187 in main ()
+
+(gdb) f
+#0  0xb5e41e76 in zephir_call_user_function () from /usr/lib/php/20151012/phalcon.so
+
+(gdb) info f
+Stack level 0, frame at 0xbfffb860:
+ eip = 0xb5e41e76 in zephir_call_user_function; saved eip = 0xb5e431cb
+ called by frame at 0xbfffb8d0
+ Arglist at 0xbfffb858, args: 
+ Locals at 0xbfffb858, Previous frame's sp is 0xbfffb860
+ Saved registers:
+  ebx at 0xbfffb84c, ebp at 0xbfffb858, esi at 0xbfffb850, edi at 0xbfffb854, eip at 0xbfffb85c
+
+(gdb) info args
+No symbol "args" in current context.</code></pre>
+<p>I did some sanity checking by making some changes to my <code>index.php</code>:</p>
+<pre><code class="language-php">
+// continued from above...
+
+// comment out the problem line
+// \App\Model\Group::findFirst(1);
+
+$group = new \App\Model\Group();
+$meta  = $di-&gt;get('modelsMetadata');
+$strategy = $meta-&gt;getStrategy();
+
+echo '&lt;p&gt;' . get_class($meta) . '&lt;/p&gt;';
+echo '&lt;p&gt;' . get_class($strategy) . '&lt;/p&gt;';
+echo '&lt;p&gt;' . var_dump($strategy-&gt;getMetaData($group, $di)) . '&lt;/p&gt;';</code></pre>
+<p>This produces the following output:</p>
+<pre><code>Phalcon\Mvc\Model\MetaData\Memory
+
+Phalcon\Mvc\Model\MetaData\Strategy\Introspection
+
+array(12) { [0]=&gt; array(2) { [0]=&gt; string(2) "id" [1]=&gt; string(4) "name" } [1]=&gt; array(1) { [0]=&gt; string(2) "id" } [2]=&gt; array(1) { [0]=&gt; string(4) "name" } [3]=&gt; array(2) { [0]=&gt; string(2) "id" [1]=&gt; string(4) "name" } [4]=&gt; array(2) { ["id"]=&gt; int(0) ["name"]=&gt; int(2) } [5]=&gt; array(1) { ["id"]=&gt; bool(true) } [8]=&gt; string(2) "id" [9]=&gt; array(2) { ["id"]=&gt; int(1) ["name"]=&gt; int(2) } [10]=&gt; array(0) { } [11]=&gt; array(0) { } [12]=&gt; array(0) { } [13]=&gt; array(0) { } }</code></pre>
+<p>However, adding a call to <code>getAttributes()</code> causes a segmentation fault:</p>
+<pre><code class="language-php">
+// continued from above...
+
+// comment out the problem line
+// \App\Model\Group::findFirst(1);
+
+$group = new \App\Model\Group();
+$meta  = $di-&gt;get('modelsMetadata');
+$strategy = $meta-&gt;getStrategy();
+
+echo '&lt;p&gt;' . get_class($meta) . '&lt;/p&gt;';
+echo '&lt;p&gt;' . get_class($strategy) . '&lt;/p&gt;';
+echo '&lt;p&gt;' . var_dump($strategy-&gt;getMetaData($group, $di)) . '&lt;/p&gt;';
+
+// add this line to produce a segmentation fault
+echo '&lt;p&gt;' . var_dump($meta-&gt;getAttributes($group)) . '&lt;/p&gt;'; </code></pre>
+<p><strong>Phew! Any ideas?</strong></p>
+<p>I'm sorry for the wall of text, but thank you for any help! PhalconPHP is super fast, but more importantly, it's just a great framework! Thank you for your hard work PhalconPHP Team!</p>
+<p>EDIT: Whoops! I called it Model::find() instead of Model::findFirst() in my title and description <em>here</em>. Sorry for the confusion.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-b3d3f80523f9c5090d8b3dbd-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-b3d3f80523f9c5090d8b3dbd-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5915f25e654c4f9e60fe51700cdee683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4769/Izopi4a" class="user-moderator-Y"><span itemprop="name">Izo</span></a>        </span>
+        <br>
+
+        <span class="karma">85.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C32989" href="#C32989">
+                <time itemprop="dateCreated" datetime="2016-04-24T23:28:49-07:00" class="action-date">Apr '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi, its because of this : <a href="https://github.com/phalcon/zephir/issues/1218">https://github.com/phalcon/zephir/issues/1218</a></p>
+<p>It seems like under OSX its working, but for us doesnt work also ( including myself )</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="32989" data-cf-modified-b3d3f80523f9c5090d8b3dbd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="32989" data-cf-modified-b3d3f80523f9c5090d8b3dbd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C33003" href="#C33003">
+                <time itemprop="dateCreated" datetime="2016-04-25T02:59:32-07:00" class="action-date">Apr '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Actually im not sure its working under OSX beacause andreas didn't wrote that view was rendered :D</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="33003" data-cf-modified-b3d3f80523f9c5090d8b3dbd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="33003" data-cf-modified-b3d3f80523f9c5090d8b3dbd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8c53379b6527781429c9664d9277ed2b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1445/CheckMater" class="user-moderator-N"><span itemprop="name">Walter Pulido</span></a>        </span>
+        <br>
+
+        <span class="karma">12.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C33043" href="#C33043">
+                <time itemprop="dateCreated" datetime="2016-04-25T12:16:38-07:00" class="action-date">Apr '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi, I compiled Zephir just a few minutes ago and recompiled Phalcon but when I try to use any model I'm getting the following error from the syslog:</p>
+<pre><code>segfault at 0 ip xxx sp xxx error 6 in phalcon.so[7fd942b28000+3a2000]</code></pre>
+<p>From the PostgreSQL log:</p>
+<pre><code>could not receive data from client: Connection reset by peer</code></pre>
+<p>Also I'm getting a 502 error from nginx</p>
+<p>The code I'm trying to run is the following:</p>
+<pre><code class="language-php">$owner = Owner::findFirst();</code></pre>
+<p>The model just has the code to set the conection on initialize like this:</p>
+<pre><code class="language-php">class Owner extends Model
+{
+    public $email;
+
+    public function initialize()
+    {
+        $this-&gt;setConnectionService('dbRoot');
+    }</code></pre>
+<p>I'm using the following:</p>
+<ul>
+<li>Ubuntu 15.04</li>
+<li>Nginx 1.6.2</li>
+<li>PostgreSQL 9.4.6</li>
+<li>PHP 7.0.5</li>
+<li>Zephir 0.9.2a-dev (Build on Apr 25 2016 12:34:21 using the master branch)</li>
+<li>Phalcon 2.1.0-RC1 (Build on Apr 25 2016 12:58:05 using the master branch)</li>
+</ul>
+<p>I don't know if this is related to my problem or if I need to open a new thread, but I think it has some relation.</p>
+<p>Thanks in advance!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="33043" data-cf-modified-b3d3f80523f9c5090d8b3dbd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="33043" data-cf-modified-b3d3f80523f9c5090d8b3dbd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="33045" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '16</span>
+              </span><br/><a name="C33045" href="#C33045">
+                <time itemprop="dateCreated" datetime="2016-04-25T13:26:40-07:00" class="action-date">Apr '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It's common problem with php 7.0.5. Phalcon don't works with php 7 fully stable. Just use php 5.x. Your problem is related. You don't need to create new thread. It's just not working for now. Check this - <a href="https://github.com/phalcon/cphalcon/issues/11550">https://github.com/phalcon/cphalcon/issues/11550</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="33045" data-cf-modified-b3d3f80523f9c5090d8b3dbd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="33045" data-cf-modified-b3d3f80523f9c5090d8b3dbd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4097134b478d395b164b407bb8a03bf9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6827/jstewmc" class="user-moderator-N"><span itemprop="name">Jack Clayton</span></a>        </span>
+        <br>
+
+        <span class="karma">1.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="33087" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '16</span>
+              </span><br/><a name="C33087" href="#C33087">
+                <time itemprop="dateCreated" datetime="2016-04-26T19:11:42-07:00" class="action-date">Apr '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Ok, cool. </p>
+<p>Thanks<a href="https://forum.phalcon.io/user/0/Izo"> @Izo</a> for the suggestion. I'm not sure if my issue is related to <a href="https://github.com/phalcon/zephir/issues/1218">phalcon/zephir PHP7 create_instance_params() issue</a>, because I don't have a problem rendering views without the <code>findFirst()</code> method. However, I'm new to Phalcon and Zephir. So, what do I know haha. </p>
+<p>Thanks<a href="https://forum.phalcon.io/user/0/Checkmater"> @Checkmater</a> for chiming in. It's nice to know I'm not alone haha.</p>
+<p>Thank you<a href="https://forum.phalcon.io/user/0/Wojciech"> @Wojciech</a> for the heads up. I didn't realize how close I'd wandered to the edge of development haha. I just wanted to be sure I hadn't missed something in my configuration. Do you think it would help the guys and gals to post my error, stacktrace, etc to <a href="https://github.com/phalcon/cphalcon/issues/11550">the Github issue</a>?</p>
+<p>Finally, thank you Phalcon Team for a great framework!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="33087" data-cf-modified-b3d3f80523f9c5090d8b3dbd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="33087" data-cf-modified-b3d3f80523f9c5090d8b3dbd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C33091" href="#C33091">
+                <time itemprop="dateCreated" datetime="2016-04-27T01:52:24-07:00" class="action-date">Apr '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You don't need to create another issue on github. I'm already doing everything that can be done here <a href="https://github.com/phalcon/cphalcon/issues/11550">https://github.com/phalcon/cphalcon/issues/11550</a>. Also <code>create_instance_params</code> is already fixed in newest zephir. But still there is problem with phql parser which is not fully ported to php 7 and it just not works(so sad).</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="33091" data-cf-modified-b3d3f80523f9c5090d8b3dbd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="33091" data-cf-modified-b3d3f80523f9c5090d8b3dbd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="11271" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

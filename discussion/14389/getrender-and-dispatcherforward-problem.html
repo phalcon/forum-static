@@ -1,0 +1,599 @@
+---
+layout: default
+title: 'getRender() and dispatcher-&gt;forward problem - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">getRender() and dispatcher-&gt;forward problem</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/8299/andresrl" class="user-moderator-N"><span itemprop="name">andresrl</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-10-07T01:59:28-07:00">Oct '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-10-07T01:59:28-07:00">Oct '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">7</span>
+                </td>
+                <td>
+                    <label>Views</label><br>991</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/d4764c2e0df9157f9fd42717304c5a59?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/8299/andresrl" class="user-moderator-N"><span itemprop="name">andresrl</span></a></span>
+                <span class="karma">3.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C14389" href="#C14389">
+        <time class="action-date">Oct '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello, I'm trying to figure out what could be happening when using getRender() to render an email template (as Vökuró tutorial does). The method works as expected, but I have a dispatcher-&gt;forward after the email is sended, and this dispatcher no longer works (blank page) if I use the getRender() method to get the content for the email.</p>
+<p>The email is sended allright with the template I provide to the getRender() method, but someting is happening between because instead of forwarding to other action I get an blank page, only with a direct flash messages I created before.</p>
+<p>As soon as I substitute getRender() in the code with a string, the dispatcher starts to work.</p>
+<p>If instead of using the dispatcher-&gt;forward I use a response-&gt;redirect, It works. But, of course, I can't use Phalcon\Flash\Direct.</p>
+<p>I used to create this project a similar way as Vökuró tutorial does (In Vökuró works fine), but using modules, this is:</p>
+<p>A SignUp method inside a SessionController:</p>
+<p><strong><em>app\modules\auth\controllers\SessionController.php</em></strong></p>
+<pre><code class="language-php">namespace MyApp\Modules\Auth\Controllers;
+
+class SessionController extends ControllerBase
+{
+    public function signupAction()
+    {
+    ...
+                if ($user-&gt;save()) {
+                    return $this-&gt;dispatcher-&gt;forward([
+                        'namespace'     =&gt; 'MyApp\Modules\Auth\Controllers',
+                        'controller'    =&gt; 'index',
+                        'action'        =&gt; 'index'
+                    ]);
+                }
+    ....
+    }
+}</code></pre>
+<p>An afterSave() method inside User class to create an EmailConfirmation:</p>
+<p><strong><em>app\models\User.php</em></strong></p>
+<pre><code class="language-php">namespace Vcloud\Models;
+...
+
+class User extends \Phalcon\Mvc\Model
+{
+    ...
+    public function afterSave()
+    {
+        $emailConfirmation = new EmailConfirmation();
+
+        $emailConfirmation-&gt;user_id = $this-&gt;id;
+
+        if ($emailConfirmation-&gt;save()) {
+            $this-&gt;getDI()
+                -&gt;getFlash()
+                -&gt;notice('A confirmation mail has been sent to ' . $this-&gt;email);
+        }
+    }
+    ...
+}</code></pre>
+<p>An afterCreate() method inside EmailConfirmation to send the email:</p>
+<p><strong><em>app\models\EmailConfirmation.php</em></strong></p>
+<pre><code class="language-php">class EmailConfirmation extends \Phalcon\Mvc\Model
+{
+    ...
+    public function afterCreate()
+    {
+        $this-&gt;getDI()
+        -&gt;getMail()
+        -&gt;send([$this-&gt;user-&gt;email =&gt; $this-&gt;user-&gt;username],
+            "Please confirm your email",
+            'confirmation',
+            ['confirmUrl' =&gt; '/auth/confirm/' . $this-&gt;code . '/' . $this-&gt;user-&gt;email]
+            );
+    }
+    ...
+}</code></pre>
+<p>And a Mail library to get the corresponding template and send the email.</p>
+<p><strong><em>app\common\library\Mail.php</em></strong></p>
+<pre><code class="language-php">namespace MyApp\Mail;
+
+use Phalcon\Mvc\User\Component;
+use Swift_Message as Message;
+use Swift_SmtpTransport as Smtp;
+use Phalcon\Mvc\View;
+
+class Mail extends Component
+{
+
+    protected $transport;
+
+    public function getTemplate($name, $params)
+    {
+        $parameters = array_merge([
+            'publicUrl' =&gt; $this-&gt;config-&gt;application-&gt;publicUrl
+        ], $params);
+
+        //If instead of returning getRender() I return "S" the dispatcher-&gt;forward works
+        //return ("S");  
+
+        return $this-&gt;view-&gt;getRender('emailTemplates', $name, $parameters, function ($view) {
+            $view-&gt;setRenderLevel(View::LEVEL_LAYOUT);
+        });
+
+        return $view-&gt;getContent();
+    }
+
+    public function send($to, $subject, $name, $params)
+    {
+        $mailSettings = $this-&gt;config-&gt;mail;
+
+        $template = $this-&gt;getTemplate($name, $params);
+
+        // Create the message
+        $message = Message::newInstance()
+            -&gt;setSubject($subject)
+            -&gt;setTo($to)
+            -&gt;setFrom([
+                $mailSettings-&gt;fromEmail =&gt; $mailSettings-&gt;fromName
+            ])
+            -&gt;setBody($template, 'text/html');
+
+        if (isset($mailSettings) &amp;&amp; isset($mailSettings-&gt;smtp)) {
+
+            if (!$this-&gt;transport) {
+                $this-&gt;transport = Smtp::newInstance(
+                    $mailSettings-&gt;smtp-&gt;server,
+                    $mailSettings-&gt;smtp-&gt;port,
+                    $mailSettings-&gt;smtp-&gt;security
+                )
+                -&gt;setUsername($mailSettings-&gt;smtp-&gt;username)
+                -&gt;setPassword($mailSettings-&gt;smtp-&gt;password);
+            }
+
+            // Create the Mailer using your created Transport
+            $mailer = \Swift_Mailer::newInstance($this-&gt;transport);
+
+            return $mailer-&gt;send($message);
+        }
+    }
+}</code></pre>
+<p>After Signing Up, the user is recorded, the emailConfirmation record is created also in the database and the email is sended correctly.</p>
+<p>But, instead of forwarding to other action, I get a blank page only with the flash message: &quot;A confirmation mail has been sent to <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="056068646c6945616a68646c6b2b666a68">[email&#160;protected]</a>&quot;. I get no Errors or Exceptions.</p>
+<p>Does somebody know what could be happening?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-cc545b23fa421e662a54d86c-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-cc545b23fa421e662a54d86c-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C41393" href="#C41393">
+                <time itemprop="dateCreated" datetime="2016-10-07T02:15:20-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Is this code in if is happening ? Add some event listener to dispatcher and log all beforeExecuteRoute and check if forwarding is happening</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="41393" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="41393" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d4764c2e0df9157f9fd42717304c5a59?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8299/andresrl" class="user-moderator-N"><span itemprop="name">andresrl</span></a>        </span>
+        <br>
+
+        <span class="karma">3.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C41403" href="#C41403">
+                <time itemprop="dateCreated" datetime="2016-10-07T03:54:23-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks Wojciech! I'll go that way.</p>
+<p>But I'm trying now to log this and can't find a way of doing it.</p>
+<p>I know how to catch Exceptions in the dispatcher (dispatch:beforeException) and treat them, but  logging All beforeExecuteRoute it's hard for me.</p>
+<p>I'm trying this:</p>
+<pre><code class="language-php">$di-&gt;setShared('dispatcher', function() use ($di) {
+    $eventsManager = new EventsManager();
+    $eventsManager-&gt;attach('dispatch:beforeExecuteRoute', function($event, $dispatcher) use ($di) {
+        // Then I don't know what to include here
+        // I can't find info about doing this in documentation
+    });
+    $dispatcher = new Dispatcher();
+    $dispatcher-&gt;setEventsManager($eventsManager);
+    return $dispatcher;
+});</code></pre>
+<p>But I can't find info about doing that in Phalcon :(</p>
+<p>Please, can you tell me how to do it? so I will go a step foward in order to debug my own projects properly</p>
+<p>Many Thanks!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="41403" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="41403" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="41409" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '16</span>
+              </span><br/><a name="C41409" href="#C41409">
+                <time itemprop="dateCreated" datetime="2016-10-07T04:31:04-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Just for example use file logger :) <a href="https://docs.phalcon.io/pl/latest/api/Phalcon_Logger_Adapter_File.htm">https://docs.phalcon.io/pl/latest/api/Phalcon_Logger_Adapter_File.htm</a></p>
+<p>I myself using queue for adding messages + cli task for writing into file</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="41409" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="41409" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d4764c2e0df9157f9fd42717304c5a59?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8299/andresrl" class="user-moderator-N"><span itemprop="name">andresrl</span></a>        </span>
+        <br>
+
+        <span class="karma">3.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C41411" href="#C41411">
+                <time itemprop="dateCreated" datetime="2016-10-07T05:13:58-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks Wojciech!</p>
+<p>So now I have a simple file logger:</p>
+<pre><code class="language-php">$di-&gt;setShared('dispatcher', function() use ($di) {
+
+    $eventsManager = new EventsManager();
+    $eventsManager-&gt;attach('dispatch:beforeExecuteRoute', function($event, $dispatcher) use ($di) {
+        $logger = new \Phalcon\Logger\Adapter\File(APP_PATH . "/logs/beforeExecuteRoute.log");
+        $logger-&gt;log("This is a message");
+        $logger-&gt;error("This is an error");
+        $logger-&gt;close();
+    });
+
+    $dispatcher = new Dispatcher();
+    $dispatcher-&gt;setEventsManager($eventsManager);
+    $dispatcher-&gt;setDefaultNamespace('Vcloud\Modules\Profile\Controllers');
+    return $dispatcher;
+});</code></pre>
+<p>How can I get the messages from the dispatcher to log them into the file?</p>
+<p>With Exceptions, for instance, we have $message  = $exception-&gt;getMessage(); to get the Exception Message</p>
+<p>But what is the way to get All the Messages from the dispatcher</p>
+<p>I'm trying this, but get some errors (Error: Call to a member function getMessage() on null)</p>
+<pre><code class="language-php">    $eventsManager-&gt;attach('dispatch:beforeExecuteRoute', function($event, $dispatcher, $message) use ($di) {
+        $msg  = $message-&gt;getMessage();
+        $logger = new \Phalcon\Logger\Adapter\File(APP_PATH . "/logs/beforeExecuteRoute.log");
+        $logger-&gt;log($msg);
+        $logger-&gt;close();
+    });</code></pre>
+<p>I'm very lost :(</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="41411" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="41411" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C41413" href="#C41413">
+                <time itemprop="dateCreated" datetime="2016-10-07T05:35:39-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>There is nothing like message passed. What messages ? Dispatcher doesn't populate any message itself :) I just have message like this:</p>
+<pre><code class="language-php"> PHP_EOL.
+                'URL: '.$this-&gt;di-&gt;get('request')-&gt;getURI().PHP_EOL.
+                'Module name:'.$dispatcher-&gt;getModuleName().PHP_EOL.
+                'Controller name:'.$dispatcher-&gt;getControllerName().PHP_EOL.
+                'Action name:'.$dispatcher-&gt;getActionName().PHP_EOL.
+                'Params:'.json_encode($dispatcher-&gt;getParams()).PHP_EOL.
+                'POST:'.json_encode($_POST).PHP_EOL.
+                'JSON:'.json_encode($this-&gt;di-&gt;get('request')-&gt;getJsonRawBody(true)).PHP_EOL.
+                'User id:'.$userId.PHP_EOL.
+                'IP:'.$this-&gt;di-&gt;get('request')-&gt;getClientAddress().PHP_EOL.
+                '=============================================================',</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="41413" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="41413" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d4764c2e0df9157f9fd42717304c5a59?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8299/andresrl" class="user-moderator-N"><span itemprop="name">andresrl</span></a>        </span>
+        <br>
+
+        <span class="karma">3.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C41415" href="#C41415">
+                <time itemprop="dateCreated" datetime="2016-10-07T05:58:45-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yeah! the forwarding is happening</p>
+<pre><code>[Fri, 07 Oct 16 14:49:53 +0200][DEBUG] 
+URL: /auth/session/signup
+Module name:auth
+Controller name:session
+Action name:signup
+======================================
+[Fri, 07 Oct 16 14:49:54 +0200][DEBUG] 
+URL: /auth/session/signup
+Module name:auth
+Controller name:index
+Action name:index</code></pre>
+<p>So, what could be the blank page error?</p>
+<p>If I change the getRender() to a string the problem dissapears</p>
+<p><em>I'm learning a lot with you :)</em></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="41415" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="41415" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C41419" href="#C41419">
+                <time itemprop="dateCreated" datetime="2016-10-07T06:04:21-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hmmm, im using mail rendering like this:</p>
+<pre><code>        $view-&gt;start();
+        $view-&gt;render('mail', 'forgot');
+        $view-&gt;finish();
+        $html = $view-&gt;getContent();</code></pre>
+<p>but never checked if there is gonna be some problem with forward. Maybe try to do reset somewhere ? How exactly this action looks like ? Did you checked php logs ? You have any errors or something ? Also the page is blank, what is in source ? Maybe it stops rendering because of some error.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="41419" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="41419" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d4764c2e0df9157f9fd42717304c5a59?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8299/andresrl" class="user-moderator-N"><span itemprop="name">andresrl</span></a>        </span>
+        <br>
+
+        <span class="karma">3.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C41423" href="#C41423">
+                <time itemprop="dateCreated" datetime="2016-10-07T09:59:41-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks!</p>
+<p>I'm almost there:</p>
+<pre><code class="language-php">
+    public function getTemplate($name)
+    {
+        $view = $this-&gt;view;
+
+        $view-&gt;start();
+        $view-&gt;render('emailTemplates', $name);
+        $view-&gt;finish();
+
+        return $view-&gt;getContent();
+    }</code></pre>
+<p>But I'ts applying also the template I have defined in SessionController.php. And, inside this template ('public'), it's rendered the 'emailTemplates'</p>
+<pre><code class="language-php">class SessionController extends ControllerBase
+{
+    public function initialize()
+    {
+        $this-&gt;view-&gt;setTemplateBefore('public');
+    }</code></pre>
+<p>This is the Controller I use to signUp (www.domain.com/auth/session/signup). From where It's called the user-&gt;save() and then the confirmation email is sended.</p>
+<p>This thing doesn't happens when using:</p>
+<pre><code class="language-php">return $this-&gt;view-&gt;getRender('emailTemplates','forgot')</code></pre>
+<p>getRender() only renders the 'emailTemplates' controller. But render() applies also the template ('public') defined in the other controller avobe the 'emailTemplates' template.</p>
+<p>It's all very strange to me, I can't understand what's happening</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="41423" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="41423" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C41425" href="#C41425">
+                <time itemprop="dateCreated" datetime="2016-10-07T10:22:06-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Did you checked logs ? Maybe try to reset view in action where you forwarind ? I don't really know what's happening here. Did you checked what i wrote what exactly you have in source ? Maybe rendering is stopped because of some exception.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="41425" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="41425" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d4764c2e0df9157f9fd42717304c5a59?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8299/andresrl" class="user-moderator-N"><span itemprop="name">andresrl</span></a>        </span>
+        <br>
+
+        <span class="karma">3.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C41427" href="#C41427">
+                <time itemprop="dateCreated" datetime="2016-10-07T11:16:54-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes,with getRender() I checked that no errors are thrown by php, in php_error.log and in the source code of the returned page (wich is completly blank)</p>
+<p>Anyway, <strong>Yeah!!!!</strong> with $view-&gt;reset() now the problem I described before is gone, above template no longer renders. <strong>THANKS!</strong></p>
+<p>But now I can't send some parameters to the view. Just like this:</p>
+<pre><code class="language-php">
+    $name = "confirmation";
+
+    public function getViewTemplate($name, $params)
+    {
+        $parameters = array_merge([
+            'publicUrl' =&gt; $this-&gt;config-&gt;application-&gt;publicUrl
+        ], $params);
+
+        $view = $this-&gt;view;
+        $view-&gt;reset();  // YEAH!!!
+
+        $view-&gt;start();
+        $view-&gt;render('emailTemplates', $name, $parameters);
+        $view-&gt;finish();
+
+        return $view-&gt;getContent();
+    }</code></pre>
+<p>I get some errors:</p>
+<pre><code>Notice: Undefined variable: publicUrl in /xxxxx/app/modules/auth/views/layouts/emailTemplates.volt.php on line 28</code></pre>
+<pre><code>Notice: Undefined variable: publicUrl in /xxxxx/app/modules/auth/views/emailTemplates/confirmation.volt.php on line 14</code></pre>
+<pre><code>Notice: Undefined variable: confirmUrl in /xxxxx/app/modules/auth/views/emailTemplates/confirmation.volt.php on line 14</code></pre>
+<p>I have tried setting the array directly also:</p>
+<pre><code class="language-php">$parameters = ['publicUrl' =&gt; "http://www.domain.com", 'confirmUrl' =&gt; "/auth/confirm/"];</code></pre>
+<p>Getting the same errors. render is not acepting these parameters</p>
+<p>I have tested the template, passing some parameters in the controller (www.domain.com/auth/emailtemplates/confirmation) and works fine</p>
+<p>Why is not getting these parameters?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="41427" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="41427" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C41431" href="#C41431">
+                <time itemprop="dateCreated" datetime="2016-10-07T13:08:16-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Render method doesn't accept parameters i think, try setVars.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="41431" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="41431" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d4764c2e0df9157f9fd42717304c5a59?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8299/andresrl" class="user-moderator-N"><span itemprop="name">andresrl</span></a>        </span>
+        <br>
+
+        <span class="karma">3.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C41435" href="#C41435">
+                <time itemprop="dateCreated" datetime="2016-10-08T03:54:13-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well, in the documentacion says that it acccepts parameters:</p>
+<pre><code class="language-php">Class Phalcon\Mvc\View
+public render (string $controllerName, string $actionName, [array $params])
+// Executes render process from dispatching data</code></pre>
+<p>But it seems it doesn't. With setVars() works fine ;)</p>
+<p>Anyway, <strong>Many Many Thanks Wojciech</strong> for your invaluable support.</p>
+<p>You have helped me so much with your answers, also I've learn a lot! <strong>Thanks</strong></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="41435" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="41435" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5df8d925204f61a484b4339f5e6bd588?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4747/ncxn" class="user-moderator-N"><span itemprop="name">ncxn</span></a>        </span>
+        <br>
+
+        <span class="karma">207</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C51309" href="#C51309">
+                <time itemprop="dateCreated" datetime="2017-10-02T00:34:08-07:00" class="action-date">Oct '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I have same problems, anyone have a solution for that?
+thanks</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51309" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51309" data-cf-modified-cc545b23fa421e662a54d86c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="14389" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

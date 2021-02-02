@@ -1,0 +1,398 @@
+---
+layout: default
+title: 'Directory Loader Not Registering Classes? (XAMPP/Windows) - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Directory Loader Not Registering Classes? (XAMPP/Windows)</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3374/Ecksters" class="user-moderator-N"><span itemprop="name">Daniel Eck</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-07-28T18:53:53-07:00">Jul '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-07-28T18:53:53-07:00">Jul '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">5</span>
+                </td>
+                <td>
+                    <label>Views</label><br>951</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/c593e65a868ad49a257ac965bf8effac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3374/Ecksters" class="user-moderator-N"><span itemprop="name">Daniel Eck</span></a></span>
+                <span class="karma">8.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C16611" href="#C16611">
+        <time class="action-date">Jul '17</time>
+    </a>
+</div>
+<div class="post-content"><div><h3>EDIT:</h3>
+<p>Okay, I've figured out what the error related to the handler was, at this point I just need help getting my directory autoloader to work(the part of the code that's commented out), I'm on XAMPP under Windows, if that might play a role, I've tried absolute paths, relative paths, verified that <code>__DIR__</code> points where I think it should, reversing the slashes(with escaping), and haven't gotten anything to load the classes automatically.</p>
+<p>Using <code>$loader-&gt;registerClasses</code> works fine, so I know that the class is named properly and works, but for some reason it's not detected by the <code>registerDirs</code> autoloader.</p>
+<h3>Original Post:</h3>
+<p>So my directory structure is pretty simple:</p>
+<pre><code>
+/
+    controllers/
+        users.php
+    api.php
+</code></pre>
+<p>My code is taken almost verbatim from the <a href="https://docs.phalcon.io/en/3.2/application-micro">Micro section</a> of the docs:</p>
+<p>api.php:</p>
+<pre><code>
+&lt;?php
+$loader = new \Phalcon\Loader();
+
+/*$loader-&gt;registerDirs(
+    [
+        __DIR__ . "/models/",
+        __DIR__ . "/controllers/"
+    ]
+)-&gt;register();*/
+
+$loader-&gt;registerClasses(
+    [
+        "UsersController"         =&gt; "controllers/users.php",
+    ]
+)-&gt;register();
+
+$app = new \Phalcon\Mvc\Micro();
+
+use Phalcon\Mvc\Micro\Collection as MicroCollection;
+
+// Users handler
+$users = new MicroCollection();
+$users-&gt;setHandler(new UsersController(), true);
+$users-&gt;setPrefix('/users');
+$users-&gt;get('/get/{id}', 'get');
+$users-&gt;get('/add/{payload}', 'add');
+$app-&gt;mount($users);
+
+$app-&gt;after(
+    function () use ($app) {
+        $app-&gt;response-&gt;setContentType('application/json');
+        $app-&gt;response-&gt;sendHeaders();
+        echo json_encode($app-&gt;getReturnedValue());
+    }
+);
+
+try {
+  $app-&gt;handle();
+} catch (\Exception $e) {
+    echo "Exception: ", $e-&gt;getMessage();
+}
+</code></pre>
+<p>controllers/users.php:</p>
+<pre><code>
+&lt;?php
+
+use Phalcon\Mvc\Controller;
+
+class UsersController extends Controller
+{
+    public function index()
+    {
+        return ["hai", "test"];
+    }
+    public function get($id)
+    {
+        return [$id, "testget"];
+    }
+
+    public function add($payload)
+    {
+        return [$payload, "testadd"];
+    }
+}
+</code></pre>
+<p>For one, I've commented out the Directory loading, because the UsersController class was failing to load, so I've loaded it directly just for testing.</p>
+<p>Second, now that it IS loading, I get this error, regardless of what page I visit (/users, /, whatever):</p>
+<blockquote>
+<p>Fatal error: Uncaught InvalidArgumentException: Parameter 'definition' must be a string in C:\Code\stud\xampp\htdocs\api.php:30 Stack trace: #0 [internal function]: Phalcon\Mvc\Micro\LazyLoader-&gt;__construct(Object(UsersController)) #1 C:\Code\stud\xampp\htdocs\api.php(30): Phalcon\Mvc\Micro-&gt;mount(Object(Phalcon\Mvc\Micro\Collection)) #2 {main} thrown in C:\Code\stud\xampp\htdocs\api.php on line 30</p>
+</blockquote>
+<p>Anyone know why this isn't working? I'm using PHP 7.1.4 on XAMPP with Phalcon 3.2, I've tried using forward slashes(Windows problem?) and  removing the first / to fix the autoloader, but still the class doesn't load, and I don't have any idea how to fix the above error.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-18a45bc82487aa2f0f194093-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-18a45bc82487aa2f0f194093-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e551053274114c51c47004223c8e65b3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9839/ChangePlaces" class="user-moderator-N"><span itemprop="name">ChangePlaces</span></a>        </span>
+        <br>
+
+        <span class="karma">10.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C49941" href="#C49941">
+                <time itemprop="dateCreated" datetime="2017-07-29T06:26:27-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>First, you don't need to set json content type headers to send a json output, you can just use: <code>$app-&gt;response-&gt;setJsonContent($data)</code>directly from the controller. no need to use an after.</p>
+<p>also, read the error message, on line 30 is the root of your error.</p>
+<p>also <code>echo "Exception: ", $e-&gt;getMessage();</code> the <code>,</code> should be a <code>.</code></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49941" data-cf-modified-18a45bc82487aa2f0f194093-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49941" data-cf-modified-18a45bc82487aa2f0f194093-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e551053274114c51c47004223c8e65b3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9839/ChangePlaces" class="user-moderator-N"><span itemprop="name">ChangePlaces</span></a>        </span>
+        <br>
+
+        <span class="karma">10.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C49943" href="#C49943">
+                <time itemprop="dateCreated" datetime="2017-07-29T06:29:17-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I'm also guessing this is line 30: <code>$users-&gt;setHandler(new UsersController(), true);</code></p>
+<p>the true is used to use lazyloading, and the error message is complaining that the constructor is expecting a string, but is receiving Object(UsersController). can you see where you've gone wrong?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49943" data-cf-modified-18a45bc82487aa2f0f194093-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49943" data-cf-modified-18a45bc82487aa2f0f194093-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c593e65a868ad49a257ac965bf8effac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3374/Ecksters" class="user-moderator-N"><span itemprop="name">Daniel Eck</span></a>        </span>
+        <br>
+
+        <span class="karma">8.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="49953" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '17</span>
+              </span><br/><a name="C49953" href="#C49953">
+                <time itemprop="dateCreated" datetime="2017-07-29T13:23:06-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Okay, I made those changes, however, it still doesn't explain why the autoloader isn't detecting my directories (I've checked that <code>__DIR__</code> is indeed pointing to my web directory, and I've tried relative and absolute paths with and without it).</p>
+<p>You are correct that is line 30, however, I am directly copying from <a href="https://docs.phalcon.io/en/3.2/application-micro">documentation</a>, under lazy loading:</p>
+<pre><code>// Users handler
+$users = new MicroCollection();
+$users-&gt;setHandler(new UsersController(), true);
+$users-&gt;setPrefix('/users');
+$users-&gt;get('/get/{id}', 'get');
+$users-&gt;get('/add/{payload}', 'add');
+$app-&gt;mount($users);</code></pre>
+<p>Are the docs wrong?</p>
+<p>EDIT: I can confirm that the docs are at least half wrong, at the top of the Lazy Loading section, they properly put the class name in quotes, when using the additional <code>true</code> parameter for lazy loading, but further down when they &quot;put it all together&quot; for you they try to pass a class instead of a string, which is where this error occurs. I've submitted an update in Github.</p>
+<p>So I'm still trying to figure out why my autoloader won't pick up the class in my directories(it's the section I commented out here), any ideas? I think it's likely XAMPP related but I'm unsure.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49953" data-cf-modified-18a45bc82487aa2f0f194093-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49953" data-cf-modified-18a45bc82487aa2f0f194093-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e551053274114c51c47004223c8e65b3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9839/ChangePlaces" class="user-moderator-N"><span itemprop="name">ChangePlaces</span></a>        </span>
+        <br>
+
+        <span class="karma">10.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="49955" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '17</span>
+              </span><br/><a name="C49955" href="#C49955">
+                <time itemprop="dateCreated" datetime="2017-07-29T17:30:01-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>i think you want <code>__DIR__ . /app/models</code></p>
+<p>as you're learning download phalcon devtools and create a new micro project. you'll get a framework to analyse,</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49955" data-cf-modified-18a45bc82487aa2f0f194093-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49955" data-cf-modified-18a45bc82487aa2f0f194093-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c593e65a868ad49a257ac965bf8effac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3374/Ecksters" class="user-moderator-N"><span itemprop="name">Daniel Eck</span></a>        </span>
+        <br>
+
+        <span class="karma">8.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="49957" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '17</span>
+              </span><br/><a name="C49957" href="#C49957">
+                <time itemprop="dateCreated" datetime="2017-07-29T19:14:15-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>So I used <code>phalcon project stud --type=micro</code> and generated a micro project. I then copied my users.php controller file shown above into the models directory, since that's the only autoloaded directory in that project by default.</p>
+<p>Here's the original skeleton's loader.php file, with an instantiation of my UsersController class added at the end to test it:</p>
+<pre><code>
+&lt;?php
+
+$loader = new \Phalcon\Loader();
+
+$loader-&gt;registerDirs(
+    [
+        $config-&gt;application-&gt;modelsDir
+    ]
+)-&gt;register();
+
+new UsersController();
+</code></pre>
+<p>This throws the following error:</p>
+<p><code>Fatal error: Uncaught Error: Class 'UsersController' not found in C:\Code\stud\xamppTest\htdocs\stud\app\config\loader.php:14 Stack trace: #0 C:\Code\stud\xamppTest\htdocs\stud\public\index.php(32): include() #1 {main} thrown in C:\Code\stud\xamppTest\htdocs\stud\app\config\loader.php on line 14</code></p>
+<p>However, if I simply use <code>registerClasses</code> and specify the file and class name, using the <em>exact</em> same directory:</p>
+<pre><code>
+&lt;?php
+
+$loader = new \Phalcon\Loader();
+
+$loader-&gt;registerClasses(
+    [
+        "UsersController" =&gt; $config-&gt;application-&gt;modelsDir . 'users.php'
+    ]
+)-&gt;register();
+
+new UsersController();</code></pre>
+<p>I get no error. Something is wrong with the registerDir function.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49957" data-cf-modified-18a45bc82487aa2f0f194093-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49957" data-cf-modified-18a45bc82487aa2f0f194093-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e551053274114c51c47004223c8e65b3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9839/ChangePlaces" class="user-moderator-N"><span itemprop="name">ChangePlaces</span></a>        </span>
+        <br>
+
+        <span class="karma">10.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="49959" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '17</span>
+              </span><br/><a name="C49959" href="#C49959">
+                <time itemprop="dateCreated" datetime="2017-07-29T20:03:40-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>No there isn't. You need to beocme more self-sufficient and actually look at the mistake you're making! ;)</p>
+<p>You're putting a controller class inside the models directory. Phalcon looks for models in the models dir, controllers in the controllers directory, migrations in the migrations dir etc as specified in the config. When you specifically define the location of the classes, it knows where to find the classes so phalcon doesn't need to look in the dirs - akin to Composers autodump i suppose.</p>
+<p>Look in the config file for yourself. Add a config directory (though I think it may be there by default), and specify that the controllers dir exists inside the app config. application[ .... 'controllersDir' =&gt; APP_PATH . '/controllers', ....]</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49959" data-cf-modified-18a45bc82487aa2f0f194093-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span><span itemprop="downvoteCount">1</span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49959" data-cf-modified-18a45bc82487aa2f0f194093-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c593e65a868ad49a257ac965bf8effac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3374/Ecksters" class="user-moderator-N"><span itemprop="name">Daniel Eck</span></a>        </span>
+        <br>
+
+        <span class="karma">8.3k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="49963" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '17</span>
+              </span><br/><a name="C49963" href="#C49963">
+                <time itemprop="dateCreated" datetime="2017-07-29T21:53:10-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The name of the folder is irrelevant, as I'm simply trying to load classes from that folder. Phalcon doesn't care if I put controller classes in the model directory, or if I rename the model directory to &quot;cows&quot;, that's just a common practice, and as long as the code refers to the right folder it should autoload all classes, regardless of type, from that folder.</p>
+<p>Doing what you said, creating a controllers folder in the config and referring to that, gives the same error as before.</p>
+<p>Interestingly enough, your suggestion led me to a discovery, I simply changed the class name to &quot;Users&quot; (still extending Controller) and it now loaded the class properly.</p>
+<p>However, if I changed it to ANYTHING other than Users, or if I deleted it completely and try to instantiate the Users class, I got an error.</p>
+<p>So I finally figured it out, the issue is that the name of the php file did not match the name of the class. I looked and it <em>is</em> very briefly mentioned in the <a href="https://docs.phalcon.io/en/3.2/loader">Autoloader docs</a>:</p>
+<blockquote>
+<p>The third option is to register directories, in which classes could be found. This option is not recommended in terms of performance, since Phalcon will need to perform a significant number of file stats on each folder, <strong>looking for the file with the same name as the class</strong>. It's important to register the directories in relevance order. Remember always add a trailing slash at the end of the paths.</p>
+</blockquote>
+<p>Anyway, that was the issue, needed to name the file the same as the class.</p>
+<p>Also, for anyone who finds this thread trying to figure out my original problem, I want to respond to the first post, as it has several inaccuracies:</p>
+<blockquote>
+<p>First, you don't need to set json content type headers to send a json output, you can just use: $app-&gt;response-&gt;setJsonContent($data)directly from the controller. no need to use an after.</p>
+<p>also, read the error message, on line 30 is the root of your error.</p>
+<p>also echo &quot;Exception: &quot;, $e-&gt;getMessage(); the , should be a .</p>
+</blockquote>
+<ol>
+<li>
+<p>Setting the content-type in the after section was because I would be doing so for all output, so putting it there reduced repetition across all controllers. (DRY principle), however, you are correct that the setJsonContent function was a better choice for this.</p>
+</li>
+<li>Echo with commas for multiple strings is correct syntax as well. Concatenation is actually <a href="https://www.electrictoolbox.com/php-echo-commas-vs-concatenation/">slightly slower</a></li>
+</ol>
+<p>However, I do greatly appreciate you taking the time to continue responding, as your responses kept pushing me to test new things until I found the issue myself, so thank you very much.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49963" data-cf-modified-18a45bc82487aa2f0f194093-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span><span itemprop="downvoteCount">2</span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49963" data-cf-modified-18a45bc82487aa2f0f194093-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e551053274114c51c47004223c8e65b3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9839/ChangePlaces" class="user-moderator-N"><span itemprop="name">ChangePlaces</span></a>        </span>
+        <br>
+
+        <span class="karma">10.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="49965" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '17</span>
+              </span><br/><a name="C49965" href="#C49965">
+                <time itemprop="dateCreated" datetime="2017-07-30T04:32:28-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>i actually went to upvote this but missed and now can't change it! However downvoting my last answer was f'ing rude after all the time I've put in to replying.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49965" data-cf-modified-18a45bc82487aa2f0f194093-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49965" data-cf-modified-18a45bc82487aa2f0f194093-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="16611" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

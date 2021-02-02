@@ -1,0 +1,570 @@
+---
+layout: default
+title: 'How can I delete records in a many-to-many relationship? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How can I delete records in a many-to-many relationship?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2470/Pajamaman" class="user-moderator-N"><span itemprop="name">Pajamaman</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-01-01T19:34:38-07:00">Jan '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-01-01T19:34:38-07:00">Jan '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">6</span>
+                </td>
+                <td>
+                    <label>Views</label><br>2907</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/e57de23929009c54de7217c7419573b0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2470/Pajamaman" class="user-moderator-N"><span itemprop="name">Pajamaman</span></a></span>
+                <span class="karma">5.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4371" href="#C4371">
+        <time class="action-date">Jan '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>First of all, I suspect <a href="https://github.com/phalcon/cphalcon/issues/2871">this issue</a> is closely related to the issue I describe below.</p>
+<p>I want to delete records in a many-to-many relationship but I'm not able to. Here's the edit action of my article controller:</p>
+<pre><code>$article = Article::findFirst($id);
+$article-&gt;title = $this-&gt;request-&gt;getPost('title');
+$article-&gt;content = $this-&gt;request-&gt;getPost('content');
+$article-&gt;sticky = $this-&gt;request-&gt;getPost('sticky') ?: 0;
+$article-&gt;type = $this-&gt;request-&gt;getPost('type');
+
+$tags = array();
+
+foreach (preg_split('/\s*,\s*/', $this-&gt;request-&gt;getPost('tag_names')) as $tag_name) {
+    $tag = Tag::findFirstByName($tag_name);
+
+    if (!$tag) {
+        $tag = new Tag();
+        $tag-&gt;name = $tag_name;
+    }
+
+    $tags[] = $tag;
+}
+
+$article-&gt;tags = $tags;
+
+$success = $article-&gt;save();</code></pre>
+<p>The problem is that it appends to the tags collection instead of overwriting it. For example, say I had the following article in the database:</p>
+<pre><code>+----+--------------+---------+------------+-------------------+--------+--------+
+| id | title        | user_id | timestamp  | content           | sticky | type   |
++----+--------------+---------+------------+-------------------+--------+--------+
+|  1 | Hello World  |       1 | 1419790166 | Hello world!      |      1 | news   |
++----+--------------+---------+------------+-------------------+--------+--------+</code></pre>
+<p>And the tags:</p>
+<pre><code>+----+---------+
+| id | name    |
++----+---------+
+|  1 | Hello   |
+|  2 | World   |
++----+---------+</code></pre>
+<p>And the article_tags:</p>
+<pre><code>+----+------------+--------+
+| id | article_id | tag_id |
++----+------------+--------+
+|  1 |          1 |      1 |
+|  2 |          1 |      2 |
++----+------------+--------+</code></pre>
+<p>If the post value for tag_names is &quot;Test, Testing&quot;, it should create two new tags, resulting in the tags:</p>
+<pre><code>+----+---------+
+| id | name    |
++----+---------+
+|  1 | Hello   |
+|  2 | World   |
+|  3 | Test    |
+|  4 | Testing |
++----+---------+</code></pre>
+<p>And the article_tags:</p>
+<pre><code>+----+------------+--------+
+| id | article_id | tag_id |
++----+------------+--------+
+|  3 |          1 |      3 |
+|  4 |          1 |      4 |
++----+------------+--------+</code></pre>
+<p>In other words, it should delete the previous records from the join table and create two new article_tags.</p>
+<p>The first part works great - the new tags are created - but the second part does not. It creates two new article_tags, but it doesn't delete the previous records. So I end up with the article_tags:</p>
+<pre><code>+----+------------+--------+
+| id | article_id | tag_id |
++----+------------+--------+
+|  1 |          1 |      1 |
+|  2 |          1 |      2 |
+|  3 |          1 |      3 |
+|  4 |          1 |      4 |
++----+------------+--------+</code></pre>
+<p>After reading other posts regarding this problem, as well as the GitHub issue referenced above, I tried to delete the tags before the save:</p>
+<pre><code>$article-&gt;tags-&gt;delete();
+$article-&gt;tags = $tags;
+
+$success = $article-&gt;save();</code></pre>
+<p>But this throws a foreign key constaint error:</p>
+<pre><code>PHP Fatal error:  Uncaught exception 'PDOException' with message 'SQLSTATE[23000]: Integrity constraint violation: 1451 Cannot delete or update a parent row: a foreign key constraint fails (`phalconsite`.`article_tag`, CONSTRAINT `article_tag_ibfk_2` FOREIGN KEY (`tag_id`) REFERENCES `tag` (`id`))' in /var/www/phalconsite/app/controllers/ArticleController.php...</code></pre>
+<p>Apparently <code>tags-&gt;delete()</code> deletes the tags themselves and not the records from the join table. This seems broken to me.</p>
+<p>One user had something like this, which I tried next:</p>
+<pre><code>$article-&gt;articleTags-&gt;delete();
+$article-&gt;tags = $tags;
+
+$success = $article-&gt;save();</code></pre>
+<p>The problem with this is I don't have an <code>articleTags</code> property in that class, nor do I think I should. (Correct me if I'm wrong.)</p>
+<p>What am I supposed to do?</p>
+<p>(Anyone interested in the models and/or schema can look at <a href="http://forum.phalcon.io/discussion/4330/manytomany-bug">my previous post</a>.)</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-484d1e8c9f29548926544084-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-484d1e8c9f29548926544084-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4d1384d668711e6153ed4c6f05e29216?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/286/trentramseyer" class="user-moderator-N"><span itemprop="name">Trent Ramseyer</span></a>        </span>
+        <br>
+
+        <span class="karma">22.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C14484" href="#C14484">
+                <time itemprop="dateCreated" datetime="2015-01-01T22:29:04-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I believe you are going to get stuck trying to use the ORM if you have not created the articleTags model or property in a class, since that will establish the mapping to a table. The path of deleting the articleTag before tag insert is correct, however you simply might have to do an sql statement of delete from articletags where article_id=x</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14484" data-cf-modified-484d1e8c9f29548926544084-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14484" data-cf-modified-484d1e8c9f29548926544084-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/877a54304e07c8cb38c47b43e1d6b6b3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2828/sergeyklay" class="user-moderator-Y"><span itemprop="name">Serghei Iakovlev</span></a>        </span>
+        <br>
+
+        <span class="karma">39.2k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="14507" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '15</span>
+              </span><br/><a name="C14507" href="#C14507">
+                <time itemprop="dateCreated" datetime="2015-01-03T07:21:13-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi<a href="https://forum.phalcon.io/user/0/Pajamaman"> @Pajamaman</a>.
+I recently solved a similar task.</p>
+<p>I have some entities:</p>
+<ul>
+<li>Attribute Group</li>
+<li>Attribute</li>
+<li>Product</li>
+</ul>
+<p>My workaround  (I omitted some code for brevity)::</p>
+<pre><code class="language-php">class AttributeController extends DashboardController
+{
+    public function createAction()
+    {
+        $model = new Attribute;
+        $form = new AttributeForm($model);
+
+        if ($this-&gt;request-&gt;isPost()) {
+            $data = [
+                'name'        =&gt; $this-&gt;request-&gt;getPost('name'),
+                'type'        =&gt; $this-&gt;request-&gt;getPost('type'),
+                'description' =&gt; $this-&gt;request-&gt;getPost('description')
+            ];
+
+            $groupsToSave = [];
+            if ($selectedGroups = $this-&gt;request-&gt;getPost('groups')) {
+                foreach ($selectedGroups as $i =&gt; $groupId) {
+                    if ($group = Attrgroup::findFirst($groupId)) {
+                        $groupsToSave[$i] = $group;
+                    }
+                }
+            }
+            $model-&gt;assign($data);
+
+            if (!empty($groupsToSave)) {
+                $model-&gt;groups = $groupsToSave;
+            }
+
+            if ($model-&gt;save()) {
+                $this-&gt;flash-&gt;success(sprintf('Attrribute %s  created', $model-&gt;getName()));
+
+               // redirect to index
+            } else {
+                $this-&gt;flash-&gt;error($model-&gt;getMessages(null, true));
+            }
+        } else {
+            $form-&gt;setEntity($model);
+        }
+
+        $this-&gt;view-&gt;setVars([
+            'form' =&gt; $form
+        ]);
+    }
+
+    public function updateAction($id)
+    {
+        $model = Attribute::findFirst($id);
+        $form = new AttributeForm($model, ['edit' =&gt; true]);
+
+        if ($this-&gt;request-&gt;isPost()) {
+            $data = [
+                'name'        =&gt; $this-&gt;request-&gt;getPost('name'),
+                'type'        =&gt; $this-&gt;request-&gt;getPost('type'),
+                'description' =&gt; $this-&gt;request-&gt;getPost('description')
+            ];
+
+            $model-&gt;assign($data);
+
+            $model-&gt;attrgroups-&gt;delete();
+            $groupsToSave = [];
+            $selectedGroups = $this-&gt;request-&gt;getPost('groups');
+
+            if (is_array($selectedGroups) &amp;&amp; !empty($selectedGroups)) {
+
+                foreach (Attrgroup::findIn($selectedGroups) as $newGroup) {
+                    $attrgroupRelation = new AttrgroupsAttributes;
+                    $attrgroupRelation-&gt;setAttributeId($model-&gt;getId());
+                    $attrgroupRelation-&gt;setGroupId($newGroup-&gt;getId());
+                    if ($attrgroupRelation-&gt;save()) {
+                        $groupsToSave[] = $attrgroupRelation;
+                    }
+                }
+            }
+
+            if (!empty($groupsToSave)) {
+                $model-&gt;attrgroups = $groupsToSave;
+            }
+
+            if ($model-&gt;save()) {
+                $this-&gt;flash-&gt;success(sprintf('Attribute %s updated', $model-&gt;getName()));
+
+                // redirect to index
+            } else {
+                $this-&gt;flash-&gt;error($model-&gt;getMessages(null, true));
+            }
+        } else {
+            $form-&gt;setEntity($model);
+        }
+
+        $this-&gt;view-&gt;setVars([
+            'form'      =&gt; $form,
+            'attribute' =&gt; $model
+        ]);
+    }
+}</code></pre>
+<p>Schema:</p>
+<pre><code class="language-sql">
+-- omitted product table here
+
+CREATE TABLE `attrgroups` (
+  `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(128) NOT NULL,
+  `position` TINYINT(4) UNSIGNED NOT NULL DEFAULT '0',
+  `description` VARCHAR(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `attrgroup_name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `attributes` (
+  `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(100) NOT NULL,
+  `type` ENUM('string','int','double','bool') NOT NULL DEFAULT 'string',
+  `description` VARCHAR(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `attribute_name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `attrgroups_attributes` (
+  `attribute_id` INT(11) UNSIGNED NOT NULL,
+  `group_id` INT(11) UNSIGNED NOT NULL,
+  PRIMARY KEY (`attribute_id`,`group_id`),
+  KEY `attrgroups_attribute_attribute` (`attribute_id`),
+  KEY `attrgroups_attribute_group` (`group_id`),
+  FOREIGN KEY (`attribute_id`) REFERENCES `attributes` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (`group_id`) REFERENCES `attrgroups` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE `attrvalues` (
+  `product_id` BIGINT(20) UNSIGNED NOT NULL,
+  `attribute_id` INT(11) UNSIGNED NOT NULL,
+  `value` VARCHAR(255) DEFAULT NULL,
+  PRIMARY KEY (`product_id`,`attribute_id`),
+  KEY `attrvalue_product` (`product_id`),
+  KEY `attrvalue_attribute` (`attribute_id`),
+  FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  FOREIGN KEY (`attribute_id`) REFERENCES `attributes` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14507" data-cf-modified-484d1e8c9f29548926544084-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14507" data-cf-modified-484d1e8c9f29548926544084-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/877a54304e07c8cb38c47b43e1d6b6b3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2828/sergeyklay" class="user-moderator-Y"><span itemprop="name">Serghei Iakovlev</span></a>        </span>
+        <br>
+
+        <span class="karma">39.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C14508" href="#C14508">
+                <time itemprop="dateCreated" datetime="2015-01-03T07:30:11-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/Pajamaman">@Pajamaman</a> </p>
+<p>Some code specific for my task and it will not work for you, if you just copy it. But I hope that the solution is clear to you.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14508" data-cf-modified-484d1e8c9f29548926544084-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14508" data-cf-modified-484d1e8c9f29548926544084-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e57de23929009c54de7217c7419573b0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2470/Pajamaman" class="user-moderator-N"><span itemprop="name">Pajamaman</span></a>        </span>
+        <br>
+
+        <span class="karma">5.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C14512" href="#C14512">
+                <time itemprop="dateCreated" datetime="2015-01-03T12:43:08-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/sergeyklay">@sergeyklay</a> can you post your models? That would be most helpful.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14512" data-cf-modified-484d1e8c9f29548926544084-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14512" data-cf-modified-484d1e8c9f29548926544084-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/877a54304e07c8cb38c47b43e1d6b6b3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2828/sergeyklay" class="user-moderator-Y"><span itemprop="name">Serghei Iakovlev</span></a>        </span>
+        <br>
+
+        <span class="karma">39.2k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C14512"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/e57de23929009c54de7217c7419573b0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Pajamaman                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C14520" href="#C14520">
+                <time itemprop="dateCreated" datetime="2015-01-03T18:57:40-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p><a href="https://forum.phalcon.io/user/0/sergeyklay">@sergeyklay</a> can you post your models? That would be most helpful.</p>
+</blockquote>
+<p>that refers to relations looks so:</p>
+<pre><code class="language-php">&lt;?php
+
+namespace Esig\Models;
+
+class Attrgroup extends BaseModel
+{
+    public function initialize()
+    {
+        $this-&gt;hasManyToMany(
+            'id',
+            __NAMESPACE__ . '\AttrgroupsAttributes',
+            'group_id', 'attribute_id',
+            __NAMESPACE__ . '\Attribute',
+            'id',
+            ['alias' =&gt; 'attributes']
+        );
+    }
+}
+
+class AttrgroupsAttributes extends BaseModel
+{
+
+    public function initialize()
+    {
+        $this-&gt;belongsTo(
+            'attribute_id',
+            __NAMESPACE__ . '\Attribute',
+            'id',
+            ['alias' =&gt; 'attribute']
+        );
+        $this-&gt;belongsTo(
+            'group_id',
+            __NAMESPACE__ . '\Attrgroup',
+            'id',
+            ['alias' =&gt; 'group']
+        );
+    }
+}
+
+class Attribute extends BaseModel
+{
+    public function initialize()
+    {
+        $this-&gt;hasMany(
+            'id',
+            __NAMESPACE__ . '\AttrgroupsAttributes', 'attribute_id',
+            ['alias' =&gt; 'attrgroups']
+        );
+
+        $this-&gt;hasManyToMany(
+            'id',
+            __NAMESPACE__ . '\AttrgroupsAttributes',
+            'attribute_id', 'group_id',
+            __NAMESPACE__ . '\Attrgroup',
+            'id',
+            ['alias' =&gt; 'groups']
+        );
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14520" data-cf-modified-484d1e8c9f29548926544084-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14520" data-cf-modified-484d1e8c9f29548926544084-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e57de23929009c54de7217c7419573b0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2470/Pajamaman" class="user-moderator-N"><span itemprop="name">Pajamaman</span></a>        </span>
+        <br>
+
+        <span class="karma">5.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="14524" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '15</span>
+              </span><br/><a name="C14524" href="#C14524">
+                <time itemprop="dateCreated" datetime="2015-01-03T22:07:59-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/sergeyklay">@sergeyklay</a> you have both the hasMany and hasManyToMany mappings in your Attribute class? That seems weird, but I'll give it a shot.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14524" data-cf-modified-484d1e8c9f29548926544084-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14524" data-cf-modified-484d1e8c9f29548926544084-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/877a54304e07c8cb38c47b43e1d6b6b3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2828/sergeyklay" class="user-moderator-Y"><span itemprop="name">Serghei Iakovlev</span></a>        </span>
+        <br>
+
+        <span class="karma">39.2k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C14524"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/e57de23929009c54de7217c7419573b0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Pajamaman                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C14537" href="#C14537">
+                <time itemprop="dateCreated" datetime="2015-01-04T04:49:44-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p><a href="https://forum.phalcon.io/user/0/sergeyklay">@sergeyklay</a> you have both the hasMany and hasManyToMany mappings in your Attribute class? That seems weird, but I'll give it a shot.</p>
+</blockquote>
+<p>It's not so strange, as far as it might seem at first glance.</p>
+<p><strong>Attribute</strong> hasMany <strong>AttrgroupsAttributes</strong> called <code>attrgroups</code> and hasManyToMany <strong>Attrgroup</strong> called <code>groups</code></p>
+<p>Maybe it's not perfect, but it's an extremely accurately reflects the required relation. Here is missing relation with the products, which are in turn are related with categories, but that's another story.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14537" data-cf-modified-484d1e8c9f29548926544084-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14537" data-cf-modified-484d1e8c9f29548926544084-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/877a54304e07c8cb38c47b43e1d6b6b3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2828/sergeyklay" class="user-moderator-Y"><span itemprop="name">Serghei Iakovlev</span></a>        </span>
+        <br>
+
+        <span class="karma">39.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C14546" href="#C14546">
+                <time itemprop="dateCreated" datetime="2015-01-04T09:36:29-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/Pajamaman">@Pajamaman</a> So, issue is solved?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14546" data-cf-modified-484d1e8c9f29548926544084-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14546" data-cf-modified-484d1e8c9f29548926544084-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e57de23929009c54de7217c7419573b0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2470/Pajamaman" class="user-moderator-N"><span itemprop="name">Pajamaman</span></a>        </span>
+        <br>
+
+        <span class="karma">5.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C14546"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/877a54304e07c8cb38c47b43e1d6b6b3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Serghei Iakovlev                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C14552" href="#C14552">
+                <time itemprop="dateCreated" datetime="2015-01-04T11:46:59-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p><a href="https://forum.phalcon.io/user/0/Pajamaman">@Pajamaman</a> So, issue is solved?</p>
+</blockquote>
+<p>Yes, thank you.</p>
+<p>Is it just me or is this behavior not documented very well?</p>
+<p>Also I still think it should be considered a bug :/</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14552" data-cf-modified-484d1e8c9f29548926544084-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14552" data-cf-modified-484d1e8c9f29548926544084-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4371" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,505 @@
+---
+layout: default
+title: 'Custom Validation is not getting the value fields to run - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/3/volt">Volt</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Custom Validation is not getting the value fields to run</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/8353/jrcscarrillo" class="user-moderator-N"><span itemprop="name">Juan R Carrillo</span></a></span>
+            <time itemprop="dateCreated" datetime="2019-11-09T06:58:28-07:00">Nov '19</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2019-11-09T06:58:28-07:00">Nov '19</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>164</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/13a11b1f902d381b5b1b07cdaffa638b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/8353/jrcscarrillo" class="user-moderator-N"><span itemprop="name">Juan R Carrillo</span></a></span>
+                <span class="karma">23.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C20085" href="#C20085">
+        <time class="action-date">Nov '19</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have a couple of custom validators running smoothly with the same logic. I did not find anything incorrectly coding in this custom validator. So, please help me to find the error. I have attached the form, the controller, the custom validator, and the volt program. The issue is that I cannot get the name neither the value of the fields named as &quot;estab&quot; and &quot;punto&quot; in the custom validator.</p>
+<p>CUSTOM VALIDATOR ValidaRucValidator.php</p>
+<pre><code class="language-php">
+use Phalcon\Validation\Message;
+use Phalcon\Validation\Validator;
+use Phalcon\Validation\ValidatorInterface;
+
+class ValidaRucValidator extends Validator implements ValidatorInterface {
+
+    /**
+     *
+     * @param  Validation $validator
+     * @param  string $attribute
+     *
+     * @return boolean
+     */
+    public function validate(Phalcon\Validation $validator, $attribute) {
+        //obtain the name of the field 
+        $elestab = $this-&gt;getOption("estab");
+
+        //obtain field value
+        $elestab_value = $validator-&gt;getValue($elestab);
+
+        //obtain the name of the field 
+        $elpunto = $this-&gt;getOption("punto");
+
+        //obtain field value
+        $elpunto_value = $validator-&gt;getValue($elpunto);
+
+        // obtain the input field value
+        $elruc_value = $validator-&gt;getValue($attribute);
+
+        //try to obtain message defined in a validator
+        $message = $this-&gt;getOption('message');
+
+        $msg = 'message ' . $elestab_value . ' ' . $elpunto_value . ' ' . $elruc_value;
+        print_r($msg);
+        //check if the value is valid
+        $ruc = Contribuyente::findFirst(array(
+                    "Ruc = :ruc:  AND CodEmisor = :estab: AND Punto = :punto:",
+                    'bind' =&gt; array('ruc' =&gt; $elruc_value, 'estab' =&gt; $elestab_value, 'punto' =&gt; $elpunto_value)
+        ));
+        if (!$ruc) {
+            $message = 'NO estan registrados en nuestra base de datos el Ruc o el Establecimiento o el Punto de Emision- Vuelva ha intentarlo';
+            $validator-&gt;appendMessage(new Message($message, $attribute, 'rucerror'));
+        }
+        if (count($validator-&gt;getMessages())) {
+            return false;
+        }
+        return true;
+    }
+
+}</code></pre>
+<p>FORM SessionForm.php</p>
+<pre><code class="language-php">
+use Phalcon\Forms\Form;
+use Phalcon\Forms\Element\Password;
+use Phalcon\Forms\Element\Text;
+use Phalcon\Validation\Validator\PresenceOf;
+use Phalcon\Validation\Validator\Email;
+
+class SessionForm extends Form {
+
+    public function initialize() {
+
+        $ruc = new Text("ruc");
+        $ruc-&gt;setLabel("Registro Unico de Contribuyentes");
+        $ruc-&gt;setFilters(array('striptags', 'string'));
+        $ruc-&gt;addValidators(array(
+            new PresenceOf(array(
+                'message' =&gt; 'No ha ingresado el numero del RUC'
+                    )),
+            new ValidaRucValidator(array(
+                'ruc' =&gt; 'ruc',
+                'message' =&gt; 'debe ingresar un numero de RUC valido'
+                    ))
+        ));
+        $this-&gt;add($ruc);
+
+        $estab = new Text("estab");
+        $estab-&gt;setLabel("Numero Establecimiento");
+        $estab-&gt;setFilters(array('striptags', 'string'));
+        $estab-&gt;addValidators(array(
+            new PresenceOf(array(
+                'message' =&gt; 'No ha ingresado el numero del Establecimiento'
+                    ))
+        ));
+        $this-&gt;add($estab);
+
+        $punto = new Text("punto");
+        $punto-&gt;setLabel("Numero Punto de Emision");
+        $punto-&gt;setFilters(array('striptags', 'string'));
+        $punto-&gt;addValidators(array(
+            new PresenceOf(array(
+                'message' =&gt; 'No ha ingresado el numero del Punto de Emision'
+                    ))
+        ));
+        $this-&gt;add($punto);
+
+        $email = new Text("email");
+        $email-&gt;setLabel("Correo Electronico");
+        $email-&gt;setFilters(array('striptags', 'string'));
+        $email-&gt;addValidators(array(
+            new PresenceOf(array(
+                'message' =&gt; 'No ha ingresado la direccion de correo'
+                    )),
+            new Email(array(
+                'message' =&gt; 'debe ingresar una direccion de correo valida'
+                    ))
+        ));
+        $this-&gt;add($email);
+
+        $password = new Password("password");
+        $password-&gt;setLabel("Password");
+        $password-&gt;addValidators(array(
+            new PresenceOf(array(
+                'message' =&gt; 'Debe ingresar una palabra clave'
+                    )),
+            new ValidaUserValidator(array(
+                'correo' =&gt; 'email',
+                'message' =&gt; 'El Email o el password no han sido registrados vuelva ha intentarlo'
+                    ))
+        ));
+
+        $this-&gt;add($password);
+    }
+
+    public function messages($nombre) {
+        if ($this-&gt;hasMessagesFor($nombre)) {
+            foreach ($this-&gt;getMessagesFor($nombre) as $mensaje) {
+                $this-&gt;flash-&gt;error($mensaje);
+            }
+        }
+    }
+
+}
+</code></pre>
+<p>VOLT index.volt</p>
+<pre><code class="language-volt">{% raw %}{{{% endraw %} content() {% raw %}}}{% endraw %}
+{% raw %}{%{% endraw %} include "layouts/cabecera.volt" {% raw %}%}{% endraw %}
+&lt;div class="jumbotron jumbotron-fluid" style="background-color: #C1C1C1"&gt;
+    &lt;div class="container-fluid"&gt;
+        &lt;div class="row"&gt;
+            &lt;div class="col col-md-6"&gt;
+                {% raw %}{{{% endraw %} form('session/start', 'role': 'form', 'class': 'sky-form') {% raw %}}}{% endraw %}
+                &lt;header&gt;Log in&lt;/header&gt;
+
+                &lt;fieldset&gt;
+                     &lt;section&gt;
+                        &lt;div class="col col-md-4"&gt;
+                            &lt;label class="label"&gt;Establecimiento y Punto de Emision&lt;/label&gt;
+                        &lt;/div&gt;
+                        &lt;div class="col col-md-4"&gt;
+                            &lt;label class="input"&gt;
+                                {% raw %}{{{% endraw %} form.render("estab", ['class': 'form-element form-element-icon']) {% raw %}}}{% endraw %}
+                            &lt;/label&gt;
+                            {% raw %}{{{% endraw %} form.messages('estab') {% raw %}}}{% endraw %}
+                        &lt;/div&gt;
+                        &lt;div class="col col-md-4"&gt;
+                            &lt;label class="input"&gt;
+                                {% raw %}{{{% endraw %} form.render("punto", ['class': 'form-element form-element-icon']) {% raw %}}}{% endraw %}
+                            &lt;/label&gt;
+                            {% raw %}{{{% endraw %} form.messages('punto') {% raw %}}}{% endraw %}
+                        &lt;/div&gt;
+                    &lt;/section&gt;
+                &lt;/fieldset&gt;
+
+                &lt;fieldset&gt;
+                    &lt;section&gt;
+                        &lt;div class="col col-md-4"&gt;
+                            &lt;label class="label"&gt;Numero RUC&lt;/label&gt;
+                        &lt;/div&gt;
+                        &lt;div class="col col-md-8"&gt;
+                            &lt;label class="input"&gt;
+                                {% raw %}{{{% endraw %} form.render("ruc", ['class': 'form-element form-element-icon']) {% raw %}}}{% endraw %}
+                            &lt;/label&gt;
+                            {% raw %}{{{% endraw %} form.messages('ruc') {% raw %}}}{% endraw %}
+                        &lt;/div&gt;
+                    &lt;/section&gt;
+                &lt;/fieldset&gt;
+
+                &lt;fieldset&gt;
+                    &lt;section&gt;
+                        &lt;div class="col col-md-4"&gt;
+                            &lt;label class="label"&gt;E-mail&lt;/label&gt;
+                        &lt;/div&gt;
+                        &lt;div class="col col-md-8"&gt;
+                            &lt;label class="input"&gt;
+                                {% raw %}{{{% endraw %} form.render("email", ['class': 'form-element form-element-icon']) {% raw %}}}{% endraw %}
+                            &lt;/label&gt;
+                            {% raw %}{{{% endraw %} form.messages('email') {% raw %}}}{% endraw %}
+                        &lt;/div&gt;
+                    &lt;/section&gt;
+                &lt;/fieldset&gt;
+
+                        &lt;fieldset&gt;
+                    &lt;section&gt;
+                        &lt;div class="col col-md-4"&gt;
+                            &lt;label class="label"&gt;Password&lt;/label&gt;
+                        &lt;/div&gt;
+                        &lt;div class="col col-md-8"&gt;
+                            &lt;label class="input"&gt;
+                                {% raw %}{{{% endraw %} form.render("password", ['class': 'form-element form-element-icon']) {% raw %}}}{% endraw %}
+                            &lt;/label&gt;
+                            {% raw %}{{{% endraw %} form.messages('password') {% raw %}}}{% endraw %}
+                        &lt;/div&gt;
+                    &lt;/section&gt;
+                &lt;/fieldset&gt;
+                &lt;footer&gt;
+                    {% raw %}{{{% endraw %} submit_button('Login', 'class': 'btn btn-primary btn-large') {% raw %}}}{% endraw %}
+                    {% raw %}{{{% endraw %} link_to('register', ' Registrarse ', 'class': 'btn btn-success btn-large', 'style':'color:white') {% raw %}}}{% endraw %}
+                &lt;/footer&gt;
+                &lt;/form&gt;
+            &lt;/div&gt;
+
+            &lt;div class="col col-md-6"&gt;
+
+                &lt;div class="card" style="background-color: #C1C1C1"&gt;
+                    &lt;div class="card-body"&gt;
+                        &lt;h2 class="card-title"&gt;Ha creado una cuenta con nosotros?&lt;/h2&gt;
+                    &lt;/div&gt;
+
+                    &lt;p&gt;Estas son las opciones que podra realizar si se registra:&lt;/p&gt;
+                    &lt;ul&gt;
+                        &lt;li&gt;Podra crear, envir y recibir mensajes.&lt;/li&gt;
+                        &lt;li&gt;Podra revisar el estado actual de su cuenta.&lt;/li&gt;
+                        &lt;li&gt;Podra bajar o imprimir uno o varios documentos electronicos&lt;/li&gt;
+                    &lt;/ul&gt;
+
+                &lt;/div&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+{% raw %}{%{% endraw %} include "layouts/footer.volt" {% raw %}%}{% endraw %}
+</code></pre>
+<p>CONTROLLER SessionController.php</p>
+<pre><code class="language-php">
+/**
+ * SessionController
+ *
+ * Allows to authenticate users
+ */
+class SessionController extends ControllerBase {
+
+    public function initialize() {
+        $this-&gt;tag-&gt;setTitle('Sign In');
+        parent::initialize();
+    }
+
+    public function indexAction() {
+
+        $form = new SessionForm;
+
+        if ($this-&gt;request-&gt;isPost()) {
+
+            if ($form-&gt;isValid($this-&gt;request-&gt;getPost()) != false) {
+
+                if ($form-&gt;getMessages()) {
+                    foreach ($form-&gt;getMessages() as $message) {
+                        $this-&gt;flash-&gt;error((string) $message);
+                    }
+                }
+            }
+        }
+
+        $this-&gt;view-&gt;form = $form;
+    }
+
+    /**
+     * Register an authenticated user into session data
+     *
+     * @param Users $user
+     */
+    private function _registerSession(Users $user) {
+        $this-&gt;session-&gt;set('auth', array(
+            'id' =&gt; $user-&gt;id,
+            'username' =&gt; $user-&gt;username,
+            'tipo' =&gt; $user-&gt;tipo,
+            'tipoId' =&gt; $user-&gt;tipoId,
+            'numeroId' =&gt; $user-&gt;numeroId,
+            'email' =&gt; $user-&gt;email,
+            'qbid' =&gt; $user-&gt;qbid,
+            'name' =&gt; $user-&gt;name
+        ));
+    }
+
+    /**
+     * This action authenticate and logs an user into the application
+     *
+     */
+    public function startAction() {
+
+        $ruc = $this-&gt;request-&gt;getPost('ruc');
+        $estab = $this-&gt;request-&gt;getPost('estab');
+        $punto = $this-&gt;request-&gt;getPost('punto');
+        $email = $this-&gt;request-&gt;getPost('email');
+        $password = $this-&gt;request-&gt;getPost('password');
+
+        $user = Users::findFirst(array(
+                    "(email = :email: OR username = :email:) AND password = :password: AND active = 'Y'",
+                    'bind' =&gt; array('email' =&gt; $email, 'password' =&gt; sha1($password))
+        ));
+        $ruc = Contribuyente::findFirst(array(
+                       "Ruc = :ruc:  AND CodEmisor = :estab: AND Punto = :punto:",
+                    'bind' =&gt; array('ruc' =&gt; $elruc_value, 'estab' =&gt; $elestab_value, 'punto' =&gt; $elpunto_value)
+        ));
+
+        if ($user and $ruc) {
+            $this-&gt;_registerSession($user);
+            $this-&gt;flash-&gt;success('Welcome ' . $user-&gt;name);
+
+            switch ($user-&gt;tipo) {
+                case 'PROVEEDOR':
+                    return $this-&gt;dispatcher-&gt;forward(
+                                    [
+                                        "controller" =&gt; "home",
+                                        "action" =&gt; "index",
+                                    ]
+                    );
+                    break;
+
+                case 'CLIENTE':
+                    return $this-&gt;dispatcher-&gt;forward(
+                                    [
+                                        "controller" =&gt; "home",
+                                        "action" =&gt; "index",
+                                    ]
+                    );
+                    break;
+
+                default:
+
+                    $ticket = Aticket::findFirst(array(
+                                "Estado = :estado:",
+                                "bind" =&gt; array("estado" =&gt; "GRABADO")
+                    ));
+                    if ($ticket) {
+                        $this-&gt;session-&gt;set('pendiente', array(
+                            "estado" =&gt; "GRABADO",
+                            "RefNumber" =&gt; $ticket-&gt;getTxnID()
+                        ));
+                    }
+                    $pago = Receivepayment::findFirst(array(
+                                "Status = :estado:",
+                                "bind" =&gt; array("estado" =&gt; "GRABADO")
+                    ));
+                    if ($pago) {
+                        $this-&gt;session-&gt;set('pagopendiente', array(
+                            "estado" =&gt; "GRABADO",
+                            "RefNumber" =&gt; $pago-&gt;getRefNumber(),
+                            "TxnID" =&gt; $pago-&gt;getTxnID()
+                        ));
+                    }
+//                $caja = Cashier::findFirst(array(
+//                            "Estado = :estado:",
+//                            "bind" =&gt; array("estado" =&gt; "ABIERTO")
+//                ));
+//                if ($caja) {
+//                    $this-&gt;session-&gt;set('cajaabierta', array(
+//                        "estado" =&gt; "ABIERTO",
+//                        "RefNumber" =&gt; $caja-&gt;getRefNumber()
+//                    ));
+//                }
+                    return $this-&gt;dispatcher-&gt;forward(
+                                    [
+                                        "controller" =&gt; "contribuyente",
+                                        "action" =&gt; "index",
+                                    ]
+                    );
+                    break;
+            }
+        }
+
+//        $this-&gt;flash-&gt;error('No existen ni la direccion de correo ni la palabra clave - Vuelva ha intentarlo');
+        return $this-&gt;dispatcher-&gt;forward(
+                        [
+                            "controller" =&gt; "session",
+                            "action" =&gt; "index",
+                        ]
+        );
+    }
+
+    /**
+     * Finishes the active session redirecting to the index
+     *
+     * @return unknown
+     */
+    public function endAction() {
+        $this-&gt;session-&gt;remove('auth');
+        $this-&gt;session-&gt;remove('ruc');
+        $this-&gt;session-&gt;remove('contribuyente');
+        $this-&gt;session-&gt;remove('pendiente');
+        $this-&gt;session-&gt;remove('pagopendiente');
+        $this-&gt;flash-&gt;success('Hasta Luego!');
+        session_destroy();
+
+        return $this-&gt;dispatcher-&gt;forward(
+                        [
+                            "controller" =&gt; "home",
+                            "action" =&gt; "index",
+                        ]
+        );
+    }
+
+}
+</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-fa82cc4999fba4d60ce8b7a4-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-fa82cc4999fba4d60ce8b7a4-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/13a11b1f902d381b5b1b07cdaffa638b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8353/jrcscarrillo" class="user-moderator-N"><span itemprop="name">Juan R Carrillo</span></a>        </span>
+        <br>
+
+        <span class="karma">23.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C61275" href="#C61275">
+                <time itemprop="dateCreated" datetime="2019-11-09T08:38:59-07:00" class="action-date">Nov '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I found the issue,, sorry for bother you. I did not add the fields in the form. For instance</p>
+<pre><code class="language-php">            new ValidaRucValidator(array(
+                'establecimiento' =&gt; 'estab',
+                'puntoemision' =&gt; 'punto',
+                'message' =&gt; 'debe ingresar un numero de RUC valido'
+                    ))</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="61275" data-cf-modified-fa82cc4999fba4d60ce8b7a4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="61275" data-cf-modified-fa82cc4999fba4d60ce8b7a4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="20085" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

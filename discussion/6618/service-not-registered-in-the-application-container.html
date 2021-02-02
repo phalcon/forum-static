@@ -1,0 +1,242 @@
+---
+layout: default
+title: 'Service not registered in the application container - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/10/di-ioc">DI/IoC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Service not registered in the application container</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3506/zackzulg" class="user-moderator-N"><span itemprop="name">zackzulg</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-05-04T06:48:21-07:00">May '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-05-04T06:48:21-07:00">May '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>May '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>978</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/2afa15d804bac4853b39ebebb0b5656c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3506/zackzulg" class="user-moderator-N"><span itemprop="name">zackzulg</span></a></span>
+                <span class="karma">5.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6618" href="#C6618">
+        <time class="action-date">May '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Good afternoon,
+I try to build my first multi-module app using phalcon, but when I run my app only this message appear &quot;0 - Service 'IntranetRH\Front\Module' was not found in the dependency injection container&quot;.
+My bootstrap file looks like this.</p>
+<pre><code>&lt;?php
+use Phalcon\DI\FactoryDefault;
+
+defined('APPLICATION_PATH')
+ || define('APPLICATION_PATH', realpath(dirname(__FILE__) . '/../apps'));
+
+error_reporting(E_ALL);
+
+try {
+ $di = new FactoryDefault();
+    include __DIR__ . "/../apps/config/router.php";
+    include __DIR__ . "/../apps/config/session.php";
+    include __DIR__ . "/../apps/config/url.php";
+
+$application = new \Phalcon\Mvc\Application($di);
+
+    $application-&gt;registerModules(
+        array(
+
+            'front'  =&gt; array(
+                'className' =&gt; 'IntranetRH\Front\Module',
+                'path'      =&gt; '../apps/front/Module.php'
+            )
+        )
+    );
+
+    $application-&gt;setDI($di);
+
+    echo $application-&gt;handle()-&gt;getContent();
+
+        } catch (\Exception $e) {
+echo $e-&gt;getCode() . ' - ' . $e-&gt;getMessage();
+} </code></pre>
+<p>Module file :</p>
+<pre><code> &lt;?php
+use Phalcon\Loader,
+Phalcon\Mvc\Dispatcher,
+Phalcon\Mvc\View,
+Phalcon\Mvc\ModuleDefinitionInterface,        
+Phalcon\Events\Manager as EventsManager;
+
+class Module implements ModuleDefinitionInterface
+{
+ public function registerAutoloaders()
+{
+    $loader = new Loader();
+    $loader-&gt;registerNamespaces(
+        array(
+            'IntranetRH\Front\Controllers' =&gt; '../apps/front/controllers/',
+            'IntranetRH\Front\Models'      =&gt; '../apps/front/models/'
+        )
+    );
+
+    $loader-&gt;register();
+}
+public function registerServices($di)
+{
+    //Registering a dispatcher
+    $di-&gt;set('dispatcher', function() {
+        $dispatcher = new Dispatcher();
+        $dispatcher-&gt;setDefaultNamespace("IntranetRH\Front\Controllers"); 
+         $eventsManager = new EventsManager();
+
+        //Attach a listener
+        $eventsManager-&gt;attach("dispatch:beforeDispatchLoop", function($event, $dispatcher) {
+
+            $keyParams = array();
+            $params = $dispatcher-&gt;getParams();
+
+            //Use odd parameters as keys and even as values
+            foreach ($params as $number =&gt; $value) {
+                if ($number &amp; 1) {
+                    $keyParams[$params[$number - 1]] = $value;
+                }
+            }
+
+            //Override parameters
+            $dispatcher-&gt;setParams($keyParams);
+        });
+
+        return $dispatcher;
+    });
+
+    //Registering the view component
+    $di-&gt;set('view', function() {
+        $view = new View();
+        $view-&gt;setViewsDir('../apps/front/views/');
+
+        $view-&gt;registerEngines(array(
+        ".twig" =&gt; function($view, $di) {
+        /**
+        * Setting up volt
+        */
+        $volt = new \Phalcon\Mvc\View\Engine\Volt($view, $di);
+
+        $volt-&gt;setOptions(array(
+            "compiledPath" =&gt; "../volt/index/",
+            "compiledExtension" =&gt; ".php",
+            'compiledSeparator' =&gt; '%%',
+            'stat'              =&gt;  1,
+            'compileAlways' =&gt; true
+        ));
+
+        $compiler = $volt-&gt;getCompiler();
+            //This binds the function name 'noformat' in Volt to the PHP function 'round'
+            $compiler-&gt;addFunction('number_format', 'number_format');
+            $compiler-&gt;addFunction('empty', 'empty');
+            $compiler-&gt;addFunction('isset', 'isset');                
+            $compiler-&gt;addFunction('utf8_encode', 'utf8_encode');
+            $compiler-&gt;addFunction('utf8_decode', 'utf8_decode');
+
+        return $volt;
+        }
+        ));
+
+        return $view;
+    });
+}
+}
+?&gt;</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-d6cc4f31f1e1b04e774c2a00-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-d6cc4f31f1e1b04e774c2a00-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/47f389ac06cd3be6143a45057a9f8c05?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1533/pixiesky" class="user-moderator-N"><span itemprop="name">Andy Myers</span></a>        </span>
+        <br>
+
+        <span class="karma">10.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C17904" href="#C17904">
+                <time itemprop="dateCreated" datetime="2015-05-04T09:29:15-07:00" class="action-date">May '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Not entirely sure but it looks like your module file needs </p>
+<pre><code class="language-php">    &lt;?php
+    namespace IntranetRH\Front;
+    # your code</code></pre>
+<p>at the beginning.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17904" data-cf-modified-d6cc4f31f1e1b04e774c2a00-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17904" data-cf-modified-d6cc4f31f1e1b04e774c2a00-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2afa15d804bac4853b39ebebb0b5656c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3506/zackzulg" class="user-moderator-N"><span itemprop="name">zackzulg</span></a>        </span>
+        <br>
+
+        <span class="karma">5.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="17921" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '15</span>
+              </span><br/><a name="C17921" href="#C17921">
+                <time itemprop="dateCreated" datetime="2015-05-05T00:59:56-07:00" class="action-date">May '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanx Andy, I added   \Module to my namespace this is why it doesn't work :) </p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17921" data-cf-modified-d6cc4f31f1e1b04e774c2a00-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17921" data-cf-modified-d6cc4f31f1e1b04e774c2a00-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6618" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

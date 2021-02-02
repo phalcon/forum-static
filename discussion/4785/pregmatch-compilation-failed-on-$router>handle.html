@@ -1,0 +1,203 @@
+---
+layout: default
+title: 'preg_match(): Compilation failed on $router-&gt;handle() - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">preg_match(): Compilation failed on $router-&gt;handle()</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1712/scrnjakovic" class="user-moderator-N"><span itemprop="name">Stefan Crnjaković</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-02-20T14:13:48-07:00">Feb '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-02-20T14:13:48-07:00">Feb '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Feb '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>769</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/267b1b1ce374e4076f4baa7f4b7557be?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1712/scrnjakovic" class="user-moderator-N"><span itemprop="name">Stefan Crnjaković</span></a></span>
+                <span class="karma">5.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4785" href="#C4785">
+        <time class="action-date">Feb '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I get this error although the code works:</p>
+<blockquote>
+<p>2015/02/20 21:49:21 [error] 3730#0: 35 FastCGI sent in stderr: &quot;PHP message: PHP Warning:  preg_match(): Compilation failed: unmatched parentheses at offset 9 in /home/stefan/websites/Bootstrap/bootstrap.php on line 130&quot; while reading response header from upstream, client: 127.0.0.1, server: bootstrap.dev, request: &quot;GET /sr/proba HTTP/1.1&quot;, upstream: &quot;fastcgi://unix:/var/run/php5-fpm.sock:&quot;, host: &quot;bootstrap.dev&quot;</p>
+</blockquote>
+<p>This is the code, but let me first explain what I was trying to achieve:</p>
+<ul>
+<li>I wanted to have translated routes and separate 404s for each module, so I have to find out language and module before defining router.</li>
+</ul>
+<p>Line 130 would be <code>$determinator-&gt;handle();</code></p>
+<pre><code class="language-php">    /**
+     * Registering language and module determinator
+     */
+    private function registerLanguageAndModuleDeterminator()
+    {
+        $config = $this-&gt;di-&gt;get('config');
+
+        # Getting enabled languages
+        $enabledLanguages = array();
+
+        foreach ($config-&gt;languages as $language =&gt; $data)
+        {
+            if ($data['enabled'])
+            {
+                $enabledLanguages[] = $language;
+            }
+        }
+
+        # Ghost router used to match modules and langs
+        $determinator = new PhRouter(false);
+
+        $determinator-&gt;setDefaults(array(
+            'controller' =&gt; 'ghost',
+            'action'     =&gt; 'ghost'
+        ));
+
+        # Is it frontend?
+        $determinator-&gt;add('/:params)', array())-&gt;setName('frontend');
+        # Is it backend?
+        $determinator-&gt;add('/backend/:params', array())-&gt;setName('backend');
+
+        $determinator-&gt;handle();
+
+        $module = ($determinator-&gt;wasMatched()) ? $determinator-&gt;getRouteByName() : 'frontend';
+
+        $this-&gt;di-&gt;set('isBackend', function() use ($module) {
+            return ($module == 'backend');
+        }, true);
+
+        $this-&gt;di-&gt;set('module', function() use ($module) {
+            return $module;
+        }, true);
+
+        $params = $determinator-&gt;getParams();
+
+        $language = (isset($params[0]) &amp;&amp; in_array($params[0], $enabledLanguages)) ? $params[0] : false;
+
+        if ($language)
+        {
+            $this-&gt;di-&gt;set('lang', function() use ($language) {
+                return $language;
+            }, true);
+        }
+        else
+        {
+            $defaultLang = $config-&gt;application-&gt;defaultLang;
+            $langMap     = $config-&gt;offsetGet('countryLang');
+
+            # Get country based on GEOIP lookup
+            $country = (isset($_SERVER['GEOIP_COUNTRY_CODE'])) ? strtolower($_SERVER['GEOIP_COUNTRY_CODE']) : false;
+
+            $language = ($country &amp;&amp; $langMap-&gt;get($country) &amp;&amp; in_array($langMap-&gt;get($country), $enabledLanguages)) ? $langMap-&gt;get($country) : $defaultLang ;
+
+            $this-&gt;di-&gt;set('lang', function() use ($language) {
+                return $language;
+            }, true);
+        }
+
+    }</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-68fe8b45e2b7c7354d074889-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-68fe8b45e2b7c7354d074889-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/210/andresgutierrez" class="user-moderator-Y"><span itemprop="name">Andres Gutierrez</span></a>        </span>
+        <br>
+
+        <span class="karma">34.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16061" href="#C16061">
+                <time itemprop="dateCreated" datetime="2015-02-20T14:15:05-07:00" class="action-date">Feb '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It must be:</p>
+<pre><code class="language-php">$determinator-&gt;add('/:params', array())-&gt;setName('frontend');</code></pre>
+<p>instead of:</p>
+<pre><code class="language-php">$determinator-&gt;add('/:params)', array())-&gt;setName('frontend');</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16061" data-cf-modified-68fe8b45e2b7c7354d074889-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16061" data-cf-modified-68fe8b45e2b7c7354d074889-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/267b1b1ce374e4076f4baa7f4b7557be?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1712/scrnjakovic" class="user-moderator-N"><span itemprop="name">Stefan Crnjaković</span></a>        </span>
+        <br>
+
+        <span class="karma">5.5k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="16062" data-toggle="modal" data-target="#historyModal">
+                edited <span>Feb '15</span>
+              </span><br/><a name="C16062" href="#C16062">
+                <time itemprop="dateCreated" datetime="2015-02-20T14:22:16-07:00" class="action-date">Feb '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hey Andres, thanks I saw that myself when I posted, but now I get wrong number of parameters exception.</p>
+<pre><code class="language-php">Wrong number of parameters
+#0 /home/stefan/websites/Bootstrap/bootstrap.php(138): Phalcon\Mvc\Router-&gt;getRouteByName()
+#1 /home/stefan/websites/Bootstrap/bootstrap.php(86): Application-&gt;registerLanguageAndModuleDeterminator()
+#2 /home/stefan/websites/Bootstrap/bootstrap.php(45): Application-&gt;registerServices()
+#3 /home/stefan/websites/Bootstrap/public/index.php(20): Application-&gt;_construct()
+#4 {main}</code></pre>
+<p>EDIT: Scratch that, my bad. I misunderstood $route-&gt;getRouteByName() ....</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16062" data-cf-modified-68fe8b45e2b7c7354d074889-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16062" data-cf-modified-68fe8b45e2b7c7354d074889-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4785" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

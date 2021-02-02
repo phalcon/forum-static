@@ -1,0 +1,495 @@
+---
+layout: default
+title: 'Micro Collection API with Nginx returns error 500 on non basic endpoints (url&#039;s) - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Micro Collection API with Nginx returns error 500 on non basic endpoints (url&#039;s)</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10309/alphadijkstra" class="user-moderator-N"><span itemprop="name">alphadijkstra</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-10-19T06:54:09-07:00">Oct '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-10-19T06:54:09-07:00">Oct '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>699</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/ca092b8cd9300d03a429a7e32f4c8e94?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10309/alphadijkstra" class="user-moderator-N"><span itemprop="name">alphadijkstra</span></a></span>
+                <span class="karma">835</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17127" href="#C17127">
+        <time class="action-date">Oct '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello all</p>
+<p>I've built an API that completely works in an Apache webserver but returns error 500's outside of the <code>v1/auth</code> and <code>v1/user</code> endpoints in a Nginx server.</p>
+<p>The API is based on Micro routing.</p>
+<p>I've tried setting up Nginx like stated in the Phalcon installation docs but it didn't fix my issues. The following Nginx conf.d code managed to allow me to connect with the auth or user endpoint which before that would return my custom <code>forbidden access</code> (see boostrap public/index.php file): </p>
+<pre><code class="language-nginx"> location / {
+        # Matches URLS `$_GET['_url']`
+        try_files $uri $uri/ /index.php?_url=$uri&amp;$args;
+    }</code></pre>
+<p><strong>Nginx returns this in the error log: </strong></p>
+<pre><code class="language-nginx">2017/10/19 12:31:23 [error] 14178#14178: *3 FastCGI sent in stderr: "PHP message: PHP Fatal error:  Class 'Ot\Controllers\Api\V1\Web\Bq\AnnouncementsController' not found in /home/runcloud/webapps/ot-api-1/public/index.php on line 49" while reading response header from upstream, client: 84.195.193.177, server: _, request: "POST /v1/bq/announcements/filter HTTP/1.1", upstream: "fastcgi://unix:/var/run/ot-api-1.sock:", host: "186.238.131.39"</code></pre>
+<p><strong>The bootstrap /public/index.php file:</strong></p>
+<pre><code class="language-php">&lt;?php
+
+use Phalcon\Mvc\Micro;
+use Phalcon\Di\FactoryDefault;
+
+error_reporting(E_ALL);
+
+define('BASE_PATH', dirname(__DIR__));
+define('APP_PATH', BASE_PATH . '/app');
+
+try {
+    /**
+     * The FactoryDefault Dependency Injector automatically registers
+     * the services that provide a full stack framework.
+     */
+    $di = new FactoryDefault();
+
+    /**
+     * Read services
+     */
+    include APP_PATH . "/config/services.php";
+
+    /**
+     * Get config service for use in inline setup below
+     */
+    $config = $di-&gt;getConfig();
+    /**
+     * Include Autoloader
+     */
+    include APP_PATH . '/config/loader.php';
+
+    /**
+     * Handle and deploy the application
+     */
+    $application = new Micro();
+    $application-&gt;setDI($di);
+
+    //Loading all API routes
+    include APP_PATH . '/config/routes.php';
+    foreach($collections as $collection) {
+      $application-&gt;mount($collection);
+    }
+
+    $application-&gt;notFound(function () use ($application) {
+      $application-&gt;response-&gt;setStatusCode(404, "Not Found")-&gt;sendHeaders();
+      echo "Forbidden access!";
+    });
+
+    $application-&gt;handle();
+} catch (\Exception $e) {
+    echo $e-&gt;getMessage() . '&lt;br&gt;';
+    echo '&lt;pre&gt;' . $e-&gt;getTraceAsString() . '&lt;/pre&gt;';
+}</code></pre>
+<p><strong>The working auth endpoint micro collection:</strong></p>
+<pre><code class="language-php">&lt;?php
+use Phalcon\Mvc\Micro\Collection as MicroCollection;
+
+$general_auth = new MicroCollection();
+$general_auth-&gt;setHandler('Ot\Controllers\Api\V1\AuthController', true);
+$general_auth-&gt;setPrefix('/v1/auth');
+$general_auth-&gt;post('/', 'indexAction');
+
+return $general_auth;</code></pre>
+<p><strong>A micro collection endpoint that returns error 500:</strong></p>
+<pre><code class="language-php">&lt;?php
+use Phalcon\Mvc\Micro\Collection as MicroCollection;
+
+$bq_announcements = new MicroCollection();
+$bq_announcements-&gt;setHandler('Ot\Controllers\Api\V1\Web\Bq\AnnouncementsController', true);
+$bq_announcements-&gt;setPrefix('/v1/Bq/announcements');
+$bq_announcements-&gt;get('/', 'indexAction');
+$bq_announcements-&gt;get('/url', 'indexAction');
+$bq_announcements-&gt;post('/filter', 'filterAction');
+
+return $bq_announcements;</code></pre>
+<p>Thanks in advance for your help!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-03506328006e390b2852790f-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-03506328006e390b2852790f-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5915f25e654c4f9e60fe51700cdee683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4769/Izopi4a" class="user-moderator-Y"><span itemprop="name">Izo</span></a>        </span>
+        <br>
+
+        <span class="karma">85.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C51649" href="#C51649">
+                <time itemprop="dateCreated" datetime="2017-10-19T06:58:24-07:00" class="action-date">Oct '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>it seems like loader &quot;problem&quot; </p>
+<p>i dont see where you define where phalcon should load your controller files</p>
+<p><a href="https://docs.phalcon.io/en/3.2/loader#registering-namespaces">https://docs.phalcon.io/en/3.2/loader#registering-namespaces</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51649" data-cf-modified-03506328006e390b2852790f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51649" data-cf-modified-03506328006e390b2852790f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C51651" href="#C51651">
+                <time itemprop="dateCreated" datetime="2017-10-19T06:58:52-07:00" class="action-date">Oct '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>PHP message: PHP Fatal error:  Class 'Ot\Controllers\Api\V1\Web\Bq\AnnouncementsController' not found in /home/runcloud/webapps/ot-api-1/public/index.php on line 49</p>
+</blockquote>
+<p>You should check your loader.php if the class was properly registered.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51651" data-cf-modified-03506328006e390b2852790f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51651" data-cf-modified-03506328006e390b2852790f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ca092b8cd9300d03a429a7e32f4c8e94?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10309/alphadijkstra" class="user-moderator-N"><span itemprop="name">alphadijkstra</span></a>        </span>
+        <br>
+
+        <span class="karma">835</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C51653" href="#C51653">
+                <time itemprop="dateCreated" datetime="2017-10-19T07:33:10-07:00" class="action-date">Oct '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks<a href="https://forum.phalcon.io/user/0/Izo"> @Izo</a> and<a href="https://forum.phalcon.io/user/0/Lajos"> @Lajos</a> for responding. </p>
+<p>I find it strange that Nginx doesn't load the controllers correctly while Apache does.</p>
+<p>This is my <strong>loader.php</strong> file:</p>
+<pre><code class="language-php">&lt;?php
+
+$loader = new \Phalcon\Loader();
+
+/**
+ * We're a registering a set of directories taken from the configuration file
+ */
+$loader-&gt;registerDirs(
+    [
+        $config-&gt;application-&gt;controllersDir,
+        $config-&gt;application-&gt;modelsDir,
+    ]
+)-&gt;register();
+
+$loader-&gt;registerNamespaces(
+    [
+        //EXAMPLE     "Example\Base"    =&gt; "vendor/example/base/",        USAGE     $var = new Example\Base();
+        'Ot\Controllers\Api\V1' =&gt; APP_PATH . '/controllers/v1/',
+        'Ot\Models' =&gt; APP_PATH . '/models/',
+        'Ot\Vendors' =&gt; $config-&gt;application-&gt;vendorDir,
+    ]
+)-&gt;register();</code></pre>
+<p>Structure of application:</p>
+<blockquote>
+<ul>
+<li>app</li>
+<li>
+<ul>
+<li>collections</li>
+</ul>
+</li>
+<li>
+<ul>
+<li>
+<ul>
+<li>v1</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<ul>
+<li>config</li>
+</ul>
+</li>
+<li>
+<ul>
+<li>controllers</li>
+</ul>
+</li>
+<li>
+<ul>
+<li>
+<ul>
+<li>v1</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li>AuthController.php</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li>ControllerBase.php</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li>web</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li>bq</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li>
+<ul>
+<li>AnnouncementsController.php</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<ul>
+<li>public</li>
+</ul>
+</li>
+<li>
+<ul>
+<li>
+<ul>
+<li>index.php</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<ul>
+<li>models</li>
+</ul>
+</li>
+</ul>
+</blockquote>
+<p><strong>Head of ControllerBase.php</strong></p>
+<pre><code class="language-php">&lt;?php
+
+namespace Ot\Controllers\Api\V1;
+
+class ControllerBase extends Controller
+{</code></pre>
+<p><strong>Head of AuthController.php</strong></p>
+<pre><code class="language-php">&lt;?php
+
+namespace Ot\Controllers\Api\V1;
+
+class AuthController extends ControllerBase
+{</code></pre>
+<p><strong>Head of AnnouncementsController.php</strong></p>
+<pre><code class="language-php">&lt;?php
+
+namespace Ot\Controllers\Api\V1\Web\Bq;
+
+class AnnouncementsController extends \Ot\Controllers\Api\V1\ControllerBase
+{</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51653" data-cf-modified-03506328006e390b2852790f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51653" data-cf-modified-03506328006e390b2852790f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="51655" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '17</span>
+              </span><br/><a name="C51655" href="#C51655">
+                <time itemprop="dateCreated" datetime="2017-10-19T07:50:40-07:00" class="action-date">Oct '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>HAH! Im guessing your apache is a local setup on win, and nginx is the live server on nix.</p>
+<p>Make sure that physical paths and namespace path case matches from the origin of registration, since nix systems are case-sensitive.</p>
+<p>Try renaming <code>v1/web/bq</code> to <code>v1/Web/Bq</code>. You can leave <code>v1</code> as it is the root folder of the namespace registration.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51655" data-cf-modified-03506328006e390b2852790f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51655" data-cf-modified-03506328006e390b2852790f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ca092b8cd9300d03a429a7e32f4c8e94?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10309/alphadijkstra" class="user-moderator-N"><span itemprop="name">alphadijkstra</span></a>        </span>
+        <br>
+
+        <span class="karma">835</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C51655"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Lajos Bencz                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C51659" href="#C51659">
+                <time itemprop="dateCreated" datetime="2017-10-19T08:54:21-07:00" class="action-date">Oct '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>HAH! Im guessing your apache is a local setup on win, and nginx is the live server on nix.</p>
+<p>Make sure that physical paths and namespace path case matches from the origin of registration, since nix systems are case-sensitive.</p>
+<p>Try renaming <code>v1/web/bq</code> to <code>v1/Web/Bq</code>. You can leave <code>v1</code> as it is the root folder of the namespace registration.</p>
+</blockquote>
+<p>My Apache is indeed used on a Windows development machine. I can't believe this was the issue. Thank you so much for your help!</p>
+<p>Changing the setHandler of a collection endpoint after the V1 to lowercase did the trick for me!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51659" data-cf-modified-03506328006e390b2852790f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51659" data-cf-modified-03506328006e390b2852790f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="51665" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '17</span>
+              </span><br/><a name="C51665" href="#C51665">
+                <time itemprop="dateCreated" datetime="2017-10-19T23:59:51-07:00" class="action-date">Oct '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Another one. I wonder will devs ever learn that Windows will only cause you problems. Use Virtualbox or some containers next time and save your time and energy.</p>
+<p>I'm glad that was the only issue, and you can deploy your app! </p>
+<p>P.S. I'd suggest you change a bit in your nginx confing and Router component:
+instead of: <code>try_files $uri $uri/ /index.php?_url=$uri&amp;$args;</code> modify to:  <code>try_files $uri $uri/ /index.php$is_args$query_string;</code></p>
+<p>Router in services:</p>
+<pre><code class="language-php">$di-&gt;setShared('router', function (){
+// Phalcon\Mvc\Router has a default behavior that provides a very simple routing that always expects a URI that matches the following pattern: /:controller/:action/:params
+
+        $router = new \Phalcon\Mvc\Router(false); //Create the router without default routes
+
+        //we're using Front Page Controller pattern in relation from nginx -&gt; Phalcon
+        $router-&gt;setUriSource($router::URI_SOURCE_SERVER_REQUEST_URI); // Use $_SERVER['REQUEST_URI']
+
+        //Set whether router must remove the extra slashes in the handled routes
+        $router-&gt;removeExtraSlashes(true);
+
+    return $router;
+});</code></pre>
+<p>Of course, it's up to you whenever you want to use default routes or not, but for API it's not required, so I'd disable it.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51665" data-cf-modified-03506328006e390b2852790f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51665" data-cf-modified-03506328006e390b2852790f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17127" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

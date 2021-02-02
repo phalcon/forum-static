@@ -1,0 +1,278 @@
+---
+layout: default
+title: 'how use phpunit in phalcon. - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">how use phpunit in phalcon.</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2676/YangHuiFor" class="user-moderator-N"><span itemprop="name">一木成舟</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-08-23T01:34:41-07:00">Aug '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-08-23T01:34:41-07:00">Aug '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>844</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/d961f207b65f2af19fc5d222ac2e0290?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2676/YangHuiFor" class="user-moderator-N"><span itemprop="name">一木成舟</span></a></span>
+                <span class="karma">8.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C16783" href="#C16783">
+        <time class="action-date">Aug '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I follow the official document use phpunit, but has error.</p>
+<p>this is my code Directory
+<img src="http://img3.meiyue.me/image/WTsmparzOuOdH1gpCJ-THVI3S0o.png" alt="" /></p>
+<p><code>TestHelper.php</code> code</p>
+<pre><code>    &lt;?php
+    //use Phalcon\Di;
+    //use Phalcon\Di\FactoryDefault;
+    ini_set('display_errors', 1);
+    error_reporting(E_ALL);
+    define('APP_PATH', __DIR__.'/../public');
+    define('ROOT_PATH', __DIR__);
+    define('PATH_LIBRARY', __DIR__ . '/../app/library/');
+    define('PATH_SERVICES', __DIR__ . '/../app/services/');
+    define('PATH_RESOURCES', __DIR__ . '/../app/resources/');
+    set_include_path(
+        ROOT_PATH . PATH_SEPARATOR . get_include_path()
+    );
+    // требуется для phalcon/incubator
+    include __DIR__ . "/../vendor/autoload.php";
+    // Используем автозагрузчик приложений для автозагрузки классов.
+    // Автозагрузка зависимостей, найденных в composer.
+    $loader = new \Phalcon\Loader();
+    $loader-&gt;registerDirs(
+        array(
+            ROOT_PATH,
+        )
+    )-&gt;registerNamespaces(array(
+        'MYH'             =&gt; '../app/library/',
+        'App\Services'   =&gt; '../app/services/',
+    ));
+    $loader-&gt;register();
+
+    if (!defined('PHPUNIT_COMPOSER_INSTALL')) {
+        define('PHPUNIT_COMPOSER_INSTALL', __DIR__ . '/../vendor/autoload.php');
+    }</code></pre>
+<p><code>UnitTestCase.php</code></p>
+<pre><code>    namespace Test;
+if(!defined('APP_PATH'))
+    define('APP_PATH', __DIR__.'/../public');
+
+require_once  __DIR__ . "/TestHelper.php";
+
+use Phalcon\Di;
+use Phalcon\Loader;
+use Phalcon\Test\UnitTestCase as PhalconTestCase;
+use Phalcon\Config;
+use Phalcon\Mvc\View;
+use Phalcon\Mvc\View\Engine\Php as PhpEngine;
+use Phalcon\Mvc\Url as UrlResolver;
+use Phalcon\Mvc\View\Engine\Volt as VoltEngine;
+use Phalcon\Mvc\Model\Manager as ModelsManager;
+use Phalcon\Mvc\Model\Metadata\Memory as MetaDataAdapter;
+use Phalcon\Session\Adapter\Files as SessionAdapter;
+use Phalcon\Session\Adapter\Redis as SessionRedis;
+use Phalcon\Flash\Direct as Flash;
+use Phalcon\Mvc\Dispatcher;
+use Phalcon\Mvc\Router;
+use Phalcon\Events\Manager as EventsManager;
+use Phalcon\Events\Event;
+use Monolog\Handler\StreamHandler;
+use Monolog\Handler\RotatingFileHandler;
+use Monolog\Logger;
+use Monolog\Formatter\LineFormatter;
+use Phalcon\Http\Response;
+
+abstract class UnitTestCase extends PhalconTestCase
+{
+    /**
+     * @var bool
+     */
+    private $_loaded = false;
+
+    public $logger;
+
+    public function setUp()
+    {
+        parent::setUp();
+
+        // Load any additional services that might be required during testing
+        $di = Di::getDefault();
+
+        // Get any DI components here. If you have a config, be sure to pass it to the parent
+        $di-&gt;setShared('eventsManager', function () {
+            $em = new EventsManager;
+            $em-&gt;enablePriorities(true);
+
+            return $em;
+        });
+
+        $di-&gt;setShared('logger', function () {
+            $requestId = $this-&gt;getShared('requestId');
+            $logger = new Monolog\Logger('App');
+            $config = $this-&gt;getShared('config');
+            //$streamHandler = new StreamHandler($config-&gt;logger-&gt;path . $config-&gt;logger-&gt;fileName, Logger::DEBUG);
+            $streamHandler = new RotatingFileHandler($config-&gt;logger-&gt;path . $config-&gt;logger-&gt;fileName,30, Logger::DEBUG);
+            $output = "[%datetime%][%channel%][requestId:{$requestId}][Level:%level_name%][Message:%message% %context% %extra%]\n";
+            // finally, create a formatter
+            $formatter = new LineFormatter($output);
+            $streamHandler-&gt;setFormatter($formatter);
+            $logger-&gt;pushHandler($streamHandler);
+            return $logger;
+        });
+
+        $this-&gt;setDi($di);
+
+        $this-&gt;_loaded = true;
+    }
+
+    /**
+     * Check if the test case is setup properly
+     *
+     * @throws \PHPUnit_Framework_IncompleteTestError;
+     */
+    public function __destruct()
+    {
+        if (!$this-&gt;_loaded) {
+            throw new \PHPUnit_Framework_IncompleteTestError(
+                "Please run parent::setUp()."
+            );
+        }
+    }
+}</code></pre>
+<p><code>MqTaskTest.php</code></p>
+<pre><code>    namespace Test;
+
+use PHPUnit\Framework\TestCase;
+use Phalcon\Test\UnitTestCase as PhalconTestCase;
+
+class MqTaskTest extends PhalconTestCase
+{
+    public function setUp()
+    {
+         parent::setUp(); // TODO: Change the autogenerated stub
+    }
+
+    public function testMqHandle()
+    {
+        $config = new \MYH\AliMq\Config(');
+        $consumer = new \MYH\AliMq\HttpConsumer($config);
+        //$data = $consumer-&gt;receiveMessage();
+
+//        $this-&gt;logger-&gt;info('Receive Message:',[$data]);
+//        echo "Receive Message Count:" .count($data['data']) ."\n";
+//        if(empty($data['data'])) {
+//        }
+        $data = [
+            'code' =&gt; '200',
+            'data' =&gt; [
+                'body' =&gt; '{"type":"sms","data":{"mobile":"18923405258","content":"\u4f60\u597d\u540c\u4e8b\uff0c\u6211\u662f\u6d4b\u8bd5\u6570\u636e"{% raw %}}}{% endraw %}',
+                'bornTime' =&gt; '1503459469659',
+                'key' =&gt; 'http',
+                'msgHandle'=&gt; 'X1BFTkRJTkdNU0dfI21xLW1zZy1wdXNoLXRlc3QtdjEjcWRpbnRlcm5ldG9yZGVyLTAxIzAjMTgjQ0lEX2Jhc2VfYXBpX3YxX0BfQF8wQTk3Q0I0OTMzQTE1MzkxNEZFOTcxMzc5QjVCRDI4QV9AX0Bfakpw',
+                'msgId' =&gt; '0A97CB4933A153914FE971379B5BD28A',
+                'reconsumeTimes' =&gt; 0,
+                'tag' =&gt; 'http'
+                ]
+        ];
+
+        $mqService = new \App\Services\MqService();
+        foreach ($data['data'] as $item) {
+            $mqService-&gt;setData($item)-&gt;send();
+            $consumer-&gt;deleteMessage($item['msgHandle']);
+        }
+    }
+}</code></pre>
+<p>An error</p>
+<pre><code>Access to undefined property logger
+ /Users/xxxx/code/xx/xxx/app/services/MqService.php:69
+/Users/xxxx/code/xxx/xx/app/services/MqService.php:51
+ /Users/xxxx/code/xxx/xxx/tests/MqTaskTest.php:49</code></pre>
+<p>that <code>MqServer.php</code> line 69 code</p>
+<pre><code>    public function initHandleObject()
+  {
+      $this-&gt;logger-&gt;info('MQ Receive Message:',[$this-&gt;data]);
+      if(empty($this-&gt;data['body'])) {
+          return false;
+      }
+      $body = json_decode($this-&gt;data['body'],true);
+      $typeClass = $body['type'];
+      $className = '\App\Services\Mq\\' . ucfirst(strtolower($typeClass)) . 'MqService';
+
+      /**
+       * @var MqInterface $mqClassObj;
+       */
+      $this-&gt;mqClassObj = new $className;
+
+      return $this;
+  }</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-1c4a50d20d9a393d2bbad0bd-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-1c4a50d20d9a393d2bbad0bd-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5915f25e654c4f9e60fe51700cdee683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4769/Izopi4a" class="user-moderator-Y"><span itemprop="name">Izo</span></a>        </span>
+        <br>
+
+        <span class="karma">85.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C50435" href="#C50435">
+                <time itemprop="dateCreated" datetime="2017-08-23T02:12:04-07:00" class="action-date">Aug '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>$this-&gt;getDI()-&gt;get(&quot;logger&quot;) ? i am no expert, but you can look at phalcon repo and copy paste from there <a href="https://github.com/phalcon/cphalcon/tree/master/tests/unit">https://github.com/phalcon/cphalcon/tree/master/tests/unit</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="50435" data-cf-modified-1c4a50d20d9a393d2bbad0bd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="50435" data-cf-modified-1c4a50d20d9a393d2bbad0bd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="16783" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,407 @@
+---
+layout: default
+title: 'Micro/Medium application can&#039;t mount handlers - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Micro/Medium application can&#039;t mount handlers</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/8997/zanza54" class="user-moderator-N"><span itemprop="name">zanza54</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-08-08T07:55:36-07:00">Aug '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-08-08T07:55:36-07:00">Aug '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>937</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/ca092b8cd9300d03a429a7e32f4c8e94?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/8997/zanza54" class="user-moderator-N"><span itemprop="name">zanza54</span></a></span>
+                <span class="karma">5.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C16687" href="#C16687">
+        <time class="action-date">Aug '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm currently separating my API from a full Phalcon website to a micro/medium one for easier maintenance and devops purposes.</p>
+<p>I've separated my api into collections. These collections use the methods from the corresponding controllers. It however seems that Phalcon cannot find the namespace my controllers reside in.</p>
+<p>All my controllers are separated into namespaces: <code>Ontrack\Controllers\Api\V1</code>
+These controllers extend from a <code>ControllerBase</code> which extends on its own from the Phalcon Controller class.</p>
+<p>How can this issue be fixed?</p>
+<p><strong>Full error:</strong></p>
+<pre><code class="language-vagrant">There are no handlers to mount
+#0 /home/vagrant/workspace/phalcon/api/public/index.php(43): Phalcon\Mvc\Micro-&gt;mount(Object(Phalcon\Mvc\Micro\Collection))
+#1 {main}</code></pre>
+<p>When I change my <code>general-user.php</code> file to use an UserController object I get a different error:</p>
+<pre><code class="language-vagrant">
+( ! ) Fatal error: Uncaught Error: Class 'Ontrack\Controllers\Api\V1\UserController' not found in /home/vagrant/workspace/phalcon/api/app/collections/v1/general-user.php on line 6
+( ! ) Error: Class 'Ontrack\Controllers\Api\V1\UserController' not found in /home/vagrant/workspace/phalcon/api/app/collections/v1/general-user.php on line 6
+Call Stack
+#   Time    Memory  Function    Location
+1   0.0030  361992  {main}( )   .../index.php:0
+2   0.0080  377968  include( '/home/vagrant/workspace/phalcon/api/app/config/routes.php' )  .../index.php:40
+3   0.0144  379624  include( '/home/vagrant/workspace/phalcon/api/app/collections/v1/general-user.php' )    .../routes.php:5
+</code></pre>
+<p><strong>Folder structure:</strong></p>
+<pre><code class="language-folder">- app
+--collections
+--config
+--controllers
+---v1
+-public</code></pre>
+<p><strong>Contents of /public/index.php:</strong></p>
+<pre><code class="language-php">&lt;?php
+
+use Phalcon\Mvc\Micro;
+use Phalcon\Di\FactoryDefault;
+
+error_reporting(E_ALL);
+
+define('BASE_PATH', dirname(__DIR__));
+define('APP_PATH', BASE_PATH . '/app');
+
+try {
+
+    /**
+     * The FactoryDefault Dependency Injector automatically registers
+     * the services that provide a full stack framework.
+     */
+    $di = new FactoryDefault();
+
+    /**
+     * Read services
+     */
+    include APP_PATH . "/config/services.php";
+
+    /**
+     * Get config service for use in inline setup below
+     */
+    $config = $di-&gt;getConfig();
+    /**
+     * Include Autoloader
+     */
+    include APP_PATH . '/config/loader.php';
+
+    /**
+     * Handle and deploy the application
+     */
+    $application = new Micro();
+    $application-&gt;setDI($di);
+
+    //Loading all API routes
+    include APP_PATH . '/config/routes.php';
+    foreach($collections as $collection) {
+      $application-&gt;mount($collection);
+    }
+
+    $application-&gt;notFound(function () use ($application) {
+      $application-&gt;response-&gt;setStatusCode(404, "Not Found")-&gt;sendHeaders();
+      echo "not found!";
+    });
+
+    $application-&gt;handle();
+
+} catch (\Exception $e) {
+    echo $e-&gt;getMessage() . '&lt;br&gt;';
+    echo '&lt;pre&gt;' . $e-&gt;getTraceAsString() . '&lt;/pre&gt;';
+}
+</code></pre>
+<p><strong>Contents of /app/collections/v1/general-user.php:</strong></p>
+<pre><code class="language-php">&lt;?php
+use Phalcon\Mvc\Micro\Collection as MicroCollection;
+use Ontrack\Controllers\Api\V1\UserController as UserController;
+
+$general_user = new MicroCollection();
+$general_user-&gt;setHandler('Ontrack\\Controllers\\Api\\V1\\UserController', true);
+$general_user-&gt;setPrefix('/v1/user');
+$general_user-&gt;post('/revokedevice', 'revokedeviceAction');
+
+return $general_user;
+</code></pre>
+<p><strong>Contents of /app/config/config.php:</strong></p>
+<pre><code class="language-php">&lt;?php
+defined('BASE_PATH') || define('BASE_PATH', getenv('BASE_PATH') ?: realpath(dirname(__FILE__) . '/../..'));
+defined('APP_PATH') || define('APP_PATH', BASE_PATH . '/app');
+
+return new \Phalcon\Config([
+    'database' =&gt; [
+      'adapter'     =&gt; 'Mysql',
+      'host'        =&gt; 'localhost',
+      'username'    =&gt; 'root',
+      'password'    =&gt; '',
+      'dbname'      =&gt; 'defaultname',
+      'charset'     =&gt; 'utf8',
+    ],
+    'application' =&gt; [
+      'applicationname'     =&gt; 'MyApp',
+      'appDir'              =&gt; APP_PATH . '/',
+      'controllersDir'      =&gt; APP_PATH . '/controllers/',
+      'modelsDir'           =&gt; APP_PATH . '/models/'
+
+      // This allows the baseUri to be understand project paths that are not in the root directory
+      // of the webpspace.  This will break if the public/index.php entry point is moved or
+      // possibly if the web server rewrite rules are changed. This can also be set to a static path.
+      'baseUri'        =&gt; '/',
+    ]
+]);
+</code></pre>
+<p><strong>Contents of /app/config/loader.php:</strong></p>
+<pre><code class="language-php">&lt;?php
+
+$loader = new \Phalcon\Loader();
+
+/**
+ * We're a registering a set of directories taken from the configuration file
+ */
+$loader-&gt;registerDirs(
+    [
+        $config-&gt;application-&gt;controllersDir,
+        $config-&gt;application-&gt;modelsDir,
+    ]
+)-&gt;register();
+
+$loader-&gt;registerNamespaces(
+    [
+        //EXAMPLE     "Example\Base"    =&gt; "vendor/example/base/",        USAGE     $var = new Example\Base();
+        'Ontrack\Controllers\Api' =&gt; APP_PATH . '/controllers/v1/',
+        'Ontrack\Models' =&gt; APP_PATH . '/models/',
+        'Ontrack\Vendors' =&gt; $config-&gt;application-&gt;vendorDir,
+    ]
+)-&gt;register();
+</code></pre>
+<p><strong>Contents of /app/config/routes.php:</strong></p>
+<pre><code class="language-php">&lt;?php
+
+$collections = [
+  include APP_PATH . '/collections/v1/general-auth.php',
+  include APP_PATH . '/collections/v1/general-user.php',
+];
+
+return $collections;
+</code></pre>
+<p><strong>Contents of /app/config/services.php:</strong></p>
+<pre><code class="language-php">&lt;?php
+/**
+ * Shared configuration service
+ */
+$di-&gt;setShared('config', function () {
+  return include APP_PATH . "/config/config.php";
+});
+
+/**
+ * The URL component is used to generate all kind of urls in the application
+ */
+$di-&gt;setShared('url', function () {
+    $config = $this-&gt;getConfig();
+
+    $url = new UrlResolver();
+    $url-&gt;setBaseUri($config-&gt;application-&gt;baseUri);
+
+    return $url;
+});
+
+/**
+ * Database connection is created based in the parameters defined in the configuration file
+ */
+$di-&gt;setShared('db', function () {
+  $config = $this-&gt;getConfig();
+
+  $class = 'Phalcon\Db\Adapter\Pdo\\' . $config-&gt;database-&gt;adapter;
+  $params = [
+      'host'     =&gt; $config-&gt;database-&gt;host,
+      'username' =&gt; $config-&gt;database-&gt;username,
+      'password' =&gt; $config-&gt;database-&gt;password,
+      'dbname'   =&gt; $config-&gt;database-&gt;dbname,
+      'charset'  =&gt; $config-&gt;database-&gt;charset
+  ];
+
+  if ($config-&gt;database-&gt;adapter == 'Postgresql') {
+      unset($params['charset']);
+  }
+
+  $connection = new $class($params);
+
+  return $connection;
+});
+</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-07d6dda352c8510e2d1b16f2-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-07d6dda352c8510e2d1b16f2-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C50169" href="#C50169">
+                <time itemprop="dateCreated" datetime="2017-08-08T08:15:39-07:00" class="action-date">Aug '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><strong>Contents of /app/config/loader.php:</strong></p>
+<pre><code class="language-php">$loader-&gt;registerNamespaces(
+    [
+        'Ontrack\Controllers\Api' =&gt; APP_PATH . '/controllers/v1/', // wrong namespace, missing V1
+        'Ontrack\Controllers\Api\V1' =&gt; APP_PATH . '/controllers/v1/', // correct
+        'Ontrack\Models' =&gt; APP_PATH . '/models/',
+        'Ontrack\Vendors' =&gt; $config-&gt;application-&gt;vendorDir,
+    ]
+)</code></pre>
+<p>This is the only error I've found skmming your code... hope it helps</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="50169" data-cf-modified-07d6dda352c8510e2d1b16f2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="50169" data-cf-modified-07d6dda352c8510e2d1b16f2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ca092b8cd9300d03a429a7e32f4c8e94?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8997/zanza54" class="user-moderator-N"><span itemprop="name">zanza54</span></a>        </span>
+        <br>
+
+        <span class="karma">5.9k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C50169"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Lajos Bencz                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C50175" href="#C50175">
+                <time itemprop="dateCreated" datetime="2017-08-08T08:40:11-07:00" class="action-date">Aug '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It looks like changing this line did load the namespace/controller correctly.
+However I still have the same error message: <code>There are no handlers to mount</code></p>
+<p>Changing my general-user.php lines to instantiating an object in <code>setHandler</code> doesn't return <code>class not found</code> anymore so namespace loading is now correct.</p>
+<blockquote>
+<p><strong>Contents of /app/config/loader.php:</strong></p>
+<pre><code class="language-php">$loader-&gt;registerNamespaces(
+   [
+       'Ontrack\Controllers\Api' =&gt; APP_PATH . '/controllers/v1/', // wrong namespace, missing V1
+       'Ontrack\Controllers\Api\V1' =&gt; APP_PATH . '/controllers/v1/', // correct
+       'Ontrack\Models' =&gt; APP_PATH . '/models/',
+       'Ontrack\Vendors' =&gt; $config-&gt;application-&gt;vendorDir,
+   ]
+)</code></pre>
+<p>This is the only error I've found skmming your code... hope it helps</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="50175" data-cf-modified-07d6dda352c8510e2d1b16f2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="50175" data-cf-modified-07d6dda352c8510e2d1b16f2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ca092b8cd9300d03a429a7e32f4c8e94?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8997/zanza54" class="user-moderator-N"><span itemprop="name">zanza54</span></a>        </span>
+        <br>
+
+        <span class="karma">5.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="50177" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '17</span>
+              </span><br/><a name="C50177" href="#C50177">
+                <time itemprop="dateCreated" datetime="2017-08-08T08:48:04-07:00" class="action-date">Aug '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><strong>EDIT: I stupidly used a POST where I simply wanted to test a GET request. So it's fixed now!</strong></p>
+<p>I've managed to remove the <code>There are no handlers to mount</code> message by removing some empty and faulty configured collection files from my <code>routes.php</code> file.</p>
+<p>My current issue is that it only shows me a <code>not found!</code> message like I declared in <code>index.php</code>.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="50177" data-cf-modified-07d6dda352c8510e2d1b16f2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="50177" data-cf-modified-07d6dda352c8510e2d1b16f2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="50193" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '17</span>
+              </span><br/><a name="C50193" href="#C50193">
+                <time itemprop="dateCreated" datetime="2017-08-10T08:30:51-07:00" class="action-date">Aug '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Where is your Router service in services? It's by default set via FactoryDefault DI, but you need to change few bits there (i.e. redefine service).</p>
+<p>I can bet that's your issue ATM.</p>
+<p>This is what I'm using with Middle / APIs:</p>
+<pre><code class="language-php">$di-&gt;setShared('router', function (){
+// Phalcon\Mvc\Router has a default behavior that provides a very simple routing that always expects a URI that matches the following pattern: /:controller/:action/:params
+
+        $router = new \Phalcon\Mvc\Router(false); //Create the router without default routes
+
+        //we're using Front Page Controller pattern in relation from nginx -&gt; Phalcon
+        $router-&gt;setUriSource($router::URI_SOURCE_SERVER_REQUEST_URI); // Use $_SERVER['REQUEST_URI']
+
+        //Set whether router must remove the extra slashes in the handled routes
+        $router-&gt;removeExtraSlashes(true);
+
+    return $router;
+});</code></pre>
+<p>And fit your web server accordingly.
+This is what you need for nginx:</p>
+<pre><code>location / {
+# FontPageController pattern
+            try_files $uri $uri/ /index.php$is_args$query_string;
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="50193" data-cf-modified-07d6dda352c8510e2d1b16f2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="50193" data-cf-modified-07d6dda352c8510e2d1b16f2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="16687" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

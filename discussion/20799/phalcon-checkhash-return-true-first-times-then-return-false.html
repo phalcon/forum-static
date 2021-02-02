@@ -1,0 +1,226 @@
+---
+layout: default
+title: 'Phalcon checkHash return true First times, then return false - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/16/security">Security</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Phalcon checkHash return true First times, then return false</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/14037/astor450" class="user-moderator-N"><span itemprop="name">Angel Zuriel</span></a></span>
+            <time itemprop="dateCreated" datetime="2020-08-07T07:43:36-07:00">Aug '20</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2020-08-07T07:43:36-07:00">Aug '20</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>134</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/38820e68367a52f4a81a3925dfce7650?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/14037/astor450" class="user-moderator-N"><span itemprop="name">Angel Zuriel</span></a></span>
+                <span class="karma">248</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C20799" href="#C20799">
+        <time class="action-date">Aug '20</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm implementing a simple login with MICRO, </p>
+<p>The problem is: the user register ok in the app, the user changes own password ok in the app, but, after few days users cannot login and they have to change their password agaain and agaaaain, and agaaaain. I check the DB field length and its length is 512, all the stored passwords are 60 Characters length, but when i use $security-&gt;checkHash over the passwords vs the stored hashed one ALWAYS is returning FALSE, Unless i hash it again, then returns True</p>
+<pre><code class="language-php">        $data = $app-&gt;request-&gt;getJsonRawBody();
+        $user = Users::findFirst([
+            'conditions' =&gt; 'username=:username:',
+            'bind' =&gt; [
+                'username' =&gt; $data-&gt;username,
+            ]
+        ]);
+        $input_password = $data-&gt;password;
+        $db_password = $user-&gt;password;
+        if($security-&gt;checkHash($data-&gt;password, $user-&gt;password))
+        {
+            $payload = [
+                'id'   =&gt; $user-&gt;id,
+                'email' =&gt; $user-&gt;email,
+                'username' =&gt; $user-&gt;username,
+                'role'  =&gt; $user-&gt;profile_id,
+                'iat' =&gt; time(),
+            ];
+
+            $token = $this-&gt;auth-&gt;make($payload);
+            echo json_encode(['_token' =&gt; $token]);
+        }
+        else
+            echo json_encode(
+                [
+                    'message' =&gt; "Incorrect login data.",
+                    'status' =&gt; 'error'
+                ]
+            );</code></pre>
+<p>The Registraton code:</p>
+<pre><code class="language-php">         $data = $app-&gt;request-&gt;getJsonRawBody();
+          try
+          {
+              $user = new Users();
+              $security = new Security();
+
+              $user-&gt;username = $data-&gt;username;
+              $user-&gt;email = $data-&gt;email;
+              $user-&gt;password = $security-&gt;hash($data-&gt;password);
+              $user-&gt;osc = $data-&gt;osc;
+              $user-&gt;cel_phone = $data-&gt;cel_phone;
+              $user-&gt;phone = $data-&gt;phone;
+              $user-&gt;area_id = $data-&gt;area_id;
+              $user-&gt;clave_area = $data-&gt;clave_area;
+              $user-&gt;profile_id = 2;
+              $user-&gt;name = $data-&gt;name;
+
+              if($user-&gt;save())
+                  echo json_encode(
+                      [
+                          'message' =&gt; 'User created successfully',
+                          'status' =&gt; 'success'
+                      ]
+                  );
+              else
+                  echo json_encode(
+                      [
+                          'message' =&gt; 'there was a problem',
+                          'status' =&gt; 'error'
+                      ]
+                  );</code></pre>
+<p>And the password recovery code:</p>
+<pre><code class="language-php">        $data = $app-&gt;request-&gt;getJsonRawBody();
+        $data = (array) $data;
+        $codigo = CodigosPassword::findFirst([
+            'conditions' =&gt; [
+                'correo' =&gt; $data['correo'],
+                'codigo' =&gt; $data['codigo']
+            ]
+        ]);
+        if(!$codigo){
+            echo json_encode([
+                'message' =&gt; 'there is no password recovery request',
+                'status' =&gt; 'nocode'
+            ]); die();
+        }
+        $usuario = Users::findFirst([
+            'conditions' =&gt; [
+                'email' =&gt; $data['correo']
+            ]
+        ]);
+        $security = new Security();
+        $usuario-&gt;password = $security-&gt;hash($data['password']);
+        try{
+            $codigo-&gt;delete();
+            $usuario-&gt;save();
+            $sendResult = $cliente_correo-&gt;sendEmail("<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="98f9fcf5f1f6d8e8eaf7e1fdfbecf7f5f9ecfdb6fbf7f5">[email&#160;protected]</a>", 
+                $data['correo'], 
+                "Se ha cambiado su contraseña de acceso",
+                "Se ha reestablecido la contraseña exitosamente");
+            echo json_encode(
+                [
+                    'message' =&gt; 'La contraseña ha sido cambiada exitosamente',
+                    'status' =&gt; 'success'
+                ]
+            );
+        }</code></pre>
+<p>:(</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-6e571a5a8230109f22b5cf10-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-6e571a5a8230109f22b5cf10-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="63985" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '20</span>
+              </span><br/><a name="C63985" href="#C63985">
+                <time itemprop="dateCreated" datetime="2020-08-07T13:47:22-07:00" class="action-date">Aug '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>At first glance this all looks fine.</p>
+<p>What does it look like if you do this:</p>
+<pre><code class="language-php">echo $security-&gt;hash($input_password).'&lt;br/ &gt;'.$db_password;</code></pre>
+<p>Theoretically those should look the same.</p>
+<p>Might there be extra whitespace somewhere?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63985" data-cf-modified-6e571a5a8230109f22b5cf10-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63985" data-cf-modified-6e571a5a8230109f22b5cf10-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/38820e68367a52f4a81a3925dfce7650?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/14037/astor450" class="user-moderator-N"><span itemprop="name">Angel Zuriel</span></a>        </span>
+        <br>
+
+        <span class="karma">248</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C63985"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Dylan Anderson                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C63987" href="#C63987">
+                <time itemprop="dateCreated" datetime="2020-08-08T09:35:35-07:00" class="action-date">Aug '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>No, it was changed 2 times. I realize that it is a phalcon problem, then i upgrade it to the version 4.06, the password issue was solved and another problem comes. Using Phalcon 4.06 MICRO with PHP 7.4 in DEV send the CORS headers OK but, in Godaddy shared hosting with aparently the same configuration the CORS headers are missing. What a headache.</p>
+<blockquote>
+<p>At first glance this all looks fine.</p>
+<p>What does it look like if you do this:</p>
+<pre><code class="language-php">echo $security-&gt;hash($input_password).'&lt;br/ &gt;'.$db_password;</code></pre>
+<p>Theoretically those should look the same.</p>
+<p>Might there be extra whitespace somewhere?</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63987" data-cf-modified-6e571a5a8230109f22b5cf10-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63987" data-cf-modified-6e571a5a8230109f22b5cf10-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="20799" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

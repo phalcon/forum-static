@@ -1,0 +1,170 @@
+---
+layout: default
+title: 'Why assigning to a static property causes random segmentation faults? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/19/incubator">Incubator</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Why assigning to a static property causes random segmentation faults?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/9377/3amprogrammer" class="user-moderator-N"><span itemprop="name">Kamil Latosiński</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-11-03T00:43:37-07:00">Nov '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-11-03T00:43:37-07:00">Nov '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>425</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9b214830c1205cae1b45b9d90e5f4020?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/9377/3amprogrammer" class="user-moderator-N"><span itemprop="name">Kamil Latosiński</span></a></span>
+                <span class="karma">701</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17219" href="#C17219">
+        <time class="action-date">Nov '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Yesterday I started receiving strange, random 502 - Bad Gateway errors. By random I mean, when I refreshed random page several times an error sometimes occured and sometimes not, without altering any code inbetween.</p>
+<p>I have started a horribly long debugging process. After an in-depth investigation I have found that this peace of code is causing an error:</p>
+<pre><code>public static function getUrlService()
+{
+    self::$_urlService = self::getDI()-&gt;get('url');
+
+    return self::$_urlService;
+}</code></pre>
+<p>It sits inside class <em>Tag</em>, that extends <em>\Phalcon\Tag</em>. I think what it is supposed to do, is to force return a service straight from DI without caching it inside <em>_urlService</em> property.</p>
+<p>But whether this code is correct or not is not important. At first I tought that returning service straight from DI might cause the problem, but I went a little further a tried something like this:</p>
+<pre><code>public static function getUrlService()
+{
+    self::$_escaperService = new \stdClass();
+
+    return self::getDI()-&gt;get('url');
+}</code></pre>
+<p>So <strong>I</strong> basically <strong>assign</strong> a dummy object <strong>to protected static property</strong> and that seems to be the origin of the problem. If I move this assignment anywhere the problem reoccurs. The only way to solve it is to completly remove this reassignment.</p>
+<p>As I said we do not consider if this code is correct or not, or what is the other - possibly correct way - of this assignment. I am just curious <strong>why the heck it causes a segmentation fault</strong>, as I tought that assigning to the protected static property is a valid operation?</p>
+<p>Additional info:</p>
+<p>Phalcon DevTools (3.1.2)</p>
+<p>Environment::
+OS: Linux user 4.4.0-53-generic #74-Ubuntu SMP Fri Dec 2 15:59:10 UTC 2016 x86_64
+PHP Version: 7.0.22-0ubuntu0.16.04.1
+PHP SAPI: cli
+PHP Bin: /usr/bin/php7.0
+PHP Extension Dir: /usr/lib/php/20151012
+PHP Bin Dir: /usr/bin
+Loaded PHP config: /etc/php/7.0/cli/php.ini
+Versions::
+Phalcon DevTools Version: 3.1.2
+Phalcon Version: 3.1.2
+AdminLTE Version: 2.3.6</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-2543856a76baa0cc218c7382-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-2543856a76baa0cc218c7382-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5915f25e654c4f9e60fe51700cdee683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4769/Izopi4a" class="user-moderator-Y"><span itemprop="name">Izo</span></a>        </span>
+        <br>
+
+        <span class="karma">85.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52027" href="#C52027">
+                <time itemprop="dateCreated" datetime="2017-11-03T00:54:10-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>perhaps this refs with</p>
+<p><a href="https://github.com/phalcon/zephir/issues/1590">https://github.com/phalcon/zephir/issues/1590</a></p>
+<p><a href="https://github.com/phalcon/zephir/issues/1530">https://github.com/phalcon/zephir/issues/1530</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52027" data-cf-modified-2543856a76baa0cc218c7382-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52027" data-cf-modified-2543856a76baa0cc218c7382-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52043" href="#C52043">
+                <time itemprop="dateCreated" datetime="2017-11-03T03:11:35-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Provide a back trace (gdb).</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52043" data-cf-modified-2543856a76baa0cc218c7382-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52043" data-cf-modified-2543856a76baa0cc218c7382-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9b214830c1205cae1b45b9d90e5f4020?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9377/3amprogrammer" class="user-moderator-N"><span itemprop="name">Kamil Latosiński</span></a>        </span>
+        <br>
+
+        <span class="karma">701</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C52043"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Jonathan Aaron Steel                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C52045" href="#C52045">
+                <time itemprop="dateCreated" datetime="2017-11-03T05:45:12-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Provide a back trace (gdb).</p>
+</blockquote>
+<p>I think we should move the discussion to <a href="https://github.com/phalcon/zephir/issues/1596">this issue</a>. You can find the trace as well as steps to reproduce.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52045" data-cf-modified-2543856a76baa0cc218c7382-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52045" data-cf-modified-2543856a76baa0cc218c7382-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17219" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

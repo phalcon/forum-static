@@ -1,0 +1,324 @@
+---
+layout: default
+title: 'Many to Many Relation save process tries to update existing record nodes - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Many to Many Relation save process tries to update existing record nodes</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2105/sszdh" class="user-moderator-N"><span itemprop="name">Soheil Samadzadeh</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-05-20T08:50:40-07:00">May '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-05-20T08:50:40-07:00">May '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>May '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>788</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/8eb214b0608f667d22a4fbbd030ae36e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2105/sszdh" class="user-moderator-N"><span itemprop="name">Soheil Samadzadeh</span></a></span>
+                <span class="karma">14.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6836" href="#C6836">
+        <time class="action-date">May '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,</p>
+<p>I have these objects model in my app:</p>
+<h5>Users Model:</h5>
+<pre><code class="language-php">namespace Application\Model;
+
+class Users extends Entity
+{
+    public $id;
+    public $firstName;
+    public $lastName;
+    public $gender;
+
+    public function initialize()
+    {
+        parent::initialize();
+
+        /* Created course by user (Course owner) */
+        $this-&gt;hasMany('id', 'Application\Model\Courses', 'createdBy', array(
+            'alias' =&gt; 'createdCourses',
+            'foreignKey' =&gt; array(
+                'message' =&gt; 'User cannot be deleted because he/she is courses owner in the system'
+            )
+        ));
+
+        /* Teaching course by user */
+        $this-&gt;hasManyToMany(
+            'id',
+            'Application\Model\Instructors',
+            'userId', 'courseId',
+            'Application\Model\Courses',
+            'id',
+            array(
+                'alias' =&gt; 'teachingCourses',
+                'foreignKey' =&gt; array(
+                    'message' =&gt; 'User cannot be deleted because he/she has teaching courses in the system'
+            )
+        ));
+    }
+}</code></pre>
+<h5>Courses Model:</h5>
+<pre><code class="language-php">namespace Application\Model;
+
+class Courses extends Entity
+{
+
+    public $id;
+    public $title;
+    public $createdBy;
+
+    public function initialize()
+    {
+        parent::initialize();
+
+        /* Course creator (Owner) */
+        $this-&gt;belongsTo('id', 'Application\Model\Users', 'createdBy', array(
+            'alias' =&gt; 'creator'
+        ));
+
+        /* Course Instructors (Teachers) */
+        $this-&gt;hasManyToMany(
+            'id',
+            'Application\Model\Instructors',
+            'courseId', 'userId',
+            'Application\Model\Users',
+            'id',
+            array(
+                'alias' =&gt; 'instructors'
+            )
+        );
+    }
+}</code></pre>
+<h5>Instructors Model:</h5>
+<pre><code class="language-php">namespace Application\Model;
+
+class Instructors extends Base
+{
+    /**
+     *
+     * @var integer
+     */
+    public $id;
+
+    /**
+     *
+     * @var integer
+     */
+    public $userId;
+
+    /**
+     *
+     * @var integer
+     */
+    public $courseId;
+
+    public function initialize()
+    {
+        parent::initialize();
+
+        $this-&gt;belongsTo("userId", 'Application\Model\Users', "id");
+        $this-&gt;belongsTo("courseId", 'Application\Model\Courses', "id");
+    }
+} </code></pre>
+<p>In my controller I have create a course then select an existing user from database and assing as course instructor via magic method:</p>
+<pre><code class="language-php">
+$course = new \Application\Model\Courses();
+$course-&gt;title = "Sample Title";
+.
+.
+$user = Application\Model\User::findFirst(1);
+$course-&gt;createdBy = $user-&gt;id;
+$course-&gt;instructors = [$user];
+$course-&gt;save();
+</code></pre>
+<p>But while saving process, it tries to update that existing user to!
+Can someone explain what is wrong here.</p>
+<p>Thanks.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-7005ff717ade4e7bf610b440-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-7005ff717ade4e7bf610b440-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/0443edc510c8690c5ebeac47ff491cfe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3402/stibiumz" class="user-moderator-N"><span itemprop="name">Óscar Enríquez</span></a>        </span>
+        <br>
+
+        <span class="karma">6.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C18632" href="#C18632">
+                <time itemprop="dateCreated" datetime="2015-05-20T09:06:57-07:00" class="action-date">May '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It's updating the user because it has a <code>hasManyToMany</code> relation (that's ActiveRecord), use dynamic update within user model to avoid updating if no changes were made, see this thread <a href="http://forum.phalcon.io/discussion/6678/how-to-disable-saving-related-records">http://forum.phalcon.io/discussion/6678/how-to-disable-saving-related-records</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="18632" data-cf-modified-7005ff717ade4e7bf610b440-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="18632" data-cf-modified-7005ff717ade4e7bf610b440-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8eb214b0608f667d22a4fbbd030ae36e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2105/sszdh" class="user-moderator-N"><span itemprop="name">Soheil Samadzadeh</span></a>        </span>
+        <br>
+
+        <span class="karma">14.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C18633" href="#C18633">
+                <time itemprop="dateCreated" datetime="2015-05-20T09:42:45-07:00" class="action-date">May '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you @Óscar for our quick reply.</p>
+<p>I try this, but result is same... and related user updates !</p>
+<pre><code class="language-php"> public function initialize()
+ {
+   parent::initialize();   
+   $this-&gt;useDynamicUpdate(true);
+
+   $this-&gt;hasManyToMany(
+            'id',
+            'Application\Model\Instructors',
+            'userId', 'courseId',
+            'Application\Model\Courses',
+            'id',
+            array(
+                'alias' =&gt; 'teachingCourses',
+                'foreignKey' =&gt; array(
+                    'action' =&gt; \Phalcon\Mvc\Model\Relation::NO_ACTION,
+                    'message' =&gt; 'User cannot be deleted because he/she has teaching courses in the system'
+            )
+        ));
+ }</code></pre>
+<p>PS: My all models have <em>Timestampable Behavior</em> with <strong>createdAt</strong> and <strong>modifiedAt</strong> fields.</p>
+<p>User's <strong>modifiedAt</strong> field allways updates in this situation!!</p>
+<p>Thanks again.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="18633" data-cf-modified-7005ff717ade4e7bf610b440-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="18633" data-cf-modified-7005ff717ade4e7bf610b440-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/0443edc510c8690c5ebeac47ff491cfe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3402/stibiumz" class="user-moderator-N"><span itemprop="name">Óscar Enríquez</span></a>        </span>
+        <br>
+
+        <span class="karma">6.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C18669" href="#C18669">
+                <time itemprop="dateCreated" datetime="2015-05-21T10:54:03-07:00" class="action-date">May '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Try using <code>beforeUpdate</code> instead</p>
+<pre><code class="language-php">public function beforeUpdate() {
+    if ($this-&gt;hasChanged()) {
+        $this-&gt;modifiedAt = $_SERVER['REQUEST_TIME']; // or whatever date format you have
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="18669" data-cf-modified-7005ff717ade4e7bf610b440-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="18669" data-cf-modified-7005ff717ade4e7bf610b440-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8eb214b0608f667d22a4fbbd030ae36e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2105/sszdh" class="user-moderator-N"><span itemprop="name">Soheil Samadzadeh</span></a>        </span>
+        <br>
+
+        <span class="karma">14.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C18675" href="#C18675">
+                <time itemprop="dateCreated" datetime="2015-05-21T12:38:43-07:00" class="action-date">May '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>So, do you mean I should do such thinng (hooking beforeUpdate) for all
+hasManyToMany models and forget about Timstampable behaviors?</p>
+<p>Basicaly why update function of user model should be call in many to many
+save process when my model fields does not changes any more?</p>
+<p>This smells bad an anti-dry code, does nt it?</p>
+<p>So, What about saving relations manually and use defined relations for read
+and fetch action?</p>
+<p>Is it normal or not?</p>
+<p>Thank you again for your valuable replies Oscar.
+On 21 May 2015 22:22, &quot;Óscar Enríquez&quot; <a href="/cdn-cgi/l/email-protection#95e5fdfae6e5fdfae7e0f8d5e5fdf4f9f6fafbbbfcfa"><span class="__cf_email__" data-cfemail="dfafb7b0acafb7b0adaab29fafb7beb3bcb0b1f1b6b0">[email&#160;protected]</span></a> wrote:</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="18675" data-cf-modified-7005ff717ade4e7bf610b440-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="18675" data-cf-modified-7005ff717ade4e7bf610b440-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/0443edc510c8690c5ebeac47ff491cfe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3402/stibiumz" class="user-moderator-N"><span itemprop="name">Óscar Enríquez</span></a>        </span>
+        <br>
+
+        <span class="karma">6.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C18679" href="#C18679">
+                <time itemprop="dateCreated" datetime="2015-05-21T17:06:51-07:00" class="action-date">May '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes, because 'Timestampable' behavior updates the property without checking if model changed, and thus cause the model change <a href="https://github.com/phalcon/cphalcon/blob/c0fd010390c8dd9a31f50915134b4c5d62db3aa6/phalcon/mvc/model/behavior/timestampable.zep#L89">https://github.com/phalcon/cphalcon/blob/c0fd010390c8dd9a31f50915134b4c5d62db3aa6/phalcon/mvc/model/behavior/timestampable.zep#L89</a>, I think thats good in this way, but implementing an option <code>dynamicUpdate</code> on it would be better.</p>
+<p>And yes, <code>Phalcon\Mvc\Model</code> has some spaghetti code, about saving relations manually don't think that's a good idea, you will go better using another ORM if Phalcon does not meet your needs</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="18679" data-cf-modified-7005ff717ade4e7bf610b440-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="18679" data-cf-modified-7005ff717ade4e7bf610b440-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6836" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

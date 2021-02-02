@@ -1,0 +1,301 @@
+---
+layout: default
+title: 'Multiple database - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Multiple database</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10733/fctoscano" class="user-moderator-N"><span itemprop="name">Flavio Toscano</span></a></span>
+            <time itemprop="dateCreated" datetime="2019-07-04T06:52:48-07:00">Jul '19</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2019-07-04T06:52:48-07:00">Jul '19</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '19</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>573</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/f14b69c2e8b727a5488c20b5469abb2e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10733/fctoscano" class="user-moderator-N"><span itemprop="name">Flavio Toscano</span></a></span>
+                <span class="karma">1.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C19807" href="#C19807">
+        <time class="action-date">Jul '19</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi guys.</p>
+<p>I´m trying to create a multiple database conneciton to the same host but something is wrong.</p>
+<p>In the services.php file I created the two database connections:</p>
+<pre><code class="language-php">use Phalcon\Db\Adapter\Pdo\Mysql as DbAdapter;
+
+$di-&gt;set('db', function () {
+    $config = $this-&gt;getConfig();
+    return new DbAdapter([
+        'host' =&gt; $config-&gt;database-&gt;host,
+        'username' =&gt; $config-&gt;database-&gt;username,
+        'password' =&gt; $config-&gt;database-&gt;password,
+        'dbname' =&gt; 'project'
+    ]);
+});
+
+$di-&gt;set('dbclient', function () {
+    return new DbAdapter([
+        'host' =&gt; '127.0.0.1',
+        'username' =&gt; 'username',
+        'password' =&gt; 'password',
+        'dbname' =&gt; 'c1'
+    ]);
+});</code></pre>
+<p>Then I created two models:</p>
+<p>Cities.php</p>
+<pre><code class="language-php">namespace Project\Models;
+
+use Phalcon\Mvc\Model;
+
+class Cities extends Model
+{
+    /**
+     * ID
+     * @var integer
+     */
+    public $id;
+
+    /**
+     * Name
+     * @var string
+     */
+    public $name;
+
+    public function initialize()
+    {
+
+    }
+}</code></pre>
+<p>Clients.php</p>
+<pre><code class="language-php">namespace Project\Models;
+
+use Phalcon\Mvc\Model;
+
+class Clients extends Model
+{
+    /**
+     * ID
+     * @var integer
+     */
+    public $id;
+
+    /**
+     * Name
+     * @var string
+     */
+    public $name;
+
+    /**
+     *
+     * @var integer
+     */
+    public $city_id;
+
+    public function initialize()
+    {
+        $this-&gt;setConnectionService('dbclient');
+
+        $this-&gt;belongsTo(
+            'city_id',
+            'Project\Models\Cities',
+            'id',
+            array('alias' =&gt; 'city')
+        );
+    }
+}</code></pre>
+<p>Then in the controlles I have a method called list that I use:</p>
+<p>ClientsController.php</p>
+<pre><code class="language-php">namespace Project\Controllers;
+
+use DataTables\DataTable;
+use Project\Models\Clients;
+
+/**
+* List clients to datatables (ajax request)
+*/
+public function listAction()
+{
+    $this-&gt;view-&gt;disable();
+    $request = $this-&gt;request;
+
+    $query = "SELECT a.id,
+              a.name,
+              b.name as city
+              FROM Project\Models\Clients a,
+              Project\Models\cities b
+               WHERE b.id = a.city_id";
+
+     $resultset  = $this-&gt;modelsManager-&gt;createQuery($query)-&gt;execute();
+     $dataTables = new DataTable();
+     $dataTables-&gt;fromResultSet($resultset)-&gt;sendResponse();
+
+}
+</code></pre>
+<p>But when I try to access clients/list I´m receiving this error:</p>
+<pre><code>SQLSTATE[42S02]: Base table or view not found: 1146 Table 'project.clients' doesn't exist
+#0 [internal function]: PDOStatement-&gt;execute()
+#1 [internal function]: Phalcon\Db\Adapter\Pdo-&gt;executePrepared(Object(PDOStatement), Array, Array)
+#2 [internal function]: Phalcon\Db\Adapter\Pdo-&gt;query('SELECT `a`.`id`...', NULL, NULL)
+#3 [internal function]: Phalcon\Mvc\Model\Query-&gt;_executeSelect(Array, NULL, NULL)
+#4 C:\site\project\app\controllers\ClientsController.php(202): Phalcon\Mvc\Model\Query-&gt;execute()
+#5 [internal function]: Project\Controllers\ClientsController-&gt;listAction()
+#6 [internal function]: Phalcon\Dispatcher-&gt;callActionMethod(Object(Project\Controllers\ClientsController), 'listAction', Array)
+#7 [internal function]: Phalcon\Dispatcher-&gt;dispatch()
+#8 C:\site\smartman\public\index.php(41): Phalcon\Mvc\Application-&gt;handle()
+#9 {main}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-4eaa5c4b7822d862c129c54c-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-4eaa5c4b7822d862c129c54c-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5915f25e654c4f9e60fe51700cdee683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4769/Izopi4a" class="user-moderator-Y"><span itemprop="name">Izo</span></a>        </span>
+        <br>
+
+        <span class="karma">85.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C60229" href="#C60229">
+                <time itemprop="dateCreated" datetime="2019-07-04T07:27:25-07:00" class="action-date">Jul '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>joins do not work between different servers. </p>
+<p>getRelated() etc methods ( as they do a query by themselves ) should work</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60229" data-cf-modified-4eaa5c4b7822d862c129c54c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60229" data-cf-modified-4eaa5c4b7822d862c129c54c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f14b69c2e8b727a5488c20b5469abb2e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10733/fctoscano" class="user-moderator-N"><span itemprop="name">Flavio Toscano</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C60237" href="#C60237">
+                <time itemprop="dateCreated" datetime="2019-07-04T17:52:31-07:00" class="action-date">Jul '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>And how could I get the same result, all clients with state names, using getrelated() method? Could you please give me an example?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60237" data-cf-modified-4eaa5c4b7822d862c129c54c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60237" data-cf-modified-4eaa5c4b7822d862c129c54c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5915f25e654c4f9e60fe51700cdee683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4769/Izopi4a" class="user-moderator-Y"><span itemprop="name">Izo</span></a>        </span>
+        <br>
+
+        <span class="karma">85.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C60239" href="#C60239">
+                <time itemprop="dateCreated" datetime="2019-07-05T01:51:02-07:00" class="action-date">Jul '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><pre><code>
+foreach (Clients::find() AS $client ) {
+    $cityRecord = $client-&gt;getCity();
+
+    echo $cityRecord-&gt;name;
+}
+</code></pre>
+<p>this should work</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60239" data-cf-modified-4eaa5c4b7822d862c129c54c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60239" data-cf-modified-4eaa5c4b7822d862c129c54c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f14b69c2e8b727a5488c20b5469abb2e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10733/fctoscano" class="user-moderator-N"><span itemprop="name">Flavio Toscano</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C60247" href="#C60247">
+                <time itemprop="dateCreated" datetime="2019-07-05T05:18:44-07:00" class="action-date">Jul '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks Izo.</p>
+<p>I was searching the docs yesterday and I came with the same solution.</p>
+<p>$clients = Clients::find();</p>
+<pre><code>            foreach ($clients as $client) {
+                $data[] = [
+                    "id" =&gt; $client-&gt;id,
+                    "name" =&gt; $client-&gt;name,
+                    "tradename" =&gt; $client-&gt;tradename,
+                    "city" =&gt; $client-&gt;city-&gt;name,
+                    "state" =&gt; $client-&gt;city-&gt;state-&gt;abbreviation
+                ];
+            }
+
+            $dataTables = new DataTable();
+            $dataTables-&gt;fromArray($data)-&gt;sendResponse();</code></pre>
+<p>But using this approach slow down the proccess.</p>
+<p>I´m using datatables with magnxpyr adapter. With foreach causes problems when I try to use the datatables search function typing fast. If I type very slow the search does not return any error, but when I type it a bit faster I recevive the error:</p>
+<p>DataTables warning: table id=clients - Invalid JSON response. For more information about this error, please see <a href="http://datatables.net/tn/1">http://datatables.net/tn/1</a></p>
+<p>I never used Phalcon pagination. I´ll take a look at it and see if it works better.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60247" data-cf-modified-4eaa5c4b7822d862c129c54c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60247" data-cf-modified-4eaa5c4b7822d862c129c54c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="19807" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,335 @@
+---
+layout: default
+title: 'How to implement  database  the  table like this &quot;prefix_tablename&quot;     ik_user， ik_blog; Table Prefix ? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How to implement  database  the  table like this &quot;prefix_tablename&quot;     ik_user， ik_blog; Table Prefix ?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/991/ikphp" class="user-moderator-N"><span itemprop="name">wanglijun</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-07-24T23:33:38-07:00">Jul '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-07-24T23:33:38-07:00">Jul '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1769</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/3d21fdc201b0b2b9d3a92d7584a16f3f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/991/ikphp" class="user-moderator-N"><span itemprop="name">wanglijun</span></a></span>
+                <span class="karma">13.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2923" href="#C2923">
+        <time class="action-date">Jul '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>My tables are like these ik_user, ik_config,  ik_blog,</p>
+<p>How to auto add the prefix 'ik_' to models ？？？</p>
+<pre><code class="language-php">//user.php Models
+
+namespace IKPHP\Common\Models;
+class User extends BaseModel
+{
+    public $userid;
+
+    public function getSource()
+    {
+        return $this-&gt;tb_prefix."user"; //How to implement like this "prefix_tablename"  ik_user
+    }
+    public function afterSave()
+    {
+        if ($this-&gt;id) {
+            //清缓存
+            $viewCache = $this-&gt;getDI()-&gt;getViewCache();
+            $viewCache-&gt;delete('post-' . $this-&gt;id);
+        }
+    }    
+}</code></pre>
+<pre><code class="language-php">//config.php    'prefix'   =&gt; 'ik_'
+//////////////////////////////////////////////////////
+return new \Phalcon\Config(
+
+'database' =&gt; array(
+    'database' =&gt; array(
+    'adapter'  =&gt; 'mysql',
+    'host'     =&gt; 'localhost',
+    'username' =&gt; 'root',
+    'password' =&gt; '',
+    'name'     =&gt; 'ikphp',
+    'prefix'   =&gt; 'ik_', // table prefix
+),
+
+));</code></pre>
+<pre><code class="language-php">//////////////////////////////////////////////////////
+// service.php
+
+$di-&gt;set('db', function() use ($config) {
+
+    $connection = new \Phalcon\Db\Adapter\Pdo\Mysql(array(
+        "host" =&gt; $config-&gt;database-&gt;host,
+        "username" =&gt; $config-&gt;database-&gt;username,
+        "password" =&gt; $config-&gt;database-&gt;password,
+        "dbname" =&gt; $config-&gt;database-&gt;name,
+        "prefix" =&gt; $config-&gt;database-&gt;prefix,
+        "options" =&gt; array(
+            PDO::MYSQL_ATTR_INIT_COMMAND =&gt; 'SET NAMES utf8'
+        )
+    ));
+
+    if ($config-&gt;application-&gt;debug) {
+        //开启日志记录
+        $eventsManager = new Phalcon\Events\Manager();
+        $logger = new \Phalcon\Logger\Adapter\File($config-&gt;logger-&gt;path .date('Y-m-d').'db.log');
+        //监听数据库日志
+        $eventsManager-&gt;attach('db', function($event, $connection) use ($logger) {
+            if ($event-&gt;getType() == 'beforeQuery') {
+                $logger-&gt;log($connection-&gt;getSQLStatement(), \Phalcon\Logger::INFO);
+            }
+        }); 
+        $connection-&gt;setEventsManager($eventsManager);      
+    }
+
+    return $connection;
+});</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-5f4593ea9662157c4d0f7cc4-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-5f4593ea9662157c4d0f7cc4-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/7c391800907f2f43f00a8246e61d09b3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1978/Isbjorn-Photography" class="user-moderator-N"><span itemprop="name">Brieuc Daniel</span></a>        </span>
+        <br>
+
+        <span class="karma">7.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9730" href="#C9730">
+                <time itemprop="dateCreated" datetime="2014-07-24T23:45:23-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I found <a href="http://stackoverflow.com/a/16940789">This</a>. I think it may help you ;)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9730" data-cf-modified-5f4593ea9662157c4d0f7cc4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9730" data-cf-modified-5f4593ea9662157c4d0f7cc4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3d21fdc201b0b2b9d3a92d7584a16f3f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/991/ikphp" class="user-moderator-N"><span itemprop="name">wanglijun</span></a>        </span>
+        <br>
+
+        <span class="karma">13.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="9731" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '14</span>
+              </span><br/><a name="C9731" href="#C9731">
+                <time itemprop="dateCreated" datetime="2014-07-24T23:59:59-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I want the table prefix in a configuration for Phalcon Model</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9731" data-cf-modified-5f4593ea9662157c4d0f7cc4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9731" data-cf-modified-5f4593ea9662157c4d0f7cc4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3d21fdc201b0b2b9d3a92d7584a16f3f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/991/ikphp" class="user-moderator-N"><span itemprop="name">wanglijun</span></a>        </span>
+        <br>
+
+        <span class="karma">13.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="9732" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '14</span>
+              </span><br/><a name="C9732" href="#C9732">
+                <time itemprop="dateCreated" datetime="2014-07-25T00:02:06-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>my configuration prefix; how  to  use </p>
+<p>I would like to set up a table prefix for all my models, since this is how it is designed in the database.</p>
+<p>How can I achieve that?</p>
+<p>How can set config.php </p>
+<pre><code class="language-php">//config.php    'prefix'   =&gt; 'ik_'
+//////////////////////////////////////////////////////
+return new \Phalcon\Config(
+'database' =&gt; array(
+    'database' =&gt; array(
+    'adapter'  =&gt; 'mysql',
+    'host'     =&gt; 'localhost',
+    'username' =&gt; 'root',
+    'password' =&gt; '',
+    'name'     =&gt; 'ikphp',
+    'prefix'   =&gt; 'ik_', // table prefix
+),
+));</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9732" data-cf-modified-5f4593ea9662157c4d0f7cc4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9732" data-cf-modified-5f4593ea9662157c4d0f7cc4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/7c391800907f2f43f00a8246e61d09b3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1978/Isbjorn-Photography" class="user-moderator-N"><span itemprop="name">Brieuc Daniel</span></a>        </span>
+        <br>
+
+        <span class="karma">7.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9734" href="#C9734">
+                <time itemprop="dateCreated" datetime="2014-07-25T00:26:43-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think you may configure a </p>
+<p>BaseMode.php setting the prefix,</p>
+<pre><code class="language-php">class BaseModel extends Phalcon\Mvc\Model{
+    public function getSource()
+    {
+        return 'my_'.strtolower(get_class($this));
+    }
+}</code></pre>
+<p>and all your models must extend BaseModel.php, like that all your models will be set as you wish.</p>
+<pre><code class="language-php">class Users extends BaseModel
+{
+
+}
+
+class Blog extends BaseModel
+{
+
+}</code></pre>
+<p>I don't think so you can directly configure it in the config file, but maybe i'm wrong</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9734" data-cf-modified-5f4593ea9662157c4d0f7cc4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9734" data-cf-modified-5f4593ea9662157c4d0f7cc4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3d21fdc201b0b2b9d3a92d7584a16f3f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/991/ikphp" class="user-moderator-N"><span itemprop="name">wanglijun</span></a>        </span>
+        <br>
+
+        <span class="karma">13.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="9738" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '14</span>
+              </span><br/><a name="C9738" href="#C9738">
+                <time itemprop="dateCreated" datetime="2014-07-25T02:38:55-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><pre><code class="language-php">&lt;?php
+namespace IKPHP\Common\Models;
+
+class BaseModel extends \Phalcon\Mvc\Model
+{
+    public $tb_prefix;
+
+    public function initialize()
+    {
+        $this-&gt;tb_prefix = $this-&gt;getDI()-&gt;get('config')-&gt;database-&gt;prefix;//  ik_blog
+    }   
+}</code></pre>
+<p>configure prefix in the config file like this  :  this success run; </p>
+<pre><code class="language-php"> return array(
+    'adapter'  =&gt; 'mysql',
+    'host'     =&gt; 'localhost',
+    'username' =&gt; 'root',
+    'password' =&gt; '',
+    'name'     =&gt; 'ikphp',
+    'prefix'   =&gt; 'ik_',
+);</code></pre>
+<p>I think, this is the way to success</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9738" data-cf-modified-5f4593ea9662157c4d0f7cc4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9738" data-cf-modified-5f4593ea9662157c4d0f7cc4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3d21fdc201b0b2b9d3a92d7584a16f3f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/991/ikphp" class="user-moderator-N"><span itemprop="name">wanglijun</span></a>        </span>
+        <br>
+
+        <span class="karma">13.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="9739" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '14</span>
+              </span><br/><a name="C9739" href="#C9739">
+                <time itemprop="dateCreated" datetime="2014-07-25T02:40:37-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><pre><code class="language-php">&lt;?php
+namespace IKPHP\Common\Models;
+
+class User extends BaseModel
+{
+    public $userid;
+
+    public function getSource()
+    {
+        return $this-&gt;tb_prefix."blog";
+    } 
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9739" data-cf-modified-5f4593ea9662157c4d0f7cc4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9739" data-cf-modified-5f4593ea9662157c4d0f7cc4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2923" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

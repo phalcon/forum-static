@@ -1,0 +1,256 @@
+---
+layout: default
+title: 'Phalcon GetText Adapter as a service - how to get locale from session - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/19/incubator">Incubator</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Phalcon GetText Adapter as a service - how to get locale from session</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1487/Conradaek" class="user-moderator-N"><span itemprop="name">Conradaek</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-04-16T05:21:40-07:00">Apr '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-04-16T05:21:40-07:00">Apr '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Apr '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>981</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/24e438429d975d345e4f99e53b740150?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1487/Conradaek" class="user-moderator-N"><span itemprop="name">Conradaek</span></a></span>
+                <span class="karma">26.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2099" href="#C2099">
+        <time class="action-date">Apr '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi All! I have a problem with setting up <a href="https://github.com/phalcon/incubator/tree/master/Library/Phalcon/Translate">Phalcon Incubator Gettext Adapter</a> in a service container.</p>
+<p>I want to set <code>locale</code> from session. I have sth like this:</p>
+<pre><code class="language-php">
+&lt;?php
+
+$di = new Phalcon\DI\FactoryDefault();
+
+$di-&gt;setShared('session', function () {
+    $session = new Phalcon\Session\Adapter\Files();
+    $session-&gt;start();
+    return $session;
+});
+
+$di-&gt;set('t', function () {
+
+    //here is my problem
+
+    if(isset($_SESSION["locale"])){
+        $locale = $_SESSION["locale"];
+    }
+    else {
+        $locale = 'cz_CZ';
+    }
+
+    $t = new Phalcon\Translate\Adapter\Gettext(array(
+        'locale' =&gt; $locale,
+        'file' =&gt; 'messages',
+        'directory' =&gt; '../app/locale'
+    ));
+
+    return $t;
+},true);
+</code></pre>
+<p>but it doesn't work. I think the problem is that at the moment when I implement Gettext there is no session started yet. But I don't know how to solve it.</p>
+<p>Thanks!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-136f1a30c138e22416b0a203-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-136f1a30c138e22416b0a203-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/533985d102feef881f5c41933bd43bfb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/283/calinrada" class="user-moderator-N"><span itemprop="name">Calin Rada</span></a>        </span>
+        <br>
+
+        <span class="karma">51.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7258" href="#C7258">
+                <time itemprop="dateCreated" datetime="2014-04-16T05:41:16-07:00" class="action-date">Apr '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Try to this:</p>
+<pre><code class="language-php">$di-&gt;set('t', function () use($di) {
+
+    if ($di-&gt;session-&gt;has('locale')) {
+        $locale = $di-&gt;session-&gt;get('locale');
+    }else {
+        $locale = 'cz_CZ';
+    }
+
+    $t = new Phalcon\Translate\Adapter\Gettext(array(
+        'locale' =&gt; $locale,
+        'file' =&gt; 'messages',
+        'directory' =&gt; '../app/locale'
+    ));
+
+    return $t;
+},true);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7258" data-cf-modified-136f1a30c138e22416b0a203-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7258" data-cf-modified-136f1a30c138e22416b0a203-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/24e438429d975d345e4f99e53b740150?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1487/Conradaek" class="user-moderator-N"><span itemprop="name">Conradaek</span></a>        </span>
+        <br>
+
+        <span class="karma">26.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7261" href="#C7261">
+                <time itemprop="dateCreated" datetime="2014-04-16T05:57:47-07:00" class="action-date">Apr '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Unfortunetly I does not work. I am getting a blank page...</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7261" data-cf-modified-136f1a30c138e22416b0a203-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7261" data-cf-modified-136f1a30c138e22416b0a203-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/533985d102feef881f5c41933bd43bfb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/283/calinrada" class="user-moderator-N"><span itemprop="name">Calin Rada</span></a>        </span>
+        <br>
+
+        <span class="karma">51.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7262" href="#C7262">
+                <time itemprop="dateCreated" datetime="2014-04-16T05:59:29-07:00" class="action-date">Apr '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well, any logs from your webserver ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7262" data-cf-modified-136f1a30c138e22416b0a203-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7262" data-cf-modified-136f1a30c138e22416b0a203-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/533985d102feef881f5c41933bd43bfb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/283/calinrada" class="user-moderator-N"><span itemprop="name">Calin Rada</span></a>        </span>
+        <br>
+
+        <span class="karma">51.2k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7264" href="#C7264">
+                <time itemprop="dateCreated" datetime="2014-04-16T06:01:41-07:00" class="action-date">Apr '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Also try to replace </p>
+<pre><code class="language-php">$di-&gt;session</code></pre>
+<p>with</p>
+<pre><code class="language-php">$di-&gt;getShared('session')</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7264" data-cf-modified-136f1a30c138e22416b0a203-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7264" data-cf-modified-136f1a30c138e22416b0a203-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/24e438429d975d345e4f99e53b740150?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1487/Conradaek" class="user-moderator-N"><span itemprop="name">Conradaek</span></a>        </span>
+        <br>
+
+        <span class="karma">26.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="7266" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '14</span>
+              </span><br/><a name="C7266" href="#C7266">
+                <time itemprop="dateCreated" datetime="2014-04-16T06:07:13-07:00" class="action-date">Apr '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Now it works! Huge thanks Calin Rada! ;)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7266" data-cf-modified-136f1a30c138e22416b0a203-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7266" data-cf-modified-136f1a30c138e22416b0a203-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/24e438429d975d345e4f99e53b740150?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1487/Conradaek" class="user-moderator-N"><span itemprop="name">Conradaek</span></a>        </span>
+        <br>
+
+        <span class="karma">26.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7267" href="#C7267">
+                <time itemprop="dateCreated" datetime="2014-04-16T06:15:17-07:00" class="action-date">Apr '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It started to wrok after I replaced</p>
+<pre><code class="language-php">
+$di-&gt;session
+</code></pre>
+<p>with</p>
+<pre><code class="language-php">
+$di-&gt;getShared('session')</code></pre>
+<p>Thanks again, it halped me a lot! ;) Lot of <em>f </em> <em> k's</em> resounded around my room for a few hours... :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7267" data-cf-modified-136f1a30c138e22416b0a203-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7267" data-cf-modified-136f1a30c138e22416b0a203-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2099" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

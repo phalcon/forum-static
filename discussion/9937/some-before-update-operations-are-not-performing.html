@@ -1,0 +1,243 @@
+---
+layout: default
+title: 'Some before update operations are not performing - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Some before update operations are not performing</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/5159/tobispace" class="user-moderator-N"><span itemprop="name">tobispace</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-12-20T14:10:42-07:00">Dec '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-12-20T14:10:42-07:00">Dec '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>320</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/6c5a7ed70304818cf1753f148f442737?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/5159/tobispace" class="user-moderator-N"><span itemprop="name">tobispace</span></a></span>
+                <span class="karma">12.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C9937" href="#C9937">
+        <time class="action-date">Dec '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>In my application I have some fields that are handled by a BaseModel, extended by every Model in my application.</p>
+<p>These fields are the dates when the record was created and last updated and the user id who last updated and created the record.</p>
+<p>The only difference between the &quot;created&quot; and the &quot;updated&quot; fields is that the &quot;updated&quot; ones can be NULL and are NULL by default. This is obviously necessary because when the record is first created it has no date or user id updated.</p>
+<p>Anyway, if I set the two &quot;updated&quot; fields to be NOT NULL, I obtain the same behaviour from the Model. </p>
+<p>In the BaseModel I manage these fields using beforeValidationOnCreate() and beforeValidationOnUpdate(). Then I use afterFetch(), afterUpdate() and afterCreate() just to convert the dates between MySQL and human readable formats.</p>
+<p>The problem is that DateCreated and UserIdCreated are handled perfectly by the application. The two &quot;updated&quot; fields are completely ignored. Where is my error?</p>
+<p>Thank you.</p>
+<p>This is my BaseModel:</p>
+<pre><code>&lt;?php
+namespace MyApp\Models;
+
+use Phalcon\Mvc\Model;
+
+class ModelBase extends Model {
+    protected $HasUserIdUpdated = true;
+    protected $HasDateCreated = true;
+    protected $HasUserIdCreated = true;
+    protected $HasDateUpdated = true;
+
+    private $DateUpdated;
+    private $UserIdUpdated;
+    private $UserIdCreated;
+    private $DateCreated;
+
+/* getters and setters... */
+
+    public function beforeValidationOnCreate() {
+        if( $this-&gt;HasDateCreated ) {
+            $this-&gt;setDateCreated( date('Y-m-d H:i:s') );
+        }
+
+        if( $this-&gt;HasUserIdCreated ) {
+            $this-&gt;setUserIdCreated( 234 );
+        }
+    }
+
+    public function beforeValidationOnUpdate() {
+        if( $this-&gt;HasDateUpdated ) {
+            $this-&gt;setDateUpdated( date('Y-m-d H:i:s') );
+        }
+
+        if( $this-&gt;HasUserIdUpdated ) {
+            $this-&gt;setUserIdUpdated( 432 );
+        }
+    }
+
+    public function afterCreate() {
+        if( $this-&gt;HasDateCreated ) {
+            $this-&gt;setDateCreated( date('d/m/Y H:i:s', strtotime($this-&gt;getDateCreated())) );
+        }
+    }
+
+    public function afterUpdate() {
+        if( $this-&gt;HasDateUpdated ) {
+            $this-&gt;setDateUpdated( date('d/m/Y H:i:s', strtotime($this-&gt;getDateUpdated())) );
+        }
+    }
+
+    public function afterFetch() {
+        if( $this-&gt;HasDateCreated ) {
+            $this-&gt;setDateCreated( date('d/m/Y H:i:s', strtotime($this-&gt;getDateCreated())) );
+        }
+
+        if( $this-&gt;HasDateUpdated ) {
+            $this-&gt;setDateUpdated( date('d/m/Y H:i:s', strtotime($this-&gt;getDateUpdated())) );
+        }
+    }
+
+}</code></pre>
+<p>This is my &quot;Version&quot; Model (table &quot;version&quot;):</p>
+<pre><code>&lt;?php
+
+namespace MyApp\Models;
+
+use MyApp\Models\ModelBase;
+
+class Version extends ModelBase {
+    private $SectionName;
+    private $SectionDescription;
+    private $Sort;
+
+/* getters and setters... */
+
+    public function beforeValidationOnCreate() {
+        parent::beforeValidationOnCreate();
+
+        $last = self::findFirst(array(
+            'order' =&gt; 'Sort DESC',
+            'limit' =&gt; 1,
+        ));
+
+        if( $last === false ) {
+            $this-&gt;setSort( 1 );
+        } else {
+            $this-&gt;setSort( $last-&gt;Sort + 1 );
+        }
+    }
+
+    public function columnMap() {
+        return array(
+            'version_id' =&gt; 'Id',
+            'section_name' =&gt; 'SectionName',
+            'section_description' =&gt; 'SectionDescription',
+            'sort' =&gt; 'Sort',
+
+            'user_id_updated' =&gt; 'UserIdUpdated',
+            'date_updated' =&gt; 'DateUpdated',
+            'user_id_created' =&gt; 'UserIdCreated',
+            'date_created' =&gt; 'DateCreated',
+        );
+    }
+}</code></pre>
+<p>This is the database (table &quot;version&quot;):</p>
+<pre><code>+---------------------+------------------+------+-----+---------+----------------+
+| Field               | Type             | Null | Key | Default | Extra          |
++---------------------+------------------+------+-----+---------+----------------+
+| version_id          | int(10) unsigned | NO   | PRI | NULL    | auto_increment |
+| section_name        | varchar(50)      | NO   | MUL | NULL    |                |
+| section_description | varchar(255)     | NO   | MUL | NULL    |                |
+| sort                | int(10) unsigned | NO   | MUL | NULL    |                |
+| user_id_updated     | int(10) unsigned | YES  |     | NULL    |                |
+| date_updated        | timestamp        | YES  |     | NULL    |                |
+| user_id_created     | int(10) unsigned | NO   |     | NULL    |                |
+| date_created        | timestamp        | NO   |     | NULL    |                |
++---------------------+------------------+------+-----+---------+----------------+</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-415e3dff747d5a3ad3124ae0-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-415e3dff747d5a3ad3124ae0-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6c5a7ed70304818cf1753f148f442737?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5159/tobispace" class="user-moderator-N"><span itemprop="name">tobispace</span></a>        </span>
+        <br>
+
+        <span class="karma">12.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="28035" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '15</span>
+              </span><br/><a name="C28035" href="#C28035">
+                <time itemprop="dateCreated" datetime="2015-12-20T14:32:02-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Found the answer, it was so stupid actually...</p>
+<p>The fields in the BaseModel were private, but I should give them protected visibility. Getters and Setters are all public of course, but the fields themselves must be protected in order to be used by the children Models.</p>
+<p>Thank you.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28035" data-cf-modified-415e3dff747d5a3ad3124ae0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28035" data-cf-modified-415e3dff747d5a3ad3124ae0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C28043" href="#C28043">
+                <time itemprop="dateCreated" datetime="2015-12-20T15:55:36-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Also its not phalcon problem :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28043" data-cf-modified-415e3dff747d5a3ad3124ae0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28043" data-cf-modified-415e3dff747d5a3ad3124ae0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="9937" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

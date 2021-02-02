@@ -1,0 +1,286 @@
+---
+layout: default
+title: 'Show custom date in volt - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/3/volt">Volt</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Show custom date in volt</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/12087/Pagana0709" class="user-moderator-N"><span itemprop="name">Pagana0709</span></a></span>
+            <time itemprop="dateCreated" datetime="2019-11-23T12:09:01-07:00">Nov '19</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2019-11-23T12:09:01-07:00">Nov '19</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '19</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>323</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/a9474706045646c4ea5c2779dc058d9a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/12087/Pagana0709" class="user-moderator-N"><span itemprop="name">Pagana0709</span></a></span>
+                <span class="karma">1.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C20129" href="#C20129">
+        <time class="action-date">Nov '19</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have a problem trying to show a date with an external library <a href="https://github.com/fightbulc/moment.php"><a href="https://github.com/fightbulc/moment.php">https://github.com/fightbulc/moment.php</a></a> in volt.</p>
+<p>I'm trying to use <a href="https://docs.phalcon.io/3.4/en/volt#extending-volt">functions in volt</a> to do it.</p>
+<p>I reviewed some old posts that served as a guide but the detail is that I did not know how to implement them for my case.</p>
+<p>This is what I tried:</p>
+<p><em>services.php</em></p>
+<pre><code class="language-php">$di-&gt;setShared('view', function () {
+    $config = $this-&gt;getConfig();
+
+    $view = new View();
+    $view-&gt;setDI($this);
+    $view-&gt;setViewsDir($config-&gt;application-&gt;viewsDir);
+
+    $view-&gt;registerEngines([
+        '.volt' =&gt; function ($view) {
+            $config = $this-&gt;getConfig();
+
+            $volt = new VoltEngine($view, $this);
+
+            $volt-&gt;setOptions([
+                'compiledPath' =&gt; $config-&gt;application-&gt;cacheDir,
+                'compiledSeparator' =&gt; '_',
+                'compiledExtension' =&gt; '.compiled',                
+            ]);
+
+            $compiler = $volt-&gt;getCompiler();
+
+            // example test function that works
+            $compiler-&gt;addFunction('strlen', function($resolvedArgs, $exprArgs) use ($compiler) {
+                $string= $compiler-&gt;expression($exprArgs[0]['expr']);
+                $secondArgument = $compiler-&gt;expression($exprArgs[1]['expr']);
+                return 'substr(' . $string . ', 0 ,' . $secondArgument . ')';
+            });
+
+            // my non-working function
+            $compiler-&gt;addFunction(
+                'dateForHumans',
+                    function ($resolvedArgs, $exprArgs) use ($compiler) {
+
+                    //$string= $compiler-&gt;expression($exprArgs[0]['expr']);
+                    $string = $resolvedArgs;
+
+                    $m = new \Moment\Moment($string, 'Europe/Berlin'); // default is "now" UTC
+                    $m-&gt;format(); // e.g. 2012-10-03T10:00:00+0000
+                    //return 'new \Moment\Moment('.$string.', "Europe/Berlin")-&gt;format()'; // e.g. 2012-10-03T10:00:00+0000
+                    return $m;
+                }
+            );
+
+            return $volt;
+        },
+        //'.phtml' =&gt; PhpEngine::class
+
+    ]);
+
+    return $view;
+});</code></pre>
+<p><em>controller.php</em></p>
+<pre><code class="language-php">
+namespace App\Controllers;
+
+use Phalcon\Validation;
+// use Phalcon\Paginator\Adapter\Model as PaginatorModel;
+use Phalcon\Paginator\Adapter\NativeArray as PaginatorArray;
+
+use App\Models\Ciclos as Ciclo; 
+
+class CiclosController extends ControllerBase
+{
+
+    public function indexAction()
+    {
+        // Current page to show
+        // In a controller/component this can be:
+        $currentPage = $this-&gt;request-&gt;getQuery('page', 'int'); // GET
+        // $this-&gt;request-&gt;getPost('page', 'int'); // POST
+        //$currentPage = (int) $_GET['page'];
+
+        // The data set to paginate
+        $ciclos = Ciclo::find([
+            'order' =&gt; 'ciclo_id desc',
+        ]);
+
+        $rows = array();
+
+        foreach ($ciclos as $ciclo) {
+
+            $rows[] = [
+                'ciclo_id' =&gt; $ciclo-&gt;ciclo_id,
+                'periodo' =&gt; $ciclo-&gt;periodo,
+                'creacion' =&gt; $ciclo-&gt;creacion
+            ];
+
+        }
+        //die(var_dump($rows));
+
+        // Create a Model paginator, show 10 rows by page starting from $currentPage
+        $paginator = new PaginatorArray(
+            [
+                'data'  =&gt; $rows,
+                'limit' =&gt; 10,
+                'page'  =&gt; $currentPage,
+            ]
+        );
+
+        // Get the paginated results
+        $this-&gt;view-&gt;ciclos = $paginator-&gt;getPaginate();
+
+        //$this-&gt;view-&gt;ciclos = 1;      
+        return $this-&gt;view-&gt;render('ciclos', 'index');
+    }</code></pre>
+<p><em>view.volt</em></p>
+<pre><code class="language-php">            &lt;table class="table table-striped table-condensed table-hover table-sm"&gt;
+              &lt;caption&gt;
+                &lt;b&gt;Total: &lt;/b&gt;{% raw %}{{{% endraw %} ciclos.total_items {% raw %}}}{% endraw %} registros
+                &lt;a href="{% raw %}{{{% endraw %} url('ciclos/crear') {% raw %}}}{% endraw %}" class="btn btn-primary btn-xs"&gt;
+                  &lt;i class="fa fa-plus-circle"&gt;&lt;/i&gt; Crear
+                &lt;/a&gt; 
+              &lt;/caption&gt;
+              &lt;thead&gt;
+                &lt;tr&gt;
+                  &lt;th scope="col"&gt;#&lt;/th&gt;
+                  &lt;th scope="col"&gt;Descripción&lt;/th&gt;
+                  &lt;th scope="col"&gt;Creación&lt;/th&gt;                  
+                  &lt;th scope="col" class="text-center"&gt;Opciones&lt;/th&gt;
+                &lt;/tr&gt;
+              &lt;/thead&gt;
+              &lt;tbody&gt;
+                {% raw %}{%{% endraw %} for row in rows {% raw %}%}{% endraw %}              
+                &lt;tr&gt;
+                  &lt;th scope="row"&gt;{% raw %}{{{% endraw %} row['ciclo_id'] {% raw %}}}{% endraw %}&lt;/th&gt;
+                  &lt;td&gt;Ciclo {% raw %}{{{% endraw %} row['periodo'] {% raw %}}}{% endraw %}&lt;/td&gt;
+
+                  &lt;!-- example test line, it works --&gt;
+                &lt;!-- &lt;td&gt;{# { strlen('abcdefghifklmnop', 10) } #}&lt;/td&gt; --&gt;
+
+                &lt;!-- this does not work --&gt;
+                  &lt;td&gt;{% raw %}{{{% endraw %} dateForHumans(row['creacion']) {% raw %}}}{% endraw %}&lt;/td&gt;
+
+                  &lt;td class="text-center"&gt;
+                    &lt;a href="{% raw %}{{{% endraw %} url('ciclos/actualizar/' ~ row['ciclo_id']) {% raw %}}}{% endraw %}" class="btn-warning btn-xs"&gt;
+                        &lt;i class="fa fa-pencil"&gt;&lt;/i&gt;
+                    &lt;/a&gt;
+                  &lt;/td&gt;                  
+                &lt;/tr&gt;
+                {% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}
+              &lt;/tbody&gt;
+            &lt;/table&gt;</code></pre>
+<p>This is the error:
+<code>Fatal error: Uncaught Exception: DateTime::__construct(): Failed to parse time string ($row['creacion']) at position 0 ($): Unexpected character in A:\wamp3\www\econtrol\vendor\fightbulc\moment\src\Moment.php on line 188</code>.</p>
+<p>And if I replace  <code>&lt;td&gt;{% raw %}{{{% endraw %} dateForHumans(row['creacion']) {% raw %}}}{% endraw %}&lt;/td&gt;</code>, for example, to timestamp <code>&lt;td&gt;{% raw %}{{{% endraw %} dateForHumans(1499366585) {% raw %}}}{% endraw %}&lt;/td&gt;</code> it shows the same error.</p>
+<p>I could use php directly in the view to try to solve this but I think it makes no sense to use volt if I'm going to end up writing normal php.</p>
+<p>Any hero without a cape to enlighten me?</p>
+<p>Thanks</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-e93b5d3d0108169767a23c86-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-e93b5d3d0108169767a23c86-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C61447" href="#C61447">
+                <time itemprop="dateCreated" datetime="2019-11-25T14:54:03-07:00" class="action-date">Nov '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think the problem is how you're passing the parameter on to Moment.  Try echoing <code>$resolvedArgs</code>, it might give you some insight as to what's going wrong.  Also, I think you want to return <code>$m-&gt;format()</code>, which is a string, not <code>$m</code>, which is an object.</p>
+<p>If that doesn't work, I've found the simplest solution is to not use an anonymous function, but an actual function:</p>
+<p><strong>services.php</strong></p>
+<pre><code class="language-php">$di-&gt;setShared('view', function () {
+  ...
+  $compiler-&gt;addFunction('dateForHumans','viewDateForHumans');
+}
+
+function viewDateForHumans($timestamp){ // This can also be a static class function if you want
+  $m = new \Moment\Moment($string, 'Europe/Berlin'); // default is "now" UTC
+  return $m-&gt;format(); // e.g. 2012-10-03T10:00:00+0000
+}</code></pre>
+<p>With all that said - if all you're doing is formatting a UNIX timestamp, you don't need to use Moment.php for that.  This function would be adequate:</p>
+<pre><code class="language-php">$Compiler-&gt;addFunction('dbDate',function($resolvedArgs,$exprArgs) use($Compiler){
+    $format = $Compiler-&gt;expression($exprArgs[0]['expr']);
+    $date   = $Compiler-&gt;expression($exprArgs[1]['expr']);
+
+    return 'date('.$format.','.$date.')';
+});</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="61447" data-cf-modified-e93b5d3d0108169767a23c86-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="61447" data-cf-modified-e93b5d3d0108169767a23c86-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a9474706045646c4ea5c2779dc058d9a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/12087/Pagana0709" class="user-moderator-N"><span itemprop="name">Pagana0709</span></a>        </span>
+        <br>
+
+        <span class="karma">1.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="61451" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '19</span>
+              </span><br/><a name="C61451" href="#C61451">
+                <time itemprop="dateCreated" datetime="2019-11-25T17:16:41-07:00" class="action-date">Nov '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes, I wanted return formatted date, but your solution helped me a lot, thanks!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="61451" data-cf-modified-e93b5d3d0108169767a23c86-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="61451" data-cf-modified-e93b5d3d0108169767a23c86-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="20129" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

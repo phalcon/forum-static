@@ -1,0 +1,150 @@
+---
+layout: default
+title: 'How to use  Model::skipAttributes()? I failed to work it out. - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How to use  Model::skipAttributes()? I failed to work it out.</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/32/guweigang" class="user-moderator-N"><span itemprop="name">洋沙居士</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-04-10T06:57:25-07:00">Apr '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-04-10T06:57:25-07:00">Apr '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>842</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9fde75bf4807a52cb35e4769583e99f9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/32/guweigang" class="user-moderator-N"><span itemprop="name">洋沙居士</span></a></span>
+                <span class="karma">9.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2050" href="#C2050">
+        <time class="action-date">Apr '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,  I got a problem about models.</p>
+<p>DBAs in our company do not allow NULL fields for MySQL. So I have to set NOT NULL for every field. Indeed, you can give it a default value, and skip it when inserting/updating. But things are complicated, there are always empty values for them. </p>
+<p>And we know phalcon has a district validation for models. So What can I do? </p>
+<p>I found that phalcon\mvc\model has skipAttributes() method to solve this problem.</p>
+<pre><code class="language-php">public function beforeValidation()                       
+{                                                        
+    $this-&gt;modtime = date("Y-m-d H:i:s");                
+
+    $emptyAttr = array();                                
+    $attrs = $this-&gt;toArray();                           
+    foreach($attrs as $key =&gt; $attr) {                   
+        if(empty($attr) &amp;&amp; $key != 'addtime') {          
+            $emptyAttr[] = $key;                         
+        }                                                
+    }                                                                               
+    $this-&gt;skipAttributes($emptyAttr);                   
+}                                                        </code></pre>
+<p>I tried it, And got a problem. </p>
+<p>I want to parse XMLs and make them into MySQL. Bottom is the table schema. Field &quot;assetnetvalue&quot; in xml always has a non-empty value, but when I insert them in, the field &quot;assetnetvalue&quot; is empty for 2/3 of the records. So Why? It was skipped? No, I just var_dump the <code>emptyArr</code> for every record, and there is no &quot;assetnetvalue&quot;. But the SQL told us it was skipped. See it below:</p>
+<pre><code class="language-xml">&lt;ROW seqno="5257"&gt;                         
+  &lt;YHCODE&gt;3878&lt;/YHCODE&gt;                    
+  &lt;FUNDCODE&gt;519886&lt;/FUNDCODE&gt;              
+  &lt;PUBDATE&gt;2013-12-31 0:00:00&lt;/PUBDATE&gt;    
+  &lt;ASSETNETVALUE&gt;8286773.69&lt;/ASSETNETVALUE&gt;
+  &lt;SHARESCOPE&gt;8286773.69&lt;/SHARESCOPE&gt;      
+&lt;/ROW&gt;                                     </code></pre>
+<pre><code class="language-php">INSERT INTO `fnd_nav` (`yhcode`, `fundcode`, `pubdate`, `modtime`, `addtime`) VALUES ('3878', '519886', '2013-12-31 0:00:00', '2014-04-10 21:15:44', '2014-04-10 21:15:44')</code></pre>
+<p>So Why ???</p>
+<pre><code class="language-php">CREATE TABLE `fnd_nav` (
+ `id` bigint(10) NOT NULL AUTO_INCREMENT,
+ `yhcode` varchar(10) NOT NULL DEFAULT '',
+ `fundcode` varchar(6) NOT NULL DEFAULT '',
+ `pubdate` varchar(31) NOT NULL DEFAULT '0000-00-00 00:00:00',
+ `netvaluechg` decimal(20,18) NOT NULL DEFAULT '0.000000000000000000',
+ `netvalue` decimal(10,5) NOT NULL DEFAULT '0.00000',
+ `totalvalue` decimal(10,5) NOT NULL DEFAULT '0.00000',
+ `totalvalueconvert` decimal(20,15) NOT NULL DEFAULT '0.000000000000000',
+ `rwfnetvalue` decimal(10,4) NOT NULL DEFAULT '0.0000',
+ `qrnhprofit` decimal(10,3) NOT NULL DEFAULT '0.000',
+ `fundjztype` varchar(10) NOT NULL DEFAULT '',
+ `assetnetvaluemain` decimal(20,2) NOT NULL DEFAULT '0.00',
+ `sharescopemain` decimal(20,2) NOT NULL DEFAULT '0.00',
+ `assetnetvalue` decimal(20,2) NOT NULL DEFAULT '0.00',
+ `sharescope` decimal(20,2) NOT NULL DEFAULT '0.00',
+ `h_rwfnetvalue` decimal(10,4) NOT NULL DEFAULT '0.0000',
+ `h_qrnhprofit` decimal(10,3) NOT NULL DEFAULT '0.000',
+ `h_fundjztype` varchar(10) NOT NULL DEFAULT '',
+ `modtime` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+ `addtime` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+ PRIMARY KEY (`id`),
+ UNIQUE KEY `yhcode` (`yhcode`,`fundcode`,`pubdate`)
+) ENGINE=InnoDB AUTO_INCREMENT=5329 DEFAULT CHARSET=utf8</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-a0f89993cfce0fa90ff97db3-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-a0f89993cfce0fa90ff97db3-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9fde75bf4807a52cb35e4769583e99f9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/32/guweigang" class="user-moderator-N"><span itemprop="name">洋沙居士</span></a>        </span>
+        <br>
+
+        <span class="karma">9.4k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7086" href="#C7086">
+                <time itemprop="dateCreated" datetime="2014-04-10T09:22:46-07:00" class="action-date">Apr '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Solved.</p>
+<p><code>skipAttributes()</code> will merge the <code>emptyAttr</code> for each called. So at last, I would have skipped a large list of fields. Fortunately, it has a second parameter to let you replace the list for each time. But it is not well documented.</p>
+<p>So I changed that to:</p>
+<pre><code class="language-php">$this-&gt;skipAttributes($emptyAttr, true);</code></pre>
+<p>Everythis is OK now.</p>
+<p>Thank u anyway.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7086" data-cf-modified-a0f89993cfce0fa90ff97db3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7086" data-cf-modified-a0f89993cfce0fa90ff97db3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2050" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,178 @@
+---
+layout: default
+title: 'how to use security token - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">how to use security token</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/5673/nakanek" class="user-moderator-N"><span itemprop="name">nakanek</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-12-26T08:52:26-07:00">Dec '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-12-26T08:52:26-07:00">Dec '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>901</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/0601f6ac1e7630c809271f26d70e8b97?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/5673/nakanek" class="user-moderator-N"><span itemprop="name">nakanek</span></a></span>
+                <span class="karma">971</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C9999" href="#C9999">
+        <time class="action-date">Dec '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I tried phalcon framework(2.0.8) Phalcon/Security,<br />
+I am in trouble without token fitting it.</p>
+<p>I tried it in the next procedure.
+（This source uploaded <a href="https://github.com/nakanek/phalcon_security_test">https://github.com/nakanek/phalcon_security_test</a>）</p>
+<ol>
+<li>create project by phalcon DevTools(2.0.8)</li>
+</ol>
+<pre><code>phalcon project phalcon</code></pre>
+<ol start="2">
+<li>edit <code>app/config/service.php</code></li>
+</ol>
+<pre><code class="language-php">$di-&gt;setShared('logger', function() use ($config) {
+    $formatter = new \Phalcon\Logger\Formatter\Line('%date% %type%  %message%');
+    $logger = new \Phalcon\Logger\Adapter\File('../phalcon.log');
+    $logger-&gt;setLogLevel(\Phalcon\Logger::DEBUG);
+    $logger-&gt;setFormatter($formatter);
+    return $logger;
+});
+
+/**
+ * Start the session the first time some component request the session service
+ */
+$di-&gt;setShared('session', function () {
+    $session = new Phalcon\Session\Adapter\Libmemcached(array(
+        'servers' =&gt; array(
+            array('host' =&gt; 'localhost', 'port' =&gt; 11211, 'weight' =&gt; 1),
+        ),
+        'client' =&gt; array(
+            Memcached::OPT_HASH =&gt; Memcached::HASH_MD5,
+            Memcached::OPT_PREFIX_KEY =&gt; 'prefix.',
+        ),
+       'lifetime' =&gt; 3600,
+       'prefix' =&gt; 'my_'
+    ));
+    $session-&gt;start();
+
+    return $session;
+});
+
+$di-&gt;set('security', function() {
+    $security = new \Phalcon\Security();
+    $security-&gt;setWorkFactor(12);
+    return $security;
+}, true);
+</code></pre>
+<ol start="3">
+<li>append <code>app/views/index/index.volt</code></li>
+</ol>
+<pre><code>&lt;div&gt;
+&lt;a href="/index/tokencheck?token={% raw %}{{{% endraw %} security.getToken() {% raw %}}}{% endraw %}"&gt;token check&lt;/a&gt;
+&lt;/div&gt;
+</code></pre>
+<ol start="4">
+<li>edit <code>app/controllers/IndexController.php</code></li>
+</ol>
+<pre><code class="language-php">    public function indexAction()
+    {
+        $this-&gt;logger-&gt;debug('call indexAction');
+    }
+
+    public function tokencheckAction()
+    {
+        $this-&gt;view-&gt;sessionToken = $this-&gt;security-&gt;getSessionToken();
+        $this-&gt;view-&gt;token = $this-&gt;request-&gt;getQuery('token', null, null);
+    }</code></pre>
+<ol start="5">
+<li>append <code>app/views/index/tokencheck.volt</code></li>
+</ol>
+<pre><code>&lt;div&gt;sessionToken:{% raw %}{{{% endraw %} sessionToken {% raw %}}}{% endraw %}&lt;/div&gt;
+&lt;div&gt;token:{% raw %}{{{% endraw %} token {% raw %}}}{% endraw %}&lt;/div&gt;</code></pre>
+<p>access <code>/</code> and click <code>token check</code>.<br />
+I hope that it becomes token equals sessionToken.<br />
+but result is </p>
+<pre><code>sessionToken:SfVRGoK1MY3GAVD
+token:aYFN1Qa5SG8xvr1o</code></pre>
+<p>In addition, I was begun to write in log as follows.</p>
+<pre><code>Sun, 27 Dec 15 00:48:49 +0900 DEBUG  call indexAction
+Sun, 27 Dec 15 00:48:50 +0900 DEBUG  call indexAction</code></pre>
+<p>indexAction called twice for some reason. . .?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-f7b38335918c444123180992-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-f7b38335918c444123180992-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/0601f6ac1e7630c809271f26d70e8b97?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5673/nakanek" class="user-moderator-N"><span itemprop="name">nakanek</span></a>        </span>
+        <br>
+
+        <span class="karma">971</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="28305" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '15</span>
+              </span><br/><a name="C28305" href="#C28305">
+                <time itemprop="dateCreated" datetime="2015-12-26T17:10:16-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>favicon access and CSS and images tend to make the index be called twice when the route is setup too loosely.</p>
+</blockquote>
+<p>I added <code>public/favicon.ico</code> and tried again.</p>
+<p>Then token became same as sessionToken.</p>
+<pre><code>sessionToken:6HSc2hlsXiBozAxN
+token:6HSc2hlsXiBozAxN</code></pre>
+<p>Thanks you.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28305" data-cf-modified-f7b38335918c444123180992-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28305" data-cf-modified-f7b38335918c444123180992-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="9999" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

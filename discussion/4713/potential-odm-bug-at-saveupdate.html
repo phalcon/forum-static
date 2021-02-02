@@ -1,0 +1,296 @@
+---
+layout: default
+title: 'Potential ODM bug at Save/Update - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/23/odm">ODM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Potential ODM bug at Save/Update</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1853/karborator" class="user-moderator-N"><span itemprop="name">karborator</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-02-11T02:58:07-07:00">Feb '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-02-11T02:58:07-07:00">Feb '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>605</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/a9e9f72e6d05abef1d6757e4a072ec24?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1853/karborator" class="user-moderator-N"><span itemprop="name">karborator</span></a></span>
+                <span class="karma">24.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4713" href="#C4713">
+        <time class="action-date">Feb '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello, i have form whitch on post I insert the data into Mongo, and then bring back the inserted data on the form(in case to edit)  + id of document.If try to make edit on same form after first insert mongo save() return true, but the data stays the same and never goes updated.
+Controller :</p>
+<pre><code>public function editHotelAction($propertySupplierId, $sellingCode)
+{
+
+    $this-&gt;property_supplier_id = $propertySupplierId;
+    $form = new EditHotelForm();
+    if (empty($this-&gt;request-&gt;getPost('documentId'))) {
+        $form-&gt;initialize(json_decode(json_encode($this-&gt;getExportedData())), $sellingCode);
+    }
+
+    if ($this-&gt;request-&gt;isPost()) {
+
+        if (empty($this-&gt;request-&gt;getPost('documentId'))) {
+            $hotelsModel = new Hotels();
+        } else {
+            $hotelsModel = Hotels::findById($this-&gt;request-&gt;getPost('documentId'));
+        }
+
+        $this-&gt;setCollections();
+
+        $hotelsModel-&gt;setInfo($this-&gt;getCollection('infoCollection'))
+            -&gt;setBrochure($this-&gt;getCollection('brochureCollection'))
+            -&gt;setSupplier($this-&gt;getCollection('supplierCollection'))
+            -&gt;sellingCode = $this-&gt;request-&gt;getPost('sellingCode');
+
+        if ($hotelsModel-&gt;save()) {
+            //Load the Updated Hotel, not original content
+            $form-&gt;initialize(json_decode(json_encode($hotelsModel)), $sellingCode);
+            $this-&gt;flashSession-&gt;success('Successfully edit Hotel!');
+            foreach ($hotelsModel-&gt;_id as $id) {
+                $this-&gt;view-&gt;documentId = $id;
+            }
+        } else {
+            $this-&gt;getErrors($hotelsModel);
+        }
+    }
+    $this-&gt;view-&gt;form = $form;
+}</code></pre>
+<p>Model :</p>
+<pre><code>namespace Modules\Agent\Models;
+
+class Hotels extends \Phalcon\Mvc\Collection
+{
+/**
+ * Collection
+ * @var
+ */
+public $info;
+
+/**
+ * Collection
+ * @var
+ */
+public $brochure;
+
+/**
+ * Collection
+ * @var
+ */
+public $supplier;
+
+public function getCollection()
+{
+    return $this-&gt;getConnection()-&gt;selectCollection('broadway_content');
+}
+
+/**
+ * @return mixed
+ */
+public function getInfo()
+{
+    return $this-&gt;info;
+}
+
+/**
+ * @param mixed $info
+ */
+public function setInfo(array $info)
+{
+    foreach ($info as $key =&gt; $value) {
+        $this-&gt;info-&gt;$key = $value;
+    }
+    return $this;
+}
+
+/**
+ * @return mixed
+ */
+public function getBrochure()
+{
+    return $this-&gt;brochure;
+}
+
+/**
+ * @param mixed $brochure
+ */
+public function setBrochure(array $brochure)
+{
+    foreach ($brochure as $key =&gt; $value) {
+        $this-&gt;brochure-&gt;$key = $value;
+    }
+
+    return $this;
+}
+
+/**
+ * @return mixed
+ */
+public function getSupplier()
+{
+    return $this-&gt;supplier;
+}
+
+/**
+ * @param mixed $supplier
+ */
+public function setSupplier(array $supplier)
+{
+    foreach ($supplier as $key =&gt; $value) {
+        $this-&gt;supplier-&gt;$key = $value;
+    }
+    return $this;
+}
+}</code></pre>
+<p>View: </p>
+<pre><code>    &lt;?php $this-&gt;partial('base/_messages') ?&gt;
+&lt;div class="row"&gt;
+&lt;div class="col-sm-12"&gt;
+    &lt;form class="form-horizontal" role="form" method="POST"&gt;
+        &lt;div class="form-group"&gt;
+            &lt;label for="hotelName" class="col-sm-2 control-label"&gt;Hotel name&lt;/label&gt;
+
+            &lt;div class="col-sm-4"&gt;
+                &lt;?php echo $form-&gt;render('hotelName'); ?&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="form-group"&gt;
+            &lt;label class="col-sm-2 control-label" for="countryName"&gt;Country name&lt;/label&gt;
+
+            &lt;div class="col-sm-4"&gt;
+                &lt;?php echo $form-&gt;render('countryName'); ?&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="form-group"&gt;
+            &lt;label class="col-sm-2 control-label" for="countryCode"&gt;Country code&lt;/label&gt;
+
+            &lt;div class="col-sm-4"&gt;
+                &lt;?php echo $form-&gt;render('countryCode'); ?&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="form-group"&gt;
+            &lt;label class="col-sm-2 control-label" for="resortName"&gt;Resort name&lt;/label&gt;
+
+            &lt;div class="col-sm-4"&gt;
+                &lt;?php echo $form-&gt;render('resortName'); ?&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="form-group"&gt;
+            &lt;label class="col-sm-2 control-label" for="email"&gt;Email&lt;/label&gt;
+
+            &lt;div class="col-sm-4"&gt;
+                &lt;?php echo $form-&gt;render('email'); ?&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="form-group"&gt;
+            &lt;label class="col-sm-2 control-label" for="phone"&gt;Phone&lt;/label&gt;
+
+            &lt;div class="col-sm-4"&gt;
+                &lt;?php echo $form-&gt;render('phone'); ?&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="form-group"&gt;
+            &lt;label class="col-sm-2 control-label" for="rooms"&gt;Rooms&lt;/label&gt;
+
+            &lt;div class="col-sm-4"&gt;
+                &lt;?php echo $form-&gt;render('rooms'); ?&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="form-group"&gt;
+            &lt;label class="col-sm-2 control-label" for="brochureName"&gt;Brochure name&lt;/label&gt;
+
+            &lt;div class="col-sm-4"&gt;
+                &lt;?php echo $form-&gt;render('brochureName'); ?&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="form-group"&gt;
+            &lt;label class="col-sm-2 control-label" for="startDate"&gt;Start date&lt;/label&gt;
+
+            &lt;div class="col-sm-4"&gt;
+                &lt;?php echo $form-&gt;render('startDate'); ?&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="form-group"&gt;
+            &lt;label class="col-sm-2 control-label" for="endDate"&gt;End date&lt;/label&gt;
+
+            &lt;div class="col-sm-4"&gt;
+                &lt;?php echo $form-&gt;render('endDate'); ?&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="form-group"&gt;
+            &lt;label class="col-sm-2 control-label" for="supplierName"&gt;Supplier name&lt;/label&gt;
+
+            &lt;div class="col-sm-4"&gt;
+                &lt;?php echo $form-&gt;render('supplierName'); ?&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="form-group"&gt;
+            &lt;label class="col-sm-2 control-label" for="supplierCode"&gt;Supplier code&lt;/label&gt;
+
+            &lt;div class="col-sm-4"&gt;
+                &lt;?php echo $form-&gt;render('supplierCode'); ?&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="form-group" style="margin-left: 470px;"&gt;
+            &lt;?php echo $form-&gt;render('sellingCode');
+            if ($documentId) { ?&gt;
+                &lt;input type="hidden" value="&lt;?php echo $documentId ?&gt;" name="documentId"&gt;
+            &lt;?php } ?&gt;
+            &lt;div class="col-sm-4"&gt;
+                &lt;button type="submit" class="btn btn-primary"&gt;Update&lt;/button&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+    &lt;/form&gt;
+&lt;/div&gt;</code></pre>
+<p>&lt;/div&gt;</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-8c9df593085e22d9e74eaa80-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-8c9df593085e22d9e74eaa80-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4713" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

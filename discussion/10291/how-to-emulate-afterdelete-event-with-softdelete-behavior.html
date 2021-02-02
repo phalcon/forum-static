@@ -1,0 +1,143 @@
+---
+layout: default
+title: 'How to emulate afterDelete event with SoftDelete behavior? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How to emulate afterDelete event with SoftDelete behavior?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2566/TrogWarZ" class="user-moderator-N"><span itemprop="name">Roman</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-01-23T10:47:55-07:00">Jan '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-01-23T10:47:55-07:00">Jan '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>692</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/f14f7a0c1c40e4c1aee7f4c26287e5f6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2566/TrogWarZ" class="user-moderator-N"><span itemprop="name">Roman</span></a></span>
+                <span class="karma">21.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C10291" href="#C10291">
+        <time class="action-date">Jan '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello!</p>
+<p>I'm using SoftDelete behavior in model and try to catch &quot;afterDelete&quot; in my other custom behaviour, but i can't. How can i emulate/fire this?</p>
+<p>My model and behavior classes:</p>
+<pre><code class="language-php">class MyModel extends \Phalcon\Mvc\Model
+{
+    const STATUS_ACTIVE = 1;
+    const STATUS_DELETED = 0;
+
+    public function initialize()
+    {
+        // Configuration
+        static::setup([
+            'events'             =&gt; true,
+            'notNullValidations' =&gt; false,
+        ]);
+        $this-&gt;keepSnapshots(true);
+        $this-&gt;useDynamicUpdate(true);
+
+        // Behaviors
+        $this-&gt;addBehavior(new Behavior\SoftDelete([
+            'field' =&gt; 'status',
+            'value' =&gt; static::STATUS_DELETED,
+        ]));
+        $this-&gt;addBehavior(new \MyNamespace\Model\Behavior\MyBehavior());
+    }
+}</code></pre>
+<pre><code class="language-php">class MyBehavior extends \Phalcon\Mvc\Model\Behavior implements \Phalcon\Mvc\Model\BehaviorInterface
+{
+    public function notify($eventType, ModelInterface $model)
+    {
+        switch ($eventType) {
+            case 'afterCreate': /* ... some code ... */ break;
+            case 'afterUpdate': /* ... some code ... */ break;
+            case 'afterDelete': /* ... some code ... */ break;
+            default: /* ... some code ... */ break;
+        }
+
+        return true;
+    }
+}</code></pre>
+<p>So, the problem is that when i do <code>$myModel-&gt;delete()</code> i catch <code>afterUpdate</code> event type in behavior but <code>afterDelete</code> not triggered at all.</p>
+<p><strong>Question:</strong> Is there any better and more semantically correct way to catch <code>afterDelete</code> than use <code>afterUpdate</code> and check that only <code>status</code> field was changed and from 1 to 0?</p>
+<p>My current code is ugly with this checking-after-delete-event stuff:</p>
+<pre><code class="language-php">&lt;?php
+
+namespace MyNamespace\Model\Behavior;
+
+use Phalcon\Mvc\Model\Behavior;
+use Phalcon\Mvc\Model\BehaviorInterface;
+use Phalcon\Mvc\ModelInterface;
+
+class Blameable extends Behavior implements BehaviorInterface
+{
+    public function notify($eventType, ModelInterface $model)
+    {
+        /* ... some code ... */
+
+        $fieldsNew = $model-&gt;toArray();
+        // "Model has not a valid snapshot" exception workaround
+        try { $fieldsOld = $model-&gt;getSnapshotData(); }
+        catch (\Exception $e) { $fieldsOld = []; }
+        try { $fieldsChanged = $model-&gt;getChangedFields(); }
+        catch (\Exception $e) { $fieldsChanged = []; }
+
+        // Try to detect afterDelete with SoftDelete and set correct event type for logger
+        if ($model::STATUS_DELETED != $fieldsOld['status'] &amp;&amp; in_array('status', $fieldsChanged) &amp;&amp; $model-&gt;isDeleted())
+            $eventType = 'afterDelete';
+
+        /* ... some code ... */
+
+        return true;
+    }
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-0d2186e39e803688fa956cf8-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-0d2186e39e803688fa956cf8-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="10291" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

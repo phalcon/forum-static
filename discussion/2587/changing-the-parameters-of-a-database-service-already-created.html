@@ -1,0 +1,169 @@
+---
+layout: default
+title: 'changing the parameters of a database service already created - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">changing the parameters of a database service already created</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1788/runningbush" class="user-moderator-N"><span itemprop="name">runningbush</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-06-17T03:12:00-07:00">Jun '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-06-17T03:12:00-07:00">Jun '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1790</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/247a743e816f30b04a5db29599d48a3b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1788/runningbush" class="user-moderator-N"><span itemprop="name">runningbush</span></a></span>
+                <span class="karma">2.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2587" href="#C2587">
+        <time class="action-date">Jun '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi all,</p>
+<p>I'm trying to change the database connection based on a variable for several of my models. This variable will be based on user input (initially) and stored in the session after they are logged in.</p>
+<p>I know that I need to set the connection service in the initialize function of the model - that works fine. The problem is I will have many databases (large datasets for multiple clients) and defining them all in the services container beforehand seems inefficient. I can create a new db service within the model using getDI() and set-&gt; and that works - but it seems like the wrong way to do it to me.</p>
+<p>Can anyone provide syntax on how to change the database name (will be variable) in a db service already initialized - rather than creating a new service within the model every time? I tried messing around with setParameter but couldn't get it.</p>
+<p>So that ideally I can set a db service in the initial service container - and then just change the dbname parameter based on a variable whenever I initialize certain models?</p>
+<p>Thanks!</p>
+<p>-Matt</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-167b04e1603c4dae9405b1f6-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-167b04e1603c4dae9405b1f6-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9cc24f35021ac8897a929a314b209126?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1737/waaghals" class="user-moderator-N"><span itemprop="name">waaghals</span></a>        </span>
+        <br>
+
+        <span class="karma">2.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C8733" href="#C8733">
+                <time itemprop="dateCreated" datetime="2014-06-17T07:01:23-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>A model gets it connection from the model manager.
+The modelManager can only set different connections on seperate models. This is not the case in you problem, you want a different connection based on the state of the model.</p>
+<p>The can be achieved by extending the <code>Phalcon/Mvc/Model/Manager</code> and overloading both <code>getReadConnection(model)</code> and <code>getWriteConnection(model)</code>.
+The return the correct connection based on <code>model</code> state.
+You then register the new ModelManager with the DI.</p>
+<p>Beware though, don't change the expected behaviour for the ModelManager.
+My solution would be to have two seperate model base types the existing <code>Phalcon\Mvc\Model</code> and a <code>MyStateModel</code> (which extends Phalcon\Mvc\Model).</p>
+<p>The <code>get*Connection()</code></p>
+<pre><code class="language-php">public function getReadConnection(ModelInterface $model) {
+    if($model instanceof MyStateModel) {
+        return; // the connection based on $model-&gt;variable
+    }
+
+    // A normal model, return the expected behaviour
+    return parent::getReadConnection($model);
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8733" data-cf-modified-167b04e1603c4dae9405b1f6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8733" data-cf-modified-167b04e1603c4dae9405b1f6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C8738" href="#C8738">
+                <time itemprop="dateCreated" datetime="2014-06-17T09:30:16-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If the connection database is stored in session, would it be possible to have your bootstrap function access $_SESSION?  Something like:</p>
+<pre><code class="language-php">$DI-&gt;setShared('db',function() use($Config){
+    $database = (isset($_SESSION['use_database'])) ? $_SESSION['use_database'] : $Config-&gt;database-&gt;database;
+
+    return new \Phalcon\DB\Adapter\Pdo\Mysql([  'host'      =&gt; $Config-&gt;database-&gt;host,
+                                                'dbname'        =&gt; $database,
+                                                'username'  =&gt; $Config-&gt;database-&gt;username,
+                                                'password'  =&gt; $Config-&gt;database-&gt;password,
+                                                'charset'       =&gt; 'utf8'
+                                            ]);
+}); </code></pre>
+<p>The database connection isn't persistent through the life of the session, so this should work starting with the first page load after the database is set in the session.</p>
+<p>Also, it might be useful to note that <code>DI::get()</code> and <code>DI::getShared()</code> accept an array of parameters as their second argument.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8738" data-cf-modified-167b04e1603c4dae9405b1f6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8738" data-cf-modified-167b04e1603c4dae9405b1f6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/247a743e816f30b04a5db29599d48a3b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1788/runningbush" class="user-moderator-N"><span itemprop="name">runningbush</span></a>        </span>
+        <br>
+
+        <span class="karma">2.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C8757" href="#C8757">
+                <time itemprop="dateCreated" datetime="2014-06-17T16:17:36-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi guys - thanks for your replies!</p>
+<p>quasipickle - that's pretty much what I was going for. I just couldn't seem to get the session while defining the service with phalcon calls. Also one problem was that the User model needs to access a different connection based on a form field during the login process before the actual auth session is set.  Unfortunately <strong>DI::get()</strong> gets the service but to set the connection for a model <strong>SetConnection</strong> just accepts the string of a service (no parameters) and you can't set it to a service you have gotten with <strong>DI::get()</strong>.</p>
+<p>I ended up using your suggestion and putting setting the dbID into a session before auth happens in order to check the User list of that particular db. Then destroying the session if authentication fails. This is currently working!!!</p>
+<p>Before I accept the answer - can anyone see any problems with this (using php <strong>SESSION</strong> in the service definition?) I am new to phalcon and not that familiar with it's DI and service handling yet and my app is in it's infancy - I don't want to create any security or session / service handling conflicts that will plague this thing later on.</p>
+<p>Should I be calling the phalcon session instead of the php var SESSION and if so how? I couldn't get at it in the services loader (my modules index.php). Or should I be going more the route of trying to extend the Model Manager (which will still need to set up a connection service based on variables - probably session variables as they will not actually be in most models).</p>
+<p>Thanks in advance for any input on the situation!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8757" data-cf-modified-167b04e1603c4dae9405b1f6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8757" data-cf-modified-167b04e1603c4dae9405b1f6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2587" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

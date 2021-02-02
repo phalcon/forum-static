@@ -1,0 +1,357 @@
+---
+layout: default
+title: 'TUTORIAL - Form elements with multidimensional array easy peasy way :) - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">TUTORIAL - Form elements with multidimensional array easy peasy way :)</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/5589/vymc" class="user-moderator-N"><span itemprop="name">vymc</span></a></span>
+            <time itemprop="dateCreated" datetime="2020-09-11T02:38:43-07:00">Sep '20</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2020-09-11T02:38:43-07:00">Sep '20</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>142</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9cf41c2a2feb359901d6ad7da9ef2ca6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/5589/vymc" class="user-moderator-N"><span itemprop="name">vymc</span></a></span>
+                <span class="karma">2.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C20861" href="#C20861">
+        <time class="action-date">Sep '20</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Array helper class for element tag name</p>
+<pre><code class="language-php">&lt;?php
+
+class Arr {
+
+    /**
+     * Convert string a[b][c] TO  a.b.c
+     * @param type $string
+     * @return type
+     */
+    public static function stringToDotString($string) {
+        return trim(preg_replace('/[\[\]]+/', '.', $string), '.');
+    }
+
+    /**
+     *  Convert array a[b][c] TO  a.b.c
+     * @param type $array
+     * @param type $prefix
+     * @return array
+     */
+    public static function arrayToPath(array $array, $prefix = '') {
+        $result = array();
+
+        foreach ($array as $key =&gt; $value) {
+            $new_key = $prefix . (empty($prefix) ? '' : '.') . $key;
+
+            if (is_array($value)) {
+                $result = array_merge($result, self::arrayToPath($value, $new_key));
+            } else {
+                $result[$new_key] = $value;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * a.b.c convert TO a[b][c]
+     * @param string $string
+     * @param mixed $value
+     * @param string $separator
+     * @return array
+     */
+    static function stringPathToArray($string, $value = '', $separator = '.') {
+        $keys = array_reverse(explode($separator, $string));
+        $tmp = $value;
+        foreach ($keys as $key) {
+            $tmp = [$key =&gt; $tmp];
+        }
+        return $tmp;
+    }
+
+    /**
+     * Convert Array a.b.c to a[b][c]
+     * @param array $array
+     * @param string $separator
+     * @return array
+     */
+    public static function pathToArray(array $array, $separator = '.') {
+        $result = [];
+        foreach ($array as $string =&gt; $value) {
+            $single = self::stringPathToArray($string, $value, $separator);
+            $result = array_merge_recursive($result, $single);
+        }
+        return $result;
+    }
+
+    public static function arrayToHtmlTagNames($array) {
+        $result = array();
+        $iterator = new \RecursiveIteratorIterator(new \RecursiveArrayIterator($array));
+        foreach ($iterator as $value) {
+            $dotString = '';
+            for ($i = 0; $i &lt;= $iterator-&gt;getDepth(); $i++) {
+                if ($i == 0) {
+                    $dotString .= $iterator-&gt;getSubIterator($i)-&gt;key();
+                } else {
+                    $dotString .= "[" . $iterator-&gt;getSubIterator($i)-&gt;key() . "]";
+                }
+            }
+            $result[$dotString] = $value;
+        }
+        return $result;
+    }
+
+    /**
+     * a.b.c TO a[b][c]
+     * @param type $string
+     * @param type $separator
+     * @return type
+     */
+    public static function stringToHtmlTagName($string, $separator = '.') {
+        $result = static::stringPathToArray($string, '', $separator);
+
+        $array = self::arrayToHtmlTagNames($result);
+        return array_keys($array)[0];
+    }
+
+    public static function array_values_recursive(array $array) {
+        $result = array();
+        foreach (array_keys($array) as $key) {
+            $value = $array[$key];
+            if (is_scalar($value)) {
+                $result[] = $value;
+            } elseif (is_array($value)) {
+                $result = array_merge($result, self::array_values_recursive($value));
+            }
+        }
+        return $result;
+    }
+
+}</code></pre>
+<p>Extending form</p>
+<pre><code class="language-php">&lt;?php
+
+use Arr;
+use Phalcon\Forms\Element\AbstractElement;
+
+class CustomForm extends \Phalcon\Forms\Form {
+
+    /**
+     * POST values to form
+     * @param array $data
+     */
+    public function setDefaults(array $data) {
+        foreach ($data as $name =&gt; $value) {
+            if ($this-&gt;has($name)) {
+                $this-&gt;get($name)-&gt;setDefault($value); //for single element
+            } elseif (is_string($value) &amp;&amp; $this-&gt;has($name . $value)) {
+                $this-&gt;get($name . $value)-&gt;setDefault($value); //for single radio group element
+            } else {
+
+                $keysValues = Arr::arrayToPath([$name =&gt; $value]);
+                foreach ($keysValues as $k =&gt; $v) {
+                    if ($this-&gt;has($k)) {
+                        $this-&gt;get($k)-&gt;setDefault($v);
+                    } else {
+                        $forMultipleSelectKey = join('.', explode('.', $k, -1)); //for  multiple values, SELECT[] or CHECK[]
+                        if ($this-&gt;has($k . $v)) {
+                            $this-&gt;get($k . $v)-&gt;setDefault($v);
+                        } else if ($this-&gt;has($forMultipleSelectKey)) {
+                            $this-&gt;get($forMultipleSelectKey)-&gt;setDefault(Arr::array_values_recursive($value));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Render HTML element
+     * @param AbstractElement $element
+     * @return AbstractElement
+     */
+    public function renderElement(AbstractElement $element) {
+        $elementID = $this-&gt;formatElementId($element);
+        $this-&gt;formatElementHtmlName($element);
+        $str = '';
+        $str .= '&lt;label for="' . $elementID . '"&gt;' . $element-&gt;getLabel() . '&lt;/label&gt;';
+        $str .= $element;
+        return $str;
+    }
+
+    public function formatElementId(AbstractElement $element) {
+        $id = $element-&gt;getAttribute('id', false);
+        if ($id === false) {
+            $element-&gt;setAttribute('id', str_replace('.', '_', $element-&gt;getName()));
+        }
+        return $element-&gt;getAttribute('id');
+    }
+
+    public function formatElementHtmlName(AbstractElement $element) {
+
+        $name = $element-&gt;getAttribute('name', $element-&gt;getName());
+        $nameAttribute = Arr::stringToHtmlTagName($name);
+
+        if ($element instanceof \Phalcon\Forms\Element\Select) {
+            $options = $element-&gt;getOptions();
+            if (isset($options['multiple'])) {
+                $nameAttribute .= '[]';
+            }
+        }
+        $element-&gt;setAttribute('name', $nameAttribute);
+    }
+}</code></pre>
+<p>And yours custom form</p>
+<pre><code class="language-php">&lt;?php
+
+use Phalcon\Forms\Element\Text;
+use Phalcon\Forms\Element\Select;
+use App\Models\Food\CategoryModel;// use yours model
+use Phalcon\Forms\Element\Check;
+use Phalcon\Forms\Element\Radio;
+
+class DummyForm extends CustomForm {
+
+    public function initialize() {
+
+        $title = new Text('a.d.f.e.f.sa.dd.f.g.h.h.e.e.e');
+        $title-&gt;setLabel('title');
+
+        $category = new Select('c.a.t.e.g.o.r.i.e.s.a.b.c', CategoryModel::find(), [
+            'emptyText' =&gt; 'Please Select...',
+            'emptyValue' =&gt; '',
+            'useEmpty' =&gt; true,
+            'using' =&gt; [
+                'id',
+                'title',
+            ],
+            'multiple' =&gt; true,
+        ]);
+        $category-&gt;setLabel('Multiple categories');
+
+        $this-&gt;add($title);
+        $this-&gt;add($category);
+        $checks = ['a', 'b', 'c'];
+
+        foreach ($checks as $key) {
+            $this-&gt;add(new Check('a.s.f.g.h.j.check.' . $key, ['value' =&gt; $key]));
+        }
+
+        foreach ($checks as $key) {
+            $elementId = 'sd.dg.h.j.d.d.s.s.a.b.x.radio-elements';
+            $this-&gt;add(new Radio($elementId . $key, ['value' =&gt; $key, 'name' =&gt; $elementId]));
+        }
+    }
+
+}</code></pre>
+<pre><code class="language-php">&lt;?php
+class IndexController extends \Phalcon\Mvc\Controller {
+
+    public function indexAction() {
+
+        $form = new DummyForm();
+        if ($this-&gt;request-&gt;isPost()) {
+
+            $form-&gt;setDefaults($_POST);
+        }
+        $this-&gt;view-&gt;form = $form;
+    }
+}</code></pre>
+<p>AND VIEW</p>
+<pre><code class="language-php">&lt;?php
+        foreach($form-&gt;getElements() as $element){
+            $form-&gt;renderElement($element); //important to use renderElement method
+        }</code></pre>
+<p>Thanks &quot;_</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-3e8ffd74a0a1a662056c8b9b-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-3e8ffd74a0a1a662056c8b9b-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/69c551a28758e409a118bce3ca45e04d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/14253/Scientific-Xplosion" class="user-moderator-N"><span itemprop="name">Scientific-Xplosion</span></a>        </span>
+        <br>
+
+        <span class="karma">71</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C64477" href="#C64477">
+                <time itemprop="dateCreated" datetime="2020-10-09T01:57:12-07:00" class="action-date">Oct '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>thanks for sharing this information.
+<a href="https://community.esri.com/external-link.jspa?url=https://www.scientificxplosion.com/2020/09/father-of-taxonomy-who-is-father-of.html?m=1/">https://community.esri.com/external-link.jspa?url=https://www.scientificxplosion.com/2020/09/father-of-taxonomy-who-is-father-of.html?m=1/</a>#</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64477" data-cf-modified-3e8ffd74a0a1a662056c8b9b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64477" data-cf-modified-3e8ffd74a0a1a662056c8b9b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/eba8f8ee53175c8fc1c90bec11cee40f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/14557/sidneyyyy" class="user-moderator-N"><span itemprop="name">sidneyyyy</span></a>        </span>
+        <br>
+
+        <span class="karma">67</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C65127" href="#C65127">
+                <time itemprop="dateCreated" datetime="2020-12-14T00:17:11-07:00" class="action-date">Dec '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Write a PHP script which will display the colors in the following way : Output :  Write a PHP script to get the first element of the above array. Write a PHP function to create a multidimensional unique array for any single key index.  That way no user input ever goes directly into the query. ... thanks alot :).</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="65127" data-cf-modified-3e8ffd74a0a1a662056c8b9b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="65127" data-cf-modified-3e8ffd74a0a1a662056c8b9b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="20861" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

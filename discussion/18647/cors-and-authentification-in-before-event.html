@@ -1,0 +1,151 @@
+---
+layout: default
+title: 'Cors and authentification in before event? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/22/micro">Micro</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Cors and authentification in before event?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/11085/eld1887" class="user-moderator-N"><span itemprop="name">eld1887</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-07-31T09:41:22-07:00">Jul '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-07-31T09:41:22-07:00">Jul '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>446</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/632ec96b09daefaee8bc8c38d9d506f3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/11085/eld1887" class="user-moderator-N"><span itemprop="name">eld1887</span></a></span>
+                <span class="karma">5.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C18647" href="#C18647">
+        <time class="action-date">Jul '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>hi,
+i have a SPA which use cors for http request. My api is phalcon Micro. before i added cors to phalcon, i only used the before event for authentification (send a request to an identity server to check if the SPA allowed to access the api). After i added CORS the authentification doesn´t work anymore. This is my before event:</p>
+<pre><code class="language-PHP">$app-&gt;before(
+
+        function () use ($app) {
+
+            $origin = $app-&gt;request-&gt;getHeader('ORIGIN') ? $app-&gt;request-&gt;getHeader('ORIGIN') : '*';
+            $app-&gt;response-&gt;setHeader("Access-Control-Allow-Origin", $origin)
+                -&gt;setHeader("Access-Control-Allow-Methods", 'GET,PUT,POST,DELETE,OPTIONS')
+                -&gt;setHeader("Access-Control-Allow-Headers", 'Origin, X-Requested-With, Content-Range, Content-Disposition, Content-Type, Authorization')
+                -&gt;setHeader("Access-Control-Allow-Credentials", true);
+
+            // Get reference token from requestHeader
+            $referenceToken = $app-&gt;request-&gt;getHeader('Authorization');
+
+            //creating guzzle client for the request to the oauth server
+            $client = new Client(['base_uri' =&gt; BASE_URL]);
+
+            $uri = 'connect/introspect';
+
+            //sending request to the oauth server to identify the client
+            $response = $client-&gt;post( $uri, [
+                'auth'    =&gt; [
+                        'xxx',
+                        'xxx'
+                    ],
+
+                    'headers' =&gt; [
+                        'Content-Type' =&gt; 'application/x-www-form-urlencoded'
+                    ],
+                    'form_params' =&gt; [
+                        'token' =&gt; $referenceToken
+                    ],
+
+                ]
+            );
+            //get the body of the response from oauth server
+            $raw_body = $response-&gt;getBody()-&gt;getContents();
+
+            $body = json_decode($raw_body, true);
+
+            //if active false authentication is failed, else response the client request
+            if (empty($body['active']) != null) {
+                throw new Exception('authentication failed', 401);
+                return false;
+            }
+
+            //create data for user
+            if ($body['sub'] != null)
+                $app-&gt;session-&gt;set("userId", $body['sub']);
+
+            return true;
+        }
+    );
+
+    $app-&gt;options('/{catch:(.*)}', function() use ($app) {
+        $app-&gt;response-&gt;setStatusCode(200, "OK")-&gt;send();
+    });</code></pre>
+<p>it seems that the SPA sends the request to the api and the api send a unauthorized 401 back. I think the problem is that the SPA send the ORIGIN Headers and get not the response 200 OK in return . and the authorization process fails always because he finds no authorization token. is there a way to do both: cors check and authorization check?</p>
+<p>this is my method from SPA(Angular) where i call the phalcon api:</p>
+<pre><code class="language-PHP">private header() {
+
+    const httpOptions = {
+
+     headers: new HttpHeaders({
+       'Content-Type': 'application/json',
+       'Accept': 'application/json',
+       'Authorization': this.oAuthService.getAccessToken()
+     })
+   };
+   return httpOptions;
+ }
+
+  getClients (): Observable&lt;Client[]&gt; {
+    const body = '';
+    console.log(this.fileServerUrl + 'client/list');
+    return this.http.get&lt;Client[]&gt;(this.fileServerUrl + 'client/list', this.header())
+      .pipe(
+        catchError(this.handleError('getClients', []))
+      );
+  }</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-3afbf99eab74379802ad8fc2-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-3afbf99eab74379802ad8fc2-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="18647" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

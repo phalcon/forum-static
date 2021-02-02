@@ -1,0 +1,167 @@
+---
+layout: default
+title: 'Unbuffered queries error in mysql, pdo config doesn&#039;t working, every third query returns empty data - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/23/odm">ODM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Unbuffered queries error in mysql, pdo config doesn&#039;t working, every third query returns empty data</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2566/TrogWarZ" class="user-moderator-N"><span itemprop="name">Roman</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-01-19T01:47:35-07:00">Jan '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-01-19T01:47:35-07:00">Jan '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>2197</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/f14f7a0c1c40e4c1aee7f4c26287e5f6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2566/TrogWarZ" class="user-moderator-N"><span itemprop="name">Roman</span></a></span>
+                <span class="karma">21.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C10227" href="#C10227">
+        <time class="action-date">Jan '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi!</p>
+<h2>Situation</h2>
+<p>I'm using MySQL and Phalcon 2.0.9 and have this snippet in my Models\Base:</p>
+<pre><code class="language-php">    /**
+     * @param string $sql
+     * @param array  $params
+     *
+     * @return Resultset\Simple
+     */
+    public static function findByRawSql($sql, array $params = [])
+    {
+        $self = new static;
+        try {
+            /**
+             * @type \Phalcon\Db\Adapter\Pdo $conn
+             * @type \Phalcon\Db\Result\Pdo  $query
+             */
+            $conn   = $self-&gt;getReadConnection();
+            $query  = $conn-&gt;query($sql, $params);
+            $result = new Resultset\Simple(null, $self, $query);
+        }
+        catch (\PDOException $e) {
+            return false;
+        }
+
+        return $result;
+    }</code></pre>
+<h2>What i do</h2>
+<p>Then i do in my Models\User:</p>
+<pre><code class="language-php">$friends = static::findByRawSql('CALL GetUserFriends(:id)', ['id' =&gt; $this-&gt;id]);</code></pre>
+<p>But have PDOException:</p>
+<blockquote>
+<p>SQLSTATE[HY000]: General error: 2014 Cannot execute queries while other unbuffered queries are active.  Consider using PDOStatement::fetchAll().  Alternatively, if your code is only ever going to run against mysql, you may enable query buffering by setting the <code>PDO::MYSQL_ATTR_USE_BUFFERED_QUERY</code> attribute.</p>
+</blockquote>
+<h2>Solvings and problems</h2>
+<p>I've googled about this and <code>PDO::MYSQL_ATTR_USE_BUFFERED_QUERY</code> doesn't help. If i do fetchAll then i can't use Resultset.</p>
+<p>Plus, i can't explain this case:</p>
+<ol>
+<li>Send request to my site – in controller do: <code>$friends = static::findByRawSql("CALL GetUserFriends(:id)", ["id" =&gt; $this-&gt;id]);</code> – all is OK – array of arrays with users data</li>
+<li>Repeat step no.1 – all is OK – same</li>
+<li>Repeat step no.1 one more time (third) – FAIL – empty array.</li>
+</ol>
+<p>Repeats only if i use findByRawSql – other requests to databse working everytime and returning same values.</p>
+<h2>Questions</h2>
+<p>So my questions are simple:</p>
+<ol>
+<li>How can i use Resultset and not getting into this error?</li>
+<li>Why PDO configuration doesn't work?</li>
+<li>Why findByRawSql returns different empty result every third query? o.0</li>
+</ol></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-5a02e58ce8da908ce30ab6f2-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-5a02e58ce8da908ce30ab6f2-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/97cfdb3586f82c3e1e4fe562bda688b8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/571/duythien" class="user-moderator-Y"><span itemprop="name">Thien Tran</span></a>        </span>
+        <br>
+
+        <span class="karma">58.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C29129" href="#C29129">
+                <time itemprop="dateCreated" datetime="2016-01-19T02:29:48-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi</p>
+<p>You can take look an example how to use Resultset at <a href="http://phalcontip.com/discussion/36/how-to-use-subqueries-in-phalcon">http://phalcontip.com/discussion/36/how-to-use-subqueries-in-phalcon</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="29129" data-cf-modified-5a02e58ce8da908ce30ab6f2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="29129" data-cf-modified-5a02e58ce8da908ce30ab6f2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f14f7a0c1c40e4c1aee7f4c26287e5f6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2566/TrogWarZ" class="user-moderator-N"><span itemprop="name">Roman</span></a>        </span>
+        <br>
+
+        <span class="karma">21.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="29135" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '16</span>
+              </span><br/><a name="C29135" href="#C29135">
+                <time itemprop="dateCreated" datetime="2016-01-19T03:58:54-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you for reply, Thien!</p>
+<p>Got it, difference between direct <code>toArray</code> in your tip (i guess, it internally calls <code>fetchAll</code>?). But in this case i need Resultset – with ability to use methods like count/filter/valid/serialize/usw. Plain old php array not suitable here.</p>
+<p>Furthermore, if i will need plain array, i can just reach my goal without any resultset and other side objects simplier:</p>
+<pre><code class="language-php">return (new static)-&gt;getReadConnection()-&gt;query($sql, $params)-&gt;fetchAll();</code></pre>
+<p>My question is about getting data as Resultset (or any structure that have model interface) and use it anywhere else (in response transformer inside api for example). Maybe, i can call <code>fetchAll</code> and then somehow use it as result while creating Resultset? It requires <code>\Phalcon\Db\Result\Pdo</code> as a result in constructor.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="29135" data-cf-modified-5a02e58ce8da908ce30ab6f2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="29135" data-cf-modified-5a02e58ce8da908ce30ab6f2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="10227" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

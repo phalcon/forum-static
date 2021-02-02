@@ -1,0 +1,171 @@
+---
+layout: default
+title: 'Snapshot functionality in models, and update() method - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Snapshot functionality in models, and update() method</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1720/blm14" class="user-moderator-N"><span itemprop="name">blm14</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-10-30T10:57:14-07:00">Oct '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-10-30T10:57:14-07:00">Oct '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1422</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/82140260df942005abbc598cbba6c688?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1720/blm14" class="user-moderator-N"><span itemprop="name">blm14</span></a></span>
+                <span class="karma">40.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3819" href="#C3819">
+        <time class="action-date">Oct '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I am overriding the built-in update() method in Phalcon\Mvc\Model in order to do audit logging. So if I have a MyModel, it extends ModelBase which extends Phalcon\Mvc\Model. In ModelBase:</p>
+<pre><code class="language-php">  public function update($data=false, $whiteList=false){
+
+    date_default_timezone_set('America/New_York');
+
+    $ret=parent::update($data,$whiteList);
+
+    //acount for blank passed data array
+    if(!$data){
+      $data = $this-&gt;toArray();
+    }
+
+    $preupdatedata = $this-&gt;getSnapshotData();
+
+    //create a new audit transaction row
+    $tr = new AuditTransaction();
+    $ts = new \DateTime();
+
+    $identity = $this-&gt;getDI()-&gt;get('auth')-&gt;getIdentity();
+
+    //assignment of variables
+    $tr-&gt;assign ( array(
+            'schema_name' =&gt; 'dsmc',
+            'table_name' =&gt; $this-&gt;table_name,
+            'table_id' =&gt; $this-&gt;id,
+            'timestamp' =&gt; $ts-&gt;format('Y-m-d H:i:s:u'),
+            'ip_address' =&gt; $this-&gt;getIP(),
+            'user_id' =&gt; $identity['id'], //change to real user ID once authentication implemented
+            'action_type' =&gt; 'U' //update
+            ));
+    $tr-&gt;create();
+
+    foreach($data as $col_name =&gt; $datum){
+      if($this-&gt;hasChanged($col_name)){
+    $av = new AuditValues();
+    $av-&gt;assign(array ( 
+         'transaction_id' =&gt; $tr-&gt;id,
+         'column_name' =&gt; $col_name,
+         'new_value' =&gt; $datum,
+         'old_value' =&gt; $preupdatedata[$col_name]));
+    $av-&gt;create();
+      }
+    }
+    return $ret;
+  }</code></pre>
+<p>Since I am calling the update() on the second line, I assume that $this-&gt;getShapShotData() will contain the previous data values after the update occurs, is that correct? I am setting $this-&gt;keepSnapshots(true) in the ModelBase's initialize()...</p>
+<p>If MyModel (which extends ModelBase) is using getters and setters, and I do setSomeField() does the value change immediately or only after an explicit call to update()? When I do currently in a controller:</p>
+<pre><code class="language-php">$model = MyModel::findFirstById($someid);
+$model-&gt;setSomeValue($value);
+$model-&gt;update();</code></pre>
+<p>I get &quot;Data passed to update() must be an array&quot;</p>
+<p>Any ideas why?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-15cb9a9604de91c774fbb111-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-15cb9a9604de91c774fbb111-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/65cc66b2174ca0e8408258408af274c2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1371/david-duncan" class="user-moderator-N"><span itemprop="name">David Duncan</span></a>        </span>
+        <br>
+
+        <span class="karma">6.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12688" href="#C12688">
+                <time itemprop="dateCreated" datetime="2014-10-30T11:17:43-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Maybe instead of overriding update you can hook into afterUpdate? Instead of re-inventing the wheel I reccomend you look at a bit cleaner of a solution. Infact this post has several different ways to tackle it:</p>
+<p><a href="http://blog.phalcon.io/post/47652831003/tutorial-creating-a-blameable-behavior-with-phalcon">http://blog.phalcon.io/post/47652831003/tutorial-creating-a-blameable-behavior-with-phalcon</a></p>
+<pre><code class="language-php">public function notify($eventType, $model)
+{
+    //Fires 'logAfterUpdate' if the event is 'afterUpdate'
+    if ($eventType == 'afterUpdate') {
+        return $this-&gt;auditAfterUpdate($model);
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12688" data-cf-modified-15cb9a9604de91c774fbb111-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12688" data-cf-modified-15cb9a9604de91c774fbb111-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/82140260df942005abbc598cbba6c688?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1720/blm14" class="user-moderator-N"><span itemprop="name">blm14</span></a>        </span>
+        <br>
+
+        <span class="karma">40.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12689" href="#C12689">
+                <time itemprop="dateCreated" datetime="2014-10-30T11:28:42-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I saw that post after I had already written a lot of my stuff :( Also I need to audit VIEWS as well and I have a ton of code around that so I don't want to ditch what I have done already...</p>
+<p>If I use afterUpdate() will the contents of getSnapShotData() contain the pre-update values?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12689" data-cf-modified-15cb9a9604de91c774fbb111-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12689" data-cf-modified-15cb9a9604de91c774fbb111-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3819" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

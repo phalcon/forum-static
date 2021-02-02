@@ -1,0 +1,112 @@
+---
+layout: default
+title: 'Transactions save after delete not work as expect - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Transactions save after delete not work as expect</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1315/piavgh" class="user-moderator-N"><span itemprop="name">Hoang Trinh Huy</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-04-09T05:25:11-07:00">Apr '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-04-09T05:25:11-07:00">Apr '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Apr '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>631</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/a264a2e7f596f906f9470244e231f1ed?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1315/piavgh" class="user-moderator-N"><span itemprop="name">Hoang Trinh Huy</span></a></span>
+                <span class="karma">18.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6344" href="#C6344">
+        <time class="action-date">Apr '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi everyone,</p>
+<p>Today I faced something that I don't know it's a bug or it's a feature when using transactions</p>
+<p>For simplicity, I have a Product model, and in one transaction, I delete some row in &quot;product&quot; table, and then immediately save some new row into that table, like this</p>
+<pre><code>$transaction = $manager-&gt;get();
+
+$oldProducts = Product::find("type = 'old'");
+foreach ($oldProducts as $oldProduct) {
+        $oldProduct-&gt;setTransaction($transaction);
+        if (!$oldProduct-&gt;delete()) {
+            foreach ($oldProduct-&gt;getMessages() as $message) {
+                $transaction-&gt;rollback($message-&gt;getMessage());
+            }
+         }
+ }
+
+// $data_arr is an array contain some ids and types
+foreach ($data_arr as $data) {
+    $newProduct = new Product();
+    $newProduct-&gt;setTransaction($transaction);
+    $newProduct-&gt;id = $data-&gt;id;
+    $newProduct-&gt;type = $data-&gt;type;
+
+    if (!$newProduct-&gt;save()) {
+        foreach ($newProduct-&gt;getMessages() as $message) {
+                $transaction-&gt;rollback($message-&gt;getMessage());
+            }
+        }
+}
+
+//Everything goes fine, let's commit the transaction
+$transaction-&gt;commit();
+</code></pre>
+<p>After the script run, there are 2 cases:</p>
+<blockquote>
+<ol>
+<li>If there are some product with type = &quot;old&quot;, they will be deleted and no new product is added</li>
+<li>If there is no product with type = &quot;old&quot;, new products will be added</li>
+</ol>
+</blockquote>
+<p>What I expected is in both case is every product with type = &quot;old&quot; are deleted, and new products are added. If there is something wrong, the rollback must work with both delete and save functions.</p>
+<p>What's wrong with my implementation?</p>
+<p>Thank you very much</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-f3f7486e40dbd1ed6938d000-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-f3f7486e40dbd1ed6938d000-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6344" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

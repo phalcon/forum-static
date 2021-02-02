@@ -1,0 +1,405 @@
+---
+layout: default
+title: '2006 MySQL server has gone away - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">2006 MySQL server has gone away</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3360/subharb" class="user-moderator-N"><span itemprop="name">subharb</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-06-13T04:55:04-07:00">Jun '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-06-13T04:55:04-07:00">Jun '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">8</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1961</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/710a519035457e1271b8e8ce9b660b9b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3360/subharb" class="user-moderator-N"><span itemprop="name">subharb</span></a></span>
+                <span class="karma">3.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C11807" href="#C11807">
+        <time class="action-date">Jun '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello, </p>
+<p>Im getting this error &quot;General error: 2006 MySQL server has gone away&quot; when saving a object.</p>
+<p>Im not going to paste the code since it way too complicated and I can explain with this example, but first a bit of context:</p>
+<p>Im executing a function via Command line using Phalcon tasks, this task creates a Object from a Model class and that object calls a casperjs script that performs some actions in web page, when it finishes its save some data, here's where <strong>sometimes</strong> I get mysql server has gone away, only when the casperjs takes a bit more.</p>
+<p>Task.php</p>
+<pre><code class="language-php"> function doSomeAction(){
+     $object = Class::findFirstByName("test");
+       $object-&gt;performActionOnWebPage();
+ }</code></pre>
+<p>In Class.php</p>
+<pre><code class="language-php">function performActionOnWebPage(){
+    $anotherObject = AnotherClass::findFirstById($anId);
+     $result = exec ("timeout 30s casperjs somescript.js");
+    if($result){
+        $anotherObject-&gt;value = $result-&gt;value;
+         $anotherObject-&gt;save();
+    }
+ }</code></pre>
+<p>It seems like the save method is affected by the time exec (&quot;timeout 30s casperjs somescript.js&quot;); takes to get an answer, when it shouldnt.</p>
+<p>Any explanation to this behaviour?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-b22b4894349f38552f0b0cad-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-b22b4894349f38552f0b0cad-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="35345" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '16</span>
+              </span><br/><a name="C35345" href="#C35345">
+                <time itemprop="dateCreated" datetime="2016-06-13T05:44:43-07:00" class="action-date">Jun '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I'm having the same problem. I found some answers which advised to increase connection timeout and <code>max_allowed_packet</code>, but it didn't help.</p>
+<p>I ended up with a hacky solution, implementing the ping method of procedural mysql api:</p>
+<pre><code class="language-php">class MyDb extends PhalconDb {
+    public function ping() {
+        try {
+            $this-&gt;fetchOne('SELECT 1');
+        } catch (\PDOException $e) {
+            if (strpos($e-&gt;getMessage(), 'gone away') !== false) {
+                $this-&gt;connect();
+            }
+            else {
+                throw $e;
+            }
+        }
+    }
+}</code></pre>
+<p>I call it before codes which have this problem...</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="35345" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="35345" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1f92c8832155ca96cb3147af3cad27b0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6311/davihu" class="user-moderator-N"><span itemprop="name">David Hübner</span></a>        </span>
+        <br>
+
+        <span class="karma">9.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="35347" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '16</span>
+              </span><br/><a name="C35347" href="#C35347">
+                <time itemprop="dateCreated" datetime="2016-06-13T05:48:59-07:00" class="action-date">Jun '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You should consider to increase MySQL</p>
+<p><strong>wait_timeout</strong> and <strong>interactive_timeout</strong> and maybe <strong>net_read_timeout</strong></p>
+<p><a href="http://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html#sysvar_wait_timeout">http://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html#sysvar_wait_timeout</a>
+<a href="http://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html#sysvar_interactive_timeout">http://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html#sysvar_interactive_timeout</a></p>
+<p>because your script connection times out</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="35347" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="35347" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/710a519035457e1271b8e8ce9b660b9b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3360/subharb" class="user-moderator-N"><span itemprop="name">subharb</span></a>        </span>
+        <br>
+
+        <span class="karma">3.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C35349" href="#C35349">
+                <time itemprop="dateCreated" datetime="2016-06-13T05:54:07-07:00" class="action-date">Jun '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes, but I can't change the timeout since it will affect to the whole project.</p>
+<p>I would like to understand what is going on.
+It seems like the <strong>$anotherObject-&gt;save(); </strong>method is affected by the time <strong>exec (&quot;timeout 30s casperjs somescript.js&quot;); </strong>takes to get an answer, when it shouldn't.
+Its not a matter of the data saved since it fails and saves succesfully with the same input, the only difference I see is the time casperjs takes to return a value. It seems like if for some reason phalcon opens the MySQL conection during the whole execution of the &quot;Class.php&quot; function, provoking the timeout when casperjs takes too long, does this make any sense?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="35349" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="35349" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1f92c8832155ca96cb3147af3cad27b0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6311/davihu" class="user-moderator-N"><span itemprop="name">David Hübner</span></a>        </span>
+        <br>
+
+        <span class="karma">9.3k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="35351" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '16</span>
+              </span><br/><a name="C35351" href="#C35351">
+                <time itemprop="dateCreated" datetime="2016-06-13T06:02:12-07:00" class="action-date">Jun '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>First time you use some model or something related to it, Phalcon will open connection to DB. Then when the execution is taking too long, it will exceeds one of the MySQL timeouts and DB server will close this connection even if script is still running.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="35351" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span><span itemprop="downvoteCount">1</span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="35351" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C35355" href="#C35355">
+                <time itemprop="dateCreated" datetime="2016-06-13T06:17:12-07:00" class="action-date">Jun '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/davihu">@davihu</a> : I don't think that's the actual problem. No single query takes more than 1-2 seconds for me. I guess it has to do with some sort of &quot;connection keep-alive&quot;</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="35355" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="35355" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/710a519035457e1271b8e8ce9b660b9b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3360/subharb" class="user-moderator-N"><span itemprop="name">subharb</span></a>        </span>
+        <br>
+
+        <span class="karma">3.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C35357" href="#C35357">
+                <time itemprop="dateCreated" datetime="2016-06-13T06:27:02-07:00" class="action-date">Jun '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>So<a href="https://forum.phalcon.io/user/0/davihu"> @davihu</a> you are saying that when I find an object, that conection is open and it keeps that way until I save, which provoques the error because of the timeout.</p>
+<p>That makes sense but, how to fix it or to work around it.</p>
+<pre><code class="language-php">function performActionOnWebPage(){
+    $anotherObject = AnotherClass::findFirstById($anId);
+     $result = exec ("timeout 30s casperjs somescript.js");
+    if($result){
+        $anotherObject-&gt;value = $result-&gt;value;
+         $anotherObject-&gt;save();
+    }
+ }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="35357" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="35357" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="35365" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '16</span>
+              </span><br/><a name="C35365" href="#C35365">
+                <time itemprop="dateCreated" datetime="2016-06-13T07:12:53-07:00" class="action-date">Jun '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I had similar issues.
+I have solved it easy with: </p>
+<pre><code class="language-php">    //this is also possible via try/catch block instead of forcing connect every time
+        $this-&gt;db-&gt;connect(); //This will reconnect even active connection pipe</code></pre>
+<p>Since I knew my DB task is very fast, the issue was when there's no interaction between app and DB for a long time, the RDBMS will just close the connection if you're not using persistent connections.
+For my use case, it was enough to just connect every time before inserting stuff into database since this was a persistent CLI task (running in memory 24/7) but events are not that often during night, and obiously this issue was present only during night when there are few events to catch etc.</p>
+<p>But if you have that long queries running, you should really try to optimize as much as possible since the connection / read limits by default should be enough.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="35365" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="35365" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/710a519035457e1271b8e8ce9b660b9b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3360/subharb" class="user-moderator-N"><span itemprop="name">subharb</span></a>        </span>
+        <br>
+
+        <span class="karma">3.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C35367" href="#C35367">
+                <time itemprop="dateCreated" datetime="2016-06-13T07:45:19-07:00" class="action-date">Jun '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>How can I do that from a Model Class?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="35367" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="35367" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="35371" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '16</span>
+              </span><br/><a name="C35371" href="#C35371">
+                <time itemprop="dateCreated" datetime="2016-06-13T08:55:43-07:00" class="action-date">Jun '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Models does not interact directly(<strong>note</strong>) with DB component / serivce which handles low level task of connecting to the remote RDBMS. You can inject via <code>php $di</code> and resolve the db service from there if you really want, but usually this should be done on controller logic.</p>
+<p><strong>note</strong> -&gt; sure they do, but not in terms of taking care of direct connection etc.</p>
+<p>Try to use <code>php $this-&gt;db-&gt;connect();</code> from your base model, if it doesn't work you need to inject <code>$di</code>.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="35371" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="35371" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/710a519035457e1271b8e8ce9b660b9b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3360/subharb" class="user-moderator-N"><span itemprop="name">subharb</span></a>        </span>
+        <br>
+
+        <span class="karma">3.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C35381" href="#C35381">
+                <time itemprop="dateCreated" datetime="2016-06-13T09:18:28-07:00" class="action-date">Jun '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>$this-&gt;db-&gt;connect(); didnt work, How could I inject $di?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="35381" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="35381" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="35509" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '16</span>
+              </span><br/><a name="C35509" href="#C35509">
+                <time itemprop="dateCreated" datetime="2016-06-15T01:28:39-07:00" class="action-date">Jun '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/subharb">@subharb</a>
+You can resolve it then to a local variable like:</p>
+<pre><code class="language-php">$db = $this-&gt;getDI()-&gt;getShared('db');</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="35509" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="35509" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C35511" href="#C35511">
+                <time itemprop="dateCreated" datetime="2016-06-15T01:30:54-07:00" class="action-date">Jun '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>And here's an example of handling this 'server has gone away' error from another application.</p>
+<p>It can be useful for such scenarios in Phalcon too.</p>
+<pre><code class="language-php"> if(!DB::Execute($query,$query_args)) { //if not - probably server gone away - retry every 10 seconds for 1h
+            for($i=0; $i&lt;360; $i++) {
+                sleep(10);
+                $connection = null;
+                try {
+                    $connection = DB::Connect(); //reconnect database as new connection
+                } catch(Exception $e) {
+                    continue; //no connection - wait
+                }
+                if($connection-&gt;Execute($query,$query_args)) {  //if ok then break and exit
+                    $connection-&gt;Close();
+                    break;
+                }
+                $connection-&gt;Close();
+            }
+        }
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="35511" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="35511" data-cf-modified-b22b4894349f38552f0b0cad-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="11807" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

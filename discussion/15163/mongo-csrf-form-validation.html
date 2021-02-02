@@ -1,0 +1,218 @@
+---
+layout: default
+title: 'Mongo CSRF Form Validation - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Mongo CSRF Form Validation</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2498/Xerton" class="user-moderator-N"><span itemprop="name">Xerton</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-12-28T09:18:08-07:00">Dec '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-12-28T09:18:08-07:00">Dec '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>380</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/89d4060266d6642f29027585c82d7223?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2498/Xerton" class="user-moderator-N"><span itemprop="name">Xerton</span></a></span>
+                <span class="karma">7.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C15163" href="#C15163">
+        <time class="action-date">Dec '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>i have some troubles with form validation using ODM.</p>
+<p>I have a basic form class</p>
+<pre><code class="language-php">class Update extends Form
+{
+    public function getCsrf()
+    {
+        return $this-&gt;security-&gt;getToken();
+    }
+
+    public function initialize($entity = null, $options = [])
+    {
+        $id = new Hidden('id');
+        $id-&gt;addValidator( new PresenceOf(['message' =&gt; '&lt;b&gt;ID&lt;b&gt; is required.']) );
+        $id-&gt;setFilters(['trim', 'string']);  // ObjectID
+        $id-&gt;setAttributes(['id' =&gt; null]);
+        $this-&gt;add($id);
+
+        $type = new Hidden('type');
+        $type-&gt;addValidator(new PresenceOf(['message' =&gt; '&lt;b&gt;Type&lt;b&gt; is required.']) );
+        $type-&gt;setDefault($options['type']);
+        $type-&gt;setFilters(['trim', 'string']);
+        $type-&gt;setAttributes(['id' =&gt; null]);
+        $this-&gt;add($type);
+
+        $csrf = new Hidden('csrf');
+        $csrf-&gt;addValidator( new PresenceOf(['message' =&gt; 'CSRF is required.']) );
+        $csrf-&gt;addValidator( new Identical( ['value' =&gt; $this-&gt;security-&gt;getSessionToken(), 'message' =&gt; 'CSRF validation failed.' ]) );
+        $csrf-&gt;setAttributes(['id' =&gt; null]);
+        $csrf-&gt;clear();
+        $this-&gt;add($csrf);
+
+        $name = new Text('name');
+        $name-&gt;setLabel('Nom');
+        $name-&gt;addValidator( new PresenceOf(['message' =&gt; 'The name is required.']) );
+        $name-&gt;setAttributes( ['class' =&gt; 'form-control', 'id' =&gt; null]);
+        $name-&gt;setFilters(['trim', 'string']);
+        $this-&gt;add($name);
+    }
+}</code></pre>
+<p>Then when I submit form : ( sample)</p>
+<pre><code class="language-php">public function updateAction()
+    {
+        $this-&gt;view-&gt;disable();
+
+        if ($this-&gt;request-&gt;isPut() == true &amp;&amp; $this-&gt;request-&gt;isAjax() == true) {
+
+            $id = $this-&gt;request-&gt;getPut('id', ['trim', 'string']);
+            $type =  $this-&gt;request-&gt;getPut('type', ['trim', 'string']);
+            $name = $this-&gt;request-&gt;getPut('name', ['trim', 'string']);
+
+           $entity = Model::findFirst([['_id' =&gt; new ObjectID($id)]]);
+
+            $form = new updateForm($entity, ['type' =&gt; $type]);
+
+            if ($form-&gt;isValid($this-&gt;request-&gt;getPut()) != false)
+            {
+
+            if ($entity-&gt;save() === true) {
+                $msg['success'][] =  ['message' =&gt; 'Updated Successfully'];
+            } else {
+                foreach ($entity-&gt;getMessages() as $message) {
+                    $msg['error'][] = ['message' =&gt; $message-&gt;getMessage()];
+                }
+            }
+
+        } else {
+            foreach ($form-&gt;getMessages() as $message) {
+                $msg['error'][] = ['message' =&gt; $message-&gt;getMessage()];
+            }
+        }
+
+            $this-&gt;response-&gt;setStatusCode(200, 'OK');
+            $this-&gt;response-&gt;setJsonContent(msg);
+            $this-&gt;response-&gt;send();
+        }
+    }</code></pre>
+<p>The problem is when i set entity to form CSRF token failed at validation.</p>
+<p>I try many solution but not result.</p>
+<ol>
+<li>
+<p>Model::findById($id)
+=&gt; Validation FAILED</p>
+</li>
+<li>
+<p>Model::findFirst([['_id' =&gt; new ObjectID($id)]]);
+=&gt; Validation FAILED</p>
+</li>
+<li>Model::findFirst(['_id' =&gt; $id]);
+=&gt; return Bad Document </li>
+</ol>
+<p>Any solution ? </p>
+<p>Thx,</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-19252d118eb1533c3899b8d0-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-19252d118eb1533c3899b8d0-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/89d4060266d6642f29027585c82d7223?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2498/Xerton" class="user-moderator-N"><span itemprop="name">Xerton</span></a>        </span>
+        <br>
+
+        <span class="karma">7.1k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C44521" href="#C44521">
+                <time itemprop="dateCreated" datetime="2017-01-02T14:12:21-07:00" class="action-date">Jan '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think I found the problem.</p>
+<p>I'm using PUT method to Update and DELETE method to Delete.
+Then i'm using ajax to delete or update entity.
+exemple : $router-&gt;addDelete('/some/route/{type:[a-z]+}/delete', array( 'action' =&gt; 'delete' ))-&gt;setName('SomeRouteDelete');</p>
+<p>And when we look at =&gt; <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/security.zep#L393">https://github.com/phalcon/cphalcon/blob/master/phalcon/security.zep#L393</a>
+Phalcon only check on POST.</p>
+<p>In that case I have to change all routes (addDelete and addPut) in POST, all ajax method to POST and CSRF validation in form.</p>
+<p>now I have to use CSRF in template file</p>
+<pre><code class="language-php">{% raw %}{{{% endraw %} hidden_field(security.getTokenKey(), "value": security.getToken()) {% raw %}}}{% endraw %}</code></pre>
+<p>instead CSRF in form class</p>
+<pre><code class="language-php">class DeleteForm extends Form
+{
+    public function getCsrf()
+    {
+        return $this-&gt;security-&gt;getToken();
+    }
+
+    public function initialize($entity = null, $options = [])
+    {
+        // Other Inputs
+
+        $csrf = new Hidden('csrf');
+        $csrf-&gt;addValidator( new Identical( ['value' =&gt; $this-&gt;security-&gt;getSessionToken(), 'message' =&gt; 'CSRF validation failed' ]));
+        $csrf-&gt;setAttributes(['id' =&gt; null]);
+        $csrf-&gt;clear();
+        $this-&gt;add($csrf);
+    }
+
+}</code></pre>
+<p>and</p>
+<pre><code class="language-php">if ($this-&gt;security-&gt;checkToken()) {
+           // 
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="44521" data-cf-modified-19252d118eb1533c3899b8d0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="44521" data-cf-modified-19252d118eb1533c3899b8d0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="15163" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

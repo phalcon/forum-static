@@ -1,0 +1,304 @@
+---
+layout: default
+title: 'Strange behavior update/saving two instances of same model inside foreach - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Strange behavior update/saving two instances of same model inside foreach</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1346/dyashy" class="user-moderator-N"><span itemprop="name">dyashy</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-10-07T07:39:54-07:00">Oct '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-10-07T07:39:54-07:00">Oct '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>551</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/c897d83e417cedacf0f5595887a70794?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1346/dyashy" class="user-moderator-N"><span itemprop="name">dyashy</span></a></span>
+                <span class="karma">1.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3632" href="#C3632">
+        <time class="action-date">Oct '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>edit: phalcon 1.3.2
+ubuntu 12.04.4
+php 5.5.16</p>
+<p>I have some code like this:</p>
+<pre><code class="language-php">
+        $matchingCards = $this-&gt;getMatches($newCard);
+        foreach ($matchingCards as $card) {
+            if ($newCard-&gt;damage &gt; $card-&gt;damage) {
+                $newCard-&gt;damage -= $card-&gt;damage;
+                $newCard-&gt;save();
+                $card-&gt;damage = 0;
+                $card-&gt;save();
+            }
+            elseif ($newCard-&gt;damage &lt; $card-&gt;damage) {
+                $card-&gt;damage -= $newCard-&gt;damage;
+                $card-&gt;save();
+                $newCard-&gt;damage = 0;
+                $newCard-&gt;save();
+            }
+            echo $card-&gt;damage;
+    }</code></pre>
+<p>$newCard has a damage value like 250 and is inserted into the database directly before the above code
+The the first 3 card-id's is what <code>$this-&gt;getMatches($newCard)</code> would return from the db.</p>
+<table>
+<thead>
+<tr>
+<th>card-id</th>
+<th>damage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>100</td>
+</tr>
+<tr>
+<td>2</td>
+<td>100</td>
+</tr>
+<tr>
+<td>3</td>
+<td>100</td>
+</tr>
+<tr>
+<td>4</td>
+<td>250</td>
+</tr>
+</tbody>
+</table>
+<p>(card-id 4 is the $newCard)</p>
+<p>after the foreach is run, the db looks like this:</p>
+<table>
+<thead>
+<tr>
+<th>card-id</th>
+<th>damage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>0</td>
+</tr>
+<tr>
+<td>2</td>
+<td>100</td>
+</tr>
+<tr>
+<td>3</td>
+<td>100</td>
+</tr>
+<tr>
+<td>4</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<p>(card-id 4 is the $newCard)</p>
+<p>The expected value of the cards after the foreach is:</p>
+<table>
+<thead>
+<tr>
+<th>card-id</th>
+<th>damage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>0</td>
+</tr>
+<tr>
+<td>2</td>
+<td>0</td>
+</tr>
+<tr>
+<td>3</td>
+<td>50</td>
+</tr>
+<tr>
+<td>4</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<p>($newCard-&gt;damage = 250 - 100 - 100 - 50)</p>
+<p>by replacing the $newCard-&gt;save() calls from inside the foreach with a single $newCard-&gt;save() call outside the foreach I get the proper values as like in the table above. </p>
+<p>Its great that I've solved my own problem but I don't know why or how it happened! Am I missing something obvious here?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-745f027ab3ae5163b3c6633d-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-745f027ab3ae5163b3c6633d-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bdee79ea2680ec179fa34b9201fc74b7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1873/RompePC" class="user-moderator-N"><span itemprop="name">RompePC</span></a>        </span>
+        <br>
+
+        <span class="karma">33.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11989" href="#C11989">
+                <time itemprop="dateCreated" datetime="2014-10-09T06:56:05-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Do a <code>var_dump()</code> of the damage of both cards at the end of the loop, so we can see what's wrong with it, 'cause your code looks excellent.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11989" data-cf-modified-745f027ab3ae5163b3c6633d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11989" data-cf-modified-745f027ab3ae5163b3c6633d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c897d83e417cedacf0f5595887a70794?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1346/dyashy" class="user-moderator-N"><span itemprop="name">dyashy</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="12022" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '14</span>
+              </span><br/><a name="C12022" href="#C12022">
+                <time itemprop="dateCreated" datetime="2014-10-09T10:26:31-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think I found some interesting things. here are two pastebin's with the <a href="http://pastebin.com/5Shm89nS">newCard first</a> and <a href="http://pastebin.com/R2M9C0Zz">matchingCards 2nd</a> (remembering matchingCards is a resultset from Cards::find(&quot;some parameters which you can find on lines 48-52 in the second paste...&quot;)). in the first paste ($newCard), if you look at lines 225-266:</p>
+<pre><code class="language-php">
+    protected $_initialized =&gt;
+        array(2) {
+        'aha\models\cards' =&gt;
+        ...
+
+        'aha\models\encounters' =&gt;
+        class Aha\Models\Encounters#1977 (18) {
+        ...
+        }
+    }
+    protected $_sources =&gt;
+    array(2) {
+      'aha\models\cards' =&gt;
+      string(3) "cards"
+      'aha\models\encounters' =&gt;
+      string(3) "encounters"
+    }
+    protected $_schemas =&gt;
+    NULL
+    protected $_behaviors =&gt;
+    array(2) {
+      'aha\models\cards' =&gt;
+      array(1) {
+        ...
+      }
+      'aha\models\encounters' =&gt;
+      array(3) {
+        ...
+      }
+    }
+    protected $_lastInitialized =&gt;
+    class Aha\Models\Encounters#1977 (18) {
+     public $id =&gt;
+      string(3) "541"
+      public $attackerID =&gt;
+      string(3) "340"
+      public $defenderID =&gt;
+      string(3) "343"
+      public $dateTimeOccurred =&gt;
+      string(19) "2014-10-09 15:43:52"
+      public $dateCleared =&gt;
+      NULL</code></pre>
+<p>I should point out that the code in my original post is incomplete as I create a new 'Encounter' (with -&gt;create()) everytime Cards::remainingDamage is decremented. I should also point out that neither the models nor the database tables themselves have any kind of belongsTo or hasMany relationships defined. I wasn't able to find any information on the internals of Resultset, ie $_lastInitialized, $_schemas , or  $_initialized. Not sure if some kind of weird pointer thing going on</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12022" data-cf-modified-745f027ab3ae5163b3c6633d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12022" data-cf-modified-745f027ab3ae5163b3c6633d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c897d83e417cedacf0f5595887a70794?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1346/dyashy" class="user-moderator-N"><span itemprop="name">dyashy</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12030" href="#C12030">
+                <time itemprop="dateCreated" datetime="2014-10-09T12:40:12-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Also, I ran a var_dump($matchingCards) with the $newCard-&gt;save() outside of the foreach (the one that produces the correct data) and the two dumps are no different</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12030" data-cf-modified-745f027ab3ae5163b3c6633d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12030" data-cf-modified-745f027ab3ae5163b3c6633d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bdee79ea2680ec179fa34b9201fc74b7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1873/RompePC" class="user-moderator-N"><span itemprop="name">RompePC</span></a>        </span>
+        <br>
+
+        <span class="karma">33.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12055" href="#C12055">
+                <time itemprop="dateCreated" datetime="2014-10-10T02:28:54-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It has to be something that triggers when you call <code>save()</code>, but I can't find what.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12055" data-cf-modified-745f027ab3ae5163b3c6633d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12055" data-cf-modified-745f027ab3ae5163b3c6633d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3632" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

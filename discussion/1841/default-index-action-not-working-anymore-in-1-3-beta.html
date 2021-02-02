@@ -1,0 +1,491 @@
+---
+layout: default
+title: 'default index action not working anymore in 1.3 Beta - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">default index action not working anymore in 1.3 Beta</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1296/fiveDust" class="user-moderator-N"><span itemprop="name">Henry Schmieder</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-03-19T09:26:35-07:00">Mar '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-03-19T09:26:35-07:00">Mar '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1444</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/27bfec72aa7e9d5191d164bf1e8ce8ea?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1296/fiveDust" class="user-moderator-N"><span itemprop="name">Henry Schmieder</span></a></span>
+                <span class="karma">1.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1841" href="#C1841">
+        <time class="action-date">Mar '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Using this configuration for my base router. Calling he controller base uri, e.g. /test  will resolve TestController::indexAction() properly in phalcon 1.2.6</p>
+<p>Since I updated to phalcon 1.3. ( windows dll ), it tries to resolve TestController::2Action as it is the action key in the routes config. </p>
+<p>Although I use Router groups with a subcontroller mvc setup, this behaviour is the same for using router directly and include the prefix in each path definition</p>
+<pre><code class="language-php">$router = new Phalcon\Mvc\Router(false);
+$router-&gt;removeExtraSlashes(true);
+$router-&gt;setDefaultAction( 'index' );
+$router-&gt;setDefaultController( 'index' );
+$router-&gt;add( '/', array(
+    'controller' =&gt; 'index'
+));
+$hype = new \Phalcon\Mvc\Router\Group( array(
+    'controller' =&gt; 'index',
+    'action' =&gt; 'index'
+) );
+$hype-&gt;setPrefix( '/hype' );
+$hype-&gt;add(
+   # all 3 working in 1.2.6 and phalcon 1.3 alpha
+   #"/(\w+)(?:/(\w+))?(/.*)*",
+   #"/:controller(?:/:action)?(?:/:params)?",
+   #"/([a-zA-Z0-9_-]+)(?:/([a-zA-Z0-9_]+))?(?:(/.*)*)?",
+
+   "/([a-zA-Z0-9_-]+)(?:/([a-zA-Z0-9_]+))?(?:(/.*)*)?",
+
+    array(
+        "namespace" =&gt; 'Hype\Controller',
+        "controller" =&gt; 1,
+        "action" =&gt; 2,
+        "params" =&gt; 3,
+    )
+);
+$hype-&gt;add( '', array(
+    "namespace" =&gt; 'Hype\Controller',
+    'controller' =&gt; 'index',
+    'action' =&gt; 'index'
+));
+$router-&gt;mount( $hype );</code></pre>
+<p>This simple test validates on phalcon 1.2.6 :</p>
+<pre><code class="language-php">$testRoutes = array(
+    '/',
+    '/hype/',
+    '/hype/',
+    '/hype/controllerToken',
+    '/hype/controllerToken/',
+    '/hype/controllerToken/actionToken',
+    '/hype/controllerToken/actionToken/',
+);
+/** @var \Phalcon\Mvc\Router $router */
+$router = $di-&gt;get("router");
+foreach ($testRoutes as $testRoute) {
+
+    //Handle the route
+    $router-&gt;handle($testRoute);
+
+    echo 'Testing ', $testRoute, '&lt;br&gt;';
+
+    //Check if some route was matched
+    if ($router-&gt;wasMatched()) {
+        echo 'Controller: ', $router-&gt;getControllerName(), '&lt;br&gt;';
+        echo 'Action: ', $router-&gt;getActionName(), '&lt;br&gt;';
+        echo 'Namespace: ', $router-&gt;getNamespaceName(), '&lt;br&gt;';
+    } else {
+        echo 'The route `'.$testRoute.'` wasn\'t matched by any route&lt;br&gt;';
+    }
+    echo '&lt;br&gt;';
+}</code></pre>
+<pre><code>// Correct behaviour in phalcon 1.2.6 :
+
+Testing /
+Controller: index
+Action: index
+Namespace: 
+
+Testing /hype/
+Controller: index
+Action: index
+Namespace: Hype\Controller
+
+Testing /hype/
+Controller: index
+Action: index
+Namespace: Hype\Controller
+
+Testing /hype/controllerToken
+Controller: controllerToken
+Action: index
+Namespace: Hype\Controller
+
+Testing /hype/controllerToken/
+Controller: controllerToken
+Action: index
+Namespace: Hype\Controller
+
+Testing /hype/controllerToken/actionToken
+Controller: controllerToken
+Action: actionToken
+Namespace: Hype\Controller
+
+Testing /hype/controllerToken/actionToken/
+Controller: controllerToken
+Action: actionToken
+Namespace: Hype\Controller</code></pre>
+<p>On <strong>phalcon 1.3</strong> it doesn't resolve the action names. I get the numerical placeholders of the route config instead ( notice the <strong>Action: 2</strong> output ) :</p>
+<pre><code>
+
+    // Incorrect  behaviour in phalcon 1.3 :
+
+    Testing /
+    Controller: index
+    Action: index
+    Namespace: 
+
+    Testing /hype/
+    Controller: index
+    Action: index
+    Namespace: Hype\Controller
+
+    Testing /hype/
+    Controller: index
+    Action: index
+    Namespace: Hype\Controller
+
+    Testing /hype/controllerToken
+    Controller: controllerToken
+    Action: 2
+    Namespace: Hype\Controller
+
+    Testing /hype/controllerToken/
+    Controller: controllerToken
+    Action: 2
+    Namespace: Hype\Controller
+
+    Testing /hype/controllerToken/actionToken
+    Controller: controllerToken
+    Action: actionToken
+    Namespace: Hype\Controller
+
+    Testing /hype/controllerToken/actionToken/
+    Controller: controllerToken
+    Action: actionToken
+    Namespace: Hype\Controller
+
+What's going on here? Should I submit this as an issue on github?</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-e1847e5c869c17f0ad5d4921-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-e1847e5c869c17f0ad5d4921-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6351" href="#C6351">
+                <time itemprop="dateCreated" datetime="2014-03-19T09:51:39-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Could you try defined the routes this way:</p>
+<pre><code class="language-php">$hype-&gt;add(
+    "/:controller",
+    array(
+        "namespace" =&gt; 'Hype\Controller',
+        "controller" =&gt; 1,
+        "action" =&gt; 2
+    )
+);
+
+$hype-&gt;add(
+    "/:controller/:action/:params",
+    array(
+        "namespace" =&gt; 'Hype\Controller',
+        "controller" =&gt; 1,
+        "action" =&gt; 2,
+        "params" =&gt; 3,
+    )
+);
+
+$hype-&gt;add( '', array(
+    "namespace" =&gt; 'Hype\Controller',
+    'controller' =&gt; 'index',
+    'action' =&gt; 'index'
+));
+
+$router-&gt;mount($hype);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6351" data-cf-modified-e1847e5c869c17f0ad5d4921-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6351" data-cf-modified-e1847e5c869c17f0ad5d4921-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/27bfec72aa7e9d5191d164bf1e8ce8ea?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1296/fiveDust" class="user-moderator-N"><span itemprop="name">Henry Schmieder</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="6356" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '14</span>
+              </span><br/><a name="C6356" href="#C6356">
+                <time itemprop="dateCreated" datetime="2014-03-19T10:31:26-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Same issue. I also included routes test for the base routes that are handled by the router instance itself ( below the uri prefix for the router group )</p>
+<pre><code class="language-php">$router = new Phalcon\Mvc\Router(false);
+$router-&gt;removeExtraSlashes(true);
+$router-&gt;setDefaultAction( 'index' );
+$router-&gt;setDefaultController( 'index' );
+$router-&gt;add( '(?:/(\w+))?(?:/(\w+))?(/.*)*', array(
+    "controller" =&gt; 1,
+    "action" =&gt; 2,
+    "params" =&gt; 3,
+));
+$router-&gt;add( '/', array(
+    'controller' =&gt; 'index',
+));
+
+$hype = new \Phalcon\Mvc\Router\Group( array(
+    'controller' =&gt; 'index',
+    'action' =&gt; 'index'
+) );
+$hype-&gt;setPrefix( '/hype' );
+
+$hype-&gt;add(
+    "/:controller",
+    array(
+        "namespace" =&gt; 'Hype\Controller',
+        "controller" =&gt; 1,
+        "action" =&gt; 2
+    )
+);
+
+$hype-&gt;add(
+    "/:controller/:action/:params",
+    array(
+        "namespace" =&gt; 'Hype\Controller',
+        "controller" =&gt; 1,
+        "action" =&gt; 2,
+        "params" =&gt; 3,
+    )
+);
+
+$hype-&gt;add( '', array(
+    "namespace" =&gt; 'Hype\Controller',
+    'controller' =&gt; 'index',
+    'action' =&gt; 'index'
+));
+$router-&gt;mount( $hype );</code></pre>
+<p>Tested routes : </p>
+<pre><code class="language-php"> $testRoutes = array(
+  '/',
+  '/test',
+  '/test/routes',
+  '/test',
+  '/hype/',
+  '/hype/controllerToken',
+  '/hype/controllerToken/actionToken',
+
+);</code></pre>
+<p>Output phalcon 1.3 ( windows dll ) : </p>
+<pre><code>Testing /
+Controller: index
+Action: index
+Namespace: 
+
+Testing /test
+Controller: test
+Action: 2
+Namespace: 
+
+Testing /test/routes
+Controller: test
+Action: routes
+Namespace: 
+
+Testing /test
+Controller: test
+Action: 2
+Namespace: 
+
+Testing /hype/
+Controller: index
+Action: index
+Namespace: Hype\Controller
+
+Testing /hype/controllerToken
+Controller: controllerToken
+Action: 2
+Namespace: Hype\Controller
+
+Testing /hype/controllerToken/actionToken
+Controller: controllerToken
+Action: actionToken
+Namespace: Hype\Controller</code></pre>
+<p>Output phalcon 1.2.6 ( windows dll )</p>
+<pre><code>Testing /
+Controller: index
+Action: index
+Namespace: 
+
+Testing /test
+Controller: test
+Action: index
+Namespace: 
+
+Testing /test/routes
+Controller: test
+Action: routes
+Namespace: 
+
+Testing /test
+Controller: test
+Action: routes
+Namespace: 
+
+Testing /hype/
+Controller: index
+Action: index
+Namespace: Hype\Controller
+
+Testing /hype/controllerToken
+Controller: controllerToken
+Action: index
+Namespace: Hype\Controller
+
+Testing /hype/controllerToken/actionToken
+Controller: controllerToken
+Action: actionToken
+Namespace: Hype\Controller</code></pre>
+<p>Note that in the above there is another issue for the route <strong>/test</strong> when <strong>/test/routes</strong> has been given to router-&gt;handle() before. In that case the  action is still <strong>routes</strong>, but should be <strong>index</strong>  as it was succesful in the initial test &quot;Testing /test&quot;</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6356" data-cf-modified-e1847e5c869c17f0ad5d4921-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6356" data-cf-modified-e1847e5c869c17f0ad5d4921-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/27bfec72aa7e9d5191d164bf1e8ce8ea?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1296/fiveDust" class="user-moderator-N"><span itemprop="name">Henry Schmieder</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="6357" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '14</span>
+              </span><br/><a name="C6357" href="#C6357">
+                <time itemprop="dateCreated" datetime="2014-03-19T10:50:36-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Ok, there was a typo in your code.
+Instead of </p>
+<pre><code class="language-php"> $hype-&gt;add(
+                "/:controller",
+                array(
+                    "namespace" =&gt; 'Hype\Controller',
+                    "controller" =&gt; 1,
+                    "action" =&gt;2
+                )
+            );</code></pre>
+<p>it should be either</p>
+<pre><code class="language-php"> $hype-&gt;add(
+                "/:controller",
+                array(
+                    "namespace" =&gt; 'Hype\Controller',
+                    "controller" =&gt; 1,
+                    "action" =&gt;'index'
+                )
+            );</code></pre>
+<p>or </p>
+<pre><code class="language-php"> $hype-&gt;add(
+                "/:controller",
+                array(
+                    "namespace" =&gt; 'Hype\Controller',
+                    "controller" =&gt; 1,
+                )
+            );</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6357" data-cf-modified-e1847e5c869c17f0ad5d4921-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6357" data-cf-modified-e1847e5c869c17f0ad5d4921-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/27bfec72aa7e9d5191d164bf1e8ce8ea?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1296/fiveDust" class="user-moderator-N"><span itemprop="name">Henry Schmieder</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6358" href="#C6358">
+                <time itemprop="dateCreated" datetime="2014-03-19T10:54:59-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>simultanously for the base router </p>
+<pre><code> $router-&gt;add( '/', array(
+                'controller' =&gt; 'index',
+            ));
+            $router-&gt;add( '/:controller', array(
+                "controller" =&gt; 1,
+                "action" =&gt; 'index',
+            ));
+            $router-&gt;add(
+                "/:controller/:action/:params",
+                array(
+                    "controller" =&gt; 1,
+                    "action" =&gt; 2,
+                    "params" =&gt; 3,
+                )
+            );
+</code></pre>
+<p>fixes all the issues there too,</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6358" data-cf-modified-e1847e5c869c17f0ad5d4921-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6358" data-cf-modified-e1847e5c869c17f0ad5d4921-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1841" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

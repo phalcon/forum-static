@@ -1,0 +1,461 @@
+---
+layout: default
+title: 'Model with relationships - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Model with relationships</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1585/kaa4ever" class="user-moderator-N"><span itemprop="name">Kristian Kaa</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-05-05T13:06:51-07:00">May '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-05-05T13:06:51-07:00">May '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>May '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">7</span>
+                </td>
+                <td>
+                    <label>Views</label><br>3188</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/d5b3e08d012c2f134052f141a98e2f3d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1585/kaa4ever" class="user-moderator-N"><span itemprop="name">Kristian Kaa</span></a></span>
+                <span class="karma">3.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2233" href="#C2233">
+        <time class="action-date">May '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,
+I´m currently trying to use Phalcon for a backend service framework for apps. I know PHP quite well, and i've heard a lot good things about Phalcon and decided to give it a try.
+I like it very much, although i have stumbled across a problem i cannot seem to solve, not even by spending the last couple of hours on google (Normally that does the trick).</p>
+<p>Anyways, i´m trying to define a relationship betwen two Models - A user table, and a country table. Each user has a country, but not the other way around.
+I started by simply defining a column in the user table as a foreign key to the country table. I used the hasOne method in the initializing method on the Users model, but this resulted in warning when doing a $user-&gt;country-&gt;name. </p>
+<p>So i re-RTFM, reworked the tables and the model, added a relational table between the user and the country table. My current table design is (A little truncated - i left some non important fields out):</p>
+<pre><code class="language-sql">CREATE TABLE IF NOT EXISTS `users` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `username` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  `password` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=2 ;
+
+CREATE TABLE IF NOT EXISTS `countries` (
+  `code` varchar(2) COLLATE utf8_unicode_ci NOT NULL,
+  `name` varchar(64) COLLATE utf8_unicode_ci NOT NULL,
+  PRIMARY KEY (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `users_countries` (
+  `id` int(10) NOT NULL AUTO_INCREMENT,
+  `users_id` int(10) NOT NULL,
+  `countries_id` varchar(2) COLLATE utf8_unicode_ci NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `countries_id` (`countries_id`),
+  KEY `users_id` (`users_id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci AUTO_INCREMENT=5 ;
+ALTER TABLE `users_countries`
+  ADD CONSTRAINT `users_countries_ibfk_4` FOREIGN KEY (`countries_id`) REFERENCES `countries` (`code`) ON DELETE CASCADE ON   UPDATE CASCADE,
+  ADD CONSTRAINT `users_countries_ibfk_3` FOREIGN KEY (`users_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;</code></pre>
+<p>And my PHP Models:</p>
+<pre><code class="language-php">class Users extends \Phalcon\Mvc\Model {
+  // Properties here - all public.
+  public function initialize() {}
+    $this-&gt;hasOne('id', 'UserCountries', 'users_id', array('foreignKey' =&gt; TRUE));
+    $this-&gt;hasOne('id', 'UserPictures', 'users_id');
+  }
+}
+
+class UsersCountries extends \Phalcon\Mvc\Model {
+  // Properties here - all public.
+  public function initialize() {
+    $this-&gt;belongsTo('users_id', 'Users', 'id');
+    $this-&gt;belongsTo('countries_id', 'Countries', 'id');
+  }
+}
+
+class Countries extends \Phalcon\Mvc\Model { }</code></pre>
+<p>So the idea is that the user know about the country, but the country doesn´t know anything about the user.</p>
+<p>Now when i create a user, i do</p>
+<pre><code>$user = new Users;
+$user-&gt;username = "kaa";
+$user-&gt;password = "test";
+$user-&gt;save();</code></pre>
+<p>The user gets created alright, but i do not have a clue about how to create the relation to country the proper way.
+I could do:</p>
+<pre><code>$country = new UsersCountries;
+$country-&gt;users_id = $user-&gt;id;
+$country-&gt;countries_id = 'DK';
+$country-&gt;save();</code></pre>
+<p>which does store the relation in the DB, but i cant find any way to access the relation from the user object.
+When i try by</p>
+<pre><code>$user-&gt;usersCountries </code></pre>
+<p>i get the exception <strong>&quot;Uncaught exception 'Phalcon\Mvc\Model\Exception' with message 'Model 'UserCountries' could not be loaded&quot;</strong>.</p>
+<p>So it seems to me, that im kinda missing the point of using these relationships between models in Phalcon.
+Anyone know how to work with these relationship s the right way / know a place i can read about them?</p>
+<p>Besides that, i find Phalcon very nice to work with, so good work devs :-)</p>
+<p>Best regards.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-acc799d3624ab9f07034335e-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-acc799d3624ab9f07034335e-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="7637" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '14</span>
+              </span><br/><a name="C7637" href="#C7637">
+                <time itemprop="dateCreated" datetime="2014-05-05T14:26:52-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I've updated your post with better syntax highlighting.  The help section here: <a href="http://forum.phalcon.io/help/markdown">http://forum.phalcon.io/help/markdown</a> explains how, or you can just &quot;Edit&quot; your post to see what I did.</p>
+<p>Also, can you double-check your table declaration?  You're declaring <code>countries</code> twice, not declaring anything like <code>userCountries</code>, and you have nothing about ids.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7637" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7637" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d5b3e08d012c2f134052f141a98e2f3d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1585/kaa4ever" class="user-moderator-N"><span itemprop="name">Kristian Kaa</span></a>        </span>
+        <br>
+
+        <span class="karma">3.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7638" href="#C7638">
+                <time itemprop="dateCreated" datetime="2014-05-05T14:28:50-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yea that looks better, sry for the inconvenience, but thanks.!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7638" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7638" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="7639" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '14</span>
+              </span><br/><a name="C7639" href="#C7639">
+                <time itemprop="dateCreated" datetime="2014-05-05T14:30:26-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I edited my previous post with some more comments.  No worries about the inconvenience - we don't yet have a good way of communicating proper code formatting.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7639" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7639" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d5b3e08d012c2f134052f141a98e2f3d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1585/kaa4ever" class="user-moderator-N"><span itemprop="name">Kristian Kaa</span></a>        </span>
+        <br>
+
+        <span class="karma">3.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="7641" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '14</span>
+              </span><br/><a name="C7641" href="#C7641">
+                <time itemprop="dateCreated" datetime="2014-05-05T22:06:47-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>That was a copy / paste error - i have edited the post and added the right table dump, thanks again..</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7641" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7641" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7653" href="#C7653">
+                <time itemprop="dateCreated" datetime="2014-05-06T07:54:46-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If each user has 1 country, you should get rid of the users_countries table, and just add a column to the users table.  <code>users_countries</code> is totally superfluous.  You can then map a user directly to the country.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7653" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7653" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d5b3e08d012c2f134052f141a98e2f3d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1585/kaa4ever" class="user-moderator-N"><span itemprop="name">Kristian Kaa</span></a>        </span>
+        <br>
+
+        <span class="karma">3.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7657" href="#C7657">
+                <time itemprop="dateCreated" datetime="2014-05-06T11:34:02-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I do agree it is superfluous, although one could argue it adds another layer of abstraction. Still though, superfluous or not, I still dont understand why it does not work? And how to get relationships like this to work at all.
+The project im working on (and later projects) will require table design where a relation table like the one above is necessary, so i kinda need to get it working.</p>
+<p>I dont feel i can find enough information about this in the manuel. Do you know of any examples where a relationship actually works as intended?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7657" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7657" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7659" href="#C7659">
+                <time itemprop="dateCreated" datetime="2014-05-06T12:25:10-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Unless I'm misunderstanding something (which is entirely possible), that intermediate table serves technically no purpose.  There is a one-to-one relationship between the <code>users</code> and <code>users_countries</code> table.  The <code>users_countries</code> table doesn't add anything.  Proper nomalization technique would say to combine those two.  In short (again, unless I'm misunderstanding something), that's just poor database design.</p>
+<p>Anyway, enough about that.  You've set up your relationship with the name &quot;userCountries&quot;, but the class &amp; table name is &quot;usersCountries&quot; - you're missing the &quot;s&quot; when you're setting up your relation.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7659" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7659" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d5b3e08d012c2f134052f141a98e2f3d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1585/kaa4ever" class="user-moderator-N"><span itemprop="name">Kristian Kaa</span></a>        </span>
+        <br>
+
+        <span class="karma">3.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="7669" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '14</span>
+              </span><br/><a name="C7669" href="#C7669">
+                <time itemprop="dateCreated" datetime="2014-05-06T13:27:17-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Embarrassing i totally overlooked that.
+However, except for the exception not being thrown, (of course), it still fails with <strong>Access to undefined property error</strong> when i try to access the
+$user-&gt;usersCountries
+property.</p>
+<p>It´s like the Users model does not know that a country relation has been created for the user. </p>
+<p>Just to experiment a little, i have tried to delete the <code>users_countries</code> relation table, and just adding a column on the <code>users</code> table, mapping directly to the <code>countries</code> table (like you suggested). This way i create a user by</p>
+<pre><code>$user = new Users;
+$user-&gt;username = "kaa";
+$user-&gt;password = "test";
+$user-&gt;country = "DK";
+$user-&gt;save();</code></pre>
+<p>Now if my understanding is not totally off (which it might well be), accessing <code>$user-&gt;country</code> should return to me a Countries model object, which looks like:</p>
+<pre><code class="language-php">class Countries extends \Phalcon\Mvc\Model {
+   public $code;
+   public $name;
+}</code></pre>
+<p>and therefore doing <code>$user-&gt;country-&gt;name</code> should return, in this case, &quot;Denmark&quot;. Sadly it is the same error as before mentioned - <strong>Access to undefined property error</strong>. </p>
+<p>I dont know why, but i´m having a hard time wrapping my head around relationship between models in Phalcon. I mean, I could easily enough just code my way out of it, but this will just result in (alot of) redundant code.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7669" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7669" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7672" href="#C7672">
+                <time itemprop="dateCreated" datetime="2014-05-06T13:38:04-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Try removing the &quot;foreignKey&quot; option in your <code>users</code> class.  It's not necessary unless you want cascading updates/deletes, and I've noticed it causes a lot of problems for people.</p>
+<p>As for your &quot;little experiment&quot; - your problem there is you have a relationship with the same name as a property - &quot;country&quot;.  If you rename the appropriate <code>user</code> column to <code>country_code</code> and update your code accordingly, it should work.  You can also set up an alias for a relationship if you prefer.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7672" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7672" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d5b3e08d012c2f134052f141a98e2f3d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1585/kaa4ever" class="user-moderator-N"><span itemprop="name">Kristian Kaa</span></a>        </span>
+        <br>
+
+        <span class="karma">3.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="7685" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '14</span>
+              </span><br/><a name="C7685" href="#C7685">
+                <time itemprop="dateCreated" datetime="2014-05-06T23:13:22-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hmm doing as you suggested, changing the column to <code>country_code</code>, and updating the code still gives me an <strong>Access to undefined property error</strong>, when i try to access <code>$user-&gt;country</code>.</p>
+<p>So in the model <code>Users</code> my initializing method is</p>
+<pre><code class="language-php">public function initialize() {
+    $this-&gt;hasOne('country', 'Countries', 'code');
+}</code></pre>
+<p>But this does not make much sense to me. With the docs in mind </p>
+<pre><code>The first parameter indicates the field of the local model used in the relationship; the second indicates the name of the referenced model and the third the field name in the referenced model</code></pre>
+<p>I understand (and correct me if i'm wrong) that the first parameter of the <code>hasOne()</code> method, which in the example above is <code>country</code>, should be the name of the  local property, which after the change is named <code>country_code</code>. </p>
+<p>So i dont see why the <code>hasOne()</code> shouldn't be:</p>
+<pre><code class="language-php">public function initialize() {
+    $this-&gt;hasOne('country_code', 'Countries', 'code');
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7685" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7685" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7693" href="#C7693">
+                <time itemprop="dateCreated" datetime="2014-05-07T07:58:20-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It should be.  You're just referencing the relationship wrong.  Part of this may be confusion with plurality - which is why all my models and tables are all singular named (ie: &quot;country&quot; instead of &quot;countries&quot; since each user only has one country).</p>
+<p>Relationships are referenced by the related model name, so assuming your last snippet is the one you're using, you can refer to the related Country model with:</p>
+<pre><code class="language-php">$user-&gt;Countries</code></pre>
+<p>However, you can also set up an alias for the relationship like so:</p>
+<pre><code class="language-php">public function initialize() {
+    $this-&gt;hasOne('country_code', 'Countries', 'code',['alias'=&gt;'country']);
+}</code></pre>
+<p>which would allow you to use:</p>
+<pre><code class="language-php">$user-&gt;country</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7693" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7693" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d5b3e08d012c2f134052f141a98e2f3d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1585/kaa4ever" class="user-moderator-N"><span itemprop="name">Kristian Kaa</span></a>        </span>
+        <br>
+
+        <span class="karma">3.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="7700" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '14</span>
+              </span><br/><a name="C7700" href="#C7700">
+                <time itemprop="dateCreated" datetime="2014-05-07T09:52:23-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Ahh finally i got it! And got it working too!</p>
+<p>The second parameter of <code>hasOne</code> (which by restudying the manuel, perhaps in this scenario should be a <code>belongsTo</code>?), is the property name you use on the model object when accessing the relationship. </p>
+<p>The manual says</p>
+<pre><code>By accessing an attribute with the same name as the relationship will retrieve all its related record(s).</code></pre>
+<p>which is true and all, but in my case it was just a little confusing. I don't know, properly just me :-)</p>
+<p>Anyways, quasipickle, thanks so much for your time, patience and effort to help me understand, much appreciated!</p>
+<p>So i guess i &quot;accept&quot; your last answer, right?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7700" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7700" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7701" href="#C7701">
+                <time itemprop="dateCreated" datetime="2014-05-07T09:56:53-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Actually, it's the third parameter is the property name.  The second parameter is the model name.</p>
+<p>You should &quot;accept&quot; whichever comment in the thread was the closest to answering your question.  The point of accepting an answer is to help others who might be having similar problems - but yes, I think my last response was probably the most accurately helpful to you.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7701" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7701" data-cf-modified-acc799d3624ab9f07034335e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2233" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

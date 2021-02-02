@@ -1,0 +1,266 @@
+---
+layout: default
+title: 'Phalcon Slow Queries - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Phalcon Slow Queries</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/6863/Xtt45" class="user-moderator-N"><span itemprop="name">Xtt45</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-07-29T01:09:54-07:00">Jul '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-07-29T01:09:54-07:00">Jul '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>800</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">-1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/c38f87a4f9ff41eddb905870bfa176cd?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/6863/Xtt45" class="user-moderator-N"><span itemprop="name">Xtt45</span></a></span>
+                <span class="karma">3.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C12239" href="#C12239">
+        <time class="action-date">Jul '16</time>
+    </a>
+</div>
+<div class="post-content"><div><pre><code>MYSQL: Percona Database Server
+Webserver: NGINX
+OS: Ubuntu Server 14.04</code></pre>
+<p>i have the ff table:</p>
+<pre><code>CREATE TABLE IF NOT EXISTS `hr_dtr` (
+  `dtr_id` int(11) NOT NULL AUTO_INCREMENT,
+  `dtr_timedate` datetime DEFAULT NULL,
+  `dtr_count` int(11) DEFAULT NULL,
+  `dtr_inout` varchar(3) DEFAULT NULL,
+  `employee_id` int(11) DEFAULT NULL,
+  `employee_pin` varchar(10) NOT NULL,
+  PRIMARY KEY (`dtr_id`),
+  KEY `fk_hr_dtr_hr_employee1_idx` (`employee_id`),
+  KEY `employee_pin` (`employee_pin`),
+  KEY `DTR_SEARCH_INDEX` (`dtr_timedate`,`dtr_count`,`employee_id`),
+  KEY `dtr_count` (`dtr_count`)
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=81 ;</code></pre>
+<p>with almost 8m rows... and i execute this query</p>
+<pre><code>SELECT * FROM hr_dtr WHERE employee_pin = ? AND dtr_timedate = ? ORDER BY dtr_timedate ASC LIMIT 10</code></pre>
+<p>in phpmyadmin, it gives the result right away</p>
+<pre><code>Showing rows 0 - 29 (2953471 total, Query took 0.0003 sec)</code></pre>
+<p>But when i execute it in phalcon, with the same pin and date</p>
+<pre><code>$dtr = HrDtr::find(
+    array(
+        'employee_pin = ?0 AND dtr_timedate = ?1',
+        'bind'=&gt;array(
+            $pin, $date
+        ),
+        'order'=&gt;'dtr_timedate ASC',
+        'limit'=&gt;10
+    )
+);</code></pre>
+<p>it took 20 to 30 seconds. i don't know what the problem.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-d661f735bb9bd87855fff216-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span><span itemprop="downvoteCount">1</span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-d661f735bb9bd87855fff216-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6221c81c81cd357c818daec1bb8b17ff?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4153/nikolay-mihaylov" class="user-moderator-N"><span itemprop="name">Nikolay Mihaylov</span></a>        </span>
+        <br>
+
+        <span class="karma">93.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C37347" href="#C37347">
+                <time itemprop="dateCreated" datetime="2016-07-29T01:25:11-07:00" class="action-date">Jul '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Using ORM returns whole objects and it's slower in general. Try using the query builder or raw query.</p>
+<p>Your query with the query builder:</p>
+<pre><code class="language-php">$results = $this-&gt;modelsManager-&gt;createBuilder()
+    -&gt;columns([
+        'id',
+        'title',
+    ])
+    -&gt;from('HrDtr')
+    -&gt;where('employee_pin = :pin:', ['pin' =&gt; $pin])
+    -&gt;andWhere('dtr_timedate = :date:', ['date' =&gt; $date])
+    -&gt;orderBy('dtr_timedate ASC')
+    -&gt;limit(10)
+    -&gt;getQuery()-&gt;execute();</code></pre>
+<p>Please give it a try and tell us how it went.</p>
+<p>Also a good idea is to always select the columns you only need, using select * is a bad idea :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="37347" data-cf-modified-d661f735bb9bd87855fff216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="37347" data-cf-modified-d661f735bb9bd87855fff216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="37349" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '16</span>
+              </span><br/><a name="C37349" href="#C37349">
+                <time itemprop="dateCreated" datetime="2016-07-29T02:37:32-07:00" class="action-date">Jul '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Select columns which you actually need. As well as work on arrays perhaps somewhere further in code(<code>toArray()</code> method). Also you should basically create indexes on each column which could be possibly used as where - especially on large tables, it should boost performance a bit.</p>
+<p>Also are you doing anything with this resultset ? I think it's not query itself, more likely any code that happens after is slowing your app.</p>
+<p>Also what php and phalcon version you use ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="37349" data-cf-modified-d661f735bb9bd87855fff216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="37349" data-cf-modified-d661f735bb9bd87855fff216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c38f87a4f9ff41eddb905870bfa176cd?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6863/Xtt45" class="user-moderator-N"><span itemprop="name">Xtt45</span></a>        </span>
+        <br>
+
+        <span class="karma">3.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C37347"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/6221c81c81cd357c818daec1bb8b17ff?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Nikolay Mihaylov                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="37391" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '16</span>
+              </span><br/><a name="C37391" href="#C37391">
+                <time itemprop="dateCreated" datetime="2016-07-29T17:56:59-07:00" class="action-date">Jul '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I have used * because i needed all the columns.</p>
+<p>Also i have tried to hydrate it to return only arrays, not objects. It's still the same</p>
+<pre><code class="language-Php">      $dtr = HrDtr::find(
+              'employee_pin = ?0 AND dtr_timedate = ?1',
+              'bind'=&gt;array(
+                  $pin, $date
+              ),
+              'order'=&gt;'dtr_timedate ASC',
+              'limit'=&gt;10,
+              'hydration'=&gt;Phalcon\Mvc\Model\Resultset::HYDRATE_ARRAYS
+          )
+      );</code></pre>
+<p>Also I have put indexes on columns on the WHERE clause.</p>
+<p>PHP Version 5.6.19
+Phalcon 2.0.10</p>
+<p>I have tried to change the WHERE cause to</p>
+<pre><code class="language-Php">    employee_pin LIKE ?0 AND dtr_timedate = ?1</code></pre>
+<p>and the pin</p>
+<pre><code class="language-Php">    '%'.$pin</code></pre>
+<p>seemed to return rows much faster, about 10 seconds. I don't know why.
+I have explained the MYSQL Query in PHPmyadmin</p>
+<p>on the Extra, it said </p>
+<p>Using Where, and the filtered was only 11.00, but rows returned was 10.</p>
+<p>The previous one was 50.00 filtred and return 10 rows, also Using WHERE.</p>
+<p>I just loop through the result set and display it</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="37391" data-cf-modified-d661f735bb9bd87855fff216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="37391" data-cf-modified-d661f735bb9bd87855fff216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/92baeb391922c7aba36de5d65677e683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2391/BadLuckBurt" class="user-moderator-N"><span itemprop="name">BadLuckBurt</span></a>        </span>
+        <br>
+
+        <span class="karma">2.1k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C37391"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/c38f87a4f9ff41eddb905870bfa176cd?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Xtt45                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C37409" href="#C37409">
+                <time itemprop="dateCreated" datetime="2016-07-29T20:30:10-07:00" class="action-date">Jul '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If it's still using the WHERE, what does the index you put on those columns look like? If it's like the ones in your original post, I don't think it'll work. Try adding an index that is employee_pin and dtr_time combined like you have done with other columns in DTR_SEARCH_INDEX</p>
+<blockquote>
+<p>Also I have put indexes on columns on the WHERE clause.
+-snip
+seemed to return rows much faster, about 10 seconds. I don't know why.
+I have explained the MYSQL Query in PHPmyadmin</p>
+<p>on the Extra, it said </p>
+<p>Using Where, and the filtered was only 11.00, but rows returned was 10.</p>
+<p>The previous one was 50.00 filtred and return 10 rows, also Using WHERE.</p>
+<p>I just loop through the result set and display it</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="37409" data-cf-modified-d661f735bb9bd87855fff216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="37409" data-cf-modified-d661f735bb9bd87855fff216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="37419" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '16</span>
+              </span><br/><a name="C37419" href="#C37419">
+                <time itemprop="dateCreated" datetime="2016-07-30T01:52:28-07:00" class="action-date">Jul '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><pre><code>I just loop through the result set and display it</code></pre>
+<p>So remove it for instance and check your response time. How exactly you are displaying it ? Maybe try to work on array instead full object like <code>-&gt;toArray()</code> method</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="37419" data-cf-modified-d661f735bb9bd87855fff216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="37419" data-cf-modified-d661f735bb9bd87855fff216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="12239" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,170 @@
+---
+layout: default
+title: 'Group routes in Micro(): Approach - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/22/micro">Micro</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Group routes in Micro(): Approach</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/4789/xerron" class="user-moderator-N"><span itemprop="name">Edwin Manuel Cerrón Angeles</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-08-28T20:06:18-07:00">Aug '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-08-28T20:06:18-07:00">Aug '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>720</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/bcb86a03b78026a223f83ca3162cf7eb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/4789/xerron" class="user-moderator-N"><span itemprop="name">Edwin Manuel Cerrón Angeles</span></a></span>
+                <span class="karma">40.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C13259" href="#C13259">
+        <time class="action-date">Aug '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I want to group routes:</p>
+<pre><code class="language-php">$userGroup = new \Phalcon\Mvc\Router\Group('user');
+
+$app-&gt;map('/user/login', function () {
+   // code...
+})-&gt;setName('user.login')-&gt;setGroup($userGroup);</code></pre>
+<p>And I retrieve the information:</p>
+<pre><code class="language-php">// get route name
+$routeName = $app-&gt;router-&gt;getMatchedRoute()-&gt;getName();
+// get group name &lt;- work , but I do not like getPaths()
+$groupName = $app-&gt;router-&gt;getMatchedRoute()-&gt;getGroup()-&gt;getPaths();
+//but getRoutes() NOT WORK.
+$groupName = $app-&gt;router-&gt;getMatchedRoute()-&gt;getGroup()-&gt;getRoutes();</code></pre>
+<p>I implement something that helps to group routes, and so to separate code into different files and folders.</p>
+<p>any ideas?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-0d1ebaf342c0299afc90569b-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-0d1ebaf342c0299afc90569b-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb86a03b78026a223f83ca3162cf7eb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4789/xerron" class="user-moderator-N"><span itemprop="name">Edwin Manuel Cerrón Angeles</span></a>        </span>
+        <br>
+
+        <span class="karma">40.1k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39337" href="#C39337">
+                <time itemprop="dateCreated" datetime="2016-08-28T21:58:28-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>My solution:</p>
+<pre><code class="language-php">&lt;?php
+
+namespace Druphal\Core;
+
+class Route extends \Phalcon\Mvc\Router\Route
+{
+    protected $moduleName;
+
+    public function getModuleName()
+    {
+        return $this-&gt;moduleName;
+    }
+
+    public function setModuleName($name)
+    {
+        $this-&gt;moduleName = $name;
+        return $this;
+    }
+
+}</code></pre>
+<pre><code class="language-php">&lt;?php
+
+namespace Druphal\Core;
+
+use Druphal\User\Auth\Exception;
+
+class Router extends \Phalcon\Mvc\Router
+{
+    public function add($pattern, $paths = null, $httpMethods = null, $position = Router::POSITION_LAST)
+    {
+        $route = new Route($pattern, $paths, $httpMethods);
+
+        switch ($position) {
+            case parent::POSITION_LAST:
+                $this-&gt;_routes[] = $route;
+                break;
+            case parent::POSITION_FIRST:
+                $this-&gt;_routes = array_merge([$route], $this-&gt;_routes);
+                break;
+            default:
+                throw new Exception("Invalid route position");
+        }
+
+        return $route;
+    }
+}</code></pre>
+<p>in services.php</p>
+<pre><code class="language-php">$di-&gt;setShared('router', function () {
+    return new Druphal\Core\Router();
+});</code></pre>
+<p>And I use:</p>
+<pre><code class="language-php">$app-&gt;map('/user/login', function () {
+     // code...
+})-&gt;setName('user.login')-&gt;setModuleName('user');</code></pre>
+<p>in before function:</p>
+<pre><code class="language-php">$app-&gt;before(function () use ($app) {
+    $routeName = $app-&gt;router-&gt;getMatchedRoute()-&gt;getName();
+    $moduleName = $app-&gt;router-&gt;getMatchedRoute()-&gt;getModuleName();
+    // logic here....
+    return true;
+});</code></pre>
+<p>work fine.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39337" data-cf-modified-0d1ebaf342c0299afc90569b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39337" data-cf-modified-0d1ebaf342c0299afc90569b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="13259" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

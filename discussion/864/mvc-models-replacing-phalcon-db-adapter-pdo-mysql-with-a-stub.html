@@ -1,0 +1,212 @@
+---
+layout: default
+title: 'MVC Models - replacing Phalcon\Db\Adapter\Pdo\Mysql with a stub - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">MVC Models - replacing Phalcon\Db\Adapter\Pdo\Mysql with a stub</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/334/temuri416" class="user-moderator-N"><span itemprop="name">temuri416</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-09-05T13:11:38-07:00">Sep '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-09-05T13:11:38-07:00">Sep '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1923</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">4</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/1c5a05d695b9e910398795de90197829?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/334/temuri416" class="user-moderator-N"><span itemprop="name">temuri416</span></a></span>
+                <span class="karma">51.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C864" href="#C864">
+        <time class="action-date">Sep '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi all,</p>
+<p>I'm playing with Phalcon application unit testing.</p>
+<p>I decided to write tests for my model Robot and stub out actual DB adapter, so I could run test without worrying about working database instance.</p>
+<p>When I'm executing</p>
+<pre><code class="language-php">    $robot = Robot::findFirst(1);</code></pre>
+<p>I want to populate object properties with contents of PHP array:</p>
+<pre><code class="language-php">    [
+        'id' =&gt; 1,
+        'name' =&gt; 'Charles',
+        'role' =&gt; 'Cleaner'
+    ]</code></pre>
+<p>I do not want to stub Robot itself. I only want to eliminate database access.</p>
+<p>My first attempt was this:</p>
+<pre><code class="language-php">    $this-&gt;di-&gt;set('db', function(){
+
+        $stub = $this-&gt;getMockBuilder('Phalcon\Db\Adapter\Pdo\Mysql')
+            -&gt;disableOriginalConstructor()
+            -&gt;getMock();
+
+        $stub-&gt;expects($this-&gt;at(0))
+             -&gt;method('tableExists')
+             -&gt;will($this-&gt;returnCallback(function(){
+                return true;
+             }));
+
+        $stub-&gt;expects($this-&gt;at(1))
+             -&gt;method('getMetadata')
+             -&gt;will($this-&gt;returnCallback(function(){
+                  // This was where I realized that I have to stub out
+                  // all calls made internally by Phalcon\Mvc\Model
+             }));
+
+        return $stub;
+    });</code></pre>
+<p>And as I wrote in the comments above - the realization that I'd have to return proper output from ALL internal calls of Phalcon\MVC\Model made me think that it is quite difficult to eliminate the database component.</p>
+<p>Is there any alternative approach to the problem?</p>
+<p>Thanks,
+Temuri</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-47d036db0935230438e9c477-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-47d036db0935230438e9c477-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">4</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3351" href="#C3351">
+                <time itemprop="dateCreated" datetime="2013-09-07T14:07:44-07:00" class="action-date">Sep '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>MetaData is a different service than the Database service, you probably need to mock that service too. <a href="http://docs.phalcon.io/en/latest/reference/models.html#models-meta-data">http://docs.phalcon.io/en/latest/reference/models.html#models-meta-data</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3351" data-cf-modified-47d036db0935230438e9c477-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3351" data-cf-modified-47d036db0935230438e9c477-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1c5a05d695b9e910398795de90197829?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/334/temuri416" class="user-moderator-N"><span itemprop="name">temuri416</span></a>        </span>
+        <br>
+
+        <span class="karma">51.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3354" href="#C3354">
+                <time itemprop="dateCreated" datetime="2013-09-07T14:13:34-07:00" class="action-date">Sep '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/Phalcon">@Phalcon</a>
+That's the thing. If I don't need DB, I don't need metadata. There should be a way to short-circuit all that stuff, set all of $this-&gt;{property} and get on with loading events..</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3354" data-cf-modified-47d036db0935230438e9c477-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3354" data-cf-modified-47d036db0935230438e9c477-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3356" href="#C3356">
+                <time itemprop="dateCreated" datetime="2013-09-07T14:34:17-07:00" class="action-date">Sep '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You can replace your meta-data strategy by a one that does not need a database, for example this strategy uses annotations: </p>
+<p><a href="https://github.com/phalcon/tutorial-models-init/blob/master/library/AnnotationsMetaDataInitializer.php">https://github.com/phalcon/tutorial-models-init/blob/master/library/AnnotationsMetaDataInitializer.php</a>
+<a href="https://github.com/phalcon/tutorial-models-init/blob/master/services.php#L40">https://github.com/phalcon/tutorial-models-init/blob/master/services.php#L40</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3356" data-cf-modified-47d036db0935230438e9c477-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3356" data-cf-modified-47d036db0935230438e9c477-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/59f44b13e093c486cc96fdb3aca34d1c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1488/silverbadge" class="user-moderator-N"><span itemprop="name">silverbadge</span></a>        </span>
+        <br>
+
+        <span class="karma">13.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7404" href="#C7404">
+                <time itemprop="dateCreated" datetime="2014-04-23T00:52:38-07:00" class="action-date">Apr '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/temuri416">@temuri416</a> I've put an example for this, I've been having the same issue for a while but I've managed to figure it out, I think:
+<a href="http://www.rami.me.uk/how-to-unit-test-code-with-phalcon-mvc-models/">http://www.rami.me.uk/how-to-unit-test-code-with-phalcon-mvc-models/</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7404" data-cf-modified-47d036db0935230438e9c477-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7404" data-cf-modified-47d036db0935230438e9c477-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d5852fc1b180677982ddbd4ec4a7ecf3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2777/yarlson" class="user-moderator-N"><span itemprop="name">Yar Kravtsov</span></a>        </span>
+        <br>
+
+        <span class="karma">72</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C13859" href="#C13859">
+                <time itemprop="dateCreated" datetime="2014-12-03T06:52:21-07:00" class="action-date">Dec '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/silverbadge">@silverbadge</a>, in your example find method of a model returns no rows with any data at dataProvider. Is there a way to fix it?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13859" data-cf-modified-47d036db0935230438e9c477-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13859" data-cf-modified-47d036db0935230438e9c477-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="864" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

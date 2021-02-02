@@ -1,0 +1,389 @@
+---
+layout: default
+title: 'How Component generates render view and passes it to Backend which generates render view and send to display? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How Component generates render view and passes it to Backend which generates render view and send to display?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/9455/elroliv" class="user-moderator-N"><span itemprop="name">elroliv</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-05-23T06:55:40-07:00">May '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-05-23T06:55:40-07:00">May '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>558</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/e527d7bd9f5a49b921abedad26819841?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/9455/elroliv" class="user-moderator-N"><span itemprop="name">elroliv</span></a></span>
+                <span class="karma">3.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C16175" href="#C16175">
+        <time class="action-date">May '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,<br />
+I have an advanced file hierarchy.</p>
+<ul>
+<li>Application
+<ul>
+<li>Backend
+<ul>
+<li>Controller</li>
+<li>View</li>
+<li>Module.php</li>
+</ul></li>
+<li>Frontend
+<ul>
+<li>...</li>
+</ul></li>
+</ul></li>
+<li>Component
+<ul>
+<li>...     </li>
+<li>Geoloc
+<ul>
+<li>City
+<ul>
+<li>Controller</li>
+<li>Model</li>
+<li>View</li>
+<li>Module.php</li>
+</ul></li>
+</ul></li>
+</ul></li>
+<li>View
+<ul>
+<li>layout</li>
+<li>partial</li>
+</ul></li>
+</ul>
+<p>All my routes redirect only on Backend or on Frontend.<br />
+I have build a City Component Service add to DI. I call it from a VilleController from Backend.  </p>
+<blockquote>
+<p>The Component should generates render of its own view and passes it to Backend Controller which generates rendering of its view with page layout and send to display. (Because there might be several Services called within same ControllerAction on Backend or Frontend)  </p>
+</blockquote>
+<p>I tried several versions of rendering but I can not connect the two parts.  </p>
+<p><strong>PHP Fatal error:  Call to undefined method AdCms\Component\Geoloc\Ville\Controller\IndexController::getId() in /.../AdCms/www/cache/volt/%%users%%elroliv%%sites%%adcms%%www%%app%%component%%geoloc%%ville%%view%%index%%villes.volt.php on line 8</strong></p>
+<p>getId() is a public function from my model and not from City Component IndexController.</p>
+<p>Perhaps it's not the good way to render Component/Controller in its own view and pass html code at Interface/BackendController to render it's own view too.</p>
+<p>Can someone advise me? Thank a lot  </p>
+<h1>Component/Geoloc/City</h1>
+<p>File : <strong>Component/Geoloc/City/Module.php</strong></p>
+<pre><code class="language-php">$di-&gt;set('moduleView', function () {
+    $view = new Simple();
+    $view-&gt;setDI($this);
+    $view-&gt;setViewsDir(__DIR__ . '/View/');
+
+    $view-&gt;registerEngines([
+        '.volt'  =&gt; 'volt',
+        '.phtml' =&gt; 'phpTemplating',
+    ]);
+
+    return $view;
+});
+
+$di-&gt;setShared('ville', function () {
+    return new IndexController();
+});</code></pre>
+<p>File : <strong>Component/Geoloc/City/Controller/IndexController.php</strong></p>
+<pre><code class="language-php">public function villesAction()
+{
+
+    $template = $this-&gt;moduleView-&gt;render(
+        "index/villes",
+        [
+            "villes" =&gt; Ville::find(
+                [
+                    "limit" =&gt; 100,
+                ]
+            ),
+        ]
+    );
+
+    return $template;
+}</code></pre>
+<p>File : <strong>Component/Geoloc/City/Model/Ville.php</strong> </p>
+<pre><code class="language-php">class Ville extends Model
+{
+    protected $id;
+    protected $name;
+    public function getId()
+    {
+        return $this-&gt;id;
+    }
+    public function setId($id)
+    {
+        $this-&gt;id = $id;
+    }
+    public function getCommune()
+    {
+        return $this-&gt;name;
+    }
+    public function setCommune($commune)
+    {
+        $this-&gt;name = $commune;
+    }
+}</code></pre>
+<p>File : <strong>Component/Geoloc/City/View/index/villes.volt</strong>  </p>
+<pre><code class="language-php">&lt;div class="page-header"&gt;
+    &lt;h1&gt;Module Geoloc / Ville&lt;/h1&gt;
+&lt;/div&gt;
+
+{% raw %}{%{% endraw %} if not villes is empty {% raw %}%}{% endraw %}
+    &lt;h2&gt;villes : &lt;/h2&gt;
+    {% raw %}{%{% endraw %} for ville in villes {% raw %}%}{% endraw %}
+        {% raw %}{{{% endraw %} ville.getId() {% raw %}}}{% endraw %} {% raw %}{{{% endraw %} ville.getName() {% raw %}}}{% endraw %}{% raw %}{%{% endraw %} if not loop.last {% raw %}%}{% endraw %}&lt;br&gt;{% raw %}{%{% endraw %} endif {% raw %}%}{% endraw %}
+    {% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}
+{% raw %}{%{% endraw %} else {% raw %}%}{% endraw %}
+    &lt;p&gt;&lt;i&gt;aucune ville récupérée&lt;/i&gt;&lt;/p&gt;
+{% raw %}{%{% endraw %} endif {% raw %}%}{% endraw %}
+</code></pre>
+<h1>Application/Backend</h1>
+<p>File : <strong>Application/Backend/Module.php</strong></p>
+<pre><code class="language-php">$di-&gt;set('view', function () {
+    $view = new View();
+    $view-&gt;setDI($this);
+    $view-&gt;setViewsDir(array(__DIR__ . '/View/'));
+
+    $view-&gt;setLayoutsDir(APP_PATH . '/View/layout/');
+    $view-&gt;setTemplateAfter('bootstrap4-fixed-nav-dev');
+
+    $view-&gt;registerEngines([
+        '.volt'  =&gt; 'volt',
+        '.phtml' =&gt; 'phpTemplating'
+    ]);
+
+    return $view;
+});</code></pre>
+<p>File : <strong>Application/Backend/Controller/VilleController.php</strong></p>
+<pre><code class="language-php">public function villeAction()
+{
+    $villes = $this-&gt;getDI()-&gt;getShared('ville');
+
+    $this-&gt;view-&gt;villes = $villes-&gt;villesAction();
+
+}</code></pre>
+<p>File : <strong>Application/Backend/View/ville/ville.volt</strong>  </p>
+<pre><code class="language-php">&lt;div class="page-header"&gt;
+    &lt;h1&gt;Interface Backend / Ville&lt;/h1&gt;
+&lt;/div&gt;
+
+{% raw %}{{{% endraw %} villes {% raw %}}}{% endraw %}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-06ddee14e73e1376268a808f-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-06ddee14e73e1376268a808f-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C48313" href="#C48313">
+                <time itemprop="dateCreated" datetime="2017-05-23T07:38:33-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>And what exactly problem you have? You can register this service just anywhere you want, like in some genric file like services.php</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48313" data-cf-modified-06ddee14e73e1376268a808f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48313" data-cf-modified-06ddee14e73e1376268a808f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e527d7bd9f5a49b921abedad26819841?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9455/elroliv" class="user-moderator-N"><span itemprop="name">elroliv</span></a>        </span>
+        <br>
+
+        <span class="karma">3.4k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C48313"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="48315" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '17</span>
+              </span><br/><a name="C48315" href="#C48315">
+                <time itemprop="dateCreated" datetime="2017-05-23T07:43:13-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>And what exactly problem you have? You can register this service just anywhere you want, like in some genric file like services.php</p>
+</blockquote>
+<p>Sorry, i'd forgot to write error ;o)</p>
+<p>Services look like good but rendering don't work :o((</p>
+<p>PHP Fatal error: Call to undefined method AdCms\Component\Geoloc\Ville\Controller\IndexController::getId() in /.../AdCms/www/cache/volt/%%users%%elroliv%%sites%%adcms%%www%%app%%component%%geoloc%%ville%%view%%index%%villes.volt.php on line 8</p>
+<p>getId() is a public function from my model and not from City Component IndexController.</p>
+<p>I don't understand how generate render from my component and passed it to Backend Controller who should render its own view.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48315" data-cf-modified-06ddee14e73e1376268a808f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48315" data-cf-modified-06ddee14e73e1376268a808f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="48345" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '17</span>
+              </span><br/><a name="C48345" href="#C48345">
+                <time itemprop="dateCreated" datetime="2017-05-23T12:34:27-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Why you just dont use partials for example and do this find in villeAction? Tbh this is really bad app design currently, it's bad idea to call action in other action and get template. There are better ways of doing it.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48345" data-cf-modified-06ddee14e73e1376268a808f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48345" data-cf-modified-06ddee14e73e1376268a808f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e527d7bd9f5a49b921abedad26819841?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9455/elroliv" class="user-moderator-N"><span itemprop="name">elroliv</span></a>        </span>
+        <br>
+
+        <span class="karma">3.4k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C48345"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C48349" href="#C48349">
+                <time itemprop="dateCreated" datetime="2017-05-23T14:33:03-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Why you just dont use partials for example and do this find in villeAction? Tbh this is really bad app design currently, it's bad idea to call action in other action and get template. There are better ways of doing it.</p>
+</blockquote>
+<p>As Phalcon is loosely coupled, allowing to use its objects as glue components, I would like building an app easy maintainable that's why I'd think adding bundle components encapsulating models, views, ... </p>
+<p>I understand I'm not on the good way. ;o))
+I'll following your advice about action calling action. Indeed that was a bad idea.
+All calls will be only from Frontend and Backend.</p>
+<p>I'm asking to me if I can keep my app tree or something like this. </p>
+<p>I think, I can call Component/Geoloc/City/Model/Ville.php directly in Application/Backend/Controller/VilleController.php.</p>
+<p>Do you think there is a way to call or render a volt template (like Component/Geoloc/City/View/index/villes.volt) directly in Application/Backend/Controller/VilleController.php?</p>
+<p>Thanks for your time and your advice,
+regards</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48349" data-cf-modified-06ddee14e73e1376268a808f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48349" data-cf-modified-06ddee14e73e1376268a808f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C48351" href="#C48351">
+                <time itemprop="dateCreated" datetime="2017-05-24T00:31:49-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes, just partial most likely or include with proper path.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48351" data-cf-modified-06ddee14e73e1376268a808f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48351" data-cf-modified-06ddee14e73e1376268a808f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e527d7bd9f5a49b921abedad26819841?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9455/elroliv" class="user-moderator-N"><span itemprop="name">elroliv</span></a>        </span>
+        <br>
+
+        <span class="karma">3.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C48357" href="#C48357">
+                <time itemprop="dateCreated" datetime="2017-05-24T01:46:03-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>thanks a lot ;o)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48357" data-cf-modified-06ddee14e73e1376268a808f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48357" data-cf-modified-06ddee14e73e1376268a808f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3ae8728fec3cd5cbfe99c4b966695f03?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10944/saysky" class="user-moderator-N"><span itemprop="name">初云</span></a>        </span>
+        <br>
+
+        <span class="karma">89</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C54424" href="#C54424">
+                <time itemprop="dateCreated" datetime="2018-03-19T01:18:02-07:00" class="action-date">Mar '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>test</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="54424" data-cf-modified-06ddee14e73e1376268a808f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="54424" data-cf-modified-06ddee14e73e1376268a808f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="16175" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

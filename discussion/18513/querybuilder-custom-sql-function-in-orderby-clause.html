@@ -1,0 +1,162 @@
+---
+layout: default
+title: 'QueryBuilder: custom SQL function in orderBy clause - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">QueryBuilder: custom SQL function in orderBy clause</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-07-03T04:46:17-07:00">Jul '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-07-03T04:46:17-07:00">Jul '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>359</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a></span>
+                <span class="karma">77.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C18513" href="#C18513">
+        <time class="action-date">Jul '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm trying to fuzzy match location names on the fly with jaro winkler algo.</p>
+<pre><code class="language-php">// custom function registration
+class Dialect extends Mysql
+{
+    public function getSqlExpression(array $expression, $escapeChar = null, $bindCounts = NULL)
+    {
+        if ($expression["type"] == 'functionCall') {
+            switch ($expression["name"]) {
+                case 'JARO_WINKLER_SIMILARITY':
+                    if (count($expression["arguments"]) != 2) {
+                        throw new \Exception('JARO_WINKLER_SIMILARITY requires 2 parameters');
+                    }
+                    return 'JARO_WINKLER_SIMILARITY('.$this-&gt;getSqlExpression($expression["arguments"][0]).', '.$this-&gt;getSqlExpression($expression["arguments"][1]).')';
+            }
+        }
+    }
+}</code></pre>
+<pre><code class="language-php">// calling the function in orderBy
+$country = Country::findFirst(['order'=&gt;['JARO_WINKLER_SIMILARITY(native_name, :name:) DESC'], 'bind'=&gt;['name'=&gt;$providerCountry-&gt;getName()]]);</code></pre>
+<p>The error i get:</p>
+<pre><code>Scanning error before 'JARO_WINKLER_SIM...' when parsing: SELECT [Travelhood\Model\Country].* FROM [Travelhood\Model\Country] ORDER BY [JARO_WINKLER_SIMILARITY(native_name,] :name:) LIMIT :APL0:</code></pre>
+<p>The syntax is cleary messed up, it treats the inner argument separator as an orderBy separator</p>
+<p>Does PHQL parse custom functions in orderBy at all? Or am i missing something?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-be23763110fa6e799a411af8-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-be23763110fa6e799a411af8-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C56521" href="#C56521">
+                <time itemprop="dateCreated" datetime="2018-07-03T10:15:11-07:00" class="action-date">Jul '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>oh dude if you can not handle this, the rest of us are screwed... ;)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="56521" data-cf-modified-be23763110fa6e799a411af8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="56521" data-cf-modified-be23763110fa6e799a411af8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6221c81c81cd357c818daec1bb8b17ff?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4153/nikolay-mihaylov" class="user-moderator-N"><span itemprop="name">Nikolay Mihaylov</span></a>        </span>
+        <br>
+
+        <span class="karma">93.7k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C56523" href="#C56523">
+                <time itemprop="dateCreated" datetime="2018-07-03T10:22:09-07:00" class="action-date">Jul '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Seems not: <a href="https://github.com/phalcon/cphalcon/blob/107b6f0197b0464d9f6b11ff390a560c000bf448/phalcon/mvc/model/query/builder.zep#L1309">https://github.com/phalcon/cphalcon/blob/107b6f0197b0464d9f6b11ff390a560c000bf448/phalcon/mvc/model/query/builder.zep#L1309</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="56523" data-cf-modified-be23763110fa6e799a411af8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="56523" data-cf-modified-be23763110fa6e799a411af8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C56521"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Emilio Degiovanni                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C56539" href="#C56539">
+                <time itemprop="dateCreated" datetime="2018-07-04T02:29:43-07:00" class="action-date">Jul '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>oh dude if you can not handle this, the rest of us are screwed... ;)</p>
+</blockquote>
+<p>there's always someone with a different angle ;]</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="56539" data-cf-modified-be23763110fa6e799a411af8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="56539" data-cf-modified-be23763110fa6e799a411af8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="18513" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

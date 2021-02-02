@@ -1,0 +1,183 @@
+---
+layout: default
+title: 'Phalcon DevTools not outputing anything not even phalcon --version works - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/6/installation">Installation</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Phalcon DevTools not outputing anything not even phalcon --version works</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/12477/veso266" class="user-moderator-N"><span itemprop="name">veso266</span></a></span>
+            <time itemprop="dateCreated" datetime="2019-05-31T04:45:32-07:00">May '19</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2019-05-31T04:45:32-07:00">May '19</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>465</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/1ea9da5e7c6371be0b1a546e283ada96?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/12477/veso266" class="user-moderator-N"><span itemprop="name">veso266</span></a></span>
+                <span class="karma">966</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C19711" href="#C19711">
+        <time class="action-date">May '19</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi there
+I have installed phalcon into docker using this dockerFile</p>
+<pre><code>FROM php:7.2-apache
+
+LABEL maintainer="Mitja Kocjančič"
+LABEL version="1.0"
+
+RUN apt-get update &amp;&amp; apt-get install -y \
+    cron \
+    anacron \
+    git \
+    libpcre3-dev \
+    libmcrypt-dev \
+    libxml2-dev \
+    zlib1g-dev \
+    libssh2-1 \
+    libssh2-1-dev \
+    libpng-dev \
+    --no-install-recommends \
+    &amp;&amp; docker-php-ext-install -j$(nproc) pdo_mysql mbstring soap zip gd \
+    &amp;&amp; cp /usr/local/bin/php /usr/bin/
+
+# Install PECL extensions
+RUN pecl install xdebug &amp;&amp; pecl install mcrypt-1.0.1 &amp;&amp; pecl install ssh2-1.1.2
+RUN docker-php-ext-enable xdebug mcrypt ssh2
+
+# Install Phalcon
+WORKDIR /usr/local/src
+RUN git clone https://github.com/phalcon/cphalcon.git --branch v3.4.3 --single-branch
+WORKDIR /usr/local/src/cphalcon/build
+RUN ./install
+
+WORKDIR /etc/php7/mods-available
+RUN echo 'extension=phalcon.so' &gt;&gt; phalcon.ini
+RUN docker-php-ext-enable phalcon
+
+# Phalcon dev tools
+RUN cd ~  &amp;&amp; git clone git://github.com/phalcon/phalcon-devtools.git \
+&amp;&amp; cd phalcon-devtools/ &amp;&amp; ./phalcon.sh \
+&amp;&amp; ln -s ~/phalcon-devtools/phalcon.php /usr/bin/phalcon  \
+&amp;&amp; chmod ugo+x /usr/bin/phalcon
+
+#Allow .htacsess to be executed and allow modRewrite
+RUN sed -i '/&lt;Directory \/var\/www\/&gt;/,/&lt;\/Directory&gt;/ s/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
+RUN a2enmod rewrite
+WORKDIR /var/www/</code></pre>
+<p>then I am runnig my project with docker-composer
+my docker-compose.yml looks like:</p>
+<pre><code>version: "3.1"
+services:
+    www:
+        build: .
+        ports: 
+            - "80:80"
+        environment:
+            XDEBUG_CONFIG: "remote_enable=1 remote_host=172.16.101.13 remote_port=9000 idekey=PHPSTORM"
+        volumes:
+            - ../../dev:/var/www/html/
+        links:
+            - db
+        networks:
+            - default
+    db:
+        image: mysql:8.0
+        ports: 
+            - "3306:3306"
+        command: --default-authentication-plugin=mysql_native_password
+        environment:
+            MYSQL_DATABASE: myDb
+            MYSQL_USER: push
+            MYSQL_PASSWORD: push
+            MYSQL_ROOT_PASSWORD: root
+        volumes:
+            - ./dump:/docker-entrypoint-initdb.d
+            - ./conf:/etc/mysql/conf.d
+            - persistent:/var/lib/mysql
+        networks:
+            - default
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        links: 
+            - db:db
+        ports:
+            - 8000:80
+        environment:
+            MYSQL_USER: push
+            MYSQL_PASSWORD: push
+            MYSQL_ROOT_PASSWORD: root 
+volumes:
+    persistent:</code></pre>
+<p>when trying to try to run phalcon dev-tools with <code>phalcon --version</code> nothing is shown not even any error
+so I don't know what is happening as Phalcon its selft works fine (I can normlly run my Phalcon app) just devTools don't seem to work</p>
+<p>Thanks for Anwsering and Best Regards</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-e98bf9b48bb6d5805dc7046f-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-e98bf9b48bb6d5805dc7046f-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f9b313c7f9567ee7aaf9a21bed59dedb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/13849/jbooa4747" class="user-moderator-N"><span itemprop="name">jbooa4747</span></a>        </span>
+        <br>
+
+        <span class="karma">76</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C63449" href="#C63449">
+                <time itemprop="dateCreated" datetime="2020-06-14T09:33:50-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Nice to see you readers of this post! I would like to say that today there are a lot of &quot;so-called&quot; writing companies which can help. Individually for me there is only one company which I can trust. I got acquainted with this one by accident on the web and after that I heared from my schoolmate about this online service. I have used it for a long time and their fantastic company has never let me down in doing the greatest essays. You can use this <a href="https://www.masterpapers.com/college-essay">Master Papers</a> online service and order essays online wright now.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63449" data-cf-modified-e98bf9b48bb6d5805dc7046f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63449" data-cf-modified-e98bf9b48bb6d5805dc7046f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="19711" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

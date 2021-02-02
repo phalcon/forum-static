@@ -1,0 +1,220 @@
+---
+layout: default
+title: 'Paginator exceeds memory_limit - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/9/paginator">Paginator</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Paginator exceeds memory_limit</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10938/modz95" class="user-moderator-N"><span itemprop="name">modz95</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-03-18T07:03:03-07:00">Mar '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-03-18T07:03:03-07:00">Mar '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>421</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/b73962517f83a47f4f971d1feb705cda?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10938/modz95" class="user-moderator-N"><span itemprop="name">modz95</span></a></span>
+                <span class="karma">2.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17948" href="#C17948">
+        <time class="action-date">Mar '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hey guys. I'm having a very strange problem. The issue consists of the Paginator exceeding PHP's memory limit since, I guess, it tries to retrieve the entire database table instead of getting only the 50 &quot;current&quot; rows as instructed by the 'limit' value. And here comes the intriguing part. It works just fine on PHP 5.6 but exceeds the memory limit on PHP 7. The installed PHP extensions as well as the configuration of 5.6 and 7 are all the same. I used EasyApache 4 to install and configure everything. The version of Phalcon is 3.2.2 for both PHP 5.6 and 7.</p>
+<pre><code>    $Paginator = new \Phalcon\Paginator\Adapter\Model([
+        'data' =&gt; \ControlPanel\Models\Projects::find([
+            'order' =&gt; 'id DESC'
+        ]),
+        'limit' =&gt; 50,
+        'page' =&gt; $page
+    ]);</code></pre>
+<p>Any idea why this is happening and what I can do to prevent this behaviour?</p>
+<p>P.S. Just to let you know, the memory limit for both PHP 5.6 and 7 is set to the healthy 32 MB. The database table I'm trying to paginate is nearly 140 MB, and if I increase the memory limit, the issue disappears. However, increasing the memory limit is not a solution by itself, so I'd like to get to the root cause of this.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-4742ef9bea98c5f84327c3fe-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-4742ef9bea98c5f84327c3fe-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C54412" href="#C54412">
+                <time itemprop="dateCreated" datetime="2018-03-18T07:49:42-07:00" class="action-date">Mar '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You are using the <a href="https://docs.phalcon.io/en/3.3/db-pagination">pagination</a> adapter in a less optimal way. Try the following</p>
+<pre><code class="language-php">use Phalcon\Paginator\Factory;
+
+$builder = $this-&gt;modelsManager-&gt;createBuilder()
+                -&gt;from(\ControlPanel\Models\Projects::class)
+                -&gt;orderBy('id DESC');
+
+$options = [
+    'builder' =&gt; $builder,
+    'limit'   =&gt; 50,
+    'page'    =&gt; $page,
+    'adapter' =&gt; 'queryBuilder',
+];
+
+$paginator = Factory::load($options);</code></pre>
+<p>Good luck</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="54412" data-cf-modified-4742ef9bea98c5f84327c3fe-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="54412" data-cf-modified-4742ef9bea98c5f84327c3fe-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b73962517f83a47f4f971d1feb705cda?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10938/modz95" class="user-moderator-N"><span itemprop="name">modz95</span></a>        </span>
+        <br>
+
+        <span class="karma">2.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="54414" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '18</span>
+              </span><br/><a name="C54414" href="#C54414">
+                <time itemprop="dateCreated" datetime="2018-03-18T08:47:43-07:00" class="action-date">Mar '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you! Never in this application have I used the Query Builder adapter, I have only used just plain Models for making any DB calls. That being said, now that I tried your suggestion, that Query Builder seems a lot more efficient, at least in this scenario. I'll look into substituting the Models I've been using everywhere with a faster and better adapter if there is such. I wrote this app 2-3 years ago, I should probably read the Phalcon documentation again and revise all the code at this point.</p>
+<pre><code>My original pagination script:
+
+PHP 5.6: Page loaded in 326 ms., Peak memory usage was 12.51 MB    // not sure why Phalcon needs this much memory to paginate 1-2 MB of data
+PHP 7.1: Page loaded in 376 ms., Peak memory usage was 214.00 MB   // probably retrieved the entire database table
+
+The pagination script you suggested:
+
+PHP 5.6: Page loaded in 211 ms., Peak memory usage was 1.23 MB
+PHP 7.1: Page loaded in 179 ms., Peak memory usage was 1.92 MB</code></pre>
+<p>One page of Paginator results should equal to 1-2 MB worth of database data. As you can see, the method you suggested uses only as much memory as it absolutely needs (1.23 or 1.92 MB), while my method uses obscene amounts of memory depending on the version of PHP. I'm not sure why this is happening, maybe it's a bug in Phalcon.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="54414" data-cf-modified-4742ef9bea98c5f84327c3fe-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="54414" data-cf-modified-4742ef9bea98c5f84327c3fe-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C54416" href="#C54416">
+                <time itemprop="dateCreated" datetime="2018-03-18T11:02:23-07:00" class="action-date">Mar '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>your problem in the first example is this</p>
+<pre><code class="language-php">'data' =&gt; \ControlPanel\Models\Projects::find([
+    'order' =&gt; 'id DESC'
+]),</code></pre>
+<p>The <code>find()</code> get all row and map to model, no problem if you have few elements, but if you have hundreds you have a big problem.</p>
+<p>The query builder adapter allows you to make a right query and then Phalcon only get the range (offset/limit) required</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="54416" data-cf-modified-4742ef9bea98c5f84327c3fe-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="54416" data-cf-modified-4742ef9bea98c5f84327c3fe-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b73962517f83a47f4f971d1feb705cda?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10938/modz95" class="user-moderator-N"><span itemprop="name">modz95</span></a>        </span>
+        <br>
+
+        <span class="karma">2.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="54418" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '18</span>
+              </span><br/><a name="C54418" href="#C54418">
+                <time itemprop="dateCreated" datetime="2018-03-18T13:16:46-07:00" class="action-date">Mar '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks. I understand that, but I was just surprised to see the Paginator getting less memory efficient with newer versions of PHP. I'm sure there's a good reason for that though. Anyway, thanks again for helping me out. Now everything is working like a charm.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="54418" data-cf-modified-4742ef9bea98c5f84327c3fe-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="54418" data-cf-modified-4742ef9bea98c5f84327c3fe-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4d1384d668711e6153ed4c6f05e29216?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/286/trentramseyer" class="user-moderator-N"><span itemprop="name">Trent Ramseyer</span></a>        </span>
+        <br>
+
+        <span class="karma">22.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C54436" href="#C54436">
+                <time itemprop="dateCreated" datetime="2018-03-19T14:03:22-07:00" class="action-date">Mar '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This adapter has an issue with cursors, it will have memory issues with large data sets</p>
+<pre><code class="language-php">new \Phalcon\Paginator\Adapter\Model</code></pre>
+<p>Querybuilder works fine getting count and loading with large data</p>
+<pre><code class="language-php"> new \Phalcon\Paginator\Adapter\QueryBuilder</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="54436" data-cf-modified-4742ef9bea98c5f84327c3fe-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="54436" data-cf-modified-4742ef9bea98c5f84327c3fe-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17948" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

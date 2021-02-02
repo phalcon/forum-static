@@ -1,0 +1,515 @@
+---
+layout: default
+title: 'Stuck on creating / updating relations - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Stuck on creating / updating relations</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1960/Michal-sk" class="user-moderator-N"><span itemprop="name">Michal-sk</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-07-16T12:57:13-07:00">Jul '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-07-16T12:57:13-07:00">Jul '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>684</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/1bfa9662d8810e7a6b9a3a7a1c0ba206?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1960/Michal-sk" class="user-moderator-N"><span itemprop="name">Michal-sk</span></a></span>
+                <span class="karma">1.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2849" href="#C2849">
+        <time class="action-date">Jul '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I am stuck on creating / updating relations of a model.</p>
+<p>So the models I have at this moment are <code>Product</code> model, <code>ProductAttribute</code> model and a <code>Attribute</code> model.</p>
+<p>Here is the code for all of them</p>
+<h3>Product</h3>
+<pre><code class="language-php">&lt;?php
+namespace Greatmedia\Models\V1;
+
+class Product extends \Phalcon\Mvc\Model
+{
+    public $id;
+
+    public $name;
+
+    public $price;
+
+    public function getSource()
+    {
+        return 'product';
+    }
+
+    public function initialize()
+    {
+//         $this-&gt;hasMany('id', '\Greatmedia\Models\V1\ProductAttribute', 'product_id', [
+//             'alias' =&gt; 'attributes'
+//         ]);
+
+        $this-&gt;hasManyToMany(
+            'id',
+            '\Greatmedia\Models\V1\ProductAttribute',
+            'product_id',
+            'attribute_id',
+            '\Greatmedia\Models\V1\Attribute',
+            'id',
+            ['alias' =&gt; 'attributes']
+        );
+    }
+}</code></pre>
+<h3>ProductAttribute</h3>
+<pre><code class="language-php">&lt;?php
+namespace Greatmedia\Models\V1;
+
+class ProductAttribute extends \Phalcon\Mvc\Model
+{
+    public $id;
+
+    public $product_id;
+
+    public function getSource()
+    {
+        return 'product_attribute';
+    }
+
+    public function initialize()
+    {
+        $this-&gt;belongsTo('product_id', '\Greatmedia\Models\V1\Product', 'id', [
+            'alias' =&gt; 'product'
+        ]);
+        $this-&gt;belongsTo('attribute_id', '\Greatmedia\Models\V1\Attribute', 'id', [
+            'alias' =&gt; 'attribute'
+        ]);
+    }
+}</code></pre>
+<h3>Attribute</h3>
+<pre><code class="language-php">&lt;?php
+namespace Greatmedia\Models\V1;
+
+class Attribute extends \Phalcon\Mvc\Model
+{
+    public $id;
+
+    public $value;
+
+    public $label;
+
+    public function getSource()
+    {
+        return 'attribute';
+    }
+
+    public function initialize()
+    {
+        $this-&gt;hasMany('id', '\Greatmedia\Models\V1\ProductAttribute', 'attribute_id', [
+          'alias' =&gt; 'product_attribute'
+        ]);
+    }
+}</code></pre>
+<p>Nothing really fancy, just as the docs told me to do.</p>
+<p>What I am doing is a CLI, now that it self works. Creating and updating products is no issue.</p>
+<p>I just can't seem to a)create and b)update attributes.</p>
+<p>Here is my <code>ImportTask</code>.</p>
+<h3>ImportTask</h3>
+<pre><code class="language-php">&lt;?php
+use Greatmedia\Models\V1\Product;
+use Greatmedia\Importer\Repository;
+use Phalcon\Mvc\Model;
+use Greatmedia\Models\V1\Attribute;
+
+class ImportTask extends \Phalcon\CLI\Task
+{
+    public function mainAction(array $params = []) {
+        if (!empty($params)) {
+            $this-&gt;importOne();
+        }
+        else {
+            $this-&gt;importAll();
+        }
+    }
+
+    public function importAll()
+    {
+        $repo = new Repository();
+        $repo-&gt;attachAll();
+
+        while($repo-&gt;valid()) {
+            $importer = $repo-&gt;current();
+
+            foreach ($importer-&gt;getProducts() as $prod) {
+                $prod_data  = $prod['product'];
+                $attributes = $prod['attributes'];
+                $sku        = $prod_data['sku'];
+
+                $product = $this-&gt;getBySkuOrNew($sku);
+                $this-&gt;createAttributes($product, $attributes);
+
+                if ($product-&gt;save($prod_data) === false) {
+                    echo 'Unable to create product.' . PHP_EOL;
+                    $this-&gt;printMessages($product);
+                    continue;
+                }
+
+                echo 'Product stored: ' . $product-&gt;id . PHP_EOL;
+            }
+
+            $repo-&gt;next();
+        }
+    }
+
+    public function createAttributes(Model $product, array $attributes_arr)
+    {
+        foreach ($product-&gt;getAttributes() as $attribute) {
+            foreach ($attributes_arr as $attr) {
+                foreach ($attr as $attr_key =&gt; $attr_val) {
+                    $attribute-&gt;{$attr_key} = $attr_val;
+                }
+
+                if ($attribute-&gt;save() === false) {
+                    echo 'Unable to create / update attribute.';
+                    $this-&gt;printMessages($attribute);
+                    continue;
+                }
+
+                echo 'Attribute created / updated for product: ' . $product-&gt;id;
+            }
+        }
+    }
+
+    public function printMessages(Model $model)
+    {
+        foreach ($model-&gt;getMessages() as $message) {
+            echo $message . PHP_EOL;
+        }
+    }
+
+    public function getBySku($sku)
+    {
+        return Product::findFirst("sku = '{$sku}'");
+    }
+
+    public function getBySkuOrNew($sku)
+    {
+        $product = $this-&gt;getBySku($sku);
+
+        if ($product === false) {
+            $product = new Product();
+        }
+
+        return $product;
+    }
+}</code></pre>
+<p>If at least there was some error or something, but there is,,, nothing. The products get stored, the product stored message is echo'd and that's it.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-2b8566d79da59158641a2082-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-2b8566d79da59158641a2082-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fc9dee05ffecfe92f1ec5e596c027703?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1886/waqasraz" class="user-moderator-N"><span itemprop="name">waqasraz</span></a>        </span>
+        <br>
+
+        <span class="karma">4.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="9518" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '14</span>
+              </span><br/><a name="C9518" href="#C9518">
+                <time itemprop="dateCreated" datetime="2014-07-16T13:34:34-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>First of all in ProductAttribute you don't have a local field attribute_id that you are using </p>
+<pre><code>$this-&gt;belongsTo('attribute_id', '\Greatmedia\Models\V1\Attribute', 'id', [
+                                    ^
+        'alias' =&gt; 'attribute'
+    ]);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9518" data-cf-modified-2b8566d79da59158641a2082-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9518" data-cf-modified-2b8566d79da59158641a2082-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1bfa9662d8810e7a6b9a3a7a1c0ba206?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1960/Michal-sk" class="user-moderator-N"><span itemprop="name">Michal-sk</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9520" href="#C9520">
+                <time itemprop="dateCreated" datetime="2014-07-16T14:36:36-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I just added it, doesn't do the trick, and not sure if it should help actually. Since defining the public properties would only be beneficial for the performance if i'm not mistaken and not required for using the property it self. If i'm wrong let me know, but that might get of topic. The issue is  still not resolved after adding the public proppertie <code>attribte_id</code>.</p>
+<pre><code class="language-php">&lt;?php
+namespace Greatmedia\Models\V1;
+
+class ProductAttribute extends \Phalcon\Mvc\Model
+{
+    public $id;
+
+    public $product_id;
+
+    public $attribute_id;
+
+    public function getSource()
+    {
+        return 'product_attribute';
+    }
+
+    public function initialize()
+    {
+        $this-&gt;belongsTo('product_id', '\Greatmedia\Models\V1\Product', 'id', [
+            'alias' =&gt; 'product'
+        ]);
+        $this-&gt;belongsTo('attribute_id', '\Greatmedia\Models\V1\Attribute', 'id', [
+            'alias' =&gt; 'attribute'
+        ]);
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9520" data-cf-modified-2b8566d79da59158641a2082-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9520" data-cf-modified-2b8566d79da59158641a2082-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1bfa9662d8810e7a6b9a3a7a1c0ba206?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1960/Michal-sk" class="user-moderator-N"><span itemprop="name">Michal-sk</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="9545" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '14</span>
+              </span><br/><a name="C9545" href="#C9545">
+                <time itemprop="dateCreated" datetime="2014-07-17T10:14:17-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Here is the refactored task, not done yet but this works much better and the setup is more elegant, <code>importers</code> are now <code>SplObjectStorage</code> objects containing the <code>Product</code> models with it's attributes in the storage, instead of the importers returning a bunch of <code>arrays</code>.</p>
+<h4>ImportTask</h4>
+<pre><code class="language-php">&lt;?php
+use Greatmedia\Models\V1\Product;
+use Greatmedia\Models\V1\Attribute;
+use Greatmedia\Importer\Repository;
+use Phalcon\Mvc\Model;
+
+class ImportTask extends \Phalcon\CLI\Task
+{
+    public function mainAction(array $params = []) {
+        if (!empty($params)) {
+            $this-&gt;importOne();
+        }
+        else {
+            $this-&gt;importAll();
+        }
+    }
+
+    public function importAll()
+    {
+        $repo = new Repository();
+        $repo-&gt;attachAll();
+
+        while($repo-&gt;valid()) {
+            $importer = $repo-&gt;current();
+            $importer-&gt;getProducts();
+            $importer-&gt;rewind();
+
+            while($importer-&gt;valid()) {
+                $im_prod = $importer-&gt;current();
+
+                if (($product = $this-&gt;getBySku($im_prod-&gt;sku)) === false) {
+                    if ($im_prod-&gt;save() === false) {
+                        echo 'Unable to create product.' , PHP_EOL;
+                        $this-&gt;printMessages($im_prod);
+                        $importer-&gt;next();
+                    }
+
+                    echo 'New product stored: ' , $product-&gt;id , PHP_EOL;
+                }
+                else {
+                    $product-&gt;update((array) $im_prod);
+                }
+
+                $importer-&gt;next();
+            }
+
+            $repo-&gt;next();
+        }
+    }
+
+    public function printMessages(Model $model)
+    {
+        foreach ($model-&gt;getMessages() as $message) {
+            echo $message , PHP_EOL;
+        }
+    }
+
+    public function getBySku($sku)
+    {
+        return Product::findFirst("sku = '{$sku}'");
+    }
+
+    public function getBySkuOrNew($sku)
+    {
+        $product = $this-&gt;getBySku($sku);
+
+        if ($product === false) {
+            $product = new Product();
+        }
+
+        return $product;
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9545" data-cf-modified-2b8566d79da59158641a2082-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9545" data-cf-modified-2b8566d79da59158641a2082-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9548" href="#C9548">
+                <time itemprop="dateCreated" datetime="2014-07-17T11:02:23-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I suggest you not to use the following the method concatening the conditions:</p>
+<pre><code class="language-php">public function getBySku($sku)
+{
+    return Product::findFirst("sku = '{$sku}'"); // Possible SQL injection
+}</code></pre>
+<p>Recommended:</p>
+<pre><code class="language-php">public function getBySku($sku)
+{
+    return Product::findFirstBySku($sku); 
+}</code></pre>
+<p>or:</p>
+<pre><code class="language-php">public function getBySku($sku)
+{
+    return Product::findFirst(array("sku = ?0", "bind" =&gt; array($sku))); 
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9548" data-cf-modified-2b8566d79da59158641a2082-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9548" data-cf-modified-2b8566d79da59158641a2082-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1bfa9662d8810e7a6b9a3a7a1c0ba206?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1960/Michal-sk" class="user-moderator-N"><span itemprop="name">Michal-sk</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9549" href="#C9549">
+                <time itemprop="dateCreated" datetime="2014-07-17T11:28:11-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Ok, i actually tought that Phalcon would do that for me, wasn't expecting that it would just dump the value in the query. I went for the recommended way, thanks.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9549" data-cf-modified-2b8566d79da59158641a2082-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9549" data-cf-modified-2b8566d79da59158641a2082-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1bfa9662d8810e7a6b9a3a7a1c0ba206?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1960/Michal-sk" class="user-moderator-N"><span itemprop="name">Michal-sk</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="9550" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '14</span>
+              </span><br/><a name="C9550" href="#C9550">
+                <time itemprop="dateCreated" datetime="2014-07-17T11:34:20-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Would there be a way to do <code>$product-&gt;update($im_prod)</code>, where <code>$im_prod</code> would be a <code>new Product</code> model. But the two are the same since they share the SKU, so it's the same product only <code>$product</code> would have to be updated with the values from <code>$im_prod</code>. The <code>update()</code> method only takes an array and if i cast the <code>$im_prod</code> to an array (as in the above snippet) , i get a SQL error that the <code>SKU</code> already exists. Since that is an unique field. Or would you just say, change the <code>$im_prod-&gt;id</code> to the one from <code>$product</code>, and call <code>save()</code> on <code>$im_prod</code> instead of <code>$product</code>.</p>
+<p>This is somewhat unexpected behavior if you ask me, since i just want to update the <code>$product</code>, and it should not matter that there already is a record with that SKU, since it's that record itself.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9550" data-cf-modified-2b8566d79da59158641a2082-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9550" data-cf-modified-2b8566d79da59158641a2082-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1bfa9662d8810e7a6b9a3a7a1c0ba206?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1960/Michal-sk" class="user-moderator-N"><span itemprop="name">Michal-sk</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9553" href="#C9553">
+                <time itemprop="dateCreated" datetime="2014-07-17T13:53:54-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>My logic here is way of. Might have been to long behind the PC. The importer is creating a <code>new Product()</code> but then in my <code>Task</code> i try to find the <code>Product</code> by SKU, statically, so it returns the <code>Product</code> created by the importer and not the product queried from the database.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9553" data-cf-modified-2b8566d79da59158641a2082-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9553" data-cf-modified-2b8566d79da59158641a2082-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2849" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,255 @@
+---
+layout: default
+title: 'Logging queries from multiple connection services - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Logging queries from multiple connection services</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/742/cspeak" class="user-moderator-N"><span itemprop="name">Steven</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-10-21T11:07:01-07:00">Oct '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-10-21T11:07:01-07:00">Oct '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1417</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/fb35f447c5edce740bc88e405d5eb3af?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/742/cspeak" class="user-moderator-N"><span itemprop="name">Steven</span></a></span>
+                <span class="karma">5.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3742" href="#C3742">
+        <time class="action-date">Oct '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Objective: Log all queries to a text file.</p>
+<p>Problem: I have multiple database connection services and not all queries are being logged.</p>
+<p>I have two database configurations </p>
+<pre><code class="language-php">...
+        $di-&gt;set('db', function () use ($di, $config) {
+
+            $eventsManager = new EventManager();
+
+            //Get a shared instance of the DbProfiler
+            $profiler = $di-&gt;getProfiler();
+
+            //Listen to all the database events
+            $eventsManager-&gt;attach('db', function($event, $connection) use ($profiler) {
+                if ($event-&gt;getType() == 'beforeQuery') {
+                    $profiler-&gt;startProfile($connection-&gt;getSQLStatement());
+                }
+                if ($event-&gt;getType() == 'afterQuery') {
+                    $profiler-&gt;stopProfile();
+                }
+            });
+
+            $section = 'database_' . ENV;
+
+            $connection = new DbAdapter(array(
+                'host' =&gt; $config-&gt;{$section}-&gt;host,
+                'username' =&gt; $config-&gt;{$section}-&gt;username,
+                'password' =&gt; $config-&gt;{$section}-&gt;password,
+                'dbname' =&gt; $config-&gt;{$section}-&gt;dbname
+            ));
+
+            $connection-&gt;setEventsManager($eventsManager);
+
+            return $connection;
+        });
+
+        $di-&gt;set('db_old', function () use ($di, $config) {
+
+            $eventsManager = new EventManager();
+
+            //Get a shared instance of the DbProfiler
+            $profiler = $di-&gt;getProfiler();
+
+            //Listen to all the database events
+            // $eventsManager-&gt;attach('db_old', function($event, $connection) use ($profiler) { // First attempt using "db_old"
+            $eventsManager-&gt;attach('db', function($event, $connection) use ($profiler) {
+                if ($event-&gt;getType() == 'beforeQuery') {
+                    $profiler-&gt;startProfile($connection-&gt;getSQLStatement());
+                }
+                if ($event-&gt;getType() == 'afterQuery') {
+                    $profiler-&gt;stopProfile();
+                }
+            });
+
+            $section = 'database_' . ENV . '_old';
+
+            $connection = new DbAdapter(array(
+                'host' =&gt; $config-&gt;{$section}-&gt;host,
+                'username' =&gt; $config-&gt;{$section}-&gt;username,
+                'password' =&gt; $config-&gt;{$section}-&gt;password,
+                'dbname' =&gt; $config-&gt;{$section}-&gt;dbname
+            ));
+
+            $connection-&gt;setEventsManager($eventsManager);
+
+            return $connection;
+        });
+...</code></pre>
+<p>All of my controllers extend ControllerBase.php in which I have this:</p>
+<pre><code class="language-php">... 
+    public function afterExecuteRoute($dispatcher) {
+      $config = $this-&gt;getDi()-&gt;get('config');
+      $logs_dir = realpath($config-&gt;application-&gt;logsDir);
+      $logger = new \Phalcon\Logger\Adapter\File($logs_dir . '/query_log.log');
+
+      $profiles = $this-&gt;getDi()-&gt;get('profiler')-&gt;getProfiles();
+
+      if ($profiles) {
+          $total_query_time = 0;
+          foreach ($profiles as $profile) {
+          $total = (float) $profile-&gt;getTotalElapsedSeconds();
+
+          $query_profile = array(
+              'ts' =&gt; date("c"),
+              'host' =&gt; gethostname(),
+              'sql' =&gt; $profile-&gt;getSQLStatement(),
+              'start' =&gt; $profile-&gt;getInitialTime(),
+              'end' =&gt; $profile-&gt;getFinalTime(),
+              'total' =&gt; $profile-&gt;getTotalElapsedSeconds()
+          );
+
+          $profile = json_encode($query_profile);
+          $logger-&gt;log($profile, Logger::INFO);
+          $total_query_time += (float) $total;
+          }
+          $logger-&gt;log(json_encode(array('TotalPageQueryTime' =&gt; $total)), Logger::INFO);
+      }
+    }
+...</code></pre>
+<p>All of the queries from &quot;db&quot; are logged and I can log the first query from db_old, but any queries done in the view, for example:</p>
+<pre><code class="language-php">                {% raw %}{%{% endraw %} for taping in tapings.items {% raw %}%}{% endraw %}
+                    {% raw %}{%{% endraw %} set settings = taping.getTapingStats() {% raw %}%}{% endraw %}
+                    {% raw %}{%{% endraw %} set show = taping.getShows() {% raw %}%}{% endraw %}
+                    &lt;tr {% raw %}{{{% endraw %} taping.getTapingActive() == '0' ? 'class="danger"' : '' {% raw %}}}{% endraw %}&gt;
+                        &lt;td&gt;{% raw %}{{{% endraw %} taping.getTapingId() {% raw %}}}{% endraw %}&lt;/td&gt;
+                        &lt;td&gt;{% raw %}{{{% endraw %} show.getShowTitle() {% raw %}}}{% endraw %}&lt;/td&gt;
+                        &lt;td&gt;{% raw %}{{{% endraw %} taping.getTapingActive() == '0' ? 'No' : 'Yes' {% raw %}}}{% endraw %}&lt;/td&gt;
+                        &lt;td&gt;{% raw %}{{{% endraw %} date("D, M d, Y @ g:i a", strtotime(taping.getTapingDate())) {% raw %}}}{% endraw %}&lt;/td&gt;
+                        &lt;td&gt;{% raw %}{{{% endraw %} settings ? settings.getGroupsAllowed()|default('0') ? 'Yes' : 'No' : '-' {% raw %}}}{% endraw %}&lt;/td&gt;
+                        &lt;td&gt;{% raw %}{{{% endraw %} settings ? settings.getGroupsNeeded()|default('-') : '-' {% raw %}}}{% endraw %}&lt;/td&gt;
+                        &lt;td&gt;{% raw %}{{{% endraw %} settings ? settings.getGroupsNeeded() - taping.getGroupBookings().count() : '-' {% raw %}}}{% endraw %}&lt;/td&gt;
+                        &lt;td&gt;{% raw %}{{{% endraw %} settings ? settings.getHasDonations() ? 'Yes' : 'No' : '-' {% raw %}}}{% endraw %}&lt;/td&gt;
+                        &lt;td&gt;{% raw %}{{{% endraw %} settings ? settings.getHasTransportation() ? 'Yes' : 'No' : '-' {% raw %}}}{% endraw %}&lt;/td&gt;
+                        &lt;td class="text-center"&gt;&lt;a href="{% raw %}{{{% endraw %} url({'for':'admin_tapings_view', 'show_id' : show.getShowId()}) {% raw %}}}{% endraw %}"&gt;View&lt;/a&gt;&lt;/td&gt;
+                    &lt;/tr&gt;
+
+                {% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}
+</code></pre>
+<p>The query for paginating the data in &quot;tapings&quot; is logged, all internal ACL queries are logged, but when I call &quot;taping.getShows()&quot; on each iteration, they are NOT logged but I do get results from them...</p>
+<p>I've tried changing the eventManager settings from 'db' to 'db_old' but it only reduces the number of logged queries I get.</p>
+<p>Eventually, these logs will be used in the ELK stack to monitor real-time query performance so making sure I can log all queries is a must.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-6d075b4c499c0c9b67cf6070-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-6d075b4c499c0c9b67cf6070-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fb35f447c5edce740bc88e405d5eb3af?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/742/cspeak" class="user-moderator-N"><span itemprop="name">Steven</span></a>        </span>
+        <br>
+
+        <span class="karma">5.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12423" href="#C12423">
+                <time itemprop="dateCreated" datetime="2014-10-21T12:44:34-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I was able to get a little more info after some digging into the issue.</p>
+<p>The initial query from the &quot;Tapings&quot; model, which uses db_old, IS logging correctly. However, the calls to the related Model <strong>Shows</strong> is not logged. </p>
+<p>This line is executed and provides a valid result, but not logged.</p>
+<pre><code class="language-php">                    {% raw %}{%{% endraw %} set show = taping.getShows() {% raw %}%}{% endraw %}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12423" data-cf-modified-6d075b4c499c0c9b67cf6070-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12423" data-cf-modified-6d075b4c499c0c9b67cf6070-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12459" href="#C12459">
+                <time itemprop="dateCreated" datetime="2014-10-22T20:43:41-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>A profiler does not log queries, have you tried this: <a href="https://github.com/phalcon/forum/blob/master/app/config/services.php#L118-L138">https://github.com/phalcon/forum/blob/master/app/config/services.php#L118-L138</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12459" data-cf-modified-6d075b4c499c0c9b67cf6070-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12459" data-cf-modified-6d075b4c499c0c9b67cf6070-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fb35f447c5edce740bc88e405d5eb3af?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/742/cspeak" class="user-moderator-N"><span itemprop="name">Steven</span></a>        </span>
+        <br>
+
+        <span class="karma">5.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12494" href="#C12494">
+                <time itemprop="dateCreated" datetime="2014-10-23T08:37:01-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks for the reply.</p>
+<p>I thought about logging directly in the connection services (db and db_old in my case) but I didn't want it to open the log file before writing each query or each call to the service. It seems like that would cause a lot of unnecessary overhead opening the log file over and over again.</p>
+<p>The goal was to use the profiler to capture all of the queries and their execution times, then once <code>afterExecuteRoute()</code> was called, log all those queries with a single call to <code>\Phalcon\Logger\Adapter\File</code> (from within ControllerBase.php, which each controller extends) so that the log file is only opened once, written to in a loop, then closed once.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12494" data-cf-modified-6d075b4c499c0c9b67cf6070-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12494" data-cf-modified-6d075b4c499c0c9b67cf6070-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3742" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

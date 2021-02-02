@@ -1,0 +1,223 @@
+---
+layout: default
+title: 'Populate Form with Related Table Data - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Populate Form with Related Table Data</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2068/rabrowne85" class="user-moderator-N"><span itemprop="name">Richard Browne</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-11-08T13:32:51-07:00">Nov '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-11-08T13:32:51-07:00">Nov '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>650</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/816905f7620afc94755494ba66da5d9b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2068/rabrowne85" class="user-moderator-N"><span itemprop="name">Richard Browne</span></a></span>
+                <span class="karma">13.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17261" href="#C17261">
+        <time class="action-date">Nov '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi all!</p>
+<p>I've been doing a lot of searching for a solution to this problem, but I'm not finding any <em>solutions</em>; people seem to just give up and/or find workarounds that are suitable for them. However, I'm hoping there's a more <em>elegant</em> way of solving this.</p>
+<p>The problem is I have a two related tables in my db: a <code>customer("name")</code> and an <code>address("street", "'street2", "street3", "city", "county", "postcode", "country_id")</code> table. Obviously the customer references the address id when it pulls the data.</p>
+<p>I have created a single form that has the fields for the customer, and I have included the fields for the address as follows:</p>
+<pre><code class="language-php">    class CustomerForm extends Form
+    {
+    public function initialize($entity = null, $options = null)
+    {
+        if ($options['edit'] === true)
+        {
+            $this-&gt;add(new Hidden('id'));
+            $params = [];
+        }
+        else
+        {
+            $params = [];
+        }
+
+        $field = new Text('name', array_merge($params, [
+            'class' =&gt; 'form-control',
+            'required' =&gt; 'required',
+            'placeholder' =&gt; '{customer_name}'
+        ]));
+        $field-&gt;setLabel('{customer_name}');
+        $this-&gt;add($field);
+
+    ...
+
+    $pre = 'Address.';
+      for ($i=1; $i &lt; 4; $i++) {
+            $field = new Text($pre . 'street_' . $i, array_merge($params, [
+                'class' =&gt; 'form-control',
+                'required' =&gt; (($i === 1) ? 'required' : ''),
+                'placeholder' =&gt; '{address} '. $i
+            ]));
+            $field-&gt;setLabel('{address}' . $i);
+            $this-&gt;add($field);
+        }
+
+        $field = new Text($pre . 'city', array_merge($params, [
+            'class' =&gt; 'form-control',
+            'required' =&gt; 'required',
+            'placeholder' =&gt; '{city}'
+        ]));
+        $field-&gt;setLabel('{city}');
+        $this-&gt;add($field);
+
+        $field = new Text($pre . 'county', array_merge($params, [
+            'class' =&gt; 'form-control',
+            'required' =&gt; 'required',
+            'placeholder' =&gt; '{county}'
+        ]));
+        $field-&gt;setLabel('{county}');
+        $this-&gt;add($field);
+
+        $field = new Text($pre . 'postcode', array_merge($params, [
+         'class' =&gt; 'form-control',
+         'required' =&gt; 'required',
+         'placeholder' =&gt; '{postcode}'
+       ]));
+        $field-&gt;setLabel('{postcode}');
+        $this-&gt;add($field);
+
+      $field = new Select($pre . 'country_id', Countries::find(array("order" =&gt; "printable_name")), array_merge($params, [
+         'class' =&gt; 'form-control select2',
+         'required' =&gt; 'required',
+         'useEmpty' =&gt; true,
+         'emptyText' =&gt; '{please_select}',
+         'using' =&gt; ['id', 'printable_name']
+      ]));
+      $field-&gt;setLabel('{country}');
+      $this-&gt;add($field);
+    }</code></pre>
+<p>Now if in my controller I use:</p>
+<pre><code class="language-php">    $customer = Customers::findFirstById($id);
+    $form = new CustomersForm($customer, ['edit' =&gt; true]);</code></pre>
+<p>It will populate the fields from the root customer table, but I'm having issues populating the fields for the related table Addresses.</p>
+<p>Does anyone have any bright ideas? Is this even possible?</p>
+<p>I've used the <code>$this-&gt;tag-&gt;setDefault()</code> method previuosly, but i'm trying to keep away from having to write out every tag every time. I've also considered <em>nesting</em> the forms within each other, but I've been unable to do this.</p>
+<p>Any help would be greatly appreciated.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-38e9e97aa968d6b623544819-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-38e9e97aa968d6b623544819-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/816905f7620afc94755494ba66da5d9b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2068/rabrowne85" class="user-moderator-N"><span itemprop="name">Richard Browne</span></a>        </span>
+        <br>
+
+        <span class="karma">13.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52173" href="#C52173">
+                <time itemprop="dateCreated" datetime="2017-11-09T12:21:01-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Update 1:</p>
+<p>So I decided to tackle the problem from the bottom up again and think about things more logically and perhaps a little more OOP.</p>
+<p>As such I though that the better solution would be that the two tables would have two separate forms that cover just the fields from their respective model. Then in the controller I could call them both and assign them using the <code>$this-&gt;view-&gt;form1 = new CustomerForm(); $this-&gt;view-&gt;form2 = new AddressForm();</code> and so on. Then in the view file I can use the <code>$form1-&gt;render();</code> and <code>$form2-&gt;render();</code> commands wherever i need them to build the form exactly how I want it to look.</p>
+<p>And this works.... most of the time...</p>
+<p>If I have a relationship where a-&gt;b, then this is fine i.e. profile &amp; user. However, with my Customer table I can have 2 addresses: head office and a separate billing address (which may or may not be the same). &quot;No problem!&quot; I thought, &quot;I'll just send a prefix option to the constructor of the form and then prefix the fields.&quot;</p>
+<p>This does not work, as the data being passed is the entity data which is non-prefixed, but the form field names are prefixed. As such they do not match, therefore the fields do not pre-populate when you load the page. However, if I don't prefix them, then I will have two fields with the same name.</p>
+<p>Anyone have any thoughts on how to get around this specific issue? i.e. how to prefix the data field names and the form field names?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52173" data-cf-modified-38e9e97aa968d6b623544819-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52173" data-cf-modified-38e9e97aa968d6b623544819-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52181" href="#C52181">
+                <time itemprop="dateCreated" datetime="2017-11-09T15:48:42-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi an non documented functions on forms is <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/forms/form.zep#L535">getCustomValue()</a> with this method you can handle the related records in the form</p>
+<p>I hope it helps you. Good luck</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52181" data-cf-modified-38e9e97aa968d6b623544819-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52181" data-cf-modified-38e9e97aa968d6b623544819-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/816905f7620afc94755494ba66da5d9b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2068/rabrowne85" class="user-moderator-N"><span itemprop="name">Richard Browne</span></a>        </span>
+        <br>
+
+        <span class="karma">13.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52217" href="#C52217">
+                <time itemprop="dateCreated" datetime="2017-11-11T13:07:39-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/emiliodeg">@emiliodeg</a> thanks for the tip. This worked like a dream!</p>
+<p>What I've now got is a a definition for the <code>getCustomValue()</code> function in my form, that takes the <code>$name</code> passed to it and then strips out the prefix that has been defined in the form definition.</p>
+<p>Then in the view, I can use <code>$form-&gt;render('prefix_field_name');</code> and it will look up the entity field name <code>field_name</code>.</p>
+<p>Much better way of doing this and always for the reuse of the forms within different sections of my application. Should mean that if I ever change the model for the form, I can update one form definition.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52217" data-cf-modified-38e9e97aa968d6b623544819-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52217" data-cf-modified-38e9e97aa968d6b623544819-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17261" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,504 @@
+---
+layout: default
+title: 'How to display error 404 page in multi modules using main error controller? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How to display error 404 page in multi modules using main error controller?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2185/ve3" class="user-moderator-N"><span itemprop="name">vee w,</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-03-21T12:35:36-07:00">Mar '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-03-21T12:35:36-07:00">Mar '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1878</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/14370e4117db7d6457134b199c928358?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2185/ve3" class="user-moderator-N"><span itemprop="name">vee w,</span></a></span>
+                <span class="karma">6.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6215" href="#C6215">
+        <time class="action-date">Mar '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I can't make not found error page.</p>
+<p>router.php</p>
+<pre><code class="language-php">$router = new Phalcon\Mvc\Router();
+
+$router-&gt;removeExtraSlashes(true);
+
+// required for modules.
+$router-&gt;setDefaultModule('core');
+
+$router-&gt;add(
+    '/{lang:[a-z]{2{% raw %}}}{% endraw %}/index/:action/:params',
+    array(
+        'module' =&gt; 'core',
+        'controller' =&gt; 'index',
+        'action' =&gt; 2,
+        'params' =&gt; 3,
+    )
+);
+$router-&gt;add(
+    '/{lang:[a-z]{2{% raw %}}}{% endraw %}', 
+    array(
+        'module' =&gt; 'core',
+        'controller' =&gt; 'index',
+        'action' =&gt; 'index',
+    )
+);</code></pre>
+<p>services.php</p>
+<pre><code class="language-php">// set dispatcher
+$di-&gt;set('dispatcher', function() use ($di) {
+    $evManager = $di-&gt;getShared('eventsManager');
+
+    $evManager-&gt;attach('dispatch:beforeException', function($event, $dispatcher, $exception) {
+        switch ($exception-&gt;getCode()) {
+            case PhDispatcher::EXCEPTION_HANDLER_NOT_FOUND:
+            case PhDispatcher::EXCEPTION_ACTION_NOT_FOUND:
+                $dispatcher-&gt;forward(
+                    array(
+                        'module' =&gt; 'core',
+                        'controller' =&gt; 'error',
+                        'action' =&gt; 'e404',
+                    )
+                );
+                return false;
+        }
+    });
+
+    $dispatcher = new PhDispatcher();
+    $dispatcher-&gt;setEventsManager($evManager);
+    $dispatcher-&gt;setDefaultNamespace('Core\\Controllers');
+    return $dispatcher;
+});</code></pre>
+<p>index.php</p>
+<pre><code class="language-php">$application = new \Phalcon\Mvc\Application($di);
+    $application-&gt;registerModules(
+        array(
+            'core' =&gt; array(
+                'className' =&gt; 'Core\\Module',
+                'path' =&gt; APPFULLPATH . '/Module.php',
+            ),
+            'contact' =&gt; array(
+                'className' =&gt; 'Modules\\Contact\\Module',
+                'path' =&gt; ROOTFULLPATH . '/modules/contact/Module.php',
+            )
+        )
+    );</code></pre>
+<p>Request the page to /index/action-not-exists
+action-not-exists is not exists in the index controller. but it is not forward to error page.</p>
+<p><strong><em>&quot;Action 'action-not-exists' was not found on handler 'index'&quot;</em></strong></p>
+<p>This is what i got instead of my 404 page.</p>
+<p>How to make 404 error page and use in all modules?</p>
+<p>--</p>
+<p>update: 01</p>
+<p>My source code are here
+<a href="https://github.com/OkveeNet/phalcon-begins">https://github.com/OkveeNet/phalcon-begins</a></p>
+<p>Now i can manage to display error 404 page But i have to add this code in <strong><em>every</em></strong> modules.
+<a href="https://github.com/OkveeNet/phalcon-begins/blob/master/core/Module.php">https://github.com/OkveeNet/phalcon-begins/blob/master/core/Module.php</a></p>
+<p><strong><em>How to make it work in All modules at once? or How to make it use only main settings?</em></strong></p>
+<p>--</p>
+<p>Dear Phalcon, please make it easier to manage error pages just like other frameworks.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-2ab33051fe6f935b78e41da4-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-2ab33051fe6f935b78e41da4-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ef35769757b23a982de5d30846530d40?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/768/iamtartan" class="user-moderator-N"><span itemprop="name">Aboozar Ghaffari</span></a>        </span>
+        <br>
+
+        <span class="karma">10.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="16741" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '15</span>
+              </span><br/><a name="C16741" href="#C16741">
+                <time itemprop="dateCreated" datetime="2015-03-21T12:45:24-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>use this simple solution instead (just add notFound route to your router):</p>
+<pre><code class="language-php">$router = new Phalcon\Mvc\Router();
+
+// add routes .....
+
+$router-&gt;notFound(array(
+  'module' =&gt; 'default',
+  "controller" =&gt; "error",
+  "action" =&gt; "notFound"
+));
+
+// blah blah blah ....
+
+$di-&gt;set('router', $router);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16741" data-cf-modified-2ab33051fe6f935b78e41da4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16741" data-cf-modified-2ab33051fe6f935b78e41da4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/14370e4117db7d6457134b199c928358?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2185/ve3" class="user-moderator-N"><span itemprop="name">vee w,</span></a>        </span>
+        <br>
+
+        <span class="karma">6.2k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C16741"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/ef35769757b23a982de5d30846530d40?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Aboozar Ghaffari                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C16743" href="#C16743">
+                <time itemprop="dateCreated" datetime="2015-03-21T12:57:36-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>use this simple solution instead (just add notFound route to your router):</p>
+<pre><code class="language-php">$router = new Phalcon\Mvc\Router();
+
+// add routes .....
+
+$router-&gt;notFound(array(
+ 'module' =&gt; 'default',
+ "controller" =&gt; "error",
+ "action" =&gt; "notFound"
+));
+
+// blah blah blah ....
+
+$di-&gt;set('router', $router);</code></pre>
+</blockquote>
+<p>No, it is not working.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16743" data-cf-modified-2ab33051fe6f935b78e41da4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16743" data-cf-modified-2ab33051fe6f935b78e41da4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ef35769757b23a982de5d30846530d40?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/768/iamtartan" class="user-moderator-N"><span itemprop="name">Aboozar Ghaffari</span></a>        </span>
+        <br>
+
+        <span class="karma">10.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16745" href="#C16745">
+                <time itemprop="dateCreated" datetime="2015-03-21T13:04:11-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>What is your phalcon version?!!!</p>
+<p>I've used this method in more that 5 production project by Phalcon 2.0!!!</p>
+<p>for example check by this App <a href="https://beta.abplus.ir"><a href="https://beta.abplus.ir">https://beta.abplus.ir</a></a> and add any path you want like <a href="https://beta.abplus.ir/blahblahblah"><a href="https://beta.abplus.ir/blahblahblah">https://beta.abplus.ir/blahblahblah</a></a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16745" data-cf-modified-2ab33051fe6f935b78e41da4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16745" data-cf-modified-2ab33051fe6f935b78e41da4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/14370e4117db7d6457134b199c928358?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2185/ve3" class="user-moderator-N"><span itemprop="name">vee w,</span></a>        </span>
+        <br>
+
+        <span class="karma">6.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16746" href="#C16746">
+                <time itemprop="dateCreated" datetime="2015-03-21T13:37:47-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I'm using Phalcon 1.3.4.</p>
+<p>However i'm using dynamic router and multi module and language uri.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16746" data-cf-modified-2ab33051fe6f935b78e41da4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16746" data-cf-modified-2ab33051fe6f935b78e41da4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/0443edc510c8690c5ebeac47ff491cfe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3402/stibiumz" class="user-moderator-N"><span itemprop="name">Óscar Enríquez</span></a>        </span>
+        <br>
+
+        <span class="karma">6.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16747" href="#C16747">
+                <time itemprop="dateCreated" datetime="2015-03-21T14:13:41-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Maybe exception code is not the expected,  it could also be</p>
+<pre><code class="language-php">Dispatcher::EXCEPTION_NO_DI
+Dispatcher::EXCEPTION_CYCLIC_ROUTING
+Dispatcher::EXCEPTION_INVALID_HANDLER
+Dispatcher::EXCEPTION_INVALID_PARAMS</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16747" data-cf-modified-2ab33051fe6f935b78e41da4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16747" data-cf-modified-2ab33051fe6f935b78e41da4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/14370e4117db7d6457134b199c928358?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2185/ve3" class="user-moderator-N"><span itemprop="name">vee w,</span></a>        </span>
+        <br>
+
+        <span class="karma">6.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="16748" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '15</span>
+              </span><br/><a name="C16748" href="#C16748">
+                <time itemprop="dateCreated" datetime="2015-03-21T14:55:04-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><pre><code class="language-php">// set dispatcher
+$di-&gt;set('dispatcher', function() use ($di) {
+    $evManager = $di-&gt;getShared('eventsManager');
+
+    $evManager-&gt;attach('dispatch:beforeException', function($event, $dispatcher, $exception) {
+        exit;
+        switch ($exception-&gt;getCode()) {
+            case PhDispatcher::EXCEPTION_HANDLER_NOT_FOUND:
+            case PhDispatcher::EXCEPTION_ACTION_NOT_FOUND:
+                $dispatcher-&gt;forward(
+                    array(
+                        'module' =&gt; 'core',
+                        'controller' =&gt; 'error',
+                        'action' =&gt; 'e404',
+                    )
+                );
+                return false;
+        }
+    });
+
+    $dispatcher = new PhDispatcher();
+    $dispatcher-&gt;setEventsManager($evManager);
+    $dispatcher-&gt;setDefaultNamespace('Core\\Controllers');
+    return $dispatcher;
+});</code></pre>
+<p>It is not even exit.</p>
+<hr />
+<p><strong>The question updated.</strong></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16748" data-cf-modified-2ab33051fe6f935b78e41da4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16748" data-cf-modified-2ab33051fe6f935b78e41da4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/14370e4117db7d6457134b199c928358?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2185/ve3" class="user-moderator-N"><span itemprop="name">vee w,</span></a>        </span>
+        <br>
+
+        <span class="karma">6.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16761" href="#C16761">
+                <time itemprop="dateCreated" datetime="2015-03-22T04:53:02-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hello, i am still cannot make 404 on controller, module not found to work.
+Can anyone help me? please.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16761" data-cf-modified-2ab33051fe6f935b78e41da4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16761" data-cf-modified-2ab33051fe6f935b78e41da4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ef35769757b23a982de5d30846530d40?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/768/iamtartan" class="user-moderator-N"><span itemprop="name">Aboozar Ghaffari</span></a>        </span>
+        <br>
+
+        <span class="karma">10.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="16763" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '15</span>
+              </span><br/><a name="C16763" href="#C16763">
+                <time itemprop="dateCreated" datetime="2015-03-22T06:49:15-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This is my 404 handling code that works perfectly before using the method that i mentioned in my previous post. you can try this one too.</p>
+<pre><code class="language-php">        $dispatcher    = new \Phalcon\Mvc\Dispatcher();
+        $eventsManager = new \Phalcon\Events\Manager();
+
+        $eventsManager-&gt;attach("dispatch", function ($event, $dispatcher, $exception) use ($di) {
+                if ($event-&gt;getType() == 'beforeNotFoundAction') {
+                    $di-&gt;get('response')-&gt;redirect('site/error/notFound');
+
+                    return false;
+                }
+
+            if ($event-&gt;getType() == 'beforeException') {
+                    switch ($exception-&gt;getCode()) {
+                        case \Phalcon\Dispatcher::EXCEPTION_HANDLER_NOT_FOUND:
+                        case \Phalcon\Dispatcher::EXCEPTION_ACTION_NOT_FOUND:
+                            $di-&gt;get('response')-&gt;redirect('site/error/notFound');
+                            return false;
+                        default:
+                            $di-&gt;get('response')-&gt;redirect('site/error/internalError');
+                            return false;
+                    }
+                }
+
+            });
+
+        $dispatcher-&gt;setEventsManager($eventsManager);
+        $di-&gt;setShared('dispatcher', $dispatcher);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16763" data-cf-modified-2ab33051fe6f935b78e41da4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16763" data-cf-modified-2ab33051fe6f935b78e41da4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/14370e4117db7d6457134b199c928358?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2185/ve3" class="user-moderator-N"><span itemprop="name">vee w,</span></a>        </span>
+        <br>
+
+        <span class="karma">6.2k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C16763"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/ef35769757b23a982de5d30846530d40?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Aboozar Ghaffari                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="16764" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '15</span>
+              </span><br/><a name="C16764" href="#C16764">
+                <time itemprop="dateCreated" datetime="2015-03-22T07:03:27-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>This is my 404 handling code that works perfectly before using the method that i mentioned in my previous post. you can try this one too.</p>
+<pre><code class="language-php">      $dispatcher    = new \Phalcon\Mvc\Dispatcher();
+      $eventsManager = new \Phalcon\Events\Manager();
+
+      $eventsManager-&gt;attach("dispatch", function ($event, $dispatcher, $exception) use ($di) {
+              if ($event-&gt;getType() == 'beforeNotFoundAction') {
+                  $di-&gt;get('response')-&gt;redirect('site/error/notFound');
+
+                  return false;
+              }
+
+          if ($event-&gt;getType() == 'beforeException') {
+                  switch ($exception-&gt;getCode()) {
+                      case \Phalcon\Dispatcher::EXCEPTION_HANDLER_NOT_FOUND:
+                      case \Phalcon\Dispatcher::EXCEPTION_ACTION_NOT_FOUND:
+                          $di-&gt;get('response')-&gt;redirect('site/error/notFound');
+                          return false;
+                      default:
+                          $di-&gt;get('response')-&gt;redirect('site/error/internalError');
+                          return false;
+                  }
+              }
+
+          });
+
+      $dispatcher-&gt;setEventsManager($eventsManager);
+      $di-&gt;setShared('dispatcher', $dispatcher);</code></pre>
+</blockquote>
+<p>From my latest source code here <a href="https://github.com/OkveeNet/phalcon-begins">https://github.com/OkveeNet/phalcon-begins</a></p>
+<p>I can make it work about...</p>
+<p>not found module\controller -&gt; 404 error page.</p>
+<p>not found module\controller\action -&gt; 404 error page.</p>
+<p>But not found module or [module is not registered] to 404 error page still does not working.</p>
+<p><code>$di-&gt;set('dispatcher'</code> is not working for &quot;module is not registered&quot;!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16764" data-cf-modified-2ab33051fe6f935b78e41da4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16764" data-cf-modified-2ab33051fe6f935b78e41da4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/14370e4117db7d6457134b199c928358?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2185/ve3" class="user-moderator-N"><span itemprop="name">vee w,</span></a>        </span>
+        <br>
+
+        <span class="karma">6.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16781" href="#C16781">
+                <time itemprop="dateCreated" datetime="2015-03-22T17:55:33-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>For module ... is not registered. I tried to use <code>catch {...}</code> to match error message because there is no support from Phalcon about module not registered error.</p>
+<pre><code class="language-php">try {
+    echo $application-&gt;handle()-&gt;getContent();
+} catch (\Exception $e) {
+        if (preg_match('/Module (.*) is not registered/ius', $e-&gt;getMessage()) == 1) {
+        $dispatch = $di-&gt;getShared('dispatch');
+        $dispatcher-&gt;forward(
+            array(
+                'namespace' =&gt; 'Core\\Controllers',
+                'module' =&gt; 'core',
+                'controller' =&gt; 'error',
+                'action' =&gt; 'e404',
+            )
+        );
+        return false;
+    }
+}</code></pre>
+<p>But i'm still cannot send it to use Error controller. Does anyone help?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16781" data-cf-modified-2ab33051fe6f935b78e41da4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16781" data-cf-modified-2ab33051fe6f935b78e41da4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6215" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

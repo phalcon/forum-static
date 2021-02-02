@@ -1,0 +1,152 @@
+---
+layout: default
+title: 'Relationships getRelated, _getRelatedRecords, __get, __call - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Relationships getRelated, _getRelatedRecords, __get, __call</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3646/Surt" class="user-moderator-N"><span itemprop="name">Erik Wiesenthal</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-04-19T03:10:57-07:00">Apr '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-04-19T03:10:57-07:00">Apr '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>709</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/d6143a9ff65d2d5222c30fb0d76664a7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3646/Surt" class="user-moderator-N"><span itemprop="name">Erik Wiesenthal</span></a></span>
+                <span class="karma">23.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C15981" href="#C15981">
+        <time class="action-date">Apr '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Since I'm using Phalcon I'm having lot of problems with cached relationships and the lazy loading.
+Actually I'm triying to fetch a model and get the relationships, but I want the relationships from the cache. I already read the Caching in the ORM documentation, but I don't like the approach, since it implies caching on the ' find' methods...</p>
+<p>The use case: </p>
+<pre><code>* call a public property alias for the relationship
+    * If the alias have results, get them
+    * if the alias does not have results, try to get them from cache
+        * if no cache, fetch them</code></pre>
+<p>I extended the Phalcon Model to use the cache on the relationships, in this way:</p>
+<pre><code class="language-php">    /*
+    * Returns related records based on defined relations USING CACHE
+    *
+    * @param string alias
+    * @param array arguments
+    * @param int ttl in seconds
+    * @return \Phalcon\Mvc\Model\ResultsetInterface
+    */
+    public function getRelated($alias, $arguments = null, $ttl = null)
+    {
+        $cache_ttl = ($ttl !== null) ? $ttl : (isset(static::$cache_ttl)) ? static::$cache_ttl : self::$cache_ttl_default;
+        $cache_key = $this-&gt;getSource() . '.' . $this-&gt;getId() . '.' . $alias . '.' . md5(serialize($arguments));
+        $rows = $this-&gt;getDI()-&gt;getCache()-&gt;remember($cache_key, $cache_ttl, function () use ($alias, $arguments) {
+            return parent::getRelated($alias, $arguments);
+        });
+
+        return $rows;
+    }
+
+    // remember is just a get if exists and if not, execute callback and save it</code></pre>
+<p>The problem with this approach is that I must define getters and call <code>getRelated</code> on them.</p>
+<p>The second problem is that every time I call those getters the results are fetched from the cache or the lazy loading, never from the already fetched ones. This means that I must control when I need to call <code>$model-&gt;getAliasRelationship()</code> so cache-lazyloading is used, or call <code>$model-&gt;aliasRelationship</code> so the already fetched ones are used.</p>
+<blockquote>
+<p><strong>Due to the lazyloading I cannot check if the property is already filled without firing the &quot;automagic&quot; fetch. If I do it I lost the posibility to use the cache.</strong></p>
+</blockquote>
+<p><a href="https://github.com/phalcon/cphalcon/pull/12772">https://github.com/phalcon/cphalcon/pull/12772</a> points there. With a method to check if the relationship is already fetched, without fetching it if not, is just as easy as adding the check on the overrided <code>getRelated</code>. </p>
+<p>I was looking for a way to redefine the <code>__get</code> so I can avoid the automatic lazyloading and make my own checks on cache etc... and found that those three methods <code>getRelated, _getRelatedRecords, __get</code>  make use of the <code>modelManager</code> and I can't find a way to make it more transparent. </p>
+<p>As I see it, it would be great that those methods <code>getRelated, _getRelatedRecords, __get</code> make use of a common method to fetch relationships (a proxy for the modelManager) so I can override it and not necesarily be suscribed to this handicap.</p>
+<p>Any clue on how to accomplish it?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-b63c70352d4f8187fe99ef01-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-b63c70352d4f8187fe99ef01-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d6143a9ff65d2d5222c30fb0d76664a7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3646/Surt" class="user-moderator-N"><span itemprop="name">Erik Wiesenthal</span></a>        </span>
+        <br>
+
+        <span class="karma">23.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C47653" href="#C47653">
+                <time itemprop="dateCreated" datetime="2017-04-19T03:19:46-07:00" class="action-date">Apr '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>My unique idea is to make a pull request on cphalcon changing any reference on <code>model.zep</code> so this methods
+<code>&lt;RelationInterface&gt; manager-&gt;getRelationByAlias(className, alias);</code>
+<code>manager-&gt;getRelationRecords(relation, null, this, arguments);</code>
+does have a proxy on model (where they call the manager methods by default, but I can override them on a model extension.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="47653" data-cf-modified-b63c70352d4f8187fe99ef01-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="47653" data-cf-modified-b63c70352d4f8187fe99ef01-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d6143a9ff65d2d5222c30fb0d76664a7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3646/Surt" class="user-moderator-N"><span itemprop="name">Erik Wiesenthal</span></a>        </span>
+        <br>
+
+        <span class="karma">23.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="47655" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '17</span>
+              </span><br/><a name="C47655" href="#C47655">
+                <time itemprop="dateCreated" datetime="2017-04-19T03:23:15-07:00" class="action-date">Apr '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Another idea is to refactor <code>getRelated</code> in <code>model.zep</code> so it uses <code>_getRelatedRecords</code> instead of duplicate code. At the same time, use <code>getRelated</code> on the <code>__get</code>. Seems the way to go, to make the code more robust. But I don't know the implications in this.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="47655" data-cf-modified-b63c70352d4f8187fe99ef01-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="47655" data-cf-modified-b63c70352d4f8187fe99ef01-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="15981" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

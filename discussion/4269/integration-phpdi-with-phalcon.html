@@ -1,0 +1,224 @@
+---
+layout: default
+title: 'Integration PHP-DI with Phalcon - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/10/di-ioc">DI/IoC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Integration PHP-DI with Phalcon</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1598/JacekJagiello" class="user-moderator-N"><span itemprop="name">JacekJagiello</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-12-16T12:35:00-07:00">Dec '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-12-16T12:35:00-07:00">Dec '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1005</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/df72ee222c1fb29bc0523da8c26fc33f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1598/JacekJagiello" class="user-moderator-N"><span itemprop="name">JacekJagiello</span></a></span>
+                <span class="karma">4.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4269" href="#C4269">
+        <time class="action-date">Dec '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hey,</p>
+<p>I wnat to use <a href="http://php-di.org">PHP-DI</a> instead of <em>Phalcon\Di</em> default container. According to the docs, i had to implement <em>Phalcon\DiInterface</em>. But i have troubles with that. I decide to look how Syfmony2 is integrated with PHP-DI.<a href="https://github.com/mnapoli/PHP-DI-Symfony2/blob/master/src/DI/Bridge/Symfony/SymfonyContainerBridge.php"> Here is implementation of PHP-DI for Symfony</a>. </p>
+<p>So i came up with something similar:
+&lt;?php namespace Plugin\Container;</p>
+<pre><code>use DI\NotFoundException;
+use Interop\Container\ContainerInterface;
+
+class PhpDiContainer extends \Phalcon\Di implements \Phalcon\DiInterface
+{
+    /**
+     * @var ContainerInterface
+     */
+    private $fallbackContainer;
+
+    /**
+     * @return ContainerInterface
+     */
+    public function getFallbackContainer()
+    {
+        return $this-&gt;fallbackContainer;
+    }
+
+    /**
+     * @param ContainerInterface $container
+     */
+    public function setFallbackContainer(ContainerInterface $container)
+    {
+        $this-&gt;fallbackContainer = $container;
+    }
+
+    public function get($name, $parameters = null)
+    {
+        if (parent::has($name)) {
+            return parent::get($name, $parameters);
+        }
+
+        if (! $this-&gt;fallbackContainer) {
+            return false;
+        }
+
+        try {
+            $entry = $this-&gt;fallbackContainer-&gt;get($name);
+            return $entry;
+        } catch (NotFoundException $e) {
+            throw new \Exception($e-&gt;getMessage());
+        }
+
+        return null;
+    }
+
+    public function has($name)
+    {
+        if (parent::has($name)) {
+            return true;
+        }
+
+        if (! $this-&gt;fallbackContainer) {
+            return false;
+        }
+
+        return $this-&gt;fallbackContainer-&gt;has($name);
+    }
+}</code></pre>
+<p>The problem is that if i create a new instance of this container and pass it to application like this:</p>
+<pre><code>$container = new \Plugin\Container\PhpDiContainer();
+$application = new \Phalcon\Mvc\Application($container);
+$application-&gt;handle()-&gt;getContent();</code></pre>
+<p>I got <em>Trying to call method handle on a non-object</em>. I don't know what to do next, i don't know if my implementation is good.
+Can you help me implement PHP-DI for Phalcon?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-fb2b49765bc7a5c2b360b181-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-fb2b49765bc7a5c2b360b181-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c58542c4c2b9171a023c69e6711c16f1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/662/ogarbe" class="user-moderator-N"><span itemprop="name">Olivier.Garbé</span></a>        </span>
+        <br>
+
+        <span class="karma">24.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C14220" href="#C14220">
+                <time itemprop="dateCreated" datetime="2014-12-16T14:54:01-07:00" class="action-date">Dec '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi,</p>
+<p>as your class extends Phalcon\DI (there is a typo here you've written Di not DI), no need to tell it implements Phalcon\DIInterface.</p>
+<p>Bitwise, if you want it to work in PHP-DI you should first make it PHP-DI compatible so tell it implements ContainerInterface.</p>
+<p>For the pb, if you've got this error, it means $application is not an object... don't you have any error in the code ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14220" data-cf-modified-fb2b49765bc7a5c2b360b181-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14220" data-cf-modified-fb2b49765bc7a5c2b360b181-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/eb9d78885b15da81f7f3f3e23e4c5071?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2848/mnapoli" class="user-moderator-N"><span itemprop="name">Matthieu Napoli</span></a>        </span>
+        <br>
+
+        <span class="karma">64</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C14242" href="#C14242">
+                <time itemprop="dateCreated" datetime="2014-12-16T23:01:50-07:00" class="action-date">Dec '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi there, I'm the author of PHP-DI,</p>
+<p>I don't know if I can help a lot because I've never used Phalcon, but a few things:</p>
+<ul>
+<li>
+<p>You need to configure the fallback container (which is PHP-DI)</p>
+<pre><code>$container = new \Plugin\Container\PhpDiContainer();
+
+// PHP-DI is the fallback container to Phalcon
+$builder = new \DI\ContainerBuilder();
+$builder-&gt;wrapContainer($container);
+$container-&gt;setFallbackContainer($builder-&gt;build());</code></pre>
+</li>
+<li>
+<p>&quot;Trying to call method handle on a non-object&quot; That error message is not enough to understand what's going on, add a more complete trace.</p>
+</li>
+<li>
+<p>Maybe you don't have to do all this? You could maybe simply write an adapter that implements <code>Phalcon\DiInterface</code> and calls PHP-DI? Or is the Phalcon container already pre-configured with entries?</p>
+</li>
+<li>If you succeed in integrating them, that would be interesting to release that on GitHub some day</li>
+</ul></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14242" data-cf-modified-fb2b49765bc7a5c2b360b181-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14242" data-cf-modified-fb2b49765bc7a5c2b360b181-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8b0ad807f308ba9670ff2a42beec5c7a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4923/maderaka" class="user-moderator-N"><span itemprop="name">I Made Raka Teja</span></a>        </span>
+        <br>
+
+        <span class="karma">67</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C23187" href="#C23187">
+                <time itemprop="dateCreated" datetime="2015-09-10T23:40:35-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi there,</p>
+<p>Could you update for this problem?
+Just code snippet or code source on github(or gist).</p>
+<p>Thank you so much.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23187" data-cf-modified-fb2b49765bc7a5c2b360b181-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23187" data-cf-modified-fb2b49765bc7a5c2b360b181-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4269" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,176 @@
+---
+layout: default
+title: 'Tiny(?) memory leak - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/22/micro">Micro</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Tiny(?) memory leak</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/4241/dennis-hh" class="user-moderator-N"><span itemprop="name">Dennis Kopp</span></a></span>
+            <time itemprop="dateCreated" datetime="2019-07-26T06:52:44-07:00">Jul '19</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2019-07-26T06:52:44-07:00">Jul '19</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '19</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>315</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/0304367cef640218690978abde974ba4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/4241/dennis-hh" class="user-moderator-N"><span itemprop="name">Dennis Kopp</span></a></span>
+                <span class="karma">396</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C19891" href="#C19891">
+        <time class="action-date">Jul '19</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hey guys. Before creating an issue on github, I wanted to consult you on a possible memory leak I found.</p>
+<p><strong>Use case</strong></p>
+<p>AWS opened AWS Lambda to support custom platforms, so I wanted to see whether I could get our phalcon application to work. The basic idea of running php in Lambda is that there is a long-running php process with a loop processing requests coming to Lambda, similar to a message queue worker.</p>
+<p><strong>The issue</strong></p>
+<p>Inside the mentioned loop, the application itself is running. However, I quickly noticed that the Lambda ran out of memory. After reconstructing the setup locally, I noticed that every iteration of bootstrapping phalcon increased the memory usage.</p>
+<p><strong>Example</strong></p>
+<pre><code>&lt;?php
+$oldUsage = 0;
+
+for($i=0; $i&lt;10; $i++) {
+    $app = new \Phalcon\Mvc\Micro();
+    $app-&gt;get(
+        '/',
+        function () {
+        }
+    );
+
+    $app-&gt;handle();
+    //gc_collect_cycles();
+
+    $usage = memory_get_usage() / 1024;
+    $diff = $usage - $oldUsage;
+    $oldUsage = $usage;
+    echo $diff . 'kb&lt;br /&gt;';
+}</code></pre>
+<p>PHP 7.2.20, Phalcon 3.4.4
+On my machine, this adds around 8kb of memory every iteration. Adding <code>gc_collect_cycles()</code> reduces this amount to 0.03kb, but with a more complex application, this amount increases significantly.</p>
+<p>Do you have any ideas how to solve this, or should I simply report a bug on github?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-1d9f943da008716daefa211d-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-1d9f943da008716daefa211d-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/438325fe54cdcddc95cc288577eb8337?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9125/kamilhurajt" class="user-moderator-N"><span itemprop="name">Kamil Hurajt</span></a>        </span>
+        <br>
+
+        <span class="karma">763</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="60593" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '19</span>
+              </span><br/><a name="C60593" href="#C60593">
+                <time itemprop="dateCreated" datetime="2019-08-02T03:47:39-07:00" class="action-date">Aug '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi I would ask as first, why you creating new instance of app, every loop ? Is that really needed ?
+Put the definition of $app and $app-&gt;get out of the loop, and call only $app-&gt;handle() in the loop and try if the memory will be still increasing. </p>
+<p>Haven't tried that, yet but that would be my first suggestion to do as that's first what I can see</p>
+<p>Out of loop:</p>
+<pre><code>412.046875kb
+
+0.03125kb
+0.03125kb
+0.03125kb
+0.03125kb
+0.03125kb
+0.03125kb
+0.03125kb
+0.03125kb
+0.03125kb</code></pre>
+<p>Out of loop also using <code>gc_collect_cycles()</code> tested in console <code>php test.php</code></p>
+<pre><code>393.796875kb
+0.03125kb
+0kb
+0kb
+0kb
+0kb
+0kb
+0kb</code></pre>
+<p>In loop:</p>
+<pre><code>412.046875kb
+
+8.3671875kb
+8.3671875kb
+8.3671875kb
+8.3671875kb
+8.3671875kb
+8.3671875kb
+8.3671875kb
+8.3671875kb
+8.3671875kb</code></pre>
+<p>Also be aware of circular referencing, as that's something for PHP hard to release, good example is ( Doctrine ), it's using circular references.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60593" data-cf-modified-1d9f943da008716daefa211d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60593" data-cf-modified-1d9f943da008716daefa211d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C60615" href="#C60615">
+                <time itemprop="dateCreated" datetime="2019-08-05T06:09:11-07:00" class="action-date">Aug '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I guess you can try report it with valgrind report/log</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60615" data-cf-modified-1d9f943da008716daefa211d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60615" data-cf-modified-1d9f943da008716daefa211d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="19891" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

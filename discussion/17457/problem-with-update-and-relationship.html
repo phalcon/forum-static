@@ -1,0 +1,182 @@
+---
+layout: default
+title: 'Problem with update and relationship - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Problem with update and relationship</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10261/etshy" class="user-moderator-N"><span itemprop="name">etshy</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-12-17T11:32:47-07:00">Dec '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-12-17T11:32:47-07:00">Dec '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>726</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/326946b764185770c24d400c34cb8ad7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10261/etshy" class="user-moderator-N"><span itemprop="name">etshy</span></a></span>
+                <span class="karma">8.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17457" href="#C17457">
+        <time class="action-date">Dec '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi
+I have a form with only few properties of a model, and I want that model only update these fields.</p>
+<p>I made this update call</p>
+<pre><code>return $chapter-&gt;update($chapter, [
+                'name', 'number', 'subNumber', 'visibility', 'teams'
+]);</code></pre>
+<p>to update only these listed fields (<code>teams</code> is the alias of a relationship)</p>
+<p>My problem is, when I update the model, I have a message saying <code>createdAt</code> is required.
+This <code>createdAt</code> is not in the Form, so there is no value for this, okay, but I don't want to update it, I didn't list it in the whitelist.</p>
+<p>To test I dleted the NotNull on the column and It &quot;worked&quot;, but the field is now NULL ...</p>
+<p>Other problem is, I have another column  <code>deleted</code> is set to NULL too.</p>
+<p>I don't understand this problem...</p>
+<p>edit : After some tests, I saw that the relationships <code>teams</code> recreate a new line in the joint table each updates. ..</p>
+<p>Here is how the relationship is declared</p>
+<p>In Chapter.php</p>
+<pre><code>$this-&gt;hasManyToMany(
+            'id',
+            ChapterTeams::class,
+            'chapterId',
+            'teamsId',
+            Teams::class,
+            'id',
+            [
+                'alias' =&gt; 'Teams'
+            ]
+);</code></pre>
+<p>in Teams.php</p>
+<pre><code>$this-&gt;hasManyToMany(
+            'id',
+            Teams::class,
+            'teamsId',
+            'chapterId',
+            ChapterTeams::class,
+            'id'
+        );</code></pre>
+<p>in ChapterTeams.php</p>
+<pre><code>$this-&gt;setSource('chapter_teams');
+
+        $this-&gt;belongsTo(
+            'chapterId',
+            Chapter::class,
+            'id'
+        );
+        $this-&gt;belongsTo(
+            'teamsId',
+            Teams::class,
+            'id'
+        );</code></pre>
+<p>I don't understand how this can work like that ...</p>
+<p>Edit 2 :
+Now I try to delete the existing relationship with <code>$chapter-&gt;teams-&gt;delete()</code> but it doesn't do anything (return false and no messages in <code>$chapter-&gt;teams-&gt;getMessages()</code>)
+So I'm completely stuck, the relation is duplicated each update (I added a unique constraint on the both fields to prevent that and I now have a fatal error).</p>
+<p>I don't understand how to handle the relations in Phalcon and the docs is pretty poor about that.</p>
+<p>Phalcon seems poor with its built-in ORM/ODM, If every request need to be done in pure SQL to be correct and/or to be working, There is no interest in that.</p>
+<p>Edit 3 :
+So to resume all my problems how to handle update model with relationship (with a &quot;relation table&quot;) (the relation is mangaed with a multi select in a Form) :</p>
+<ul>
+<li>Do I need to delete the relationship (in 3rd table) and then re add them ? in this case, how to delete the relation ?</li>
+<li>is there a way that automatically handle addition/deletion in relationship ?
+Like, I get my object (Chapter) that have one or more Teams.
+in the Form, the multiselect is filled with existing teams in Chapter.
+When I submit the form, automatically watch the ChapterTeams relationship and add/delete if needed (if the relation already exist, nothing to do).</li>
+</ul>
+<p>Thanks in advance to help me with this, it's completely blocking for my app ^^&quot;</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-b6d40ffd6d3bf83ab44ec346-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-b6d40ffd6d3bf83ab44ec346-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="52943" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '17</span>
+              </span><br/><a name="C52943" href="#C52943">
+                <time itemprop="dateCreated" datetime="2017-12-18T05:30:54-07:00" class="action-date">Dec '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I never liked how phalcon handles all relation creation/update stuff - just do it yourself, like create transaction, create ChapterTeams instances yourself and commit transaction or rollback if any creation fails.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52943" data-cf-modified-b6d40ffd6d3bf83ab44ec346-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52943" data-cf-modified-b6d40ffd6d3bf83ab44ec346-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/326946b764185770c24d400c34cb8ad7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10261/etshy" class="user-moderator-N"><span itemprop="name">etshy</span></a>        </span>
+        <br>
+
+        <span class="karma">8.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52947" href="#C52947">
+                <time itemprop="dateCreated" datetime="2017-12-18T06:07:15-07:00" class="action-date">Dec '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hmm, Ok, I'll see how to do that by myself.
+I assume I'll need to do &quot;plain SQL&quot; but I don't really have a choice there.</p>
+<p>I'll just do a manual deletion of relationships in joint table, as when I save Phalcon try to save all the relation.</p>
+<p>Thanks a lot, but I think ORM and ODM need a bot of rework maybe, the only problems I got are related to these two ^^&quot;</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52947" data-cf-modified-b6d40ffd6d3bf83ab44ec346-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52947" data-cf-modified-b6d40ffd6d3bf83ab44ec346-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17457" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

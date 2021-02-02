@@ -1,0 +1,139 @@
+---
+layout: default
+title: 'Pagination changes in v4 - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/9/paginator">Paginator</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Pagination changes in v4</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/13255/Ruzgfpegk" class="user-moderator-N"><span itemprop="name">Ruzgfpegk</span></a></span>
+            <time itemprop="dateCreated" datetime="2020-01-21T00:06:07-07:00">Jan '20</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2020-01-21T00:06:07-07:00">Jan '20</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>186</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/1db729595c5625de86a527898a2fa4e0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/13255/Ruzgfpegk" class="user-moderator-N"><span itemprop="name">Ruzgfpegk</span></a></span>
+                <span class="karma">450</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C20280" href="#C20280">
+        <time class="action-date">Jan '20</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello all,</p>
+<p>I already discussed this issue a bit in the Discord server, but I'm still stuck so sorry to repeat myself.</p>
+<p>Indeed migrating to v4 has at least one side-effect not (yet) mentionned in the <a href="https://docs.phalcon.io/4.0/en/upgrade#paginator">upgrade documentation</a>, which is that pagination now works in a completely backwards-incompatible way.</p>
+<p>I use Volt to force myself to stick to MVC principles by not letting me introduce too much code in the view, so for most columns I used pagination in this way in v3 (simplified example):</p>
+<pre><code>{% raw %}{%{% endraw %} if page.items is defined {% raw %}%}{% endraw %}
+    {% raw %}{%{% endraw %} for place in page.items {% raw %}%}{% endraw %}
+    &lt;tr&gt;
+        &lt;td&gt;{% raw %}{{{% endraw %} place.getPlaceId() {% raw %}}}{% endraw %}&lt;/td&gt;
+        &lt;td&gt;...&lt;/td&gt;
+        ...
+    &lt;/tr&gt;
+    {% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}
+{% raw %}{%{% endraw %} endif {% raw %}%}{% endraw %}</code></pre>
+<p>But &quot;items&quot; is now an array, so the following code is the v4-compliant one:</p>
+<pre><code>{% raw %}{%{% endraw %} if page.items | length {% raw %}%}{% endraw %}
+    {% raw %}{%{% endraw %} for place in page.items {% raw %}%}{% endraw %}
+    &lt;tr&gt;
+        &lt;td&gt;{% raw %}{{{% endraw %} place['placeId'] {% raw %}}}{% endraw %}&lt;/td&gt;
+        &lt;td&gt;...&lt;/td&gt;
+        ...
+    &lt;/tr&gt;
+    {% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}
+{% raw %}{%{% endraw %} endif {% raw %}%}{% endraw %}</code></pre>
+<p>Which is good and all... but for the cases where we used objects in Volt from the paginator, how are we supposed to migrate?</p>
+<p>Indeed in v3, even if I rarely used the getters to change values on the fly (but others may still use them that way), I did &quot;model jumps&quot; to quickly resolve simple DB relationships, based on the scaffolds from devtools.</p>
+<p>For instance, here where &quot;Currencies&quot; is a relationship alias in the Country model, to get the name of a currency from the related table by its ID in the country table I previously did:</p>
+<pre><code>{% raw %}{%{% endraw %} for country in page.items {% raw %}%}{% endraw %}
+    &lt;tr&gt;
+        &lt;td&gt;{% raw %}{{{% endraw %} country.getCurrencies().currencyShort {% raw %}}}{% endraw %}&lt;/td&gt;
+        &lt;td&gt;...&lt;/td&gt;
+        ...
+    &lt;/tr&gt;
+{% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}</code></pre>
+<p>(I couldn't chain &quot;jumps&quot; to go further than that, but I accepted this limitation given that what I was doing already felt quite hackish)</p>
+<p>Is there a way to get the previous behavior back, or a new clean way to do this that I missed?</p>
+<p>Or should every pagination query reaching other models now be converted to PHQL in the controllers to feed to a Paginator\Adapter\NativeArray?</p>
+<p>If so then it would add quite a lot of code overall in my admin pages given my 73 interconnected tables (...yeah I know), but well...</p>
+<p>I wonder if this isn't just an oversight as devtools still references the previous behavior by calling the getters of the now removed object when the getter option is selected:</p>
+<p><a href="https://github.com/phalcon/phalcon-devtools/blob/v4.0.1/src/Builder/Component/Scaffold.php#L726">https://github.com/phalcon/phalcon-devtools/blob/v4.0.1/src/Builder/Component/Scaffold.php#L726</a></p>
+<p>Indeed as hinted to me on Discord the change has been made in Paginator/Adapter/Model.zep around this part:</p>
+<p>v3: <a href="https://github.com/phalcon/cphalcon/blob/3.4.x/phalcon/paginator/adapter/model.zep#L92">https://github.com/phalcon/cphalcon/blob/3.4.x/phalcon/paginator/adapter/model.zep#L92</a></p>
+<p>v4: <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/Paginator/Adapter/Model.zep#L125">https://github.com/phalcon/cphalcon/blob/master/phalcon/Paginator/Adapter/Model.zep#L125</a></p>
+<p>It has been suggested that I &quot;create [my] own zephir/php adapter extension&quot; to get the previous behavior back, but is it really the only option?</p>
+<p>Maybe the previous behavior (&quot;including objects in the pagination&quot;) has just been forgotten during the refactoring?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-9105d3c14bd583f9c67e00c5-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-9105d3c14bd583f9c67e00c5-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="61921" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '20</span>
+              </span><br/><a name="C61921" href="#C61921">
+                <time itemprop="dateCreated" datetime="2020-01-21T03:27:17-07:00" class="action-date">Jan '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I  <em>think</em> the rationale behind all this, was that the pagination component was not really extensible.
+It was good for quick&amp;dirty displays, but other than that, you would've written your own logic anyway, considering caching and whatnot.</p>
+<p>There were also cases where the SQL engine blocked successive requests until the cursor finished scrolling through the results, and in that case, you can't query relations for the item model instance. I think the devs went with the least common-denominator, and made it more robust this way, at the cost of that meager extensibility.</p>
+<p>You are better off writing your own logic, that is streamlined for your application and environment.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="61921" data-cf-modified-9105d3c14bd583f9c67e00c5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="61921" data-cf-modified-9105d3c14bd583f9c67e00c5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="20280" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

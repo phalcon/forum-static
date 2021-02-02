@@ -1,0 +1,107 @@
+---
+layout: default
+title: 'Response set within dispatch:beforeException gets wiped - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/20/internals">Internals</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Response set within dispatch:beforeException gets wiped</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/11539/terax6669" class="user-moderator-N"><span itemprop="name">Terax</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-08-19T04:19:19-07:00">Aug '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-08-19T04:19:19-07:00">Aug '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>328</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/056f807ca388cf0aa2f77cab4222ce2c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/11539/terax6669" class="user-moderator-N"><span itemprop="name">Terax</span></a></span>
+                <span class="karma">394</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C18729" href="#C18729">
+        <time class="action-date">Aug '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Steps to reproduce:</p>
+<ol>
+<li>Throw an exception.</li>
+<li><code>dispatch:beforeException</code> -&gt; handle exception, <code>response-&gt;setContent()</code>, <code>return false</code>, now the app flow returns to <code>application.zep</code>.</li>
+<li><code>application.zep</code> -&gt; now <code>possibleResponse === NULL</code> and  <code>implicitView === true</code> (default).</li>
+<li><code>application.zep</code> -&gt; <code>possibleResponse</code> was not <code>false</code> and was not a Response object, so eventually <em>this</em> gets executed on line 399 <code>response-&gt;setContent(view-&gt;getContent())</code> and wipes out any reponse I have previously set.</li>
+<li>App returns to <code>index.php</code> -&gt;
+<pre><code>$response = $application-&gt;handle();
+$response-&gt;send();</code></pre>
+<p>the Response is now empty, because it was cleared in step 4.</p></li>
+</ol>
+<p>Perhaps handle returning a response object from <code>dispatch:beforeException</code>? Because currently Phalcon is clearing a response when it IMO shouldn't.</p>
+<p>Unless there is a way to circumvent this behavior? The only one I can think of would be to <code>$application-&gt;useImplicitView(false)</code>, but I don't want to do that since I use views in my app.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-39cc660cffbd67ff8a547b11-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-39cc660cffbd67ff8a547b11-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/0e444fe1fceb2de4324c5e9b12c68299?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11093/nadorator" class="user-moderator-N"><span itemprop="name">nadorator</span></a>        </span>
+        <br>
+
+        <span class="karma">821</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C57305" href="#C57305">
+                <time itemprop="dateCreated" datetime="2018-09-12T22:28:18-07:00" class="action-date">Sep '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>your thinking is wrong.</p>
+<p>When attaching the event to your callback, you have the exception parameter. </p>
+<p>If your exeception code is 8 then it is a notice you just have to do nothing. in the other case then the route does not exist.You don't have to put anything in the response. You can put the exception details in a session variable then return false; You can also use syslog to log the exception. </p>
+<p>Then the exception will be thrown in your view because it don't know what to render and then you use a try catch inside iyour custom view service to expose  what you want to display by rendering another controller/action using:</p>
+<p>$this-&gt;render($controllerClass,'error404Action',$params);</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57305" data-cf-modified-39cc660cffbd67ff8a547b11-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57305" data-cf-modified-39cc660cffbd67ff8a547b11-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="18729" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

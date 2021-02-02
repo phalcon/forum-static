@@ -1,0 +1,354 @@
+---
+layout: default
+title: 'Best approach to allow model access - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/24/show-community">Show to Community</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Best approach to allow model access</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/701/erickne" class="user-moderator-N"><span itemprop="name">Erick Engelhardt</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-03-24T06:46:07-07:00">Mar '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-03-24T06:46:07-07:00">Mar '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>881</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/812b859522c2040b766310bb83502946?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/701/erickne" class="user-moderator-N"><span itemprop="name">Erick Engelhardt</span></a></span>
+                <span class="karma">15.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6237" href="#C6237">
+        <time class="action-date">Mar '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>How do you handle this situation:</p>
+<ol>
+<li>You have a user that work in a task</li>
+<li>Task is an model in your project</li>
+<li>You have another model with relation to Task: TaskPermission that has task_id and user_id</li>
+</ol>
+<p>Of course you can always query manualy database (detailed steps below - sorry for any typo! I can't validate code right now):</p>
+<pre><code class="language-php">$task = Task::findFirstById($id);
+foreach($task-&gt;getTaskPermission() as $permission){
+  $allow = ($this-&gt;session-&gt;auth-&gt;user_id == $permission-&gt;getUserId())?true:false;
+}</code></pre>
+<p>Or extend a method</p>
+<pre><code class="language-php">public static function findFirstById($id){
+  $task = parent::findFirstById($id);
+  $permission = Permission::find([
+    'task_id = :tid: AND user_id = :uid:',[
+      'tid' =&gt; $task-&gt;getId(),
+      'uid' =&gt; DI::get('session')-&gt;auth-&gt;user_id
+    ]);
+    if($permission) {
+      return $task;
+    }else{
+      return false; //or throw an exception
+    }
+}</code></pre>
+<p>There are a thousand of different approaches. What is yours? Anyone using behavior? I am really curious about it.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-09997cc909378b24c6fd9202-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-09997cc909378b24c6fd9202-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bdee79ea2680ec179fa34b9201fc74b7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1873/RompePC" class="user-moderator-N"><span itemprop="name">RompePC</span></a>        </span>
+        <br>
+
+        <span class="karma">33.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16842" href="#C16842">
+                <time itemprop="dateCreated" datetime="2015-03-24T08:45:17-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>That looks like a <strong>M:N</strong> relationship, isn't it? I just create another model file for that type of tables and work with it. About knowing if an user has a permission to work on a task, you don't need to extend the method (if you know the task's<code>id</code>, and the user's<code>id</code>, as you show, you don't need to search previously for any task/user):</p>
+<pre><code>$clausule = 'task_id = :task_id: AND user_id = :user_id:';
+$bind = [
+    'task_id' =&gt; $taskId,
+    'user_id' =&gt; $userId
+];
+$bindTypes = [
+    Phalcon\Db\Column::BIND_PARAM_INT,
+    Phalcon\Db\Column::BIND_PARAM_INT
+];
+
+if (TaskPermission::findFirst([$clausule, $bind, $bindTypes])) {
+    // Do stuff.
+} else {
+    // Do other stuff.
+}</code></pre>
+<p>Well, maybe you could create a new <strong>static</strong> method on the new model, <code>hasPermission($taskId, $userId)</code>, that returns the result of the <strong>IF</strong> (if you need to repeat that sequence in other part of the program):</p>
+<pre><code>public static boolean hasPermission($taskId, $userId) {
+    return (TaskPermission::findFirst([
+            'task_id = :task_id: AND user_id = :user_id:',
+             [ 'task_id' =&gt; $taskId, 'user_id' =&gt; $userId ],
+             [ Phalcon\Db\Column::BIND_PARAM_INT,  Phalcon\Db\Column::BIND_PARAM_INT ]
+         ] != false);
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16842" data-cf-modified-09997cc909378b24c6fd9202-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16842" data-cf-modified-09997cc909378b24c6fd9202-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/812b859522c2040b766310bb83502946?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/701/erickne" class="user-moderator-N"><span itemprop="name">Erick Engelhardt</span></a>        </span>
+        <br>
+
+        <span class="karma">15.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16856" href="#C16856">
+                <time itemprop="dateCreated" datetime="2015-03-24T13:34:33-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I was thinking about using <code>afterFetch</code> inside a behavior. Them I attach this behavior to models I want to respect this relation.What do you think?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16856" data-cf-modified-09997cc909378b24c6fd9202-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16856" data-cf-modified-09997cc909378b24c6fd9202-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bdee79ea2680ec179fa34b9201fc74b7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1873/RompePC" class="user-moderator-N"><span itemprop="name">RompePC</span></a>        </span>
+        <br>
+
+        <span class="karma">33.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16858" href="#C16858">
+                <time itemprop="dateCreated" datetime="2015-03-24T16:18:55-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Why you should use custom behaviors with <code>afterFetch</code> inside? I didn't work with then (even didn't know of), but after reading the docs I see it innecessary (unless you are doing other specifical things).</p>
+<p>You just need to know if an user has permission over a task. <code>TaskPermission</code> reflects that logic: if an user has permission, it will appear a row with his id an the task's id.</p>
+<p>But maybe I'm not getting the whole idea.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16858" data-cf-modified-09997cc909378b24c6fd9202-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16858" data-cf-modified-09997cc909378b24c6fd9202-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/812b859522c2040b766310bb83502946?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/701/erickne" class="user-moderator-N"><span itemprop="name">Erick Engelhardt</span></a>        </span>
+        <br>
+
+        <span class="karma">15.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16860" href="#C16860">
+                <time itemprop="dateCreated" datetime="2015-03-24T17:01:37-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>We are talking about Tasks. What if I add this Permission check in another model called Projects? With the same logic, but instead of task_id use project_id ? The whole idea here is to think about a reusable code, that can be used in many models.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16860" data-cf-modified-09997cc909378b24c6fd9202-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16860" data-cf-modified-09997cc909378b24c6fd9202-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bdee79ea2680ec179fa34b9201fc74b7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1873/RompePC" class="user-moderator-N"><span itemprop="name">RompePC</span></a>        </span>
+        <br>
+
+        <span class="karma">33.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="16864" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '15</span>
+              </span><br/><a name="C16864" href="#C16864">
+                <time itemprop="dateCreated" datetime="2015-03-25T04:04:35-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>With the same logic, but instead of task_id use project_id?</p>
+</blockquote>
+<p>You said it, the logic is the same. The only thing that may change is the column to search in. Maybe you could do the following.</p>
+<p>Use a base abstract <code>MyModel</code> class. This'll have common methods for all the models (so all of then'll extend it). Include inside of it the <code>hasPermission</code> with a few changes:</p>
+<pre><code>protected boolean hasPermission($id, $userId) {
+    $clausule = '';
+    $model = get_called_class();
+
+    switch($model) {
+        case "Task":
+            $clausule = 'task_id;
+            break;
+        case "Project":
+            $clausule = 'project_id;
+            break;
+    }
+
+    return ($model::findFirst([
+            $clausule . ' = :id: AND user_id = :user_id:',
+             [ 'id' =&gt; $id, 'user_id' =&gt; $userId ],
+             [ Phalcon\Db\Column::BIND_PARAM_INT,  Phalcon\Db\Column::BIND_PARAM_INT ]
+         ] != false);
+}</code></pre>
+<p>So, whenever you need permissions on another model, just add it to the <code>switch</code>. This is what I normally do when I've redundant code on some models.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16864" data-cf-modified-09997cc909378b24c6fd9202-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16864" data-cf-modified-09997cc909378b24c6fd9202-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/812b859522c2040b766310bb83502946?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/701/erickne" class="user-moderator-N"><span itemprop="name">Erick Engelhardt</span></a>        </span>
+        <br>
+
+        <span class="karma">15.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16885" href="#C16885">
+                <time itemprop="dateCreated" datetime="2015-03-25T11:46:17-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Good job! Looks much better now.</p>
+<p>What if...</p>
+<pre><code class="language-php">class SuperModel extends \Phalcon\Mvc\Model 
+{
+  protected function setPermissionFiel($field)
+  {
+    $this-&gt;permission_field = $field;
+    return $this;
+  }
+
+  public static function hasPermission($id = null, $userId = null) 
+  {
+    $model = get_called_class();
+
+    if(is_null($userid) $userid = 1; //Get user from session
+    if(is_null($id) AND $this-&gt;id) $id = $this-&gt;id;
+
+    if($this-&gt;permission_field)
+    {
+          return ($model::findFirst([
+            $this-&gt;permission_field . ' = :id: AND user_id = :user_id:',
+             [ 'id' =&gt; $id, 'user_id' =&gt; $userId ],
+             [ Phalcon\Db\Column::BIND_PARAM_INT,  Phalcon\Db\Column::BIND_PARAM_INT ]
+         ] != false);
+    }else{
+      throw new Exception('Model does not have valid permission field');
+    }
+  }
+}</code></pre>
+<p>And</p>
+<pre><code class="language-php">class Task extends SuperModel 
+{
+    public function initialize()
+    {
+      $this-&gt;setPermissionField('task_id');
+    }
+}</code></pre>
+<p>Then, both should work and you don't have to modify your <code>SuperModel</code>:</p>
+<pre><code class="language-php">$task = Task::FindFirstById(1000);
+$task-&gt;hasPermission();
+#or 
+$task = Task::hasPermission(1000);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16885" data-cf-modified-09997cc909378b24c6fd9202-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16885" data-cf-modified-09997cc909378b24c6fd9202-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bdee79ea2680ec179fa34b9201fc74b7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1873/RompePC" class="user-moderator-N"><span itemprop="name">RompePC</span></a>        </span>
+        <br>
+
+        <span class="karma">33.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16887" href="#C16887">
+                <time itemprop="dateCreated" datetime="2015-03-25T16:43:18-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><code>SuperModel</code> looks good, but I would make this changes:</p>
+<ol>
+<li><strong>Make the class abstract</strong> =&gt; We don't want anyone to create an instance of the class (I should add it as a plugin).</li>
+<li><strong>Modify <code>hasPermission</code></strong> =&gt; I should first do the check of <code>permission_field</code>, so you don't have to do adittional work if it is null.</li>
+<li><strong>Change <code>permission_field</code></strong> =&gt; This should be an alternative to using a variable for the field. You can make an abstract function in <code>SuperModel</code> (so inherited models have the obligation of adding it) that directly returns the field, so you can skip using a var and declaring a setter for it in the parent model.</li>
+</ol>
+<pre><code>public boolean hasPermission($id = null, $userId = null) {
+    if (!is_null($this-&gt;permission_field)) {
+      $model = get_called_class();
+
+      if (is_null($userId)) {
+          //Get user from session
+          $userId = 1;
+      }
+      if(is_null($id) &amp;&amp; $this-&gt;id) {
+          $id = $this-&gt;id;
+      }
+
+        return ($model::findFirst([
+            $field . ' = :id: AND user_id = :user_id:',
+            [ 'id' =&gt; $id, 'user_id' =&gt; $userId ],
+            [ Phalcon\Db\Column::BIND_PARAM_INT,  Phalcon\Db\Column::BIND_PARAM_INT ]
+        ] != false);
+    } else {
+        throw new Exception('Model does not have valid permission field');
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16887" data-cf-modified-09997cc909378b24c6fd9202-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16887" data-cf-modified-09997cc909378b24c6fd9202-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6237" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,159 @@
+---
+layout: default
+title: 'Data consistency with findFirst then -&gt;create() - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Data consistency with findFirst then -&gt;create()</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10209/slothstronaut" class="user-moderator-N"><span itemprop="name">slothstronaut</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-09-23T12:42:58-07:00">Sep '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-09-23T12:42:58-07:00">Sep '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>415</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/3e0b957bff7124d8346cbfa1a2b54e27?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10209/slothstronaut" class="user-moderator-N"><span itemprop="name">slothstronaut</span></a></span>
+                <span class="karma">1.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C16987" href="#C16987">
+        <time class="action-date">Sep '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm consistently having an issue in a production environment where I'm doing a query to see if the row exists, if so update, if not insert.</p>
+<p>Here is the code</p>
+<pre><code>$hasExistingVisit = \Model\UserVisit::findFirst(array(
+    'fromUserId = :fromUserId: AND toUserId = :toUserId:',
+    "bind" =&gt; array(
+        'fromUserId' =&gt; $this-&gt;currentUser-&gt;userId,
+        'toUserId' =&gt; $this-&gt;profileUser-&gt;userId,
+    ),
+));
+
+if($hasExistingVisit) {
+    $hasExistingVisit-&gt;visitCount++;
+    $hasExistingVisit-&gt;seen = 0;
+    $hasExistingVisit-&gt;lastVisit = new \Phalcon\Db\RawValue('NOW()');               
+    $hasExistingVisit-&gt;save();              
+} else {
+    $newVisit = new \Model\UserVisit;
+    $newVisit-&gt;fromUserId = $this-&gt;currentUser-&gt;userId;
+    $newVisit-&gt;toUserId = $this-&gt;profileUser-&gt;userId;
+    $newVisit-&gt;lastVisit = new \Phalcon\Db\RawValue('NOW()');
+    $newVisit-&gt;create();
+}</code></pre>
+<p>About .001% of the time it will get this error:</p>
+<p>SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '977070-935378' for key 'PRIMARY'</p>
+<p>I've tried everything, including using $hasExistingVisit !== false</p>
+<p>This is probably a symptom of another problem, but I'm not calling it twice, and even if it were a race condition, its directly after the query, so it would be unlikely to trigger an error.</p>
+<p>Any help/thoughts would be appreciated, thank you!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-1d83bd693fd74d810b3b0f50-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-1d83bd693fd74d810b3b0f50-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C51183" href="#C51183">
+                <time itemprop="dateCreated" datetime="2017-09-24T12:47:00-07:00" class="action-date">Sep '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Simply - if people will refresh two times before adding to database in first time this condition will be ture. But when actually making query it can be already there - this is why you have error. For this case you simply should put this has existing visit to some kind of cache to be honest.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51183" data-cf-modified-1d83bd693fd74d810b3b0f50-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51183" data-cf-modified-1d83bd693fd74d810b3b0f50-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C51201" href="#C51201">
+                <time itemprop="dateCreated" datetime="2017-09-25T13:52:28-07:00" class="action-date">Sep '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>What about locking beforehand?</p>
+<p>Altenatively you could go down to raw SQL and do a REPLACE or INSERT...IGNORE or INSERT ... ON DUPLICATE KEY UPDATE.  This page explains the differences: <a href="https://chartio.com/resources/tutorials/how-to-insert-if-row-does-not-exist-upsert-in-mysql/">https://chartio.com/resources/tutorials/how-to-insert-if-row-does-not-exist-upsert-in-mysql/</a></p>
+<p>If it were me, I'd do an INSERT...IGNORE.  In this case, the data is only going to be off by one, and you don't really need to record both visits anyway.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51201" data-cf-modified-1d83bd693fd74d810b3b0f50-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51201" data-cf-modified-1d83bd693fd74d810b3b0f50-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3e0b957bff7124d8346cbfa1a2b54e27?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10209/slothstronaut" class="user-moderator-N"><span itemprop="name">slothstronaut</span></a>        </span>
+        <br>
+
+        <span class="karma">1.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C63333" href="#C63333">
+                <time itemprop="dateCreated" datetime="2020-06-04T11:55:52-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Answering myself after several years: the challenge with this problem was actually an unavoidable race condition. The solution for these kinds of problems are to publish the change to a queue and run the queries by a worker which guarantees they will run in order and not have a race condition as long as the worker consumer is single-threaded.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63333" data-cf-modified-1d83bd693fd74d810b3b0f50-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63333" data-cf-modified-1d83bd693fd74d810b3b0f50-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="16987" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,272 @@
+---
+layout: default
+title: 'Caching minified view - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/8/cache">Cache</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Caching minified view</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/6325/Ewald64" class="user-moderator-N"><span itemprop="name">Ewald64</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-03-13T03:00:41-07:00">Mar '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-03-13T03:00:41-07:00">Mar '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>908</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/503937d06660c7047cb03dec1f8426dc?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/6325/Ewald64" class="user-moderator-N"><span itemprop="name">Ewald64</span></a></span>
+                <span class="karma">2.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C10763" href="#C10763">
+        <time class="action-date">Mar '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm implementing a per page cache. I'm minifying rendered HTML in a <code>view:afterRenderView</code> event. When caching, this event is however not fired, so that the cached pages are not minified.</p>
+<p><em>How do I get the cached pages to be minified?</em></p>
+<p>I have things implemented like this:</p>
+<p>The page caching happens in a class called from <code>Controller-&gt;beforeExecuteRoute()</code>, and looks like this:</p>
+<pre><code class="language-php">            $pageCacheId = $sectionName.'-'.$pageAction.'.html';
+            $view-&gt;cache( ['key' =&gt; $pageCacheId] );
+            // Check for a cached version of this page
+            if ($view-&gt;getCache()-&gt;exists($pageCacheId)) {
+                return;
+            }</code></pre>
+<p>My minify code is in the services.php file, in <code>$di-&gt;set("view", function () use ($config, $di) { .... }</code>:</p>
+<pre><code class="language-php">        // Minify after rendering view
+        $eventsManager = $di['eventsManager'];
+        $eventsManager-&gt;attach("view:afterRenderView", function($event, $view) {
+            $content = $view-&gt;getContent();
+
+            // Remove spaces at start of lines, and empty lines
+            $content = preg_replace('/\r?\n\s*(\r?\n)?/', "\n", $content);
+            // Remove xhtml endings
+            $content = str_replace(' &gt;', '&gt;', str_replace('/&gt;', '&gt;', $content));
+
+            $view-&gt;setContent($content);
+        });
+        $view-&gt;setEventsManager($eventsManager);</code></pre>
+<p>(I'm using Phalcon 2.0.9, Windows for development, Linux for production.)</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-ec90939e763a830fb30f7a88-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-ec90939e763a830fb30f7a88-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/92baeb391922c7aba36de5d65677e683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2391/BadLuckBurt" class="user-moderator-N"><span itemprop="name">BadLuckBurt</span></a>        </span>
+        <br>
+
+        <span class="karma">2.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C30943" href="#C30943">
+                <time itemprop="dateCreated" datetime="2016-03-14T07:01:30-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I haven't gotten to the stage yet where I need to turn on view caching but I think you'd have to call the View's cache function in your afterRenderView-event once you've minified it:</p>
+<pre><code>$view-&gt;cache(
+    array(
+        "lifetime" =&gt; 86400,
+        "key"      =&gt; "yourkey"
+    )
+);</code></pre>
+<p>I'm not sure how you would get access to the key you generate in the first part of your code though.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="30943" data-cf-modified-ec90939e763a830fb30f7a88-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="30943" data-cf-modified-ec90939e763a830fb30f7a88-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/503937d06660c7047cb03dec1f8426dc?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6325/Ewald64" class="user-moderator-N"><span itemprop="name">Ewald64</span></a>        </span>
+        <br>
+
+        <span class="karma">2.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C30961" href="#C30961">
+                <time itemprop="dateCreated" datetime="2016-03-15T02:01:42-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Actually, the particular caching code needs to be before the view starts rendering. It needs to be able to prevent the view rendering process from starting, so as to serve a cached version of the page instead.</p>
+<p>Phalcon's view cache system apparently stores a page's HTML in a particular event, that happens before <code>view:afterRenderView</code>. I might be able to get this to work, if I could change the event where that happens, or move the minification code to an event before that. I tried having the minification code in the  <code>view:afterRender</code> event, but that didn't help.</p>
+<p>I wasn't able to find a list of view events. Anyone knows where it is in the documentation?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="30961" data-cf-modified-ec90939e763a830fb30f7a88-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="30961" data-cf-modified-ec90939e763a830fb30f7a88-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/92baeb391922c7aba36de5d65677e683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2391/BadLuckBurt" class="user-moderator-N"><span itemprop="name">BadLuckBurt</span></a>        </span>
+        <br>
+
+        <span class="karma">2.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C30971" href="#C30971">
+                <time itemprop="dateCreated" datetime="2016-03-15T02:59:22-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>By <em>the particular caching code</em> you mean the code that checks if the cache exists ($view-&gt;getCache()-&gt;exists($key)) and not the generating of the cache itself right?</p>
+<p>This example app uses the caching system: <a href="https://github.com/phalcon/php-site"><a href="https://github.com/phalcon/php-site">https://github.com/phalcon/php-site</a></a>. Just take a look at the App controllers and you'll see the caching happens in the controller actions, not in the beforeExecuteRoute event.</p>
+<p>Where in your code do you call $view-&gt;render()? And if you call $view-&gt;getContent() after that, is that minified? If it is, call the $view-&gt;cache function after $view-&gt;render() and be sure to remove $view-&gt;cache from the beforeExecuteRoute function.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="30971" data-cf-modified-ec90939e763a830fb30f7a88-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="30971" data-cf-modified-ec90939e763a830fb30f7a88-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/503937d06660c7047cb03dec1f8426dc?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6325/Ewald64" class="user-moderator-N"><span itemprop="name">Ewald64</span></a>        </span>
+        <br>
+
+        <span class="karma">2.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C30983" href="#C30983">
+                <time itemprop="dateCreated" datetime="2016-03-15T04:21:43-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Burt, have you actually worked with Phalcon's build-in cache generation classes? I do the cache generation with these. They're set in the services.php like this:</p>
+<pre><code class="language-php">    use Phalcon\Cache\Frontend\Output as OutputFrontend;
+    use Phalcon\Cache\Backend\File as BackFile;
+
+    $di-&gt;set('viewCache', function () use ($config) {
+        $frontCache = new OutputFrontend(
+            array(
+                "lifetime" =&gt; 86400
+            )
+        );
+
+        $cache = new BackFile(
+            $frontCache,
+            array(
+                "cacheDir" =&gt; $config-&gt;application-&gt;cacheDir,
+                "prefix"   =&gt; "page-"
+            )
+        );
+
+        return $cache;
+    }, true);</code></pre>
+<p>I do have reasons for using the <code>Controller-&gt;beforeExecuteRoute()</code> event, you know, I do lots of things there. Loading various route dependent config files, setting up View variables, handling 404's, etc. And cache handling. These are needed when things happen in the Controller action.</p>
+<p>I have no need to call $view-&gt;render() in my code, actually. Minification works fine.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="30983" data-cf-modified-ec90939e763a830fb30f7a88-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="30983" data-cf-modified-ec90939e763a830fb30f7a88-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/92baeb391922c7aba36de5d65677e683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2391/BadLuckBurt" class="user-moderator-N"><span itemprop="name">BadLuckBurt</span></a>        </span>
+        <br>
+
+        <span class="karma">2.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C30987" href="#C30987">
+                <time itemprop="dateCreated" datetime="2016-03-15T05:36:44-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>No, I haven't. I plan on messing with them this weekend as your question has made me curious so hopefully I can add something more constructive afterwards.</p>
+<p>My setup differs a lot from yours though, I render my views using the $view-&gt;render() function and then handle it's output manually after that.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="30987" data-cf-modified-ec90939e763a830fb30f7a88-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="30987" data-cf-modified-ec90939e763a830fb30f7a88-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/503937d06660c7047cb03dec1f8426dc?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6325/Ewald64" class="user-moderator-N"><span itemprop="name">Ewald64</span></a>        </span>
+        <br>
+
+        <span class="karma">2.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C30989" href="#C30989">
+                <time itemprop="dateCreated" datetime="2016-03-15T06:41:01-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I use Volt as a templating engine. I suppose that does away with the need to use <code>$view-&gt;render()</code>.</p>
+<p>I wrote a separate caching class, that is called from /public/index.php. It bypasses most of the framework when there's a cache hit. It only needs the config, and not the class loader, services, and Application class.</p>
+<p>This sort of solves my problem, and is faster than using Phalcon's built-in caching. But it's not a very neat way to do it, and I must improvise things like logging.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="30989" data-cf-modified-ec90939e763a830fb30f7a88-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="30989" data-cf-modified-ec90939e763a830fb30f7a88-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/92baeb391922c7aba36de5d65677e683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2391/BadLuckBurt" class="user-moderator-N"><span itemprop="name">BadLuckBurt</span></a>        </span>
+        <br>
+
+        <span class="karma">2.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C31137" href="#C31137">
+                <time itemprop="dateCreated" datetime="2016-03-18T12:11:20-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I use Volt as well. I implented cache yesterday and it works for me, more or less. Your original post is right in that caching doesn't take the after-events into account, which is a shame. I looked up the render function in the Zephir code: <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/view.zep"><a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/view.zep">https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/view.zep</a></a>. The way to get around it seems to be to create the cache manually at a stage in your code where the view's content is available in the state that you want it. </p>
+<p>I was using a single view object to render multiple Volt templates in one action and found that it caches the first time you call render. I ended up creating two separate view objects, one with caching enabled, the other one without and only rendering the final view in the view object that has caching enabled. Still not satisfied but it works for now and I need to focus on some more important features first :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="31137" data-cf-modified-ec90939e763a830fb30f7a88-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="31137" data-cf-modified-ec90939e763a830fb30f7a88-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="10763" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,119 @@
+---
+layout: default
+title: 'Insert array to Postgresql error - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Insert array to Postgresql error</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2849/esoftcard" class="user-moderator-N"><span itemprop="name">esoftcard</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-11-04T04:19:30-07:00">Nov '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-11-04T04:19:30-07:00">Nov '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>788</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/bf4ebce50563f92ce8cb58ea29d248be?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2849/esoftcard" class="user-moderator-N"><span itemprop="name">esoftcard</span></a></span>
+                <span class="karma">6.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C14709" href="#C14709">
+        <time class="action-date">Nov '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I try to insert array to postgresql :</p>
+<p>array(4) { [0]=&gt; string(1) &quot;1&quot; [1]=&gt; string(1) &quot;6&quot; [2]=&gt; string(1) &quot;9&quot; [3]=&gt; string(2) &quot;12&quot; }</p>
+<p>Column datatype: varchar[]</p>
+<p>But got this error : SQLSTATE[HY093]: Invalid parameter number: parameter was not defined</p>
+<p>Please help me fix this</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-c7932f9b8414684653b72f2c-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-c7932f9b8414684653b72f2c-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="42575" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '16</span>
+              </span><br/><a name="C42575" href="#C42575">
+                <time itemprop="dateCreated" datetime="2016-11-04T06:03:47-07:00" class="action-date">Nov '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Phalcon ORM does not support PGSQL arrays, so you'll have to write your native SQL queries like so:</p>
+<pre><code class="language-php">class SomeController extends \Phalcon\Mvc\Controller
+{
+    public function someAction()
+    {
+        $set = array("1","6","9","12");
+        settype($set, 'array'); // can be called with a scalar or array
+        $result = array();
+        foreach ($set as $t) {
+            if (is_array($t)) {
+                $result[] = to_pg_array($t);
+            } else {
+                $t = str_replace('"', '\\"', $t); // escape double quote
+                if (! is_numeric($t)) // quote only non-numeric values
+                    $t = '"' . $t . '"';
+                $result[] = $t;
+            }
+        }
+        $result = '{' . implode(",", $result) . '}'; // format
+        $this-&gt;db-&gt;execute("INSERT INTO tbl (colName) VALUES (".$result.")");
+    }
+}</code></pre>
+<p><a href="http://stackoverflow.com/questions/5631387/php-array-to-postgres-array">http://stackoverflow.com/questions/5631387/php-array-to-postgres-array</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="42575" data-cf-modified-c7932f9b8414684653b72f2c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="42575" data-cf-modified-c7932f9b8414684653b72f2c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="14709" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

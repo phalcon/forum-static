@@ -1,0 +1,151 @@
+---
+layout: default
+title: 'Mocking DI service - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/10/di-ioc">DI/IoC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Mocking DI service</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3065/hakimio" class="user-moderator-N"><span itemprop="name">Tomas Rimkus</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-08-31T02:25:52-07:00">Aug '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-08-31T02:25:52-07:00">Aug '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>829</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/3f8d556afb5ff8b6d771bcea40f9d230?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3065/hakimio" class="user-moderator-N"><span itemprop="name">Tomas Rimkus</span></a></span>
+                <span class="karma">11.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C13299" href="#C13299">
+        <time class="action-date">Aug '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I am using Codeception with REST, Phalcon and Mockery modules. The issue is that replacing services with Mockery mocks doesn't seem to work. When I run the following code it still tries to use the real class instance instead of the mock:</p>
+<pre><code class="language-php">    public function someTest(ApiTester $I)
+    {
+        $I-&gt;wantTo('test sth');
+
+        $di = $I-&gt;getApplication()-&gt;getDI();
+        $myServiceMock = Mockery::mock(MyService::class);
+        $myServiceMock-&gt;shouldReceive('someMethod')
+            -&gt;andReturn(null);
+        $myServiceMock-&gt;shouldReceive('setDI')
+            -&gt;andReturn($di);
+
+        $I-&gt;haveServiceInDi('myService', function() use ($myServiceMock) {
+            return $myServiceMock;
+        }, true);
+
+        $I-&gt;haveHttpHeader('Content-Type', 'application/json');
+        $I-&gt;sendPOST('someUrl', []);
+        $I-&gt;seeResponseCodeIs(HttpCode::OK);
+        $I-&gt;seeResponseIsJson();
+        $I-&gt;seeResponseContainsJson([
+            'success' =&gt; true
+        ]);
+    }</code></pre>
+<p>Is there a better way to replace DI services with mock objects during runtime to make it work?</p>
+<p>[I also tried AspectMock but it didn't work at all with Phalcon.]</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-dd887ca06c2b66cca7c1fbb9-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-dd887ca06c2b66cca7c1fbb9-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/05b196967e6d529da34c125a4567b641?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3576/rkeplin" class="user-moderator-N"><span itemprop="name">Rob</span></a>        </span>
+        <br>
+
+        <span class="karma">3.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39593" href="#C39593">
+                <time itemprop="dateCreated" datetime="2016-09-01T14:08:37-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I am using PHPUnit, and have been mocking DI services like this.  This pattern should work for you as well, if I am understanding your issue correctly.  To mock out or replace a service in the DI, all you have to do is set it in the DI in your test.</p>
+<p>Assume that <code>SomeObject::run()</code> internally requests <code>myService</code> from the DI.</p>
+<pre><code class="language-php">    public function testSomething()
+    {
+        $this-&gt;getDI()-&gt;set('myService', function() {
+            return new MockService();
+        });
+
+        $object = SomeObject();
+        $output = $object-&gt;run(); // Internally requests myService from the DI, which will now return a MockService instance
+
+        $this-&gt;assertEquals('output', $output);
+    }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39593" data-cf-modified-dd887ca06c2b66cca7c1fbb9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39593" data-cf-modified-dd887ca06c2b66cca7c1fbb9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3f8d556afb5ff8b6d771bcea40f9d230?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3065/hakimio" class="user-moderator-N"><span itemprop="name">Tomas Rimkus</span></a>        </span>
+        <br>
+
+        <span class="karma">11.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="39603" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '16</span>
+              </span><br/><a name="C39603" href="#C39603">
+                <time itemprop="dateCreated" datetime="2016-09-02T00:54:54-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I am doing exactly the same. Just using Codeception's Phalcon module to set DI service instead of setting it directly like you do. My problem is that when I am using REST module (which uses Phalcon module in turn) by calling &quot;sendPost()&quot;, DI services are reset to initial state. I can make it work by including the mocking code in the Phalcon module's bootstrap file but that's a pretty dirty solution.</p>
+<p>There was a pretty much the same issue with Codeception's Laravel module described <a href="https://github.com/Codeception/Codeception/issues/2904">here</a>, but the maintainer of Laravel module managed to fix it.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39603" data-cf-modified-dd887ca06c2b66cca7c1fbb9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39603" data-cf-modified-dd887ca06c2b66cca7c1fbb9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="13299" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

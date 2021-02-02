@@ -1,0 +1,262 @@
+---
+layout: default
+title: 'General error: 1205 Lock wait timeout exceeded on phalcon 2.0.13 - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">General error: 1205 Lock wait timeout exceeded on phalcon 2.0.13</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10415/sadslash" class="user-moderator-N"><span itemprop="name">sadslash</span></a></span>
+            <time itemprop="dateCreated" datetime="2020-08-17T09:08:33-07:00">Aug '20</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2020-08-17T09:08:33-07:00">Aug '20</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>199</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/6093a6e161e3d10a88fedcb5bd597c23?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10415/sadslash" class="user-moderator-N"><span itemprop="name">sadslash</span></a></span>
+                <span class="karma">331</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C20823" href="#C20823">
+        <time class="action-date">Aug '20</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi all,</p>
+<p>We have a problem during DB saving on the API, here are the PHP log:</p>
+<blockquote>
+<p>Error: SQLSTATE[HY000]: General error: 1205 Lock wait timeout exceeded; try restarting transaction</p>
+<p>0 [internal function]: PDOStatement-&gt;execute()</p>
+<p>1 [internal function]: Phalcon\Db\Adapter\Pdo-&gt;executePrepared(Object(PDOStatement), Array, Array)</p>
+<p>2 [internal function]: Phalcon\Db\Adapter\Pdo-&gt;execute('UPDATE `OrderLi...', Array, Array)</p>
+<p>3 [internal function]: Phalcon\Db\Adapter-&gt;update('OrderList', Array, Array, Array, Array)</p>
+<p>4 [internal function]: Phalcon\Mvc\Model-&gt;_doLowUpdate(Object(Phalcon\Mvc\Model\MetaData\Memory), Object(Phalcon\Db\Adapter\Pdo\Mysql), 'OrderList')</p>
+<p>5 .../models/BaseModel.php(16): Phalcon\Mvc\Model-&gt;save(NULL, NULL)</p>
+<p>6 .../controllers/store/OrderListController.php(30320): ...\Models\BaseModel-&gt;save()</p>
+</blockquote>
+<p>We have the following BaseModel extended by all models:</p>
+<pre><code class="language-php"> abstract class BaseModel extends \Phalcon\Mvc\Model
+ {
+     public function save($data = null, $whiteList = null)
+     {
+         //Override save() method to handle possible relations recursion and cleanup related models bag after save.
+         $related = $this-&gt;_related;
+         try {
+             $result = parent::save($data, $whiteList);
+             if (!$result) {
+                 $this-&gt;_related = $related;
+             }
+             return $result;
+         } catch (\Exception $e) {
+             $this-&gt;_related = $related;
+             throw $e;
+         }
+     }
+
+     protected function _preSaveRelatedRecords(\Phalcon\Db\AdapterInterface $conn, $related)
+     {
+         //Fix related models recursion problem. Fix savepoint exception when using nested transactions with model exceptionOnFailedSave.
+         $this-&gt;_related = null;
+         try {
+             $txLevel = $conn-&gt;getTransactionLevel();
+             return parent::_preSaveRelatedRecords($conn, $related);
+         } catch (\Exception $e) {
+             while ($conn-&gt;getTransactionLevel() &gt; $txLevel) {
+                 try {
+                     $conn-&gt;rollback();
+                 } catch (\PDOException $pdoEx) {}
+             }
+             throw $e;
+         }
+     }
+
+     public function __call($method, $args = null)
+     {
+         //Add magic setter for related models.
+         if (1 === count($args)
+             &amp;&amp; ($args[0] instanceof \Phalcon\MVC\ModelInterface || is_array($args[0]))
+             &amp;&amp; (0 === stripos($method, 'set'))
+         ) {
+             $related = substr($method, 3);
+             $this-&gt;$related = $args[0];
+             return $this;
+         }
+         return parent::__call($method, $args);
+     }
+ }</code></pre>
+<p>We found this class on the web and it fix our problems for a long time, since now.</p>
+<p>Here are the software version:</p>
+<ul>
+<li>PHP 5.6.40</li>
+<li>Phalcon 2.0.13</li>
+<li>MySQL 5.7.30</li>
+</ul>
+<p>And the value of &quot;innodb_lock_wait_timeout&quot; are setted to 50, default value.</p>
+<p>Anyone have had the same problem and fix it?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-40eee4b54009ab961a702fd6-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-40eee4b54009ab961a702fd6-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C64041" href="#C64041">
+                <time itemprop="dateCreated" datetime="2020-08-17T09:12:31-07:00" class="action-date">Aug '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Please edit your post with proper code formatting so it's possible to read.  Preferred format is explained here: <a href="https://forum.phalcon.io/help/markdown">https://forum.phalcon.io/help/markdown</a>, under the <strong>Code Blocks</strong> heading.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64041" data-cf-modified-40eee4b54009ab961a702fd6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64041" data-cf-modified-40eee4b54009ab961a702fd6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6093a6e161e3d10a88fedcb5bd597c23?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10415/sadslash" class="user-moderator-N"><span itemprop="name">sadslash</span></a>        </span>
+        <br>
+
+        <span class="karma">331</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C64041"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Dylan Anderson                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="64043" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '20</span>
+              </span><br/><a name="C64043" href="#C64043">
+                <time itemprop="dateCreated" datetime="2020-08-17T09:29:01-07:00" class="action-date">Aug '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi Dylan, thank you, I've edited the post, it's ok now?</p>
+<blockquote>
+<p>Please edit your post with proper code formatting so it's possible to read.  Preferred format is explained here: <a href="https://forum.phalcon.io/help/markdown">https://forum.phalcon.io/help/markdown</a>, under the <strong>Code Blocks</strong> heading.</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64043" data-cf-modified-40eee4b54009ab961a702fd6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64043" data-cf-modified-40eee4b54009ab961a702fd6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C64045" href="#C64045">
+                <time itemprop="dateCreated" datetime="2020-08-17T09:32:40-07:00" class="action-date">Aug '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Much better.  Thanks.</p>
+<p>As for your problem - do you need all that stuff?  Phalcon has built-in save functionality so you don't <em>need</em> to override anything.</p>
+<p>Also, Phalcon is on v4 now (with v3.4 being the most popular I think), so you might want to upgrade your Phalcon installation.  Finding help for such an old version might be difficult.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64045" data-cf-modified-40eee4b54009ab961a702fd6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64045" data-cf-modified-40eee4b54009ab961a702fd6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6093a6e161e3d10a88fedcb5bd597c23?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10415/sadslash" class="user-moderator-N"><span itemprop="name">sadslash</span></a>        </span>
+        <br>
+
+        <span class="karma">331</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C64045"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Dylan Anderson                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C64047" href="#C64047">
+                <time itemprop="dateCreated" datetime="2020-08-17T10:44:18-07:00" class="action-date">Aug '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you.</p>
+<p>We used that abstract class because of problem during saving, phalcon try to save all the related models and sometimes it stop to work, here are the refs: <a href="https://forum.phalcon.io/discussion/1305/model-implementation-problems">https://forum.phalcon.io/discussion/1305/model-implementation-problems</a></p>
+<p>About of the update to Phalcon 3.4 (or 4), we have some backward incompatibility (<a href="https://blog.phalcon.io/post/phalcon-3-0-0-released">https://blog.phalcon.io/post/phalcon-3-0-0-released</a>, specifically &quot;Backwards compatibility from openssl to mcrypt is problematic if not impossible. We had to remove several methods that are no longer applicable. Additionally the rijndael-256 from mcrypt is no longer valid in openssl. The default encryption algorithm is AES-256-CFB&quot;)</p>
+<blockquote>
+<p>Much better.  Thanks.</p>
+<p>As for your problem - do you need all that stuff?  Phalcon has built-in save functionality so you don't <em>need</em> to override anything.</p>
+<p>Also, Phalcon is on v4 now (with v3.4 being the most popular I think), so you might want to upgrade your Phalcon installation.  Finding help for such an old version might be difficult.</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64047" data-cf-modified-40eee4b54009ab961a702fd6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64047" data-cf-modified-40eee4b54009ab961a702fd6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C64049" href="#C64049">
+                <time itemprop="dateCreated" datetime="2020-08-17T10:57:37-07:00" class="action-date">Aug '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I don't know then.  You could turn on a query log and check it to see what's actually being passed.  This sounds like multiple processes are being run and the second process times out because the first one is taking too long to execute.  Honestly though, you're dealing with an old version of Phalcon, so the problem might be fixed in newer versions.</p>
+<p>As for mcrypt compatibility - there's nothing about Phalcon that prohibits you from using built-in PHP code.  If I were in your place, I'd upgrade, then shim in the parts of Phalcon that don't work with old mcrypt.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64049" data-cf-modified-40eee4b54009ab961a702fd6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64049" data-cf-modified-40eee4b54009ab961a702fd6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="20823" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

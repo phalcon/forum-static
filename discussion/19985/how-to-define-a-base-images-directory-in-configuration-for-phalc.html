@@ -1,0 +1,114 @@
+---
+layout: default
+title: 'How to define a base images directory in configuration for phalcon website? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/25/configuration">Configuration</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How to define a base images directory in configuration for phalcon website?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10073/iftikharuddin" class="user-moderator-N"><span itemprop="name">Iftikhar uddin</span></a></span>
+            <time itemprop="dateCreated" datetime="2019-09-03T04:18:39-07:00">Sep '19</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2019-09-03T04:18:39-07:00">Sep '19</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '19</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>186</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/d3b07acb440fe79976cb95ea365d0054?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10073/iftikharuddin" class="user-moderator-N"><span itemprop="name">Iftikhar uddin</span></a></span>
+                <span class="karma">5.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C19985" href="#C19985">
+        <time class="action-date">Sep '19</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have defined a shared service <code>baseImagesURL</code> in my configuration Class but when I try to use it in volt it throws this error <code>Phalcon\Mvc\View\Exception: Macro 'baseImagesURL' does not exist</code></p>
+<pre><code class="language-php">     /**
+         * Create url helper service
+         * Instance of Phalcon\Mvc\Url.
+         * This service helps in the setting base images folder URL 
+         */
+        $di-&gt;setShared('baseImagesURL', function() use ($di) {
+            /** @var Config $config */
+            $config = $di-&gt;get('config');
+            $url = new Url();
+            $url-&gt;setStaticBaseUri( $config-&gt;path("environment.baseImagesUri"));
+            return $url;
+        });</code></pre>
+<p><strong>Volt</strong></p>
+<pre><code class="language-volt">       &lt;img src="{% raw %}{{{% endraw %}baseImagesURL('Labor-Sale-big.jpg'){% raw %}}}{% endraw %}" &gt;</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-868d4e89326141fd6e82162a-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-868d4e89326141fd6e82162a-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C60867" href="#C60867">
+                <time itemprop="dateCreated" datetime="2019-09-04T10:38:49-07:00" class="action-date">Sep '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>In volt, when you call <code>{% raw %}{{{% endraw %} url('some path') {% raw %}}}{% endraw %}</code>, you're not directly calling the service, you're calling a function defined in Volt that <em>uses</em> the <code>url</code> service.</p>
+<p>So what you need to do is define a new function in the compiler to call the service.  Actually, I don't think you need a service for this.  Something like (untested):</p>
+<pre><code class="language-php">$Compiler-&gt;addFunction('baseImagesURL',function($resolvedArgs,$exprArgs) use($Compiler,$di){
+        $filename = $Compiler-&gt;expression($exprArgs[0]['expr']);
+        $config = $di-&gt;get('config');
+        return $config-&gt;path('environment.baseImagesUri').'/'.$filename;
+    });</code></pre>
+<p>The tricky part is that the function is supposed to return valid PHP code that gets put in the compiled template to be executed.  So you may need to play around with what gets returned.</p>
+<p>Alternatively, you could just forgoe the function and just do:</p>
+<pre><code class="language-volt">&lt;img src = "{% raw %}{{{% endraw %} config.environment.baseImagesUri {% raw %}}}{% endraw %}/Labor-Sale-big.jpg" /&gt;</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60867" data-cf-modified-868d4e89326141fd6e82162a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60867" data-cf-modified-868d4e89326141fd6e82162a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="19985" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

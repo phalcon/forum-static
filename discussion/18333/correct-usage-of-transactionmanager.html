@@ -1,0 +1,208 @@
+---
+layout: default
+title: 'Correct Usage of TransactionManager - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Correct Usage of TransactionManager</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1098/Fuhunter" class="user-moderator-N"><span itemprop="name">Niclas Günther</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-05-29T15:36:46-07:00">May '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-05-29T15:36:46-07:00">May '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>May '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>393</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/25aee26e5eee04d6cc87345e7dbc1af2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1098/Fuhunter" class="user-moderator-N"><span itemprop="name">Niclas Günther</span></a></span>
+                <span class="karma">17.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C18333" href="#C18333">
+        <time class="action-date">May '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hey guys,</p>
+<p>so now I'm at the point, where I need to use a Transaction Manager.</p>
+<p>Assume  I have something like the following code:</p>
+<pre><code>    $item = Item::findFirst(...);
+    $new = new Model1();
+
+    if (!$new-&gt;create()) {
+        // do rollback
+    }
+
+    $new2 = new Model2();
+
+    ...
+
+    if (!$new-&gt;create()) {
+        // do rollback
+    }
+
+    if ($item--&gt;getID() == 1) {
+        if (!$item-&gt;delete()) {
+            // do rollback.
+        }
+    } else {
+        $item-&gt;setCount(1);
+
+        if (!$item-&gt;save()) {
+            // do rollback
+        }
+    }
+</code></pre>
+<p>Now is it enough to use Manual Transactions? Or should I use Isolated Transaction?</p>
+<p>If it helps, this kind of Code is in nearly every Action or Library Function and when everything is done, it should be a Browsergame.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-5f59349cec6e5826ee22b649-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-5f59349cec6e5826ee22b649-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6549777fa33638d0674db65d9111d400?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2145/DestinyMKas" class="user-moderator-N"><span itemprop="name">Karolis Mačiulskis</span></a>        </span>
+        <br>
+
+        <span class="karma">26.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C55871" href="#C55871">
+                <time itemprop="dateCreated" datetime="2018-05-29T23:26:01-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I'm extending phalcon mvc model with my model:</p>
+<pre><code class="language-php">&lt;?php
+class Model extends \Phalcon\Mvc\Model
+{
+    public function create($data = null, $whiteList = null)
+    {
+        if (!parent::create($data, $whiteList)) {
+            foreach ($this-&gt;getMessages() as $message) {
+                throw new DbException($message);
+            }
+        }
+
+        return $this;
+    }
+
+    public function update($data = null, $whiteList = null)
+    {
+        if (!parent::update($data, $whiteList)) {
+            foreach ($this-&gt;getMessages() as $message) {
+                throw new DbException($message);
+            }
+        }
+
+        return $this;
+    }
+
+    public function save($data = null, $whiteList = null)
+    {
+            foreach ($this-&gt;getMessages() as $message) {
+                throw new DbException($message);
+            }
+        }
+
+        return $this;
+    }
+
+    public function delete()
+    {
+        if (!parent::delete()) {
+            foreach ($this-&gt;getMessages() as $message) {
+                throw new DbException($message);
+            }
+        }
+
+        return $this;
+    }
+}</code></pre>
+<p>And when I need to do some actions in one transaction:</p>
+<pre><code class="language-php">&lt;?php
+
+$this-&gt;db-&gt;begin();
+try {
+    $model = Model::findFirst(['id = ?0', 'bind' =&gt; [1], 'for_update' =&gt; true);
+    $model-&gt;delete();
+
+    $model2 = new Model2;
+    $model2-&gt;create();
+
+    $this-&gt;db-&gt;commit();
+} catch (DbException $e) {
+    $this-&gt;logException($e);
+    $this-&gt;db-&gt;rollback();
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55871" data-cf-modified-5f59349cec6e5826ee22b649-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55871" data-cf-modified-5f59349cec6e5826ee22b649-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/25aee26e5eee04d6cc87345e7dbc1af2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1098/Fuhunter" class="user-moderator-N"><span itemprop="name">Niclas Günther</span></a>        </span>
+        <br>
+
+        <span class="karma">17.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="55923" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '18</span>
+              </span><br/><a name="C55923" href="#C55923">
+                <time itemprop="dateCreated" datetime="2018-06-01T16:41:25-07:00" class="action-date">Jun '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This isn't exactly what I was asking for.</p>
+<p>Manual Transaction or Isolated Transactions?</p>
+<p>EDIT: Does no one have an advice for me?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55923" data-cf-modified-5f59349cec6e5826ee22b649-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55923" data-cf-modified-5f59349cec6e5826ee22b649-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="18333" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

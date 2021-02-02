@@ -1,0 +1,392 @@
+---
+layout: default
+title: 'Preloading model relations - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Preloading model relations</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2566/TrogWarZ" class="user-moderator-N"><span itemprop="name">Roman</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-11-05T17:21:32-07:00">Nov '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-11-05T17:21:32-07:00">Nov '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1056</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/f14f7a0c1c40e4c1aee7f4c26287e5f6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2566/TrogWarZ" class="user-moderator-N"><span itemprop="name">Roman</span></a></span>
+                <span class="karma">21.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3867" href="#C3867">
+        <time class="action-date">Nov '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello!</p>
+<h2>What i have</h2>
+<p>I have User and Cars models:</p>
+<pre><code class="language-php">class Users extends \Phalcon\Mvc\Model
+{
+    public function initialize() {
+        $this-&gt;hasMany('id', 'Cars', 'ownerId');
+    }
+}
+class Cars extends \Phalcon\Mvc\Model {}</code></pre>
+<p>Then, if i do this:</p>
+<pre><code class="language-php">$users = Users::query()-&gt;limit(10)-&gt;execute();
+foreach ($users as $user) {
+    echo "$user-&gt;name\n";
+    foreach ($user-&gt;getCars() as $car) {
+        echo "\t$car-&gt;name\n";
+    }
+}</code></pre>
+<h2>Problem</h2>
+<p>It works perfectly, but.. in SQL log i see smth like this:</p>
+<pre><code class="language-sql">SELECT IF(COUNT(*)&gt;0, 1 , 0) FROM `INFORMATION_SCHEMA`.`TABLES` WHERE `TABLE_NAME`='users';
+DESCRIBE `users`;
+SELECT `users`.`id`, `users`.`name` FROM `users` ORDER BY `users`.`id` DESC LIMIT 10 OFFSET 0;
+SELECT IF(COUNT(*)&gt;0, 1 , 0) FROM `INFORMATION_SCHEMA`.`TABLES` WHERE `TABLE_NAME`='cars';
+DESCRIBE `cars`;
+SELECT `cars`.`id`, `cars`.`name`, `cars`.`ownerId` FROM `cars` WHERE `cars`.`ownerId` = :0;
+SELECT `cars`.`id`, `cars`.`name`, `cars`.`ownerId` FROM `cars` WHERE `cars`.`ownerId` = :0;
+SELECT `cars`.`id`, `cars`.`name`, `cars`.`ownerId` FROM `cars` WHERE `cars`.`ownerId` = :0;
+SELECT `cars`.`id`, `cars`.`name`, `cars`.`ownerId` FROM `cars` WHERE `cars`.`ownerId` = :0;
+SELECT `cars`.`id`, `cars`.`name`, `cars`.`ownerId` FROM `cars` WHERE `cars`.`ownerId` = :0;
+SELECT `cars`.`id`, `cars`.`name`, `cars`.`ownerId` FROM `cars` WHERE `cars`.`ownerId` = :0;
+SELECT `cars`.`id`, `cars`.`name`, `cars`.`ownerId` FROM `cars` WHERE `cars`.`ownerId` = :0;
+SELECT `cars`.`id`, `cars`.`name`, `cars`.`ownerId` FROM `cars` WHERE `cars`.`ownerId` = :0;
+SELECT `cars`.`id`, `cars`.`name`, `cars`.`ownerId` FROM `cars` WHERE `cars`.`ownerId` = :0;
+SELECT `cars`.`id`, `cars`.`name`, `cars`.`ownerId` FROM `cars` WHERE `cars`.`ownerId` = :0;</code></pre>
+<h2>Question</h2>
+<p>Yep, lazy load is really cool in some cases. But sometimes it breaks all optimizations.
+I've read whole tutorial but not found how can i tell ORM to preload some relations in one join-by-index-query?</p>
+<pre><code class="language-php">$users = Users::query()-&gt;limit(10)-&gt;with('cars')-&gt;execute(); // Outer using – disables lazy only for this query
+$this-&gt;hasMany('id', 'Cars', 'ownerId', ['with' =&gt; true]);   // Setup-based – disables lazy for this relation forever</code></pre>
+<p>And i want to get here JUST ONE sql query. Or, maybe, two.. but not N+1 queries (o.0) cuz selecting 100 users with 10-20 cars will literally kill my database server.</p>
+<h2>Global</h2>
+<p>Also, my use-case is to send user data with car data in json string to client (i'm writing api).
+Maybe, Phalcon has much more better way to do this? Something like to already existed asArray() method but with data from specified relations?</p>
+<p>Thank you!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-b7a7dcb87d45645354676a43-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-b7a7dcb87d45645354676a43-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bdee79ea2680ec179fa34b9201fc74b7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1873/RompePC" class="user-moderator-N"><span itemprop="name">RompePC</span></a>        </span>
+        <br>
+
+        <span class="karma">33.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12852" href="#C12852">
+                <time itemprop="dateCreated" datetime="2014-11-06T03:35:51-07:00" class="action-date">Nov '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Something exactly similar was discussed here <a href="http://forum.phalcon.io/discussion/3482/model-hierarchy-avoiding-lazy-loading#C11448">http://forum.phalcon.io/discussion/3482/model-hierarchy-avoiding-lazy-loading#C11448</a></p>
+<p>The solution will be overwritting <code>find()</code>, to add at the end of it the queries for loading related records, or creating a new type of finding with the same logic, and call that function instead of <code>find()</code>.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12852" data-cf-modified-b7a7dcb87d45645354676a43-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12852" data-cf-modified-b7a7dcb87d45645354676a43-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fcae2565ce4d1ed7240231932dec115a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/659/oleg578" class="user-moderator-N"><span itemprop="name">Oleg</span></a>        </span>
+        <br>
+
+        <span class="karma">8.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12868" href="#C12868">
+                <time itemprop="dateCreated" datetime="2014-11-06T08:14:01-07:00" class="action-date">Nov '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You can solve this problem setters/getters use in your models.
+When I translated Phalcon doc to Russian, I note this in Russian phalcon doc.
+<a href="http://docs.phalconphp.ru/ru/latest/reference/models.html#id2">http://docs.phalconphp.ru/ru/latest/reference/models.html#id2</a></p>
+<p>example :</p>
+<pre><code class="language-php">
+&lt;?php
+
+class Robots extends \Phalcon\Mvc\Model
+{
+
+    protected $id;
+
+    protected $name;
+
+    public function getId()
+    {
+        return $this-&gt;id;
+    }
+
+    public function setName($name)
+    {
+        if (strlen($name) &lt; 10) {
+            throw new \InvalidArgumentException('Имя слишком короткое');
+        }
+        $this-&gt;name = $name;
+    }
+
+    public function getName()
+    {
+        return $this-&gt;name;
+    }
+
+    public function initialize()
+    {
+        $this-&gt;hasMany("id", "RobotsParts", "robots_id");
+    }
+
+    /**
+     * Return "robots parts" through one query
+     *
+     * @return \RobotsParts[]
+     */
+    public function getRobotsParts($parameters=null)
+    {
+        return $this-&gt;getRelated('RobotsParts', $parameters);
+    }
+
+}
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12868" data-cf-modified-b7a7dcb87d45645354676a43-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12868" data-cf-modified-b7a7dcb87d45645354676a43-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bdee79ea2680ec179fa34b9201fc74b7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1873/RompePC" class="user-moderator-N"><span itemprop="name">RompePC</span></a>        </span>
+        <br>
+
+        <span class="karma">33.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12870" href="#C12870">
+                <time itemprop="dateCreated" datetime="2014-11-06T08:19:56-07:00" class="action-date">Nov '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yeah, the magic get for getting related records is also there. But it isn't automatically called, so it has also to create his personal function where he calls it.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12870" data-cf-modified-b7a7dcb87d45645354676a43-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12870" data-cf-modified-b7a7dcb87d45645354676a43-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fcae2565ce4d1ed7240231932dec115a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/659/oleg578" class="user-moderator-N"><span itemprop="name">Oleg</span></a>        </span>
+        <br>
+
+        <span class="karma">8.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="12873" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '14</span>
+              </span><br/><a name="C12873" href="#C12873">
+                <time itemprop="dateCreated" datetime="2014-11-06T10:47:50-07:00" class="action-date">Nov '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Public properties in model isn't best practice.
+If you will be use setters/getters we obtained more security code.
+For the relations get your code don't be longer.
+on public</p>
+<pre><code class="language-php">
+$model-&gt;relation;
+</code></pre>
+<p>on model with getters/setters</p>
+<pre><code class="language-php">
+$model-&gt;getRelation();
+</code></pre>
+<p>Many developers concerned for foreign keys, but did not pay attention to make a model of the desired quality :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12873" data-cf-modified-b7a7dcb87d45645354676a43-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12873" data-cf-modified-b7a7dcb87d45645354676a43-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f14f7a0c1c40e4c1aee7f4c26287e5f6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2566/TrogWarZ" class="user-moderator-N"><span itemprop="name">Roman</span></a>        </span>
+        <br>
+
+        <span class="karma">21.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="12877" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '14</span>
+              </span><br/><a name="C12877" href="#C12877">
+                <time itemprop="dateCreated" datetime="2014-11-06T11:38:08-07:00" class="action-date">Nov '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks for the response, RompePC and Oleg!</p>
+<p>RompePC, oh, i've got it. This is not implemented in Phalcon because ot enough time/money or just don't fit into frameworks philsophy?</p>
+<p>Oleg, thank you! Your method is much more readable, cool!</p>
+<p>In this case i'll must do smth like this:</p>
+<pre><code class="language-php">$cars = Cars::find('color = "red"');
+$result = [];
+foreach ($cars as $car) {
+    $owner = $car-&gt;getUsers()-&gt;toArray();
+    $manufacturer = $car-&gt;getManufacturers()-&gt;toArray();
+    $carArr = $car-&gt;toArray();
+    $carArr['owner'] = $owner;
+    $carArr['manufacturer'] = $manufacturer;
+    $result[$car-&gt;id] = $carArr;
+}
+echo json_encode($result);</code></pre>
+<p>Compared with:</p>
+<pre><code class="language-php">// together setting in Cars model
+$this-&gt;belongsTo('ownerId', 'Users', 'id', ['together' =&gt; true]);
+$this-&gt;belongsTo('manufacturerId', 'Manufacturer', 'id', ['together' =&gt; true]);
+
+// Somewhere in code
+echo json_decode(Cars::find('color = "red"')-&gt;toArray());</code></pre>
+<p>To get multidimensional array with loaded relations. Right? Maybe, Phalcon has better and more readable way to do this?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12877" data-cf-modified-b7a7dcb87d45645354676a43-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12877" data-cf-modified-b7a7dcb87d45645354676a43-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f14f7a0c1c40e4c1aee7f4c26287e5f6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2566/TrogWarZ" class="user-moderator-N"><span itemprop="name">Roman</span></a>        </span>
+        <br>
+
+        <span class="karma">21.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="12881" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '14</span>
+              </span><br/><a name="C12881" href="#C12881">
+                <time itemprop="dateCreated" datetime="2014-11-06T12:29:03-07:00" class="action-date">Nov '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Trying to use answer above and get something wrong.</p>
+<h2>Models</h2>
+<pre><code class="language-php">class Users extends \Phalcon\Mvc\Model
+{
+    public $id;
+    public $name;
+
+    public function initialize()
+    {
+        $this-&gt;hasMany('id', 'Cars', 'ownerId');
+    }
+
+    /**
+     * @param string|array $params
+     * @return Cars[]
+     */
+    public function getCars($params=null)
+    {
+        return $this-&gt;getRelated('Cars', $params);
+    }
+}</code></pre>
+<pre><code class="language-php">class Cars extends \Phalcon\Mvc\Model
+{
+    public $id;
+    public $name;
+    public $ownerId;
+
+    public function initialize()
+    {
+        $this-&gt;belongsTo('ownerId', 'Users', 'id');
+    }
+
+    /**
+     * @param string|array $params
+     * @return Users
+     */
+    public function getUser($params=null)
+    {
+        return $this-&gt;getRelated('Users', $params);
+    }
+}</code></pre>
+<h2>First test</h2>
+<pre><code class="language-php">/** @type Users[] $users */
+$users  = Users::find('id IN (1,2,3)'); // Each user has more than 3 cars
+$result = array();
+foreach ($users as $user) {
+    $cars            = $user-&gt;getCars();
+    $userArr         = $user-&gt;toArray();
+    $userArr['cars'] = $cars-&gt;toArray();
+    $result[]        = $userArr;
+}
+var_export($result); // Good</code></pre>
+<p>It passed, cool!</p>
+<h2>Second test</h2>
+<pre><code class="language-php">/** @type Cars[] $cars */
+$cars   = Cars::find('id IN (10,11,12)'); // Each car has different owner
+$result = array();
+foreach ($cars as $car) {
+    $user            = $car-&gt;getUser();
+    echo "carId: $car-&gt;id | carOwnerId: $car-&gt;ownerId | userId: $user-&gt;id\n";
+    $carArr          = $car-&gt;toArray();
+    $carArr['owner'] = $user-&gt;toArray();
+    $result[]        = $carArr;
+}
+var_export($result); // Eh.. nope (o.0)</code></pre>
+<p>Result of second test was:</p>
+<pre><code>carId: 10 | carOwnerId: 1 | userId: 1
+carId: 11 | carOwnerId: 2 | userId: 1
+carId: 12 | carOwnerId: 3 | userId: 1</code></pre>
+<p>Why user id is always from first car?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12881" data-cf-modified-b7a7dcb87d45645354676a43-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12881" data-cf-modified-b7a7dcb87d45645354676a43-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3867" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

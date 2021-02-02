@@ -1,0 +1,610 @@
+---
+layout: default
+title: 'Uniqueness validation in form on model update/edit - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Uniqueness validation in form on model update/edit</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10703/Xerphis" class="user-moderator-N"><span itemprop="name">Xerphis</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-05-22T03:16:28-07:00">May '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-05-22T03:16:28-07:00">May '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>May '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">14</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1099</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/deac7a61ebe061bfc2884973b0e8280c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10703/Xerphis" class="user-moderator-N"><span itemprop="name">Xerphis</span></a></span>
+                <span class="karma">3.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C18271" href="#C18271">
+        <time class="action-date">May '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi.</p>
+<p>I have problem with form validation on model update/edit.
+For example; i wont edit user (id = 99, email = <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="97faf6fefbd7f2eff6fae7fbf2b9f4f8fa">[email&#160;protected]</a>). On &quot;users&quot; model, validation code looks like this:</p>
+<pre><code class="language-php">$validator-&gt;add(['email', 'date_deleted'], new UniquenessValidator([
+            'convert' =&gt; function ($data) {
+                $data['email'] = $this-&gt;getDI()-&gt;get('filter')-&gt;sanitize($data['email'], 'trim');
+                $data['email'] = $this-&gt;getDI()-&gt;get('filter')-&gt;sanitize($data['email'], 'email');
+                $data['email'] = $this-&gt;getDI()-&gt;get('filter')-&gt;sanitize($data['email'], 'lower');
+                return $data;
+            },
+            'message' =&gt; 'duplicate entry for ":fields" field on Users model'
+                ])
+        );</code></pre>
+<p>And execudet query from validation looks:</p>
+<pre><code class="language-sql">SELECT COUNT(*) AS `rowcount` FROM `somedb`.`users` WHERE `users`.`email` = "<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="b4d9d5ddd8f4d1ccd5d9c4d8d19ad7dbd9">[email&#160;protected]</a>" AND `users`.`date_deleted`  IS NULL AND `users`.`id` &lt;&gt; 99</code></pre>
+<p>Is ok. But i have validation in form:</p>
+<pre><code class="language-php">
+$emailElement-&gt;addValidators([
+            // ... PresenceOfValidator, EmailValidator...
+            new UniquenessValidator([
+                'model' =&gt; new UsersModel, // or $this-&gt;getEntity()
+                'fields' =&gt; ['email', 'date_deleted'],
+                'convert' =&gt; function ($data) {
+                    $data['email'] = $this-&gt;filter-&gt;sanitize($data['email'], 'trim');
+                    $data['email'] = $this-&gt;filter-&gt;sanitize($data['email'], 'email');
+                    $data['email'] = $this-&gt;filter-&gt;sanitize($data['email'], 'lower');
+                    return $data;
+                },
+                'message' =&gt; 'Entered e-mail address is currently in use by another user.'
+    ]);</code></pre>
+<p>Executed validation from form query looks:</p>
+<pre><code class="language-sql">SELECT COUNT(*) AS `rowcount` FROM `somedb`.`users` WHERE `users`.`email` = "<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f19c90989db19489909c819d94df929e9c">[email&#160;protected]</a>" AND `users`.`date_deleted`  IS NULL</code></pre>
+<p>In form validation, id of entity is skipped and edited user email is not unique, because is used by self.</p>
+<p>How to user uniqueness validator on form, to get the same result in case model-side validation?</p>
+<p>Phalcon v3.3.2</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-dea706947511a8dde2b3f216-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-dea706947511a8dde2b3f216-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="55565" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '18</span>
+              </span><br/><a name="C55565" href="#C55565">
+                <time itemprop="dateCreated" datetime="2018-05-22T03:19:27-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If form is already associated with found User model then just remove model option and it will use your current model from form and make a proper query. I mean if it's update form just do something like this:</p>
+<pre><code class="language-php">$user = UsersModel::findFirst($id);
+$form = new UsersForm($user);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55565" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55565" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/deac7a61ebe061bfc2884973b0e8280c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10703/Xerphis" class="user-moderator-N"><span itemprop="name">Xerphis</span></a>        </span>
+        <br>
+
+        <span class="karma">3.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="55567" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '18</span>
+              </span><br/><a name="C55567" href="#C55567">
+                <time itemprop="dateCreated" datetime="2018-05-22T03:32:58-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Entity in form is set...
+Without &quot;model&quot; option the same result.</p>
+<p>I can not also find in the cphalcon code, what determines and where is added for the model &quot;id &lt;&gt; x&quot;.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55567" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55567" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C55569" href="#C55569">
+                <time itemprop="dateCreated" datetime="2018-05-22T03:35:43-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Then just remove <code>'model' =&gt; new UsersModel, // or $this-&gt;getEntity()</code> <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/validation/validator/uniqueness.zep#L293">https://github.com/phalcon/cphalcon/blob/master/phalcon/validation/validator/uniqueness.zep#L293</a> here is this code.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55569" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55569" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/deac7a61ebe061bfc2884973b0e8280c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10703/Xerphis" class="user-moderator-N"><span itemprop="name">Xerphis</span></a>        </span>
+        <br>
+
+        <span class="karma">3.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C55571" href="#C55571">
+                <time itemprop="dateCreated" datetime="2018-05-22T03:36:54-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Phalcon\Validation\Exception: Model of record must be set to property &quot;model&quot;</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55571" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55571" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C55573" href="#C55573">
+                <time itemprop="dateCreated" datetime="2018-05-22T03:38:01-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>How exactly you creates form? If entity is set it should be passed to validation.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55573" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55573" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C55575" href="#C55575">
+                <time itemprop="dateCreated" datetime="2018-05-22T03:41:27-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well maybe it's a bug actually. Well try to use there <code>$this-&gt;getEntity()</code> then</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55575" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55575" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/deac7a61ebe061bfc2884973b0e8280c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10703/Xerphis" class="user-moderator-N"><span itemprop="name">Xerphis</span></a>        </span>
+        <br>
+
+        <span class="karma">3.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="55577" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '18</span>
+              </span><br/><a name="C55577" href="#C55577">
+                <time itemprop="dateCreated" datetime="2018-05-22T03:43:47-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Before add validation in form, getEntity() return correct model of &quot;user&quot;.</p>
+<pre><code class="language-php">$user = UsersModel::findFirstById($id);
+
+$form = new UserForm($user, [
+    'edit' =&gt; true
+]);
+
+// ... after post
+$form-&gt;bind($this-&gt;request-&gt;getPost(), $user);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55577" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55577" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C55579" href="#C55579">
+                <time itemprop="dateCreated" datetime="2018-05-22T03:45:22-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yea that should be valid, but actually in isValid method you most likely have no arguments and that's why it happens, imho it's a bug.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55579" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55579" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/deac7a61ebe061bfc2884973b0e8280c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10703/Xerphis" class="user-moderator-N"><span itemprop="name">Xerphis</span></a>        </span>
+        <br>
+
+        <span class="karma">3.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="55581" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '18</span>
+              </span><br/><a name="C55581" href="#C55581">
+                <time itemprop="dateCreated" datetime="2018-05-22T03:47:46-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>$this-&gt;getEntity() - still to the same.</p>
+<p>Yes, in isValid i not have arguments, because i use &quot;bind&quot; method.</p>
+<p>Using isValid with arguments, without bind method - the same results.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55581" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55581" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C55583" href="#C55583">
+                <time itemprop="dateCreated" datetime="2018-05-22T03:53:32-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>What you mean the same? Like exception? Or not proper validation?</p>
+<p>You sure that getEntity returns proper model?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55583" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55583" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/deac7a61ebe061bfc2884973b0e8280c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10703/Xerphis" class="user-moderator-N"><span itemprop="name">Xerphis</span></a>        </span>
+        <br>
+
+        <span class="karma">3.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C55585" href="#C55585">
+                <time itemprop="dateCreated" datetime="2018-05-22T04:05:22-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The same results - executed query not contain &quot;id &lt;&gt; x&quot;.
+Without &quot;model&quot; parameter i get exception.</p>
+<p>Mhm.. Before add validations, getEntity return correct model. Dump before validations:</p>
+<pre><code> Array (4) (
+  [entity array] =&gt; Array (9) (
+    [id] =&gt; Numeric string (1) "99"
+    [email] =&gt; String (15) "<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ec818d8580ac89948d819c8089c28f8381">[email&#160;protected]</a>"
+    [date_deleted] =&gt; NULL
+  )
+  [entity dirty state] =&gt; Integer (0)
+  [model dirty state presistent const] =&gt; Integer (0)
+  [primary key attribute from enetity] =&gt; Array (1) (
+    [0] =&gt; String (2) "id"
+  )
+)</code></pre>
+<p>According to uniqueness.zep, on line 293 dirty sate conditions match true and additional conditions parameters should be added, but not work...</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55585" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55585" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="55587" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '18</span>
+              </span><br/><a name="C55587" href="#C55587">
+                <time itemprop="dateCreated" datetime="2018-05-22T04:11:46-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If you use isValid with correct arguments then try to remove 'model' key and see what happens.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55587" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55587" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/deac7a61ebe061bfc2884973b0e8280c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10703/Xerphis" class="user-moderator-N"><span itemprop="name">Xerphis</span></a>        </span>
+        <br>
+
+        <span class="karma">3.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C55591" href="#C55591">
+                <time itemprop="dateCreated" datetime="2018-05-22T04:34:53-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><pre><code class="language-php">if ($form-&gt;isValid($this-&gt;request-&gt;getPost(), $user)) {
+    // ...
+}</code></pre>
+<p>Ok. Now, in form, uniqueness validator not require &quot;model&quot; parameter.
+Unfortunately, the executed query by uniqueness validator still does not include &quot;id &lt;&gt; x&quot;.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55591" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55591" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C55593" href="#C55593">
+                <time itemprop="dateCreated" datetime="2018-05-22T04:45:30-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Not sure what's going on. You can try to do some debugging by creating new validator, extending Uniqueness validator and use it, and check what you have as a record in validate method. It still might be some bug, unforunately i don't use phalcon forms at all cuz i have whole frontend written in AngularJS.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55593" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55593" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/deac7a61ebe061bfc2884973b0e8280c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10703/Xerphis" class="user-moderator-N"><span itemprop="name">Xerphis</span></a>        </span>
+        <br>
+
+        <span class="karma">3.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="55595" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '18</span>
+              </span><br/><a name="C55595" href="#C55595">
+                <time itemprop="dateCreated" datetime="2018-05-22T05:18:28-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I found something.</p>
+<pre><code class="language-sql">SELECT COUNT(*) AS `rowcount` FROM `somedb`.`users` WHERE `users`.`email` = '<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="96fbf7fffad6f3eef7fbe6faf3b8f5f9fb">[email&#160;protected]</a>' AND `users`.`id` &lt;&gt; '99'</code></pre>
+<p>The table with users contained 2 records with the same email address. One of the records contained &quot;date_deleted&quot;.</p>
+<p>In the latter case, the executed query contained &quot;id &lt;&gt; x&quot;. However, it did not check all of the fields listed (email, date_deleted). It checked only the &quot;email&quot; field, which is why it returned the result as false. The validator excludes the current model (by id) when checking. But it does not check the fields that I gave in the options.</p>
+<p>Wee. I have a solution for my case. In form - uniqueness validation, validator not see &quot;fields&quot; option. Validator search records only by field name. We must use &quot;except&quot; option, like this:</p>
+<pre><code class="language-php">new UniquenessValidator([
+                'except' =&gt; ['date_deleted' =&gt; $this-&gt;getEntity()-&gt;date_deleted],
+                'convert' =&gt; function ($data) {
+                    $data['email'] = $this-&gt;filter-&gt;sanitize($data['email'], 'trim');
+                    $data['email'] = $this-&gt;filter-&gt;sanitize($data['email'], 'email');
+                    $data['email'] = $this-&gt;filter-&gt;sanitize($data['email'], 'lower');
+                    return $data;
+                },
+                'message' =&gt; 'msg on fail '
+]),</code></pre>
+<p>Thanks for help.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55595" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55595" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C55597" href="#C55597">
+                <time itemprop="dateCreated" datetime="2018-05-22T05:22:34-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>UniquenessValidator actually doesn't accept fields field, like it adds validator to element or uses fields from add method from <code>$validation-&gt;add()</code>, but it doesn't contain itself information about fields. But yea, your solution is fine i guess, still i guess there is a bug and i think when we have entity used like new Form($entity) it should be passed to validation even if we use isValid() or bind() without entity.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55597" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55597" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/deac7a61ebe061bfc2884973b0e8280c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10703/Xerphis" class="user-moderator-N"><span itemprop="name">Xerphis</span></a>        </span>
+        <br>
+
+        <span class="karma">3.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C55599" href="#C55599">
+                <time itemprop="dateCreated" datetime="2018-05-22T05:59:45-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Aww.. However, this is not what I meant. I can only exclude certain data, but I can not exclude data that is &quot;NOT NULL&quot;.
+The &quot;except&quot; option only supports exclude the value via &quot;field &lt;&gt; x&quot; or &quot;field NOT IN (x ...)&quot;, whten &quot;x&quot; can not equal &quot;NULL&quot;;</p>
+<p>At the moment, I can only use callback validation.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55599" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55599" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C55601" href="#C55601">
+                <time itemprop="dateCreated" datetime="2018-05-22T06:04:33-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Oh you mean it should exclude also where <code>date_deleted</code> is NOT NULL? Yea i guess it's obvious, well i think there was somewhere NFR for it wasn't implemented. I guess it's a time to add it.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55601" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55601" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C55603" href="#C55603">
+                <time itemprop="dateCreated" datetime="2018-05-22T06:07:00-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://github.com/phalcon/incubator/blob/master/Library/Phalcon/Validation/Validator/Db/Uniqueness.php">Db Uniqueness validator</a> from incubator supporte <code>exclude</code> option to this cases</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55603" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55603" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="55605" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '18</span>
+              </span><br/><a name="C55605" href="#C55605">
+                <time itemprop="dateCreated" datetime="2018-05-22T06:10:01-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><code>WHERE %s = ? AND %s !=</code> doesn't look like it supports IS NOT NULL/IS NULL.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55605" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55605" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C55607" href="#C55607">
+                <time itemprop="dateCreated" datetime="2018-05-22T08:00:26-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>well, we have to improve it ;)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55607" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55607" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C55609" href="#C55609">
+                <time itemprop="dateCreated" datetime="2018-05-22T08:09:31-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yea but just improve validator in core already. <a href="https://github.com/phalcon/cphalcon/issues/12763">https://github.com/phalcon/cphalcon/issues/12763</a> there was an issue, i guess maybe we should reopen i and implement it.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55609" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55609" data-cf-modified-dea706947511a8dde2b3f216-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="18271" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

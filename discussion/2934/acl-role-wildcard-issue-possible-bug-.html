@@ -1,0 +1,242 @@
+---
+layout: default
+title: 'Acl Role Wildcard issue (possible bug) - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/17/acl">Acl</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Acl Role Wildcard issue (possible bug)</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1952/undefin3d" class="user-moderator-N"><span itemprop="name">undefin3d</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-07-25T13:32:25-07:00">Jul '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-07-25T13:32:25-07:00">Jul '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1317</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/884402a9ff0bcd54ea3a4df0f6ea8351?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1952/undefin3d" class="user-moderator-N"><span itemprop="name">undefin3d</span></a></span>
+                <span class="karma">3.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2934" href="#C2934">
+        <time class="action-date">Jul '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm trying to make use of the Phalcon Acl in my application but I'm running into some very strange behavior.
+I'm using the Vokuro app as a guideline to persist Profiles (Acl Roles) to the database.</p>
+<p>The following is my schema/data for a Role which is Identical to the Vokuro sample application</p>
+<pre><code class="language-php">CREATE TABLE IF NOT EXISTS profiles (
+  id int(10) unsigned NOT NULL AUTO_INCREMENT,
+  name varchar(64) NOT NULL,
+  active char(1) NOT NULL,
+  PRIMARY KEY (id),
+  KEY active (active)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=4 ;
+
+INSERT INTO profiles (id, name, active) VALUES
+(1, 'Administrators', 'Y'),
+(2, 'Users', 'Y'),
+(3, 'Read-Only', 'Y');
+</code></pre>
+<p>In my script, I fetch profiles and add them as roles (same as in the Acl for vokuro)</p>
+<pre><code class="language-php">// Register roles
+$profiles = Profiles::find('active = "Y"');
+
+foreach ($profiles as $profile) {
+    $acl-&gt;addRole(new Role($profile-&gt;name));
+}</code></pre>
+<p>Resources are defined as follows:</p>
+<pre><code class="language-php">$acl-&gt;addResource(new Resource('index'), array('index'));
+$acl-&gt;addResource(new Resource('user'), array('search', 'create'));
+$acl-&gt;addResource(new Resource('admin'), array('create', 'update', 'delete'));</code></pre>
+<p>Once I have resources and roles added to the ACL, I try to set up some permissions, using the wildcard role first</p>
+<p><strong>EX1</strong></p>
+<pre><code class="language-php">$acl-&gt;allow('Read-Only', 'user', 'create'); // THIS WORKS
+$acl-&gt;allow('*', 'index', 'index'); // allow everyone to access index/index THIS LINE CAUSES PROBLEMS
+$acl-&gt;allow('Read-Only', 'user', 'search'); // FAILS HERE with error 'Role "Read-Only" does not exist in ACL'</code></pre>
+<p>The above code fails on the last line, where I try to set permissions on the Read-Only role, ONLY if I set a permission using '*' as the role before it (as in the example).
+It is strange because the first line executes fine, so the role Read-Only, exists at that point but doesn't exist after the 2nd line.
+So, the 2nd line is problematic.</p>
+<p>A few things I noted about this issue is it <strong>only occurs for the very last role added to the ACL</strong>.
+In the above case,  'Read-Only' was last to be added to the ACL as a role.</p>
+<p>The following code works fine</p>
+<p><strong>EX2</strong></p>
+<pre><code class="language-php">$acl-&gt;allow('Read-Only', 'user', 'create'); // THIS WORKS
+$acl-&gt;allow('*', 'index', 'index'); // allow everyone to access index/index 
+$acl-&gt;allow('Users', 'user', 'search'); // THIS WORKS because 'Users'  was not the last role added</code></pre>
+<p>Of course, If I don't use the wildcard role in line 2, I never have any problems for <strong>EX1</strong>.</p>
+<p>If you use a wildcard role a second time, you get a different error</p>
+<p><strong>EX3</strong></p>
+<pre><code class="language-php">$acl-&gt;allow('Read-Only', 'user', 'create'); // THIS WORKS
+$acl-&gt;allow('*', 'index', 'index'); // allow everyone to access index/index CAUSES PROBLEMS
+$acl-&gt;allow('*', 'user', 'search'); // THIS FAILS
+
+// ABOVE LINE PRODUCES THE Following stack trace
+/*
+PHP Fatal error:  Uncaught exception 'Phalcon\Acl\Exception' with message 'Role "' in /www/project/scripts/acltest.php:130
+Stack trace:
+#0 [internal function]: Phalcon\Acl\Adapter\Memory-&gt;_allowOrDeny('\x00 \x00\x00\x00\x00\x00\x00y', 'user', 'search', 1)
+#1 /www/project/scripts/acltest.php(130): Phalcon\Acl\Adapter\Memory-&gt;allow('*', 'user', 'search')
+#
+*/</code></pre>
+<p>The wildcard is clearly problematic.</p>
+<p>Another strange thing I noticed is this behaviour doesn't occur if we hardcode the roles instead of retrieving from the db.
+For example if I define the above roles as follows:</p>
+<pre><code class="language-php">// Hardcode the roles
+$acl-&gt;addRole(new Role('Administrators'));
+$acl-&gt;addRole(new Role('Users'));
+// $profiles[2]-&gt;name == 'Read-Only'    is true.
+$acl-&gt;addRole(new Role('Read-Only')); // but we need to pass in a string literal</code></pre>
+<p>If I use this approach, <strong>EX1</strong> gives me no issues</p>
+<p>I realize that there are several work arounds for this. I could use role inheritance to avoid using a '*' role. </p>
+<p>To confirm that my database environment is not at fault, I set up the vokuro app on the same mysql server, in the ACL rebuild method,
+I added code similar to EX1 and  I get the exact same error. So that rules out the possibility my dabase setup is at fault.</p>
+<p>I am fairly certain this is a bug, the $acl-&gt;allow() should not affect the collection of roles in the ACL.
+Has anyone else had this issue?</p>
+<p>I'd really like for this behaviour to be fixed and work properly. </p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-0f4cccd1834e8323c4c88e45-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-0f4cccd1834e8323c4c88e45-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/65cc66b2174ca0e8408258408af274c2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1371/david-duncan" class="user-moderator-N"><span itemprop="name">David Duncan</span></a>        </span>
+        <br>
+
+        <span class="karma">6.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9761" href="#C9761">
+                <time itemprop="dateCreated" datetime="2014-07-25T13:58:18-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I dont understand how this is a bug. It looks like it was never implemented and this is a feature request.</p>
+<ol>
+<li>I have yet to see any tutorial/example/code that uses a wildcard role</li>
+<li>You can solve it with inheritance as you said</li>
+<li>Or you could solve it with a loop.</li>
+</ol>
+<p>As far as I know, the only situation where the wildcard works in ACL is for a permission. You can wildcard permissions but not roles or resources. </p>
+<p>Is there a reason why you do not want to do any of the above solutions that you or I have stated? If performance is an issue for you keep in mind that just about every example using phalcon acl will show you how to cache it.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9761" data-cf-modified-0f4cccd1834e8323c4c88e45-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9761" data-cf-modified-0f4cccd1834e8323c4c88e45-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/884402a9ff0bcd54ea3a4df0f6ea8351?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1952/undefin3d" class="user-moderator-N"><span itemprop="name">undefin3d</span></a>        </span>
+        <br>
+
+        <span class="karma">3.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9762" href="#C9762">
+                <time itemprop="dateCreated" datetime="2014-07-25T14:06:11-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Actually, If you take a look at the php Doc for the allow method on the Phalcon\Acl\Adapter\Memory class,</p>
+<p>You will see the following</p>
+<pre><code class="language-php">/**
+         * Allow access to a role on a resource
+         *
+         * You can use '*' as wildcard
+         *
+         * Example:
+         * &lt;code&gt;
+         * //Allow access to guests to search on customers
+         * $acl-&gt;allow('guests', 'customers', 'search');
+         *
+         * //Allow access to guests to search or create on customers
+         * $acl-&gt;allow('guests', 'customers', array('search', 'create'));
+         *
+         * //Allow access to any role to browse on products
+         * $acl-&gt;allow('*', 'products', 'browse');
+         *
+         * //Allow access to any role to browse on any resource
+         * $acl-&gt;allow('*', '*', 'browse');
+         * &lt;/code&gt;
+         *
+         * @param string $roleName
+         * @param string $resourceName
+         * @param mixed $access
+         */
+        public function allow($roleName, $resourceName, $access){ }
+</code></pre>
+<p>From the examples provided in the doc block for the method, the clearly give an example of using a wildcard for a role.
+Unless they accidently put this in the docs, it should be a valid working feature.</p>
+<p>I realize this can be solved by other means, but It would be nice if the functionality stated in the docs was working properly.
+You'll notice that the * role works fine even in my examples, as long as you hardcode the roles.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9762" data-cf-modified-0f4cccd1834e8323c4c88e45-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9762" data-cf-modified-0f4cccd1834e8323c4c88e45-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/65cc66b2174ca0e8408258408af274c2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1371/david-duncan" class="user-moderator-N"><span itemprop="name">David Duncan</span></a>        </span>
+        <br>
+
+        <span class="karma">6.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9764" href="#C9764">
+                <time itemprop="dateCreated" datetime="2014-07-25T14:21:48-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I stand corrected I misspoke.</p>
+<p><a href="https://github.com/phalcon/cphalcon/pull/1411">https://github.com/phalcon/cphalcon/pull/1411</a></p>
+<p>Looks like similar issue was fixed in 1.3.0. If you are on a more recent version I would file an issue on the tracker</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9764" data-cf-modified-0f4cccd1834e8323c4c88e45-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9764" data-cf-modified-0f4cccd1834e8323c4c88e45-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2934" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

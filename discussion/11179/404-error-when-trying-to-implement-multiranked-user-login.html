@@ -1,0 +1,280 @@
+---
+layout: default
+title: '404 error when trying to implement multiranked user login - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/16/security">Security</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">404 error when trying to implement multiranked user login</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/6753/Horodrim" class="user-moderator-N"><span itemprop="name">Horodrim</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-04-15T02:54:49-07:00">Apr '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-04-15T02:54:49-07:00">Apr '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>436</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/d5da0315d074cff965531f135b3d029e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/6753/Horodrim" class="user-moderator-N"><span itemprop="name">Horodrim</span></a></span>
+                <span class="karma">510</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C11179" href="#C11179">
+        <time class="action-date">Apr '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi all,</p>
+<p>Im kinda stuck with a problem. I'm workin on a project, and i decided to implement the login with  ACL authentification. The problem is that i followed the documentation and I'm having trouble with normal users.</p>
+<p>I have 2 types of users, Admin and Regular. Admin user works fine but regular gives me the 404 page not found error. I tried using die() to see what is happening with the roles and i can see that they are properly assigned to users.</p>
+<p>Now i really don't understand why does it not load my registered users only page for normal users when it works for admins, and ACL is properly settup?</p>
+<p>can you  guys  help out, it's pretty important. Would appreciate for any help.</p>
+<p>The project is quite simple, here are the implementations i used:</p>
+<p><strong>SecurityPlugin.php
+</strong></p>
+<blockquote>
+<p>use Phalcon\Acl;
+use Phalcon\Acl\Role;
+use Phalcon\Acl\Resource;
+use Phalcon\Events\Event;
+use Phalcon\Mvc\User\Plugin;
+use Phalcon\Mvc\Dispatcher;
+use Phalcon\Acl\Adapter\Memory as AclList;</p>
+<p>public function getAcl()
+{
+if (!isset($this-&gt;persistent-&gt;acl)) {</p>
+<pre><code>      $acl = new AclList();
+
+      $acl-&gt;setDefaultAction(Acl::DENY);
+
+      // Register roles
+      $roles = [
+          'users'  =&gt; new Role(
+              'Users',
+              'Member privileges, granted after sign in.'
+          ),
+
+          'admin'  =&gt; new Role(
+              'Admin',
+              'Admin privileges, granted after sign in.'
+          ),
+
+          'guests' =&gt; new Role(
+              'Guests',
+              'Anyone browsing the site who is not signed in is considered to be a "Guest".'
+          )
+      ];
+
+      foreach ($roles as $role) {
+          $acl-&gt;addRole($role);
+      }
+
+      //Private area resources
+      $privateResources = array(
+          'restricted'          =&gt; array('index')
+      );
+      foreach ($privateResources as $resource =&gt; $actions) {
+          $acl-&gt;addResource(new Resource($resource), $actions);
+      }
+
+      //Admin area resources
+      $adminResources = array(
+          'restricted'     =&gt; array('index', 'profile')
+
+      );
+      foreach ($adminResources as $resource =&gt; $actions) {
+          $acl-&gt;addResource(new Resource($resource), $actions);
+      }
+
+      //Public area resources
+      $publicResources = array(
+          'index'      =&gt; array('index'),
+          'register'   =&gt; array('index'),
+          'errors'     =&gt; array('show401', 'show403', 'show404', 'show500'),
+          'session'    =&gt; array('index', 'register', 'start', 'end')
+      );
+      foreach ($publicResources as $resource =&gt; $actions) {
+          $acl-&gt;addResource(new Resource($resource), $actions);
+      }
+
+      //Grant access to public areas to both users and guests
+      foreach ($roles as $role) {
+          foreach ($publicResources as $resource =&gt; $actions) {
+              foreach ($actions as $action){
+                  $acl-&gt;allow($role-&gt;getName(), $resource, $action);
+              }
+          }
+      }
+
+      //Grant access to private area to role Users
+      foreach ($privateResources as $resource =&gt; $actions) {
+          foreach ($actions as $action){
+              $acl-&gt;allow('Users', $resource, $action);
+          }
+      }
+
+      //Grant access to private area to role Admin
+      foreach ($adminResources as $resource =&gt; $actions) {
+          foreach ($actions as $action){
+              $acl-&gt;allow('Admin', $resource, $action);
+          }
+      }
+
+      //The acl is stored in session
+      $this-&gt;persistent-&gt;acl = $acl;
+  }
+
+  return $this-&gt;persistent-&gt;acl;</code></pre>
+<p>}</p>
+<p>public function beforeDispatch(Event $event, Dispatcher $dispatcher)
+{</p>
+<pre><code>  $auth = $this-&gt;session-&gt;get('auth');
+  if (!$auth){
+      $role = 'Guests';
+      die(print_r($role));
+
+  } else {
+      $role = 'Users';
+  } 
+
+  if ($auth['type'] == 'A') {
+        return;
+    }
+
+  $controller = $dispatcher-&gt;getControllerName();
+  $action = $dispatcher-&gt;getActionName();
+
+  $acl = $this-&gt;getAcl();
+
+  if (!$acl-&gt;isResource($controller)) {
+      $dispatcher-&gt;forward([
+          'controller' =&gt; 'errors',
+          'action'     =&gt; 'show404'
+      ]);
+
+      return false;
+  }
+
+  $allowed = $acl-&gt;isAllowed($role, $controller, $action);
+
+  if ($allowed != Acl::ALLOW) {
+      if ($role == 'Guests') {
+          $dispatcher-&gt;forward(array(
+          'controller' =&gt; 'errors',
+          'action'     =&gt; 'show401'
+          ));
+          return false;
+      } else {
+          $dispatcher-&gt;forward(array(
+          'controller' =&gt; 'errors',
+          'action'     =&gt; 'show403'
+          ));
+          return false;
+          }   
+  }               </code></pre>
+<p>}
+}</p>
+</blockquote>
+<p><strong>SessionController.php</strong></p>
+<blockquote>
+<p>class SessionController extends ControllerBase
+{
+public function initialize()
+{
+$this-&gt;tag-&gt;setTitle('Log in');
+parent::initialize();
+}</p>
+<pre><code>public function indexAction()
+{
+    if (!$this-&gt;request-&gt;isPost()) {
+        $this-&gt;tag-&gt;setDefault('name', 'user');
+        $this-&gt;tag-&gt;setDefault('password', '12345678');
+    }
+}
+
+private function _registerSession(Users $user)
+{
+    $this-&gt;session-&gt;set('auth', array(
+        'id' =&gt; $user-&gt;id,
+        'name' =&gt; $user-&gt;name,
+        'type'=&gt;$user-&gt;type
+    ));
+}
+
+public function startAction()
+{
+    if ($this-&gt;request-&gt;isPost()) {
+
+        $name = $this-&gt;request-&gt;getPost('name');
+        $password = $this-&gt;request-&gt;getPost('password');
+
+        $user = Users::findFirst(array(
+            "(name = :name:) AND password = :password: AND active = 'Y'",
+            'bind' =&gt; array('name' =&gt; $name, 'password' =&gt; sha1($password))
+        )); 
+        if ($user != false) {
+            $this-&gt;_registerSession($user);
+            $this-&gt;flash-&gt;success('Welcome back ' . $user-&gt;name);
+            return $this-&gt;forward('locked/index');
+        }
+
+        $this-&gt;flash-&gt;error('Wrong name/password');
+    }
+
+    return $this-&gt;forward('session/index');
+}
+
+public function endAction()
+{
+    $this-&gt;session-&gt;remove('auth');
+    $this-&gt;flash-&gt;success('You have been logged out succesfully!');
+    return $this-&gt;forward('index/index');
+}</code></pre>
+<p>}</p>
+</blockquote>
+<p>So for admin both <em>locked/index.php</em> and <em>locked/profile.php</em> work normally, yet for Users(regular user) it gives me the 404 file not found.</p>
+<p>Anyone got any idea what it might be?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-a1dcfe51143693e52dcd893c-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-a1dcfe51143693e52dcd893c-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="11179" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

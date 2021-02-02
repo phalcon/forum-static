@@ -1,0 +1,564 @@
+---
+layout: default
+title: 'Are recursive, dynamic models possible in Phalcon? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Are recursive, dynamic models possible in Phalcon?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10209/slothstronaut" class="user-moderator-N"><span itemprop="name">slothstronaut</span></a></span>
+            <time itemprop="dateCreated" datetime="2020-06-04T11:50:33-07:00">Jun '20</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2020-06-04T11:50:33-07:00">Jun '20</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">6</span>
+                </td>
+                <td>
+                    <label>Views</label><br>211</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/3e0b957bff7124d8346cbfa1a2b54e27?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10209/slothstronaut" class="user-moderator-N"><span itemprop="name">slothstronaut</span></a></span>
+                <span class="karma">1.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C20673" href="#C20673">
+        <time class="action-date">Jun '20</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I've been building out a fairly large project using Phalcon 4.0.5 and just hit a major snag.</p>
+<p>Our models in some cases are dynamic, so we will create an instance, and set the source table after creation, which has been working fine until its done recursively, here is an example:</p>
+<pre><code class="language-php">class DynamicModel extends \Phalcon\Mvc\Model
+{
+    public function setTable($table)
+    {
+        $this-&gt;setSource($table);
+    }
+}
+
+$originalModel = new \Model\DynamicModel;
+$originalModel-&gt;setTable('original');
+$originalModel::find();</code></pre>
+<p>This all works great, until...</p>
+<pre><code class="language-php">class DynamicModel extends \Phalcon\Mvc\Model
+{
+    public function setTable($table)
+    {
+        $this-&gt;setSource($table);
+    }
+
+    public function afterFetch(): void
+    {
+        $someOtherTable = new \Model\DynamicModel;
+        $someOtherTable-&gt;setTable('some_new_table');
+
+        // this works, but now the source for any instance
+        // of \Model\DyanmicModel is 'some_new_table'
+        $someOtherTable::find();
+    }
+}</code></pre>
+<p>I can use this line to fix the issue of it having the wrong table, and force it to refresh in setTable()</p>
+<pre><code class="language-php">$this-&gt;getModelsManager()-&gt;__destruct();  </code></pre>
+<p>But the issue remains for saving it... for example:</p>
+<pre><code class="language-php">$originalModel = new \Model\DynamicModel;
+$originalModel-&gt;setTable('original');
+$originalModel::find();</code></pre>
+<p>this fires afterFetch() and changes table to <code>some_new_table</code></p>
+<p>So now when you go to save the model instance like:</p>
+<pre><code class="language-php">$originalModel-&gt;some_field = 123;
+$originalModel-&gt;save();</code></pre>
+<p>Its now trying to save to <code>some_new_table</code></p>
+<p>I've tried a number of different approaches to overcome this, the most promising seems to be anonymously subclassing DynamicModel, which seems to work until you try to run a query.</p>
+<pre><code class="language-php">$dynamicModelAnonymousClassInstance = new class extends \Model\DynamicModel {
+    public function initialize(): void
+    {
+        $this-&gt;setSource('some_other_table');
+        parent::initialize();
+    }
+};</code></pre>
+<p>With the above, <code>$dynamicModelAnonymousClassInstance</code> appears to be a perfectly usable model, but when you run <code>::find()</code> you get:</p>
+<pre><code>Scanning error before 'anonymous...' when parsing: SELECT <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="beddd2dfcdcdfedfd0d1d0c7d3d1cbcd">[email&#160;protected]</a> (155)</code></pre>
+<p>So it seems to discard the <code>source</code> set behind the scenes, but only once you try to do a query. I'm not sure if that is a bug, or I'm just not using it as intended so its behaving unpredictably.</p>
+<p>When I define the class normally, for instance:</p>
+<pre><code class="language-php">class SomeOtherTable extends \Model\ManagedModel {
+    public function initialize(): void
+    {
+        $this-&gt;setSource('some_other_table');
+        parent::initialize();
+    }
+};
+
+\Model\SomeOtherTable::find();</code></pre>
+<p>This works fine, but the problem is I can't predefine the names of the classes on the filesystem for this project, I need to be able to generate them dynamically by the name provided by the user.</p>
+<p>I would really appreciate any ideas on how to overcome the issue, or other approaches that might avoid the issue altogether.</p>
+<p>Thanks</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C63337" href="#C63337">
+                <time itemprop="dateCreated" datetime="2020-06-04T12:26:18-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It's not immediately obvious to me why you're running that code in <code>afterFetch()</code>.  You're not returning anything - you're just querying the DB again, but doing nothing with the result.</p>
+<p>Just thinking out loud (so to speak), but what if you added a static property to <code>DynamicModel</code> that gets set to whatever you set in <code>setTable()</code>.  Then, add a <code>beforeSave()</code> handler that calls <code>$this-&gt;setSource(self::$originallySetTableSource)</code>.  That would revert the change done in <code>afterFetch()</code>.  You could probably tie that in to the constructor actually, rather than needing a separate <code>setTable()</code> method.  It might make invocation of <code>DynamicModel</code> a little clearer:</p>
+<pre><code class="language-php">$SomeDynamicModel = new \Model\DynamicModel('table_name');</code></pre>
+<p>Finally, off-topic: If you append the three backticks for opening a code block with &quot;php&quot; (so '''php but with backticks instead of single quotes), you'll get syntax highlighting.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63337" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63337" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3e0b957bff7124d8346cbfa1a2b54e27?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10209/slothstronaut" class="user-moderator-N"><span itemprop="name">slothstronaut</span></a>        </span>
+        <br>
+
+        <span class="karma">1.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="63341" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '20</span>
+              </span><br/><a name="C63341" href="#C63341">
+                <time itemprop="dateCreated" datetime="2020-06-04T12:42:17-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hey Dylan, thanks for the quick reply.</p>
+<p>You're spot on, the code in <code>afterFetch()</code> is for demonstration purposes to keep it as simple as possible. The real purpose is to get a hydrated model instance.</p>
+<p>Your idea about the static property works in the above scenario, but I don't think can handle another level of recursion, I need to handle up to 4 levels of recursion. I tried a similar approach, but storing it as arrays and it got a unwieldy quickly. </p>
+<p>Is there some reason an anonymous subclass won't allow <code>-&gt;setSource('table_name')</code> but a pre-defined class will? This is my first time diving into anonymous classes, so I'm a bit out of my depth.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63341" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63341" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C63343" href="#C63343">
+                <time itemprop="dateCreated" datetime="2020-06-04T12:57:07-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I've never used anonymous classes so I'm no help there.</p>
+<p>You're right - static properties won't work if you need to store multiple levels.  What about just a regular private property?  That will be tied to the object, not the class.  Since you're setting the source with every invocation of DynamicModel anyway, there's no need to persist the table source between objects of that class.</p>
+<p>How do you determine the source of the recursive, inner model?  ie: what <code>some_new_table</code>is?
+What do you actually do with that inner model?  Is it assigned to that outer model?</p>
+<p>Can you give me the use case for why you're doing this?  Maybe that'll help us come up with an ideal solution.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63343" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63343" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3e0b957bff7124d8346cbfa1a2b54e27?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10209/slothstronaut" class="user-moderator-N"><span itemprop="name">slothstronaut</span></a>        </span>
+        <br>
+
+        <span class="karma">1.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="63349" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '20</span>
+              </span><br/><a name="C63349" href="#C63349">
+                <time itemprop="dateCreated" datetime="2020-06-04T13:27:07-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The use case is for a system that can create and manage tables dynamically. </p>
+<p>If it helps to explain it conceptutally, an example might be a user created <code>Blog</code> model instance, which, when hydrated loads an instance of a <code>Image</code> model, which in turn loads a <code>File</code> instance of the file record.</p>
+<p>The cut-off at the service level is 4 levels of recursion, so that would also force the cut-off on the recursive dynamic models as well. </p>
+<p>So, in psuedo-ish-code:</p>
+<pre><code class="language-php">class DynamicModel extends BaseModel {
+    public function afterFetch()
+    {
+        if(property_exists($this, 'image')) {
+            // lets say it was stored as an int
+            $imageModelInstance = new \Model\DynamicModel;
+            $imageModelInstance-&gt;setTable('images');
+            $this-&gt;image = $imageModelInstance::findFirst($this-&gt;image);
+        }
+
+        if(property_exists($this, 'file')) {
+            // lets say it was stored as an int
+            $fileModelInstance = new \Model\DynamicModel;
+            $fileModelInstance-&gt;setTable('files');
+            $this-&gt;file = $fileModelInstance::findFirst($this-&gt;file);
+        }
+    }
+}
+
+$dynamicModelInstance = new \Model\DynamicModel;
+$dynamicModelInstance-&gt;setTable('blogs');
+
+$blogs = $dynamicModelInstance::find();</code></pre>
+<p>In a perfect world, the end result would be something like this</p>
+<pre><code>[
+    blog {
+        image {
+            file {
+
+            }
+        }
+    }
+]</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63349" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63349" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="63351" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '20</span>
+              </span><br/><a name="C63351" href="#C63351">
+                <time itemprop="dateCreated" datetime="2020-06-04T13:56:07-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Ok, then yeah - I think setting a private property would work:</p>
+<pre><code class="language-php">
+class DynamicModel{
+
+    private $actual_source;
+
+    public function setTable($table){
+        $this-&gt;actual_source = $table;
+        $this-&gt;setSource($table);
+    }
+
+    // Ensure the right table is used before validation (and saving) happens
+    public function beforeValidation(){
+        $this-&gt;setSource($this-&gt;actual_source);
+    }
+
+    // Ensure the right table is used when querying
+    public function find($params){
+        $this-&gt;setSource($this-&gt;actual_source);
+        return parent::find($params);
+    }
+
+    public function afterFetch(){
+        $sub_models = [
+            'image' =&gt; 'images',
+            'file'  =&gt; 'files'
+        ];
+        foreach($sub_models as $property,$table){
+            if(property_exists($this,$property)){
+                $SubModel = new \Model\DynamicModel;
+                $SubModel-&gt;setTable($table);
+                $this-&gt;{$property} = $SubModel::findFirst($this-&gt;{$property});
+            }
+        }
+    }   
+}</code></pre>
+<p>I feel like there should be a more elegant solution -  maybe anonymous classes is the trick.  What you're doing is pretty out there, so this may be as good as it gets.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63351" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63351" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3e0b957bff7124d8346cbfa1a2b54e27?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10209/slothstronaut" class="user-moderator-N"><span itemprop="name">slothstronaut</span></a>        </span>
+        <br>
+
+        <span class="karma">1.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="63361" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '20</span>
+              </span><br/><a name="C63361" href="#C63361">
+                <time itemprop="dateCreated" datetime="2020-06-05T10:41:55-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hey Dylan, first of all thanks for taking a look at this. After 10 hours of banging my head against it, at some point it just helps to have a second pair of eyes. I realize this problem isn't necessarily related to Phalcon, but more just my implementation of it, so I'm very appreciative of the help.</p>
+<p>Anonymous subclassing doesn't work as it gets auto assigned a class name by the engine, and in Zephir, it simply calls <code>get_class()</code> on the instance so PHQL attempts to construct a query with an anonymous class name like <code>SELECT field FROM <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="bfdcd3deccccffded1d0d1c6d2d0cacc">[email&#160;protected]</a>/iw9uh87gf8</code> I don't see anywhere you can override the internal class key, otherwise this would be the best option.</p>
+<p>I had not considered making the query methods non-static. After going through it, it also has its pitfalls, such as:</p>
+<p>1) <code>-&gt;find()</code> cannot be made non-static when its extending <code>Phalcon\Mvc\Model</code>, a simple workaround is just to make up a new name like <code>-&gt;findDynamic()</code> to wrap the original name.</p>
+<p>2) I still need to make use of <code>$this-&gt;getModelsManager()-&gt;__destruct();</code> to refresh the cache on each instance of <code>-&gt;setTable()</code> otherwise it does not actually update the source, which means every query generates a new execution plan, which means anything in a loop would perform poorly.</p>
+<p>3) The model instances returned by <code>-&gt;findDynamic()</code> which call <code>::find()</code> are generic instances of DynamicModel without the private property set, so now I have to save each model instance returned by find or findFirst and pass that table to it, this also seems like it will perform poorly.</p>
+<p>After coming up with workarounds for all of the above shortcomings, it &quot;works&quot; but feels very fragile and since its doing all of the inspection of variables and passing things around in PHP it isn't taking advantage of Phalcon's performance benefits.</p>
+<p>That all being said, I'm tinkering around with another wild idea:</p>
+<p>What if I had a file with 1,000 spare placeholder classes, named things like DynamicModel0001, then as needed I can instantiate these, set the table, and maintain the table:model mapping and interface directly with the hydrated placeholder models.</p>
+<p>In practice that might look like:</p>
+<pre><code class="language-php">class DynamicModel0001 extends DynamicModel
+{
+    public $dynamicSource;
+
+    public function initialize()
+    {
+        if(is_string($dynamicSource)) {
+            $this-&gt;setSource($this-&gt;dynamicSource);
+        }
+    }
+}
+
+class DynamicModel0002 extends DynamicModel
+{
+    public $dynamicSource;
+
+    public function initialize()
+    {
+        if(is_string($dynamicSource)) {
+            $this-&gt;setSource($this-&gt;dynamicSource);
+        }
+    }
+}</code></pre>
+<p>Then resolve the table name to placeholder class via a static method, such as:</p>
+<pre><code class="language-php">class DynamicModelMapper
+{
+    static $existingModels = [];
+
+    static $nextDynamicModelPosition = 1;
+
+    static function getModel($table)
+    {
+        if(isset(self::$existingModels[$table])) {
+            return self::$existingModels[$table];
+        }
+
+        $className = "\Model\DynamicModel000" . self::$nextDynamicModelPosition;
+
+        self::$existingModels[$table] = new $className;
+        self::$existingModels[$table]-&gt;setTable($table);
+        self::$nextDynamicModelPosition += 1;
+
+        return self::$existingModels[$table];
+    }
+}
+
+$userTable = 'some_table';
+DynamicModelMapper::getModel($userTable)::find()</code></pre>
+<p>This is just theory, this code may not be exactly what's needed, but its the general idea of having spare blank classes avilable on-demand. It seems kind of nutty, but also seems like it may work.</p>
+<p>I am fairly certain it will work, its pretty weird, but seems more maintainable than the maze that I've created to handle the other side effects of mixing/matching static vs. non-static.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63361" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63361" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="63363" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '20</span>
+              </span><br/><a name="C63363" href="#C63363">
+                <time itemprop="dateCreated" datetime="2020-06-05T11:04:21-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>D'oh - you're right, I forgot the static nature of <code>find()</code></p>
+<p>You're also right that this is a wild idea.  You've been really inventive but honestly, if I had to do this to solve my problem, I'd re-examine what the problem is. Because as inventive as this is....there's GOTTA be a better way.</p>
+<p>You said you want to manage tables dynamically.  What all does that entail?  Have you considered not using models at all, but a type of Management component that can act on multiple tables - possibly dynamically creating SQL statements?</p>
+<p>Something like:</p>
+<pre><code class="language-php">$Manager = new Manager('blog');
+$Manager-&gt;deleteWhere('id',23);</code></pre>
+<pre><code class="language-php">class Manager extends \Phalcon\Mvc\Component{
+    private $table;
+
+    public function __construct($table){
+        $this-&gt;table = $table;
+    }
+
+    // Alternatively you could maybe have this accept an SQL clause and binding values
+    public function deleteWhere($column,$value){
+        // Obviously lots of room for SQL injections,
+        // this is just a proof-of-concept
+        $query = &lt;&lt;&lt;SQL
+            DELETE
+            FROM
+                $this-&gt;table
+            WHERE
+                $column = $value
+        SQL;
+        $this-&gt;DB-&gt;executeQuery($query);
+    }
+}</code></pre>
+<p>Another thought I had was - do you actually need multiple tables?  Or can all this data sit in one table, use one Model, and have that Model's behaviour change depending on what <code>type</code> the row is (blog/image/file/etc)?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63363" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63363" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3e0b957bff7124d8346cbfa1a2b54e27?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10209/slothstronaut" class="user-moderator-N"><span itemprop="name">slothstronaut</span></a>        </span>
+        <br>
+
+        <span class="karma">1.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C63365" href="#C63365">
+                <time itemprop="dateCreated" datetime="2020-06-05T11:47:57-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Necessity is the mother of all invention :) </p>
+<p>For this project, the ability to manage multiple tables dynamically is not incidental, but rather the central purpose of the platform. Coming up with a maintainable solution is a must.</p>
+<p>I have considered building something to manually construct queries, but I am quite fond of Phalcon's ORM, even more so with shiny new Phalcon 4 features.</p>
+<p>Currently, its able to handle hundreds of other use cases in the context of this project brilliantly, this is the only place its stumbled so far.</p>
+<p>I'm not sure if this is out of scope, but one potential option would be to make the internal class name customizable, so in <code>Manager.zep</code> instead of</p>
+<pre><code>public function setModelSource(&lt;ModelInterface&gt; model, string! source) -&gt; void
+{
+    let this-&gt;sources[get_class_lower(model)] = source;
+}</code></pre>
+<p>It could have a parameter for model class:</p>
+<pre><code>public function setModelSource(&lt;ModelInterface&gt; model, string! source, string! customClassName) -&gt; void
+{
+    modelClass = customClassName ?? get_class_lower(model)
+
+    let this-&gt;sources[class] = source;
+}</code></pre>
+<p><code>I do not know Zephir, the above code is for demonstration purposes only</code></p>
+<p>Alternatively, it could hash the anonymous class name and assign it a representitive name to refer to it keeping the model fully anonymous.</p>
+<p>I'm fairly certain this would allow for anonymous subclasses. It could potentially have other side effects, but at least would fix the error I found.</p>
+<p>If that was built into Phalcon, you could then create models completely programmatically, which would likely be helpful for a number of different use cases beyond mine.</p>
+<p>Apparently, I'm not the only one running into this case, I found a thread on StackOverflow where they claimed to be able to solve the same issue in Laravel using anonymous subclasses: <a href="https://stackoverflow.com/a/53092769/225199">https://stackoverflow.com/a/53092769/225199</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63365" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63365" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C63367" href="#C63367">
+                <time itemprop="dateCreated" datetime="2020-06-05T12:18:01-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If you want to keep investigating anonymous classes, good luck.  Not having any experience with them, I can't help with that.</p>
+<p>Another thought:</p>
+<p>Have you considered using the developer tools? <a href="https://docs.phalcon.io/4.0/en/devtools">https://docs.phalcon.io/4.0/en/devtools</a></p>
+<p>Maybe instead of making 1000 dynamic models, you dynamically create the model definition for each table.  So if a user wants to create a table called blogs, you create the table, then invoke the developer tools to create the model for it.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63367" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63367" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3e0b957bff7124d8346cbfa1a2b54e27?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10209/slothstronaut" class="user-moderator-N"><span itemprop="name">slothstronaut</span></a>        </span>
+        <br>
+
+        <span class="karma">1.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="63369" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '20</span>
+              </span><br/><a name="C63369" href="#C63369">
+                <time itemprop="dateCreated" datetime="2020-06-05T12:29:32-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>In that case the web server would need access to write to the filesystem with the new model definitions I believe, which would be a security concern. It would definitely make it a million times easier, but I don't think thats viable considering the risk it imposes. </p>
+<p>I've thought about doing <code>eval()</code> as well, but that also has security and performance concerns.</p>
+<p>Sorry, I know this is kind of a weird one</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63369" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63369" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="63371" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '20</span>
+              </span><br/><a name="C63371" href="#C63371">
+                <time itemprop="dateCreated" datetime="2020-06-05T13:02:21-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Web servers write to the file system all the time - thats how file uploads work.  You could make it safe by restricting the characters of new table names to just <code>[a-z0-9]</code> - that's simple enough to regex.</p>
+<p>Or, you could have a translation table that maps whatever the user entered to a safe, internal name.  Then, when a <code>Joe's table</code> model is requested, a lookup is done that maps<code>Joe's table</code> to <code>user_23_table_98</code>, and the <code>User23Table98</code> model.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63371" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63371" data-cf-modified-ecc9aa20529a9d7ab9d4a679-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="20673" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

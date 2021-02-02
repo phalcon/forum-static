@@ -1,0 +1,310 @@
+---
+layout: default
+title: 'How to do validation with Forms in Phalcon 2.1? What have I missed in my code? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How to do validation with Forms in Phalcon 2.1? What have I missed in my code?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/6765/Zaxap" class="user-moderator-N"><span itemprop="name">Zaxap</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-05-01T10:02:25-07:00">May '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-05-01T10:02:25-07:00">May '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>786</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/aaface2b4f44cdb662c387a930f4c69b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/6765/Zaxap" class="user-moderator-N"><span itemprop="name">Zaxap</span></a></span>
+                <span class="karma">11.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C11367" href="#C11367">
+        <time class="action-date">May '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>That is my code:</p>
+<p><em>app/forms/<strong>MyForm.php</strong></em></p>
+<pre><code class="language-php">&lt;?php
+
+use Phalcon\Forms\Form;
+use Phalcon\Forms\Element\Text;
+use Phalcon\Forms\Element\Password;
+use Phalcon\Validation\Validator\PresenceOf;
+use Phalcon\Validation\Validator\StringLength;
+use Phalcon\Validation\Validator\Regex;
+use Phalcon\Validation\Validator\Uniqueness;
+
+class MyForm extends Form
+{
+    public function initialize()
+    {
+        $name = new Text('name', [
+            'minlength'   =&gt; 3,
+            'maxlength'   =&gt; 30,
+            'placeholder' =&gt; 'Name'
+        ]);
+        $username-&gt;addValidators([
+            new StringLength([
+                'messageMinimum' =&gt; 'The name is too short',
+                'min'            =&gt; 4
+            ]),
+            new Regex([
+                'message'      =&gt; 'The name is required',
+                'pattern'      =&gt; '/^[a-zA-Z0-9-_.]+$/',
+                'cancelOnFail' =&gt; true
+            ]),
+            new Uniqueness([
+                'model'        =&gt; 'Users',
+                'message'      =&gt; 'Sorry, this name already taken.'
+            ])
+        ]);
+        $this-&gt;add($name);
+
+        $password = new Password('pass', [
+            'minlength'   =&gt; 2,
+            'placeholder' =&gt; 'password'
+        ]);
+        $password-&gt;addValidators([
+            new PresenceOf([
+                'message' =&gt; 'The password is required'
+            ]),
+            new StringLength([
+                'messageMinimum' =&gt; 'The password is too short',
+                'min'            =&gt; 3
+            ])
+        ]);
+        $password-&gt;clear();
+        $this-&gt;add($password);
+    }
+}</code></pre>
+<p><em>app/controllers/<strong>RegisterController.php</strong></em></p>
+<pre><code class="language-php">&lt;?php
+
+use Phalcon\Mvc\Controller;
+
+class RegisterController extends Controller
+{
+    public function indexAction()
+    {
+        $form = new MyForm;
+        if ($this-&gt;request-&gt;isPost()) {
+            $user = new Users;
+            $user-&gt;assign([
+                'name' =&gt; $this-&gt;request-&gt;getPost('name', ['string', 'striptags']),
+                'pass' =&gt; $this-&gt;request-&gt;getPost('pass')
+            ]);
+            if ($user-&gt;save()) {
+                return $this-&gt;response-&gt;redirect('register/done');
+            }
+            $this-&gt;flash-&gt;error($user-&gt;getMessages());
+        }
+        $this-&gt;view-&gt;form = $form;
+    }
+
+    public function doneAction()
+    {
+        return 'Done!';
+    }
+}</code></pre>
+<p>But the validation has always passed and website always returned &quot;Done!&quot;.</p>
+<p>I tried to use</p>
+<pre><code class="language-php">if ($form-&gt;isValid($_POST)) { ... }</code></pre>
+<pre><code class="language-php">&lt;?php
+
+// ...
+    public function indexAction()
+    {
+        // ...
+        if ($this-&gt;request-&gt;isPost()) {
+            if ($form-&gt;isValid($_POST)) {
+                // ...
+            }
+        }
+        // ...
+    }
+// ...</code></pre>
+<p>But it returnes this error:</p>
+<pre><code>Exception: Model of record must be set to property "model"</code></pre>
+<p>I hope for your support :)</p>
+<p>P.S. My version of Phalcon - 2.1</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-e5a52a2b975048b8c519e4f1-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-e5a52a2b975048b8c519e4f1-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1f92c8832155ca96cb3147af3cad27b0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6311/davihu" class="user-moderator-N"><span itemprop="name">David Hübner</span></a>        </span>
+        <br>
+
+        <span class="karma">9.3k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="33377" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '16</span>
+              </span><br/><a name="C33377" href="#C33377">
+                <time itemprop="dateCreated" datetime="2016-05-01T23:37:48-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Maybe try to rename <strong>$username</strong> to <strong>$name</strong> and it will work :)</p>
+<pre><code class="language-php">$name = new Text(...);
+$username-&gt;addValidators(...);</code></pre>
+<p>Also you have to pass model instance to Uniqueness validator instead of model class. you can pass that model as first parameter of initialize method.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="33377" data-cf-modified-e5a52a2b975048b8c519e4f1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="33377" data-cf-modified-e5a52a2b975048b8c519e4f1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/aaface2b4f44cdb662c387a930f4c69b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6765/Zaxap" class="user-moderator-N"><span itemprop="name">Zaxap</span></a>        </span>
+        <br>
+
+        <span class="karma">11.1k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C33377"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/1f92c8832155ca96cb3147af3cad27b0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        David Hübner                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C33393" href="#C33393">
+                <time itemprop="dateCreated" datetime="2016-05-02T07:12:31-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Maybe try to rename $username to $name and it will work :)</p>
+</blockquote>
+<p>Oh! Sorry for this mistake :) I've already did it, but unfortunately still see an error:</p>
+<pre><code>Exception: Model of record must be set to property "model"</code></pre>
+<p>I can not fully understand what is the real cause of this... Do you have any guesses what's it?</p>
+<blockquote>
+<p>Also you have to pass model instance to Uniqueness validator instead of model class. you can pass that model as first parameter of initialize method.</p>
+</blockquote>
+<p>Can you say me more about it? Of course, If it's not very difficult)))</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="33393" data-cf-modified-e5a52a2b975048b8c519e4f1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="33393" data-cf-modified-e5a52a2b975048b8c519e4f1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1f92c8832155ca96cb3147af3cad27b0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6311/davihu" class="user-moderator-N"><span itemprop="name">David Hübner</span></a>        </span>
+        <br>
+
+        <span class="karma">9.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C33399" href="#C33399">
+                <time itemprop="dateCreated" datetime="2016-05-02T07:49:25-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Form class</p>
+<pre><code class="language-php">class MyForm extends Form
+{
+    public function initialize($model)
+    {
+        $name = new Text('name', [
+            'minlength'   =&gt; 3,
+            'maxlength'   =&gt; 30,
+            'placeholder' =&gt; 'Name'
+        ]);
+        $username-&gt;addValidators([
+            ...,
+            new Uniqueness([
+                'model' =&gt; $model,
+                'message' =&gt; 'Sorry, this name already taken.'
+            ])
+        ]);
+    }
+}</code></pre>
+<p>controller</p>
+<pre><code class="language-php">class RegisterController extends Controller
+{
+    public function indexAction()
+    {
+        $user = new Users;
+        $form = new MyForm($user);
+        ...
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="33399" data-cf-modified-e5a52a2b975048b8c519e4f1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="33399" data-cf-modified-e5a52a2b975048b8c519e4f1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4d1384d668711e6153ed4c6f05e29216?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/286/trentramseyer" class="user-moderator-N"><span itemprop="name">Trent Ramseyer</span></a>        </span>
+        <br>
+
+        <span class="karma">22.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C38845" href="#C38845">
+                <time itemprop="dateCreated" datetime="2016-08-21T11:59:19-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You can initiate a model in the uniqueness array </p>
+<pre><code class="language-php">&lt;?php
+ new Uniqueness(
+   array(
+     'model' =&gt; new User(),
+     'message' =&gt; ':field must be unique'
+   )
+ )</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="38845" data-cf-modified-e5a52a2b975048b8c519e4f1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="38845" data-cf-modified-e5a52a2b975048b8c519e4f1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="11367" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

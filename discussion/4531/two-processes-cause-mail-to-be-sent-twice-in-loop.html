@@ -1,0 +1,176 @@
+---
+layout: default
+title: 'Two processes cause mail to be sent twice in loop - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Two processes cause mail to be sent twice in loop</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2973/phil-schreiber" class="user-moderator-N"><span itemprop="name">phil-schreiber</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-01-20T05:59:24-07:00">Jan '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-01-20T05:59:24-07:00">Jan '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>626</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/552cd85850852acf12d17c70c36b234a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2973/phil-schreiber" class="user-moderator-N"><span itemprop="name">phil-schreiber</span></a></span>
+                <span class="karma">754</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4531" href="#C4531">
+        <time class="action-date">Jan '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>I'm having trouble in an application that is used as an mailing tool. The situation is that I retrieve a mailqueue from database, send an individual mail to each entry via swiftmail and mark every queue entry as sent. Pretty simple. </p>
+<p>The problem is, that some of the mails are being sent twice. It doesn't seem to have any logic to it. </p>
+<pre><code class="language-php">foreach($mailqueue as $mailqueueElement){
+     $message = \Swift_Message::newInstance($mailing-&gt;subject)
+    -&gt;setSender(array($configuration-&gt;sendermail =&gt; $configuration-&gt;sendername))
+    -&gt;setFrom(array($configuration-&gt;sendermail =&gt; $configuration-&gt;sendername))
+    -&gt;setReplyTo($configuration-&gt;answermail)
+    -&gt;setReturnPath($configuration-&gt;returnpath)
+    -&gt;setBody($bodyFinal, 'text/html');
+    $address=$mailqueueElement-&gt;getAddress();
+    $to=array($address-&gt;email =&gt; $address-&gt;first_name.' '.$address-&gt;last_name);
+    $message-&gt;setTo($to);
+
+    if($mailqueueElement-&gt;sent==0){
+     $mailqueueElement-&gt;assign(
+       array(
+        "sent"=&gt;1
+     ));                            
+    $mailqueueElement-&gt;update();
+    if(!$this-&gt;config['application']['dontSendReally']){
+            try{
+                    $numSent+=$mailer-&gt;send($message, $failures);
+            }catch(\Swift_TransportException $e){
+                    echo($e-&gt;getMessage());
+            }
+
+    }               
+    //file_put_contents('../app/logs/debuggerSend.csv',getmypid().' &lt;--PID '.PHP_EOL,FILE_APPEND);
+}</code></pre>
+<p>As you can see, I was logging the process ids. And this is the only thing, which baffles me. The mails, which are sent twice always have two different process ids. All other mails have the same process ids. I tried it on three completely different servers. So at some point phalcon seems to spawn a new process and this causes the mail to be sent twice, but I just can't figure out why it does that. </p>
+<p>Here's a simplified example of my debug output for a looprun on 11 DB entries:</p>
+<pre><code>7503 &lt;--PID &lt;-&gt; loopcounter: 0 &lt;-&gt; {"addressUid":"542"}
+7503 &lt;--PID &lt;-&gt; loopcounter: 1 &lt;-&gt; {"addressUid":"543"}
+7503 &lt;--PID &lt;-&gt; loopcounter: 2 &lt;-&gt; {"addressUid":"544"}
+7503 &lt;--PID &lt;-&gt; loopcounter: 3 &lt;-&gt; {"addressUid":"545"}
+7503 &lt;--PID &lt;-&gt; loopcounter: 4 &lt;-&gt; {"addressUid":"546"}
+7503 &lt;--PID &lt;-&gt; loopcounter: 5 &lt;-&gt; {"addressUid":"547"}
+7503 &lt;--PID &lt;-&gt; loopcounter: 6 &lt;-&gt; {"addressUid":"548"}
+7503 &lt;--PID &lt;-&gt; loopcounter: 7 &lt;-&gt; {"addressUid":"549"}
+7503 &lt;--PID &lt;-&gt; loopcounter: 8 &lt;-&gt; {"addressUid":"550"}
+7503 &lt;--PID &lt;-&gt; loopcounter: 9 &lt;-&gt; {"addressUid":"551"}
+7560 &lt;--PID &lt;-&gt; loopcounter: 0 &lt;-&gt; {"addressUid":"551"}
+7503 &lt;--PID &lt;-&gt; loopcounter: 10 &lt;-&gt; {"addressUid":"552"}
+7560 &lt;--PID &lt;-&gt; loopcounter: 1 &lt;-&gt; {"addressUid":"552"}</code></pre>
+<p>Obviously the mails to the addresses 551 and 552 get sent twice. That's it, process 7560 does not run through the whole loop. I actually think it has something to do with updating the models within the loop.</p>
+<p>Has anybody experienced a similar issue or knows how to help?</p>
+<p>Thanks for your time.</p>
+<p><strong>EDIT</strong>
+FYI: I'm completely working around the issue now by not updating the model objects within the loop at all. I'm using a lock file to prevent any parallel processes to intefere.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-a89becf6c55a58f2fedbb227-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-a89becf6c55a58f2fedbb227-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/07dedd51671291aca4f3f84a115c534e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1320/tztztztz" class="user-moderator-N"><span itemprop="name">Tomasz Zadora</span></a>        </span>
+        <br>
+
+        <span class="karma">10.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C15101" href="#C15101">
+                <time itemprop="dateCreated" datetime="2015-01-20T09:04:03-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You need to synchronise things in some way, and there is more than one way to do it</p>
+<p>For example:
+1) lock table row containing message to send
+2) send message
+3) Change message status (sent = 1)
+4) release the row lock</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="15101" data-cf-modified-a89becf6c55a58f2fedbb227-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="15101" data-cf-modified-a89becf6c55a58f2fedbb227-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/552cd85850852acf12d17c70c36b234a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2973/phil-schreiber" class="user-moderator-N"><span itemprop="name">phil-schreiber</span></a>        </span>
+        <br>
+
+        <span class="karma">754</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C15101"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/07dedd51671291aca4f3f84a115c534e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Tomasz Zadora                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C15106" href="#C15106">
+                <time itemprop="dateCreated" datetime="2015-01-20T12:46:30-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>thank you. I'm certainly gonna do that. however, I'm still wondering how the second process comes into play. because it's absolutely certain that there's only one single request. any ideas on that?</p>
+<blockquote>
+<p>You need to synchronise things in some way, and there is more than one way to do it</p>
+<p>For example:
+1) lock table row containing message to send
+2) send message
+3) Change message status (sent = 1)
+4) release the row lock</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="15106" data-cf-modified-a89becf6c55a58f2fedbb227-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="15106" data-cf-modified-a89becf6c55a58f2fedbb227-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4531" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

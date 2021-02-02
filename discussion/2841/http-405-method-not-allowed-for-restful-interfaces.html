@@ -1,0 +1,249 @@
+---
+layout: default
+title: 'HTTP 405 Method Not Allowed For Restful Interfaces - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">HTTP 405 Method Not Allowed For Restful Interfaces</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/60/ajmckee" class="user-moderator-N"><span itemprop="name">AJ McKee</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-07-15T10:10:05-07:00">Jul '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-07-15T10:10:05-07:00">Jul '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>9311</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/075703e80faff2a7790144aaa5ed209d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/60/ajmckee" class="user-moderator-N"><span itemprop="name">AJ McKee</span></a></span>
+                <span class="karma">15.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2841" href="#C2841">
+        <time class="action-date">Jul '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>When using a router to place a method constraint on a route such as a HTTP POST, if I perform any other method request on the same URI, I get directed to the default notfound route. </p>
+<p>Is it possible to specify a method for a route, and then methods that do not match should return an ALLOW header but more importantly a HTTP 405.</p>
+<p>TIA</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-2eeddbabb991f5a0981d7f39-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-2eeddbabb991f5a0981d7f39-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/075703e80faff2a7790144aaa5ed209d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/60/ajmckee" class="user-moderator-N"><span itemprop="name">AJ McKee</span></a>        </span>
+        <br>
+
+        <span class="karma">15.2k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9483" href="#C9483">
+                <time itemprop="dateCreated" datetime="2014-07-15T11:54:32-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Okay, so going to answer my own question here. </p>
+<p>By rights, a RESTful API should be returning a HTTP 405 when a method does not match the required action. Can DELETE if we only want POST.  The problem here being the route will not match the route, as you have bound it to a HTTP method. As the route is not matched, it will then default to the standard notFound route if you have one defined. This is less than ideal for API clients, they should get a standard HTTP response with HTTP Status code telling them ther are being bad clients. </p>
+<p>One way to do this would be to of course add in logic to the action itself, but thats a pain in the ass to do for every other action. We could limit each controller to only contain HTTP POST functionality say, but thats also not realistic long term.</p>
+<p>So after a breif bit of thought, a plugin seems to be the way to go this. But wait, how will I know what methods my action supports? I can't intercept the router, as its not going to be matched if the method is not right... ahhhh I am no fan of them, but maybe annotations have the answer for me. </p>
+<p>First, we need to create a plugin, this one is called RestfulMethodsCheck</p>
+<pre><code class="language-php">namespace MyApp\Phalcon\Dispatcher\Plugin;
+
+use Phalcon\Events\Event;
+use Phalcon\Mvc\User\Plugin;
+use Phalcon\Mvc\Dispatcher;
+
+/**
+ * Plugin to detect the HTTP method of a request and determine if matches an actions annotated methods. If it does not
+ * then plugin will end the execution of the request by returning a HTTP 405 Method Not Allowed allow with an Allow
+ * header of methods that are permitted.
+ *
+ * @package Pentagon\Phalcon\Dispatcher\Plugin
+ */
+class RestfulMethodsCheck extends Plugin
+{
+    /**
+     * Check the requested method against an annotation on the action (if any) and fail it if its not matching.
+     *
+     * @param Event $event
+     * @param Dispatcher $dispatcher
+     * @return bool
+     */
+    public function beforeExecuteRoute(Event $event, Dispatcher $dispatcher)
+    {
+        $annotations = $this-&gt;annotations-&gt;getMethod($dispatcher-&gt;getActiveController(), $dispatcher-&gt;getActiveMethod());
+        if ($annotations-&gt;has('HTTPMethods')) {
+            $annotation = $annotations-&gt;get('HTTPMethods');
+            if (!in_array($this-&gt;request-&gt;getMethod(), array_change_key_case($annotation-&gt;getArguments(), CASE_UPPER))) {
+                $this-&gt;response-&gt;setStatusCode(405, 'Method Not Allowed');
+                $this-&gt;response-&gt;setHeader('Allow', implode(',', $annotation-&gt;getArguments()));
+                $this-&gt;response-&gt;send();
+                return false;
+            }
+        }
+        return true;
+    }
+}</code></pre>
+<p>Now, we need to register this as a new event listener in our services definitions. This one is in the API module, so we shall add it there.</p>
+<pre><code class="language-php">$di-&gt;set('dispatcher', function () use ($di) {
+            //Obtain the standard eventsManager from the DI
+            $eventsManager = $di-&gt;getShared('eventsManager');
+            //Instantiate the Restful Methods plugin
+            $pluginRestfulMethods = new Pentagon\Phalcon\Dispatcher\Plugin\RestfulMethodsCheck();
+            //Listen for events produced in the dispatcher using the Restful Methods plugin
+            $eventsManager-&gt;attach('dispatch', $pluginRestfulMethods);
+            // Create an instance of the dispatcher.
+            $dispatcher = new Phalcon\Mvc\Dispatcher();
+            //Bind the EventsManager to the Dispatcher
+            $dispatcher-&gt;setEventsManager($eventsManager);
+            return $dispatcher;
+        });</code></pre>
+<p>We now create a route to our API endpoint. <strong>N.B</strong>  Notice how I am just using <em>add</em> instead of <em>addPost</em> or <em>addGet</em>. That is because if we add the method, and that method is never matched, then we default to the non matched route, not a HTTP compliant response.</p>
+<pre><code class="language-php">$router-&gt;add('/api/0.0.1/ping', array(
+    'namespace' =&gt; 'Api\\Controllers',
+    'module' =&gt; 'api',
+    'controller' =&gt; 'ping',
+    'action' =&gt; 'ping',
+    'params' =&gt; 1,
+));</code></pre>
+<p>We are now almost there. Time to add a controller that has some annotations to it. These are checked before the action is executed.</p>
+<pre><code class="language-php">namespace Api\Controllers;
+/**
+ * Class PingController
+ *
+ * Simple testing controller to ensure client is setup correctly to access API service.
+ *
+ * @package Api\Controllers
+ */
+class PingController extends ControllerBase
+{
+    /**
+     * This is a simple ping method, that returns an ok response if the client is authtenticated.
+     *
+     * @HTTPMethods(POST, GET)
+     *
+     */
+    public function pingAction()
+    {
+        $this-&gt;response-&gt;setJsonContent(array("success" =&gt; true));
+        $this-&gt;response-&gt;send();
+    }
+}</code></pre>
+<p>If we call this controller now using our restful test client we should be getting a standard response in json</p>
+<pre><code class="language-javascript">{"success":true}</code></pre>
+<p>But if we call it with a HTTP DELETE method, then we actually get correctly denied access and a nice HTTP 405 response back.</p>
+<pre><code>HTTP/1.1 405 Method Not Allowed
+Date: Tue, 15 Jul 2014 18:47:20 GMT
+Server: Apache/2.4.7 (Ubuntu)
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Status: 405 Method Not Allowed
+Allow: POST,GET
+Content-Length: 0
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: application/json; charset=UTF-8</code></pre>
+<p>If anyone has better ideas as to how to solve this issue, I'd be keen to hear of them.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9483" data-cf-modified-2eeddbabb991f5a0981d7f39-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9483" data-cf-modified-2eeddbabb991f5a0981d7f39-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/075703e80faff2a7790144aaa5ed209d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/60/ajmckee" class="user-moderator-N"><span itemprop="name">AJ McKee</span></a>        </span>
+        <br>
+
+        <span class="karma">15.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9485" href="#C9485">
+                <time itemprop="dateCreated" datetime="2014-07-15T12:22:13-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>OPTIONS, I forgot OPTIONS... yes you could in theory provide a little help to your API buddies by including OPTIONS that automagically tell the REST client what it should do.</p>
+<p>If you wanted to do that, then the plugin class would become</p>
+<pre><code class="language-php">class RestfulMethods extends Plugin
+{
+    /**
+     * Check the requested method against an annotation on the action (if any) and fail it if its not matching.
+     *
+     * @param Event $event
+     * @param Dispatcher $dispatcher
+     * @return bool
+     */
+    public function beforeExecuteRoute(Event $event, Dispatcher $dispatcher)
+    {
+        $annotations = $this-&gt;annotations-&gt;getMethod($dispatcher-&gt;getActiveController(), $dispatcher-&gt;getActiveMethod());
+        if ($annotations-&gt;has('HTTPMethods')) {
+            $annotation = $annotations-&gt;get('HTTPMethods');
+            if ($this-&gt;request-&gt;getMethod() == 'OPTIONS') {
+                $this-&gt;response-&gt;setHeader('Allow', implode(',', $annotation-&gt;getArguments()));
+                $this-&gt;response-&gt;setJsonContent(array('options' =&gt; $annotation-&gt;getArguments()));
+                $this-&gt;response-&gt;send();
+                // End the request as all we wanted was to send the options.
+                return false;
+            } elseif (!in_array($this-&gt;request-&gt;getMethod(), array_change_key_case($annotation-&gt;getArguments(), CASE_UPPER))) {
+                $this-&gt;response-&gt;setStatusCode(405, 'Method Not Allowed');
+                $this-&gt;response-&gt;setHeader('Allow', implode(',', $annotation-&gt;getArguments()));
+                $this-&gt;response-&gt;send();
+                return false;
+            }
+        }
+        return true;
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9485" data-cf-modified-2eeddbabb991f5a0981d7f39-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9485" data-cf-modified-2eeddbabb991f5a0981d7f39-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2841" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

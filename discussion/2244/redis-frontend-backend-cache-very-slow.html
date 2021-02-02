@@ -1,0 +1,313 @@
+---
+layout: default
+title: 'Redis Frontend/Backend cache very slow - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/8/cache">Cache</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Redis Frontend/Backend cache very slow</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1593/grepit" class="user-moderator-N"><span itemprop="name">grepit</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-05-06T20:14:55-07:00">May '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-05-06T20:14:55-07:00">May '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>3032</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/174e95af4e189b38a36c85c5475780f7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1593/grepit" class="user-moderator-N"><span itemprop="name">grepit</span></a></span>
+                <span class="karma">3.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2244" href="#C2244">
+        <time class="action-date">May '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have been using Redis as a cache and noticed that it was quite slow. I am using the Phalcon\Cache\Frontend\Data and Phalcon\Cache\Backend\Redis as a cache for my models. I've noticed that it is at times 40x slower than using a regular redis connection.</p>
+<p>Here is my connections for both (normal frontend/backend cache) and just using Redis:</p>
+<pre><code class="language-php">
+$di-&gt;set('cache', function() use ($config) {
+    $redis = new Redis();
+    $redis-&gt;connect("localhost", "6379");
+
+    $frontend = new Phalcon\Cache\Frontend\Data(array(
+        'lifetime' =&gt; 3600
+    ));
+
+    $cache = new Phalcon\Cache\Backend\Redis($frontend, array(
+        'redis' =&gt; $redis
+    ));
+
+    return $cache;
+});
+
+$di-&gt;set('cache2', function() use ($config) {
+    $redis = new Redis();
+    $redis-&gt;connect("localhost", "6379");
+    return $redis;
+});
+</code></pre>
+<p>For a test, in a controller, I will do:</p>
+<pre><code class="language-php">
+$this-&gt;cache-&gt;save("test", 123);
+</code></pre>
+<p>I'll load another page once that data is set to not have it be cached in the frontend:</p>
+<pre><code class="language-php">
+$start = microtime(true);
+
+$this-&gt;cache2-&gt;get("test");
+
+$end = microtime(true);
+
+echo "Total Time: ".($end - $start)."&lt;br /&gt;";
+
+$start = microtime(true);
+
+$this-&gt;cache-&gt;get("test");
+
+$end = microtime(true);
+
+echo "Total Time: ".($end - $start)."&lt;br /&gt;";
+</code></pre>
+<p>I'll run the previous code and get:</p>
+<pre><code class="language-php">
+Total Time: 0.00025105476379395
+Total Time: 0.0061139850616455
+</code></pre>
+<p>Any reason this could be that slow? Is it just overhead with the library?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-495f151a87dc3df46158b273-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-495f151a87dc3df46158b273-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/174e95af4e189b38a36c85c5475780f7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1593/grepit" class="user-moderator-N"><span itemprop="name">grepit</span></a>        </span>
+        <br>
+
+        <span class="karma">3.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7712" href="#C7712">
+                <time itemprop="dateCreated" datetime="2014-05-07T19:42:57-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>So I changed the backed to Mongo:</p>
+<pre><code class="language-php">
+$di-&gt;set('cache', function() use ($config) {
+    $frontend = new Phalcon\Cache\Frontend\Json(array(
+        'lifetime' =&gt; 3600
+    ));
+
+    $cache = new Phalcon\Cache\Backend\Mongo($frontend, array(
+        'server'     =&gt; "mongodb://localhost",
+        'db'         =&gt; 'caches',
+        'collection' =&gt; 'cache'
+    ));
+
+    return $cache;
+});
+</code></pre>
+<p>And I am getting very quick times:</p>
+<pre><code class="language-php">
+Total Time: 0.00071096420288086
+</code></pre>
+<p>However that doesn't fix my problem as I'd like to use Redis for this.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7712" data-cf-modified-495f151a87dc3df46158b273-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7712" data-cf-modified-495f151a87dc3df46158b273-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/174e95af4e189b38a36c85c5475780f7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1593/grepit" class="user-moderator-N"><span itemprop="name">grepit</span></a>        </span>
+        <br>
+
+        <span class="karma">3.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7713" href="#C7713">
+                <time itemprop="dateCreated" datetime="2014-05-07T19:58:23-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Looking at some of the other Redis classes for metadata:</p>
+<pre><code class="language-php">
+$di-&gt;set('modelsMetadata', function() use ($config) {
+    $redis = new Redis();
+    $redis-&gt;connect("localhost", 6379);
+
+    return new \Phalcon\Mvc\Model\MetaData\Redis(array(
+        "lifetime" =&gt; 3600,
+        "redis"    =&gt; $redis
+    ));
+});
+</code></pre>
+<p>Even this seems to be quite slow:</p>
+<pre><code class="language-php">
+$start = microtime(true);
+
+$user = new User();
+
+$metaData = $user-&gt;getModelsMetaData();
+
+$attributes = $metaData-&gt;getAttributes($user);
+
+$end = microtime(true);
+
+echo "Total Time: ".($end - $start);
+</code></pre>
+<p>Yields the results:</p>
+<pre><code class="language-php">
+Total Time: 0.010041952133179
+</code></pre>
+<p>Is there any configuration that I'm missing? But it seems to be because of the classes as I am able to connect quickly with my own methods.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7713" data-cf-modified-495f151a87dc3df46158b273-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7713" data-cf-modified-495f151a87dc3df46158b273-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d6143a9ff65d2d5222c30fb0d76664a7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3646/Surt" class="user-moderator-N"><span itemprop="name">Erik Wiesenthal</span></a>        </span>
+        <br>
+
+        <span class="karma">23.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="24593" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '15</span>
+              </span><br/><a name="C24593" href="#C24593">
+                <time itemprop="dateCreated" datetime="2015-10-16T09:40:34-07:00" class="action-date">Oct '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Same thing happens to me, actually a page with cached data spend <del>500ms while the non cache only uses </del>75ms
+I'm using the standard way with phalcon 2.0.8: </p>
+<pre><code class="language-php">        $di-&gt;setShared('cache', function () {
+            //Create a Data frontend and set a default lifetime to 1 hour
+            $frontend = new \Phalcon\Cache\Frontend\Data(['lifetime' =&gt; 172800]);
+
+           $cache = new \Phalcon\Cache\Backend\Redis($frontend, [
+                'prefix'     =&gt; 'cache_',
+                'lifetime'   =&gt; 172800,
+                'host'       =&gt; 'tcp://127.0.0.1',
+                'port'       =&gt; 6379,
+                'persistent' =&gt; false,
+            ]);
+
+            return $cache;
+        });
+</code></pre>
+<p>I looked at the redis server and the latency is perfect for my system so is no redis server problem. Any ideas?</p>
+<p>P.D. I was looking if it was the <code>save</code>  or the <code>get</code>  problem, but it seems that both causes the time to grow as hell.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="24593" data-cf-modified-495f151a87dc3df46158b273-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="24593" data-cf-modified-495f151a87dc3df46158b273-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d6143a9ff65d2d5222c30fb0d76664a7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3646/Surt" class="user-moderator-N"><span itemprop="name">Erik Wiesenthal</span></a>        </span>
+        <br>
+
+        <span class="karma">23.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C24693" href="#C24693">
+                <time itemprop="dateCreated" datetime="2015-10-19T01:57:56-07:00" class="action-date">Oct '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It seems related to the phalcon debugbar. If I disable it the caché works fine. I didn't look in depth but just disabling it make the page load at full speed with cache.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="24693" data-cf-modified-495f151a87dc3df46158b273-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="24693" data-cf-modified-495f151a87dc3df46158b273-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">3</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C29353" href="#C29353">
+                <time itemprop="dateCreated" datetime="2016-01-24T17:43:18-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Interactive debugging always come at a price.
+It's good to know that you found a root cause... so it's not the framework killing the perfomance, which would be lost point since Phalcon aims at high perfomrance :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="29353" data-cf-modified-495f151a87dc3df46158b273-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="29353" data-cf-modified-495f151a87dc3df46158b273-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5579bd25ed729847d20c15e1c61e2a60?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3748/jzhbiao" class="user-moderator-N"><span itemprop="name">kudo</span></a>        </span>
+        <br>
+
+        <span class="karma">27.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C38043" href="#C38043">
+                <time itemprop="dateCreated" datetime="2016-08-09T22:56:49-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Were you sovle this?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="38043" data-cf-modified-495f151a87dc3df46158b273-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="38043" data-cf-modified-495f151a87dc3df46158b273-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2244" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

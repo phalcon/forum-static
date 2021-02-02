@@ -1,0 +1,254 @@
+---
+layout: default
+title: 'Session Problem - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/28/session">Session</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Session Problem</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1878/stevenpilagan" class="user-moderator-N"><span itemprop="name">Steven Pilagan</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-11-13T02:26:43-07:00">Nov '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-11-13T02:26:43-07:00">Nov '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1244</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/4cd5afd39f65642140be0f2848ea787b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1878/stevenpilagan" class="user-moderator-N"><span itemprop="name">Steven Pilagan</span></a></span>
+                <span class="karma">55.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3940" href="#C3940">
+        <time class="action-date">Nov '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>hi guys,</p>
+<p>I'm stuck with this problem, my session is still present even if i already remove it,  session still showing when I click the back button, unlike INVO when you click logout and press back button it shows blank page with warning/error message </p>
+<p>here is my code</p>
+<p>services.php</p>
+<pre><code class="language-php">&lt;?php
+
+use \Phalcon\Session\Adapter\Files as SessionAdapter;
+
+$di-&gt;set('session', function () {
+    $session = new SessionAdapter();
+    $session-&gt;start();
+
+    session_regenerate_id();
+    return $session;
+});
+</code></pre>
+<p>SessionController.php</p>
+<pre><code class="language-php">&lt;?php
+class SessionController extends ControllerBase
+{
+    public function indexAction()
+    {
+
+    }
+
+    /* get user from login/register form */
+    public function registerAction(){
+
+        $username = "testsession";
+
+        $this-&gt;_session($username);
+    }
+
+    /* making session to be accessable */
+    private function _session($usersession){
+
+        $this-&gt;session-&gt;set('auth', $usersession);
+    }
+
+    /* end session */
+    public function endAction(){
+
+        $this-&gt;session-&gt;remove('auth');
+        $this-&gt;forward('home/');
+    }   
+
+}</code></pre>
+<p>my Elements.php</p>
+<pre><code class="language-php">&lt;?php
+
+use \Phalcon\Mvc\User\Component as Element,
+        \Phalcon\Tag as Tag;
+/**
+ * Elements
+ *
+ * Helps to build UI elements for the application
+ */
+class Elements extends Element
+{
+    private $_tabs = array(
+        'Home' =&gt; array(
+            'controller' =&gt; 'home',
+            'action' =&gt; 'index',
+            'any' =&gt; false
+        ),
+        'Test1' =&gt; array(
+            'controller' =&gt; 'test1',
+            'action' =&gt; 'index',
+            'any' =&gt; false
+        ),
+        'Test2' =&gt; array(
+            'controller' =&gt; 'test2',
+            'action' =&gt; 'index',
+            'any' =&gt; false
+        )
+    );
+
+    /**
+     * Builds header menu with left and right items
+     *
+     * @return string
+     */
+
+    public function getTabs()
+    {
+        /* get session value in HomeController startSession method */
+        $auth = $this-&gt;session-&gt;get('auth');
+
+        echo $auth;
+
+        if(!empty($auth)){
+
+            $controllerName = $this-&gt;view-&gt;getControllerName();
+            $actionName = $this-&gt;view-&gt;getActionName();
+            echo'&lt;ul class="nav navbar-nav navbar-right"&gt;';
+                    foreach ($this-&gt;_tabs as $caption =&gt; $option){
+                        if($option['controller'] == $controllerName &amp;&amp; ($option['action'] == $actionName || $option['any'])){
+                            echo'&lt;li class="active"&gt;';
+                        }
+                        else{
+                            echo'&lt;li&gt;';
+                        }
+                        echo Tag::linkTo($option['controller'].'/'.$option['action'], $caption), '&lt;/li&gt;';
+
+                    }
+
+            echo'&lt;/ul&gt;';
+
+            echo Tag::linkTo('session/end', 'Log out');
+        }
+        else{
+
+            $controllerName = $this-&gt;view-&gt;getControllerName();
+            $actionName = $this-&gt;view-&gt;getActionName();
+
+            echo'&lt;ul class="nav navbar-nav navbar-right"&gt;';
+                    foreach ($this-&gt;_tabs as $caption =&gt; $option){
+                        if($option['controller'] == $controllerName &amp;&amp; ($option['action'] == $actionName || $option['any'])){
+                            echo'&lt;li class="active"&gt;';
+                        }
+                        else{
+                            echo'&lt;li&gt;';
+                        }
+                        echo Tag::linkTo($option['controller'].'/'.$option['action'], $caption), '&lt;/li&gt;';
+                    }
+            echo'&lt;/ul&gt;';
+        }
+
+    }
+}
+</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-509db92b5704342face136b4-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-509db92b5704342face136b4-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9eafe1dbabc0c116138b0aff7e8f3670?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2335/skollro" class="user-moderator-N"><span itemprop="name">skollro</span></a>        </span>
+        <br>
+
+        <span class="karma">6.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C13218" href="#C13218">
+                <time itemprop="dateCreated" datetime="2014-11-15T15:14:53-07:00" class="action-date">Nov '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Maybe you have to use a shared instance of the session? I think everytime you access <code>$di-&gt;session</code> a new session instance is created...</p>
+<pre><code class="language-php">$di-&gt;setShared('session', function() {
+    $session = new Phalcon\Session\Adapter\Files();
+    $session-&gt;start();
+    return $session;
+});</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13218" data-cf-modified-509db92b5704342face136b4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13218" data-cf-modified-509db92b5704342face136b4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/872fd5b83f0d0f67c5370ed1032bae80?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2820/chiWahWong" class="user-moderator-N"><span itemprop="name">chiWahWong</span></a>        </span>
+        <br>
+
+        <span class="karma">25.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="14817" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '15</span>
+              </span><br/><a name="C14817" href="#C14817">
+                <time itemprop="dateCreated" datetime="2015-01-12T14:03:55-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Although I'm still on my way looking for my answer, there is something hopefully helpful to you: <a href="http://docs.phalcon.io/en/latest/reference/di.html#shared-services">shared-services</a>
+see that </p>
+<blockquote>
+<p>$di-&gt;get('session');</p>
+<p>$di-&gt;getSession();</p>
+</blockquote>
+<p>however I can't tell anything deeper at this moment. What I'm also looking for is to manage session data at all different location, for example anywhere outside of <a href="http://docs.phalcon.io/en/latest/reference/session.html#storing-retrieving-data-in-session">injectable</a>. I'm confused that what's the &quot;correct&quot; way to manage session data, for example if it is not a &quot;shared service&quot;, which function should I use? If it is a &quot;shared service&quot;, then which one is &quot;correct&quot;? What's the pros and cons of them?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14817" data-cf-modified-509db92b5704342face136b4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14817" data-cf-modified-509db92b5704342face136b4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3940" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

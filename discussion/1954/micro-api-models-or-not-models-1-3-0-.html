@@ -1,0 +1,289 @@
+---
+layout: default
+title: 'Micro API, Models or not models (1.3.0) - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/22/micro">Micro</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Micro API, Models or not models (1.3.0)</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/889/zyxep" class="user-moderator-N"><span itemprop="name">zyxep</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-03-30T17:06:07-07:00">Mar '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-03-30T17:06:07-07:00">Mar '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1271</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/7ffb0f8e96c882de47c169a83d9dfa7f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/889/zyxep" class="user-moderator-N"><span itemprop="name">zyxep</span></a></span>
+                <span class="karma">21.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1954" href="#C1954">
+        <time class="action-date">Mar '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi.</p>
+<p>I am building a small restful API with 2 gets and 1 put.
+I am following the guide there is for a restful API with Phalcon and i don't get it all.</p>
+<p>In the guide does it create a model, without using the functions in it and then it is needed to do SQL calls.</p>
+<p>So what is best to do it? do all the code in the bootstrap/index file or move SQL calls to a model?</p>
+<p>Here is my bootstrap/index file
+<strong>index.php</strong></p>
+<pre><code class="language-php">&lt;?php
+$loader = new \Phalcon\Loader();
+
+$loader-&gt;registerDirs(array(
+    __DIR__ . '/models/'
+))-&gt;register();
+
+$di = new \Phalcon\DI\FactoryDefault();
+$app = new \Phalcon\Mvc\Micro($di);
+
+$di-&gt;set('db', function() {
+    return new \Phalcon\Db\Adapter\Pdo\Mysql(array(
+        "host" =&gt; "localhost",
+        "username" =&gt; "patteguf",
+        "password" =&gt; "xxxxxxxxxxxx",
+        "dbname" =&gt; "pattegufv3"
+    ));
+});
+
+$app-&gt;get('/pictures', function() use ($app)
+{
+    $limit = $app['request']-&gt;getQuery('limit', 'int', 10);
+    $offset = $app['request']-&gt;getQuery('offset', 'int', 0);
+
+    if($limit &gt; 50) {
+        $response = new Phalcon\Http\Response();
+        $response-&gt;setStatusCode(403, 'Forbidden');
+    }
+
+    $phql = "SELECT p.id, p.filename, p.likes FROM pictures p WHERE p.status = 'Active' ORDER BY p.id DESC LIMIT :limit:,:offset:";
+
+    $pictures = $app-&gt;modelsManager-&gt;executeQuery(
+        $phql,
+        array(
+            'limit' =&gt; $limit,
+            'offset' =&gt; $offset
+        ),
+        array(
+            'limit' =&gt; \Phalcon\Db\Column::BIND_PARAM_INT,
+            'offset' =&gt; \Phalcon\Db\Column::BIND_PARAM_INT
+        )
+    );
+
+    $data = array();
+    foreach ($pictures as $picture) {
+        $data[] = array(
+            'id' =&gt; $picture-&gt;id,
+            'filename' =&gt; $picture-&gt;filename,
+            'likes' =&gt; $picture-&gt;likes
+        );
+    }
+
+    echo json_encode($data);
+});
+
+$app-&gt;get('/pictures/{id:[0-9]+}', function($id) use ($app)
+{
+    $phql = "SELECT p.id, p.filename, p.likes FROM pictures p WHERE p.status = 'Active' AND p.id = :id:";
+    $picture = $app-&gt;modelsManager-&gt;executeQuery($phql,
+        array(
+        'id' =&gt; $id
+        ),
+        array('id' =&gt; \Phalcon\Db\Column::BIND_PARAM_INT))-&gt;getFirst();
+
+    $response = new Phalcon\Http\Response();
+
+    if($picture == false) {
+        $response-&gt;setStatusCode(404, 'Not found');
+    } else {
+        $response-&gt;setJsonContent(array(
+            'id' =&gt; $picture-&gt;id,
+            'filename' =&gt; $picture-&gt;filename,
+            'likes' =&gt; $picture-&gt;likes
+        ));
+    }
+
+    return $response;
+});
+
+$app-&gt;put('/pictures/{id:[0-9]+}', function($id) use ($app)
+{
+    $query = "SELECT p.likes FROM pictures p WHERE p.status = 'Active' AND p.id = :id:";
+    $like = $app-&gt;modelsManager-&gt;executeQuery($query,
+    array(
+        'id' =&gt; $id
+    ),
+    array('id' =&gt; \Phalcon\Db\Column::BIND_PARAM_INT))-&gt;getFirst();
+    $amountLikes = $like-&gt;likes + 1;
+    $phql = "UPDATE pictures SET pictures.likes = pictures.likes + 1 WHERE pictures.id = :id:";
+    #$phql = "UPDATE pictures p SET `p.likes` = " . $amountLikes ." WHERE `p.id` = :id:";
+
+    $customHash = $app['security']-&gt;hash('*patte.!guf#');
+    $ipAddress = $app['request']-&gt;getClientAddress();
+    $userAgent = $app['request']-&gt;getUserAgent();
+    $response = new Phalcon\Http\Response();
+
+    $app-&gt;modelsManager-&gt;executeQuery($phql,
+        array(
+            'id' =&gt; $id
+        ),
+        array(
+            'id' =&gt; \Phalcon\Db\Column::BIND_PARAM_INT
+        ));
+        #$app['cookies']-&gt;set($customHash, $app['security']-&gt;hash("*patte." . $ipAddress . $userAgent . time() . "!guf#"),time() + 30 * 86400); // sets cookie for 1 month
+    /*
+    } else {
+        $response-&gt;setStatusCode(403, 'Forbidden');
+    }
+    */
+    return $response;
+});
+
+$app-&gt;notFound(function () use ($app) {
+    $app-&gt;response-&gt;setStatusCode(404, "Not Found")-&gt;sendHeaders();
+    echo 'This is crazy, but this page was not found!';
+});
+
+$app-&gt;handle();</code></pre>
+<p>And this is my model i am creating.
+<strong>/models/Pictures.php</strong></p>
+<pre><code class="language-php">&lt;?php
+use Phalcon\Mvc\Model,
+    Phalcon\Mvc\Model\Query,
+    Phalcon\Db,
+    Phalcon\Http\Response;
+
+class Pictures extends Model
+{
+    public function select($id = null, $limit = 10, $offset = 0)
+    {
+        if(is_null($id))
+        {
+            if($limit &gt; 50) {
+                $response = new Phalcon\Http\Response();
+                $response-&gt;setStatusCode(403, 'Forbidden');
+            }
+
+            $phql = "SELECT p.id, p.filename, p.likes FROM pictures p WHERE p.status = 'Active' ORDER BY p.id DESC LIMIT :limit:,:offset:";
+
+            $pictures = $this-&gt;getModelsManager()-&gt;executeQuery(
+                $phql,
+                array(
+                    'limit' =&gt; $limit,
+                    'offset' =&gt; $offset
+                ),
+                array(
+                    'limit' =&gt; Db\Column::BIND_PARAM_INT,
+                    'offset' =&gt; Db\Column::BIND_PARAM_INT
+                )
+            );
+
+            $data = array();
+            foreach ($pictures as $picture) {
+                $data[] = array(
+                    'id' =&gt; $picture-&gt;id,
+                    'filename' =&gt; $picture-&gt;filename,
+                    'likes' =&gt; $picture-&gt;likes
+                );
+            }
+
+            return json_encode($data);
+        }
+
+        if(!is_null($id))
+        {
+            $phql = "SELECT p.id, p.filename, p.likes FROM pictures p WHERE p.status = 'Active' AND p.id = :id:";
+            $picture = $this-&gt;getModelsManager()-&gt;executeQuery($phql,
+                array(
+                    'id' =&gt; $id
+                ),
+                array('id' =&gt; Db\Column::BIND_PARAM_INT))-&gt;getFirst();
+
+            $response = new Response();
+
+            if($picture == false) {
+                $response-&gt;setStatusCode(404, 'Not found');
+            } else {
+                $response-&gt;setJsonContent(array(
+                    'id' =&gt; $picture-&gt;id,
+                    'filename' =&gt; $picture-&gt;filename,
+                    'likes' =&gt; $picture-&gt;likes
+                ));
+            }
+
+            return $response;
+        }
+    }
+}</code></pre>
+<p>I haven't figured out how to use it completely.
+FYI, i do have some errors in the code above i am working on.</p>
+<p>I need suggestions how to do this the best/smatest way and easy scalable</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-65cd3548a935fb0c194dc979-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-65cd3548a935fb0c194dc979-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d55454a268f90dc48fda627ba5dceda7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/850/digitronac" class="user-moderator-N"><span itemprop="name">Nemanja Ognjanovic</span></a>        </span>
+        <br>
+
+        <span class="karma">300</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6728" href="#C6728">
+                <time itemprop="dateCreated" datetime="2014-03-31T01:32:41-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi,
+i havent used phalcons micro app, but in terms of best practices, your data manipulation should be in models, so i guess thats the way to go ... then again, if you have in terms of scalability, if your app is intended to grow, im not sure that using micro app might be best approach? perhaps using sinle module application would give you a more robust starting point and structure for your application</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6728" data-cf-modified-65cd3548a935fb0c194dc979-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6728" data-cf-modified-65cd3548a935fb0c194dc979-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1954" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

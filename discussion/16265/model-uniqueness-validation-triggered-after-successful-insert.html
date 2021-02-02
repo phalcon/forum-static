@@ -1,0 +1,218 @@
+---
+layout: default
+title: 'Model uniqueness validation triggered after successful insert - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Model uniqueness validation triggered after successful insert</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/8575/sasa-b" class="user-moderator-N"><span itemprop="name">Sasa B.</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-06-06T01:45:35-07:00">Jun '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-06-06T01:45:35-07:00">Jun '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>343</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/1db2d2ea61f39b1e96767b9b0d8b7d24?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/8575/sasa-b" class="user-moderator-N"><span itemprop="name">Sasa B.</span></a></span>
+                <span class="karma">432</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C16265" href="#C16265">
+        <time class="action-date">Jun '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have a problem, my model uniquenss validation is triggered after a succesfull update so I get both the success flash message and error flash message. I use slightly modified code from vokuro and invo examples.</p>
+<pre><code>//MODEL
+
+public function validation()
+{
+    $validator = new Validation();
+
+    $validator-&gt;add('email', new Uniqueness([
+        "message" =&gt; "The email is already registered"
+    ]));
+
+    $validator-&gt;add("username", new Uniqueness([
+        "message" =&gt; "The username is taken, try a new one"
+    ]));
+
+    return $this-&gt;validate($validator);
+}
+
+/**
+ * Initialize method for model.
+ */
+public function initialize()
+{
+    $this-&gt;setSource("users");
+    $this-&gt;belongsTo('role_id', 'Models\Role', 'id', ['alias' =&gt; 'Role']);
+}
+
+//CONTROLLER    
+
+/**
+ * @Route("/register", methods={"GET", "POST"})
+ */
+public function registerAction()
+{
+    $form = new RegisterForm();
+
+    if ($this-&gt;request-&gt;isPost()) {
+
+        if ($form-&gt;isValid($this-&gt;request-&gt;getPost()) != false) {
+
+            $user = new User([
+                'name' =&gt; $this-&gt;request-&gt;getPost('name', 'striptags'),
+                'email' =&gt; $this-&gt;request-&gt;getPost('email'),
+                'password' =&gt; $this-&gt;security-&gt;hash($this-&gt;request-&gt;getPost('password')),
+                'hash' =&gt; $this-&gt;security-&gt;getRandomBytes(),
+                'role_id' =&gt; 5
+            ]);
+
+            $this-&gt;flash-&gt;setAutomaticHtml(true);
+
+            if ($user-&gt;save()) {
+
+                $this-&gt;flash-&gt;success('You have successfully registered');
+
+                return $this-&gt;dispatcher-&gt;forward([
+                    'controller' =&gt; 'auth',
+                    'action' =&gt; 'register'
+                ]);
+
+            }
+
+            $this-&gt;flash-&gt;error($user-&gt;getMessages());
+        }
+    }
+
+    $this-&gt;view-&gt;form = $form;
+}
+
+//VIEW
+    {% raw %}{{{% endraw %} form("class": "form-search") {% raw %}}}{% endraw %}
+
+  &lt;div class="page-header"&gt;
+      &lt;h2&gt;
+          Sign Up
+      &lt;/h2&gt;
+      &lt;/div&gt;
+
+    {% raw %}{{{% endraw %} content() {% raw %}}}{% endraw %}
+    {% raw %}{{{% endraw %} form.messages() {% raw %}}}{% endraw %}
+
+    &lt;label&gt;{% raw %}{{{% endraw %} form.label("name") {% raw %}}}{% endraw %}&lt;/label&gt;
+    &lt;div class="form-group {% raw %}{{{% endraw %} form.hasMessagesFor('name') ? 'has-error' : '' {% raw %}}}{% endraw %}"&gt;
+        {% raw %}{{{% endraw %} form.render("name") {% raw %}}}{% endraw %}
+    &lt;/div&gt;
+
+    &lt;label&gt;{% raw %}{{{% endraw %} form.label("username") {% raw %}}}{% endraw %}&lt;/label&gt;
+    &lt;div class="form-group {% raw %}{{{% endraw %} form.hasMessagesFor('username') ? 'has-error' : '' {% raw %}}}{% endraw %}"&gt;
+    &lt;div class="input-group"&gt;
+        &lt;span class="input-group-addon"&gt;&lt;i class="fa fa-user"&gt;&lt;/i&gt;&lt;/span&gt;
+        {% raw %}{{{% endraw %} form.render("username") {% raw %}}}{% endraw %}
+    &lt;/div&gt;
+    &lt;/div&gt;
+
+  &lt;label&gt;{% raw %}{{{% endraw %} form.label("email") {% raw %}}}{% endraw %}&lt;/label&gt;
+  &lt;div class="form-group {% raw %}{{{% endraw %} form.hasMessagesFor('email') ? 'has-error' : '' {% raw %}}}{% endraw %}"&gt;
+      &lt;div class="input-group"&gt;
+          &lt;span class="input-group-addon"&gt;@&lt;/span&gt;
+          {% raw %}{{{% endraw %} form.render("email") {% raw %}}}{% endraw %}
+      &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;label&gt;{% raw %}{{{% endraw %} form.label("password") {% raw %}}}{% endraw %}&lt;/label&gt;
+  &lt;div class="form-group {% raw %}{{{% endraw %} form.hasMessagesFor('password') ? 'has-error' : '' {% raw %}}}{% endraw %}"&gt;
+      {% raw %}{{{% endraw %} form.render("password") {% raw %}}}{% endraw %}
+  &lt;/div&gt;
+
+  &lt;label&gt;{% raw %}{{{% endraw %} form.label("confirmPassword") {% raw %}}}{% endraw %}&lt;/label&gt;
+  &lt;div class="form-group {% raw %}{{{% endraw %} form.hasMessagesFor('confirmPassword') ? 'has-error' : '' {% raw %}}}{% endraw %}"&gt;
+      {% raw %}{{{% endraw %} form.render("confirmPassword") {% raw %}}}{% endraw %}
+  &lt;/div&gt;
+
+  &lt;label&gt;
+      {% raw %}{{{% endraw %} form.render("terms") {% raw %}}}{% endraw %} {% raw %}{{{% endraw %} form.label("terms") {% raw %}}}{% endraw %}
+  &lt;/label&gt;
+
+  &lt;div class="form-group"&gt;
+      {% raw %}{{{% endraw %} form.render("Sign Up") {% raw %}}}{% endraw %}
+  &lt;/div&gt;
+
+  {% raw %}{{{% endraw %} form.render("csrf", ["value": security.getToken()]) {% raw %}}}{% endraw %}
+  {% raw %}{{{% endraw %} form.messageFor("csrf") {% raw %}}}{% endraw %}
+
+  &lt;hr&gt;
+
+  {% raw %}{{{% endraw %} endForm() {% raw %}}}{% endraw %}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-759052923d7845ea73d1d255-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-759052923d7845ea73d1d255-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1db2d2ea61f39b1e96767b9b0d8b7d24?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8575/sasa-b" class="user-moderator-N"><span itemprop="name">Sasa B.</span></a>        </span>
+        <br>
+
+        <span class="karma">432</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C48605" href="#C48605">
+                <time itemprop="dateCreated" datetime="2017-06-06T02:12:49-07:00" class="action-date">Jun '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Figured it out, when you use the same controller action for both the POST and GET http requests and if you dispatcher-&gt;forward to the same controller action after successfull entry the dispatcher will trigger both methods somehow, and thus the model will try to create the same user with the same data again</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48605" data-cf-modified-759052923d7845ea73d1d255-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48605" data-cf-modified-759052923d7845ea73d1d255-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="16265" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

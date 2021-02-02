@@ -1,0 +1,133 @@
+---
+layout: default
+title: 'multiple model object update doesn&#039;t work properly - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/23/odm">ODM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">multiple model object update doesn&#039;t work properly</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/9029/kordestanchi" class="user-moderator-N"><span itemprop="name">saber</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-01-30T03:10:01-07:00">Jan '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-01-30T03:10:01-07:00">Jan '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>505</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9a6b30a761a4056627091f1823012cb3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/9029/kordestanchi" class="user-moderator-N"><span itemprop="name">saber</span></a></span>
+                <span class="karma">569</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C15425" href="#C15425">
+        <time class="action-date">Jan '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>So we try to update a fiend of a model object twice after the object is loaded, and the second update doesn't work while it returns true.</p>
+<blockquote>
+<p>// initial status value in db: 0</p>
+<p>$Account-&gt;setStatus(1);</p>
+<p>if ($Account-&gt;update() !== false) {</p>
+<p>print &quot;update done!&quot;;</p>
+<p>}</p>
+<p>$Account-&gt;setStatus(2);</p>
+<p>if ($Account-&gt;update() !== false) {</p>
+<p>print &quot;update done!&quot;;</p>
+<p>}</p>
+</blockquote>
+<p>please note that $this-&gt;useDynamicUpdate(true); for this model, and when useDynamicUpdate is turned false, it works without any problem.</p>
+<p>so basically to summarize it:</p>
+<p>with $this-&gt;useDynamicUpdate(true); </p>
+<blockquote>
+<ul>
+<li>initial value: 0</li>
+<li>after first update: 1</li>
+<li>after second update: 1</li>
+</ul>
+</blockquote>
+<p>with $this-&gt;useDynamicUpdate(false); </p>
+<blockquote>
+<ul>
+<li>initial value: 0</li>
+<li>after first update: 1</li>
+<li>after second update: 2</li>
+</ul>
+</blockquote></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-afe64577fffc4a63428f8d76-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-afe64577fffc4a63428f8d76-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/49a91407f45a240159399ab5eaafb7ac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3406/MollocH" class="user-moderator-N"><span itemprop="name">MollocH</span></a>        </span>
+        <br>
+
+        <span class="karma">3.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C45531" href="#C45531">
+                <time itemprop="dateCreated" datetime="2017-01-30T14:37:56-07:00" class="action-date">Jan '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>We had the same problem when migrating to useDynamicUpdate(true).</p>
+<p>We solved it by using an afterUpdate hook on every model.</p>
+<blockquote>
+<pre><code>/**</code></pre>
+<ul>
+<li>ORM hook fired after a model was updated
+*/
+protected function afterUpdate()
+{
+// We need to update the snapshot so that change -&gt; save -&gt; change -&gt; save on a model instance would work
+$this-&gt;setSnapshotData($this-&gt;toArray());
+}</li>
+</ul>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="45531" data-cf-modified-afe64577fffc4a63428f8d76-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="45531" data-cf-modified-afe64577fffc4a63428f8d76-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="15425" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

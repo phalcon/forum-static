@@ -1,0 +1,132 @@
+---
+layout: default
+title: 'Model does not save properly when id is reset in beforeSave() - bug or pebkac? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Model does not save properly when id is reset in beforeSave() - bug or pebkac?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/8531/bqtran" class="user-moderator-N"><span itemprop="name">Bao Tran</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-11-07T19:59:28-07:00">Nov '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-11-07T19:59:28-07:00">Nov '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>363</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/030c24868820b0742e3a96537e597499?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/8531/bqtran" class="user-moderator-N"><span itemprop="name">Bao Tran</span></a></span>
+                <span class="karma">1.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C14753" href="#C14753">
+        <time class="action-date">Nov '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>This is my table:</p>
+<pre><code>CREATE TABLE `user` (
+  `id` binary(16) NOT NULL,
+  `username` varchar(191) NOT NULL,
+  ...
+  PRIMARY KEY(`id`)
+  )</code></pre>
+<p>My model for the table contains this:</p>
+<pre><code class="language-php">    public function beforeSave() {
+        $this-&gt;id = hex2bin($this-&gt;id);
+    }
+    public function afterSave() {
+        $this-&gt;afterFetch();
+    }
+
+    public function afterFetch() {
+        $this-&gt;id = bin2hex($this-&gt;id);
+    }</code></pre>
+<p>When I fetch a record, afterFetch() fires properly and I see the translated id's, and upon calling save(), I do see beforeSave() changing the id back into a binary value, so everything looks fine so far. The problem is at execution, the id is actually never translated back into binary but is still a hex string, causing the Update to change no records (since there is no match), but save() to pass with no errors produced since it's a valid sql statement. (I enabled query logging in Mysql to see recently executed queries: SET GLOBAL log_output = 'TABLE'; SET GLOBAL general_log = 'ON';) Funny thing is afterSave() is called and does show id being a binary value in the debugger, so I get the feeling that any id changes are being ignored by save() even if it's in beforeSave(). Is this a bug or am I doing something wrong?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-20f962eeff028eed63bd6363-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-20f962eeff028eed63bd6363-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/030c24868820b0742e3a96537e597499?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8531/bqtran" class="user-moderator-N"><span itemprop="name">Bao Tran</span></a>        </span>
+        <br>
+
+        <span class="karma">1.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C42761" href="#C42761">
+                <time itemprop="dateCreated" datetime="2016-11-07T22:35:56-07:00" class="action-date">Nov '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I actually ended up sidestepping the whole issue by setting custom getters/setters for the id, but I'm unsure if this is still a bug or not.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="42761" data-cf-modified-20f962eeff028eed63bd6363-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="42761" data-cf-modified-20f962eeff028eed63bd6363-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C42765" href="#C42765">
+                <time itemprop="dateCreated" datetime="2016-11-08T01:38:43-07:00" class="action-date">Nov '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Primary keys just can't be changed in phalcon. This is how ORM is implemented.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="42765" data-cf-modified-20f962eeff028eed63bd6363-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="42765" data-cf-modified-20f962eeff028eed63bd6363-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="14753" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

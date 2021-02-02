@@ -1,0 +1,237 @@
+---
+layout: default
+title: 'no way to save to db via ajax, need help... - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">no way to save to db via ajax, need help...</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3162/Graphmatic" class="user-moderator-N"><span itemprop="name">graphmatic</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-05-30T17:03:53-07:00">May '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-05-30T17:03:53-07:00">May '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>523</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/a20d655bbeff97e2c393510348ddb7cd?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3162/Graphmatic" class="user-moderator-N"><span itemprop="name">graphmatic</span></a></span>
+                <span class="karma">11.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6943" href="#C6943">
+        <time class="action-date">May '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>After a lot of try, I noticed that ajax call to a controller always return nothing when using -&gt;save() or -&gt;create() on a foreign models inside the function. Does it is a bug, or a misconfig' on my side??
+here is my setup: </p>
+<p>ajax are sorted in baseController.php:</p>
+<pre><code class="language-php">    // After route executed event
+    public function afterExecuteRoute(\Phalcon\Mvc\Dispatcher $dispatcher) {
+        if($this-&gt;request-&gt;isAjax() == true) {
+            $this-&gt;view-&gt;disableLevel(array(
+                View::LEVEL_ACTION_VIEW =&gt; true,
+                View::LEVEL_LAYOUT =&gt; true,
+                View::LEVEL_MAIN_LAYOUT =&gt; true,
+                View::LEVEL_AFTER_TEMPLATE =&gt; true,
+                View::LEVEL_BEFORE_TEMPLATE =&gt; true
+            ));
+            $this-&gt;response-&gt;setContentType('application/json', 'UTF-8');
+            $data = $this-&gt;view-&gt;getParamsToView();
+            /* Set global params if is not set in controller/action */
+            if (is_array($data)) {
+                $data['success'] = isset($data['success']) ?: true;
+                $data['message'] = isset($data['message']) ?: 'blurp';
+                $data = json_encode($data);
+            }
+            $this-&gt;response-&gt;setContent($data);
+        }
+        return $this-&gt;response-&gt;send();
+    }</code></pre>
+<p>in first model Controller,   saving second model is done correctly, but response is empty</p>
+<pre><code class="language-php">        public function createNewBlocAction() {
+        if ($this-&gt;request-&gt;isPost()) {
+            if ($this-&gt;request-&gt;isAjax()) {
+              $paramBloc = json_decode($this-&gt;request-&gt;getPost('paramBloc'));
+                $checkBlocExist = Blocarticle::findFirst(array(        //using here a foreign model (we are in InvoiceController.php)
+                    'columns' =&gt; '*',
+                    'conditions' =&gt; 'operationID = ?1 AND nomBloc = ?2',
+                    'bind' =&gt;
+                        [
+                            1 =&gt; $paramBloc-&gt;operationID,
+                            2 =&gt; $paramBloc-&gt;nomBloc,
+                        ]
+                ));
+                if(!$checkBlocExist) {
+                    $blocArticle = new Blocarticle();
+                    $blocArticle-&gt;operationID = $paramBloc-&gt;operationID;
+                    $blocArticle-&gt;nomBloc = $paramBloc-&gt;nomBloc;
+                    $blocArticle-&gt;save();
+
+                    $this-&gt;view-&gt;messageAddNewBloc = "ok";  /// ----&gt; doesn't work, ajax response always empty, but in Db, $blocArticle have been correctly saved
+                }
+                else {
+
+                    $this-&gt;view-&gt;messageAddNewBloc = "bad";
+                }       
+            }
+        }
+    }</code></pre>
+<p>ajax response :   {&quot;title&quot;:&quot;Devis&quot;,&quot;success&quot;:true,&quot;message&quot;:&quot;&quot;} </p>
+<p>and the same, bypassing the 'save' op:</p>
+<pre><code class="language-php">        public function createNewBlocAction() {
+        if ($this-&gt;request-&gt;isPost()) {
+            if ($this-&gt;request-&gt;isAjax()) {
+
+                $paramBloc = json_decode($this-&gt;request-&gt;getPost('paramBloc'));
+
+                $checkBlocExist = Blocarticle::findFirst(array(     //using here a foreign model (we are in InvoiceController.php)
+                    'columns' =&gt; '*',
+                    'conditions' =&gt; 'operationID = ?1 AND nomBloc = ?2',
+                    'bind' =&gt;
+                        [
+                            1 =&gt; $paramBloc-&gt;operationID,
+                            2 =&gt; $paramBloc-&gt;nomBloc,
+                        ]
+                ));
+                if(!$checkBlocExist) {
+                    $blocArticle = new Blocarticle();
+                    $blocArticle-&gt;operationID = $paramBloc-&gt;operationID;
+                    $blocArticle-&gt;nomBloc = $paramBloc-&gt;nomBloc;
+             //       $blocArticle-&gt;save();     we bypass the save operation
+
+                    $this-&gt;view-&gt;messageAddNewBloc = "ok";  /// ----&gt; is workin correctly, ajax response not empty
+                }
+                else {
+
+                    $this-&gt;view-&gt;messageAddNewBloc = "bad";
+                }
+
+            }
+        }
+    }</code></pre>
+<p>ajax response :  {&quot;title&quot;:&quot;Devis&quot;,&quot;messageAddNewBloc&quot;:&quot;ok&quot;,&quot;success&quot;:true,&quot;message&quot;:&quot;&quot;}</p>
+<p>any hint?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-9fc3633f8516e5ae9bcf445a-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-9fc3633f8516e5ae9bcf445a-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a20d655bbeff97e2c393510348ddb7cd?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3162/Graphmatic" class="user-moderator-N"><span itemprop="name">graphmatic</span></a>        </span>
+        <br>
+
+        <span class="karma">11.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C18952" href="#C18952">
+                <time itemprop="dateCreated" datetime="2015-05-31T06:46:43-07:00" class="action-date">May '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>...20$ bounty for the one who helps me to solve that ;-)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="18952" data-cf-modified-9fc3633f8516e5ae9bcf445a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="18952" data-cf-modified-9fc3633f8516e5ae9bcf445a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/97cfdb3586f82c3e1e4fe562bda688b8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/571/duythien" class="user-moderator-Y"><span itemprop="name">Thien Tran</span></a>        </span>
+        <br>
+
+        <span class="karma">58.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C18953" href="#C18953">
+                <time itemprop="dateCreated" datetime="2015-05-31T07:01:11-07:00" class="action-date">May '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hey man</p>
+<p>I have take look code you. It haven't good you can try following code below</p>
+<pre><code class="language-php">//Controllerbase
+
+    /**
+     * @var array
+     */
+    public $jsonMessages = [];
+
+    /**
+     * After execute route event
+     *
+     * @param Dispatcher $dispatcher
+     */
+    public function afterExecuteRoute(Dispatcher $dispatcher)
+    {
+        if ($this-&gt;request-&gt;isAjax()) {
+            $this-&gt;view-&gt;disable();
+            $this-&gt;response-&gt;setContentType('application/json', 'UTF-8');
+
+            $data = $dispatcher-&gt;getReturnedValue();
+            if (is_array($data)) {
+                $this-&gt;response-&gt;setJsonContent($data);
+            }
+            echo $this-&gt;response-&gt;getContent();
+        }
+    }
+</code></pre>
+<p>Then in some controller you an use it</p>
+<pre><code class="language-php"> [...]
+  $user = //Dosomething
+  if (!$user) {
+            $this-&gt;jsonMessages['messages'][] = [
+                'type'    =&gt; 'error',
+                'content' =&gt;  'You need to login first'
+            ];
+            return $this-&gt;jsonMessages;
+   }</code></pre>
+<p>And the final in javscript just to call it</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="18953" data-cf-modified-9fc3633f8516e5ae9bcf445a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="18953" data-cf-modified-9fc3633f8516e5ae9bcf445a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6943" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

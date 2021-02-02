@@ -1,0 +1,226 @@
+---
+layout: default
+title: 'Rendering a called template interferes with another another template - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Rendering a called template interferes with another another template</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1409/gazley" class="user-moderator-N"><span itemprop="name">G Wynne</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-08-25T09:11:03-07:00">Aug '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-08-25T09:11:03-07:00">Aug '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>604</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/b7087a5cdbd5a4365582e4a26a26a9a2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1409/gazley" class="user-moderator-N"><span itemprop="name">G Wynne</span></a></span>
+                <span class="karma">38.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3244" href="#C3244">
+        <time class="action-date">Aug '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi there,</p>
+<p>I am pulling data from a separate Content Management Framework (CMF). In the action, I call a method on a class:</p>
+<pre><code class="language-php">$forms-&gt;process_form_insert(...)</code></pre>
+<p>that searches in the body copy for a special syntax that denotes a form insert like so: </p>
+<pre><code>[[form name=minimal_business_contact]]</code></pre>
+<p>If this is found, it takes the name value and tries to translates it into a Phalcon Form object. The templates for such forms are held in a /app/views/forms folder and the name of the specific template is returned from a method on the Form instance.</p>
+<p>The template is processed into the HTML form markup, and injected into the body markup from the CMF. All of this markup is then returned to the action that called it.</p>
+<p>The problem is that the calling action seems to stop rendering it's own template? If I don't call:</p>
+<pre><code class="language-php">$forms-&gt;process_form_insert(...)</code></pre>
+<p>the template (with its unprocessed form inserts) renders perfectly. If I do call:</p>
+<pre><code class="language-php">$forms-&gt;process_form_insert(...)</code></pre>
+<p>even though all of the correct markup is produced and returned to the action, nothing renders and there are no errors reported.</p>
+<p>Here is the code from the action:</p>
+<pre><code class="language-php">
+    /**
+     * Main index action
+     */
+    public function indexAction()
+    {
+
+        // Get body markup from separate CMF
+
+        $body = $this-&gt;getPage()-&gt;get('body');
+
+        // Get instance of my own 'Forms' class
+        $forms = $this-&gt;di-&gt;get('forms');
+
+        // Look in the $body markup from the CMF and see if there are any HTML form inserts
+        $form_data = $forms-&gt;get_form_inserts($body);
+
+        // If there is one called 'MinimalBusinessContactForm', process it
+        if (isset($form_data['MinimalBusinessContactForm'])) {
+
+            $body = $forms-&gt;process_form_insert([
+                    'markup' =&gt; $body,
+                    'form' =&gt; 'MinimalBusinessContactForm',
+                    'insert' =&gt; $form_data['MinimalBusinessContactForm'],
+                    'config' =&gt; ['business_name' =&gt; 'Agency']
+                ]);
+
+        }
+
+        // Assign the $body markup with process HTML form
+        $this-&gt;view-&gt;body = $body;
+
+    }
+</code></pre>
+<p>Here is the code from $forms-&gt;process_form_insert(...)</p>
+<pre><code class="language-php">
+    /**
+     * Process the form insert with any associated data
+     *
+     * @param array $params
+     *
+     * @return string
+     */
+    public function process_form_insert($params)
+    {
+
+        if (isset($params['markup'])) {
+
+            $markup = $params['markup'];
+
+        }
+
+        if (isset($params['form'])) {
+
+            $form = $params['form'];
+
+        }
+
+        if (isset($params['insert'])) {
+
+            $insert = $params['insert'];
+
+        }
+
+        if (isset($params['config'])) {
+
+            $config = $params['config'];
+
+        } else {
+
+            $config = [];
+
+        }
+
+        if (isset($params['entity'])) {
+
+            $entity = $params['entity'];
+
+        } else {
+
+            $entity = null;
+
+        }
+
+        $form = new $form($entity, $config);
+
+        $view = $this-&gt;getDI()-&gt;get('view');
+
+        $view-&gt;form = $form;
+
+        $view-&gt;setRenderLevel(\Phalcon\Mvc\View::LEVEL_ACTION_VIEW);
+
+        $view-&gt;start();
+
+        $view-&gt;render('forms', $form-&gt;getTemplate());
+
+        $view-&gt;finish();
+
+        $form_markup = $view-&gt;getContent();
+
+        $markup = str_replace($insert, $form_markup, $markup);
+
+        return $markup;
+
+    }
+</code></pre>
+<p>Just to be clear, I get, an empty, blank page. If I do the following in the action:</p>
+<pre><code class="language-php">    /**
+     * Main index action
+     */
+    public function indexAction()
+    {
+
+        // Get body markup from separate CMS
+
+        $body = $this-&gt;getPage()-&gt;get('body');
+
+        // Get instance of my own 'Forms' class
+        $forms = $this-&gt;di-&gt;get('forms');
+
+        // Look in the $body markup from the CMS and see if there are any HTML form inserts
+        $form_data = $forms-&gt;get_form_inserts($body);
+
+        // If there is one called 'MinimalBusinessContactForm', process it
+//        if (isset($form_data['MinimalBusinessContactForm'])) {
+//
+//            $body = $forms-&gt;process_form_insert([
+//                    'markup' =&gt; $body,
+//                    'form' =&gt; 'MinimalBusinessContactForm',
+//                    'insert' =&gt; $form_data['MinimalBusinessContactForm'],
+//                    'config' =&gt; ['business_name' =&gt; 'Agency']
+//                ]);
+//
+//        }
+
+        // Assign the $body markup with process HTML form
+        $this-&gt;view-&gt;body = $body;
+
+    }
+</code></pre>
+<p>I get the page from the CMF rendered, apart from the fact that the HTML form insert(s) are unprocessed.</p>
+<p>Any ideas why calling the form processing method stops the action from rendering? I've spent days trying to get this to work without success :(</p>
+<p>Thanks.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-06eb088a79b1f3981e82a57b-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-06eb088a79b1f3981e82a57b-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3244" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

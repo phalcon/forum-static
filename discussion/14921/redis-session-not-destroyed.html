@@ -1,0 +1,183 @@
+---
+layout: default
+title: 'Redis Session not destroyed - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/28/session">Session</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Redis Session not destroyed</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2498/Xerton" class="user-moderator-N"><span itemprop="name">Xerton</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-11-30T07:05:00-07:00">Nov '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-11-30T07:05:00-07:00">Nov '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>656</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/89d4060266d6642f29027585c82d7223?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2498/Xerton" class="user-moderator-N"><span itemprop="name">Xerton</span></a></span>
+                <span class="karma">7.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C14921" href="#C14921">
+        <time class="action-date">Nov '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi all,</p>
+<p>I'm have some troubles with redis session when I'm trying to destroy it.</p>
+<p>Configuration (Virtualbox with 4 VM) :</p>
+<p>HTTP Server</p>
+<ul>
+<li>nginx v1.10.2</li>
+<li>PHP Version 7.0.13-1~dotdeb+8.1</li>
+<li>Phalcon 3.0.2</li>
+</ul>
+<p>Cache Server</p>
+<ul>
+<li>Redis v3.2.5</li>
+</ul>
+<p>Session Server</p>
+<ul>
+<li>Redis v3.2.5</li>
+</ul>
+<p>Databases Server</p>
+<ul>
+<li>MariaDB</li>
+<li>MongoDB</li>
+</ul>
+<p><strong>Bootstrap cache setting :</strong></p>
+<pre><code class="language-php">        $cacheConfig = new Config( require ($this-&gt;servicesDir . 'cache.php'));
+
+        $this-&gt;di-&gt;set('cache', function () use ($cacheConfig) {
+            $frontCache = new \Phalcon\Cache\Frontend\Data(
+                [
+                    'lifetime' =&gt; $cacheConfig-&gt;lifetime
+                ]
+            );
+
+            $cache = new \Phalcon\Cache\Backend\Redis($frontCache, $cacheConfig-&gt;redis-&gt;toArray());
+
+            return $cache;
+        });</code></pre>
+<p>Redis cache server works perfectly with cache settings (maxmemory ans momemry-policy) and AUTH.</p>
+<p>Then i'm using session with another redis server (normal settings), I try using
+session but it's seems when i'm using destroy function, it doesn't work...</p>
+<p><strong>Bootstrap session setting :</strong></p>
+<pre><code class="language-php">        $cacheConfig = new Config( require ($this-&gt;servicesDir . 'session.php'));
+        $this-&gt;di-&gt;set('session', function () use ($cacheConfig) {
+            $session = new \Phalcon\Session\Adapter\Redis($cacheConfig-&gt;toArray());
+            $session-&gt;start();
+            return $session;
+        });</code></pre>
+<p><strong>Test used :</strong></p>
+<pre><code class="language-php">        $this-&gt;session-&gt;set('foo', 'Bar');
+        echo $this-&gt;session-&gt;get('foo');  // OK
+
+        $this-&gt;session-&gt;set('product', ['name' =&gt; 'ipad', 'price' =&gt; '299.90€']);   
+        var_dump($this-&gt;session-&gt;get('product'));  // OK
+
+        $this-&gt;session-&gt;destroy();
+
+        echo $this-&gt;session-&gt;get('foo');  // data not destroyed
+        var_dump($this-&gt;session-&gt;get('product'));  // data not destroyed
+</code></pre>
+<p>Data not deleted on remote server.</p>
+<p>Any Idea why session destroy not work ? </p>
+<p>Thx.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-303d13d2ebe9f1818f469ae6-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-303d13d2ebe9f1818f469ae6-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C43433" href="#C43433">
+                <time itemprop="dateCreated" datetime="2016-11-30T09:47:41-07:00" class="action-date">Nov '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This may be the same case as an older question:</p>
+<blockquote>
+<p>Destroy the session does not remove data from the $_SESSION superglobal</p>
+</blockquote>
+<p><a href="https://forum.phalcon.io/discussion/7713/session-not-destroy-with-redis">https://forum.phalcon.io/discussion/7713/session-not-destroy-with-redis</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="43433" data-cf-modified-303d13d2ebe9f1818f469ae6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="43433" data-cf-modified-303d13d2ebe9f1818f469ae6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/89d4060266d6642f29027585c82d7223?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2498/Xerton" class="user-moderator-N"><span itemprop="name">Xerton</span></a>        </span>
+        <br>
+
+        <span class="karma">7.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C43435" href="#C43435">
+                <time itemprop="dateCreated" datetime="2016-11-30T10:51:19-07:00" class="action-date">Nov '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It means &quot;destroy&quot; method is useless if we hate to use PHP super-global $_SESSION.</p>
+<p>I hape there is a solution instead using :</p>
+<pre><code class="language-php">    session_unset();
+    session_regenerate_id(true);</code></pre>
+<p>I hope there is a solution for making clean code.</p>
+<p>Thx for reply.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="43435" data-cf-modified-303d13d2ebe9f1818f469ae6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="43435" data-cf-modified-303d13d2ebe9f1818f469ae6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="14921" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

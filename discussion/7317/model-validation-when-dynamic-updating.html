@@ -1,0 +1,269 @@
+---
+layout: default
+title: 'model validation when dynamic updating - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">model validation when dynamic updating</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3081/xiaochong0302" class="user-moderator-N"><span itemprop="name">jacky huang</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-06-27T04:07:49-07:00">Jun '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-06-27T04:07:49-07:00">Jun '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1040</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/28f9c286d22b81013b0290ae960fb646?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3081/xiaochong0302" class="user-moderator-N"><span itemprop="name">jacky huang</span></a></span>
+                <span class="karma">6.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C7317" href="#C7317">
+        <time class="action-date">Jun '15</time>
+    </a>
+</div>
+<div class="post-content"><div><pre><code>&lt;?php
+
+class User extends \Phalcon\Mvc\Model
+{
+
+    protected $id;
+    protected $name;
+    protected $email;
+    protected $mobile;
+    protected $password;
+
+    public function initialize()
+    {
+        $this-&gt;useDynamicUpdate(true);
+    }
+
+    public function validation()
+    {
+        $this-&gt;validate(new Email(array(
+            "field" =&gt; "email",
+            "message" =&gt; "The email is invalid"
+        )));
+        $this-&gt;validate(new Uniqueness(array(
+            "field" =&gt; "email",
+            "message" =&gt; "The email must be unique"
+        )));
+        return $this-&gt;validationHasFailed() != true;
+    }
+     ...................
+
+}</code></pre>
+<pre><code>$record = User::findFirst(1);
+$record-&gt;setMobile('13507083599');
+if ($record-&gt;update() == false) {
+    foreach ($record-&gt;getMessages() as $message) {
+        echo $message, "\n";
+    }
+} else {
+    echo "update ok";
+}</code></pre>
+<p>when I only update the mobile field, the email field validation is also excecuted, any solution for validating dynamic update fields?</p>
+<p>I try to move the validation to the setter method, but the result is not right.</p>
+<pre><code>public function setEmail($email)
+ {
+        $this-&gt;validate(new Email(array(
+            "field" =&gt; "email",
+            "message" =&gt; "The email is invalid"
+        )));
+        $this-&gt;validate(new Uniqueness(array(
+            "field" =&gt; "email",
+            "message" =&gt; "The email must be unique"
+        )));
+        if ($this-&gt;validationHasFailed()) {
+            foreach ($this-&gt;getMessages() as $message) {
+                throw new \Exception($message);
+            }
+            return false;
+        }
+
+        $this-&gt;email = $email;
+        return $this;
+    }</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-7860f93594bc618062bebb80-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-7860f93594bc618062bebb80-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e00a6fdd3e722135512e013b7f1e9693?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a>        </span>
+        <br>
+
+        <span class="karma">17.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C19993" href="#C19993">
+                <time itemprop="dateCreated" datetime="2015-06-28T09:50:40-07:00" class="action-date">Jun '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If it's in your validation, it's going to get executed.  My suggestion would be to move the validation to beforeCreate so it's only fired on creation.  Still, it shouldn't be an issue if you're saving the user object and the user has a valid email address to begin with.  Something like this, maybe:</p>
+<pre><code class="language-php">public function beforeCreate() {
+        $validation = new Validation();
+        $validation-&gt;add('email',new Email([
+            "message" =&gt; "Email address is invalid."
+        ]));
+        $messages = $validation-&gt;validate(["email"=&gt;$email]);
+        return count($messages) == 0;
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="19993" data-cf-modified-7860f93594bc618062bebb80-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="19993" data-cf-modified-7860f93594bc618062bebb80-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/28f9c286d22b81013b0290ae960fb646?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3081/xiaochong0302" class="user-moderator-N"><span itemprop="name">jacky huang</span></a>        </span>
+        <br>
+
+        <span class="karma">6.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C19993"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/e00a6fdd3e722135512e013b7f1e9693?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Zach                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="20005" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '15</span>
+              </span><br/><a name="C20005" href="#C20005">
+                <time itemprop="dateCreated" datetime="2015-06-28T18:36:08-07:00" class="action-date">Jun '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>thanks for your reply, but your solution is not so perfect, the fields in the user object may be null. </p>
+<p>for example, registering by steps: </p>
+<p>step 1: create account with name and password</p>
+<p>step 2: if user want login with email, send a mail to confirm the email</p>
+<p>step 3: if user want login with mobile number, send a sms to confirm the mobile</p>
+<p>is there any api method to get what fields are updating, if so I can handle the validations by condition.</p>
+<blockquote>
+<p>If it's in your validation, it's going to get executed.  My suggestion would be to move the validation to beforeCreate so it's only fired on creation.  Still, it shouldn't be an issue if you're saving the user object and the user has a valid email address to begin with.  Something like this, maybe:</p>
+<pre><code class="language-php">public function beforeCreate() {
+       $validation = new Validation();
+       $validation-&gt;add('email',new Email([
+           "message" =&gt; "Email address is invalid."
+       ]));
+       $messages = $validation-&gt;validate(["email"=&gt;$email]);
+       return count($messages) == 0;
+}</code></pre>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="20005" data-cf-modified-7860f93594bc618062bebb80-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="20005" data-cf-modified-7860f93594bc618062bebb80-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e00a6fdd3e722135512e013b7f1e9693?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a>        </span>
+        <br>
+
+        <span class="karma">17.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C20025" href="#C20025">
+                <time itemprop="dateCreated" datetime="2015-06-29T07:59:50-07:00" class="action-date">Jun '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Why not capture the name, number, and password on create and do the validations once?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="20025" data-cf-modified-7860f93594bc618062bebb80-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="20025" data-cf-modified-7860f93594bc618062bebb80-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/28f9c286d22b81013b0290ae960fb646?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3081/xiaochong0302" class="user-moderator-N"><span itemprop="name">jacky huang</span></a>        </span>
+        <br>
+
+        <span class="karma">6.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C20025"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/e00a6fdd3e722135512e013b7f1e9693?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Zach                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C20033" href="#C20033">
+                <time itemprop="dateCreated" datetime="2015-06-29T09:03:38-07:00" class="action-date">Jun '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>assume user object has 10 required fields, filling these fields once may make user give up.  </p>
+<blockquote>
+<p>Why not capture the name, number, and password on create and do the validations once?</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="20033" data-cf-modified-7860f93594bc618062bebb80-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="20033" data-cf-modified-7860f93594bc618062bebb80-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e00a6fdd3e722135512e013b7f1e9693?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a>        </span>
+        <br>
+
+        <span class="karma">17.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C20035" href="#C20035">
+                <time itemprop="dateCreated" datetime="2015-06-29T09:27:59-07:00" class="action-date">Jun '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If the fields are required, they must be filled in.</p>
+<p>If you have 10 fields and only two or three are required on create then validate those two or three fields on create and add a <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model.html">skipAttributesOnCreate</a> array to your model.</p>
+<p>I'm not at my computer to post code samples, but you could then add a beforeUpdate function that conditionally checks for null values of the fields that are not required.  If (!empty($var)) { validate field }</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="20035" data-cf-modified-7860f93594bc618062bebb80-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="20035" data-cf-modified-7860f93594bc618062bebb80-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="7317" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

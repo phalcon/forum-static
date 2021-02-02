@@ -1,0 +1,268 @@
+---
+layout: default
+title: 'Saving model with relations - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Saving model with relations</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/7793/qmegas" class="user-moderator-N"><span itemprop="name">qmegas</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-09-05T07:27:49-07:00">Sep '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-09-05T07:27:49-07:00">Sep '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>598</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/2f9d231a48fa7d0f8c1b3959d1249975?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/7793/qmegas" class="user-moderator-N"><span itemprop="name">qmegas</span></a></span>
+                <span class="karma">2.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C13353" href="#C13353">
+        <time class="action-date">Sep '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi all,</p>
+<p>I have found very buggy behaviour in saving a model with relations.
+Let's suppose that we have two classes:</p>
+<pre><code class="language-php">&lt;?php
+class Album extends \Phalcon\Mvc\Model
+{
+    public $id;
+    public $name;
+}
+
+class Song extends \Phalcon\Mvc\Model
+{
+    public $id;
+    public $albumId;
+    public $name;
+
+    public function initialize()
+    {
+        $this-&gt;hasOne('albumId', '\Album', 'id', [
+            'alias' =&gt; 'album'
+        ]);
+    }
+}</code></pre>
+<p>Each song can be related to some album.
+And we have following DB data:</p>
+<pre><code>|--------------|
+| id | name    |
+|--------------|
+| 1  | Album 1 |
+| 2  | Album 2 |
+|--------------|
+
+|-----------------------|
+| id | albumId | name   |
+|-----------------------|
+| 1  | 1       | Song 1 |
+|-----------------------|</code></pre>
+<p>Now let's move song ID#1 from Album 1 to Album 2</p>
+<pre><code class="language-php">$song = \Song::findFirst(1);
+$song-&gt;albumId = 2;
+$song-&gt;save();</code></pre>
+<p>Let's check the database:</p>
+<pre><code>|--------------|
+| id | name    |
+|--------------|
+| 1  | Album 1 |
+| 2  | Album 2 |
+|--------------|
+
+|-----------------------|
+| id | albumId | name   |
+|-----------------------|
+| 1  | 2       | Song 1 |
+|-----------------------|</code></pre>
+<p>Looks fine till now.
+But let's change the code a little (don't forget to move song record back to album 1).  Let's decide that we want to print song's album name before we change it.</p>
+<pre><code class="language-php">$song = \Song::findFirst(1);
+echo $song-&gt;album-&gt;name;
+$song-&gt;albumId = 2;
+$song-&gt;save();</code></pre>
+<p>Now let's check the database:</p>
+<pre><code>|--------------|
+| id | name    |
+|--------------|
+| 1  | Album 1 |
+| 2  | Album 1 |
+|--------------|
+
+|-----------------------|
+| id | albumId | name   |
+|-----------------------|
+| 1  | 2       | Song 1 |
+|-----------------------|</code></pre>
+<p>What??? Album 2 now called Album 1?</p>
+<p>Actually that is very simple example. In that case album model have only one field besides id, but in real case all fileds for changed record are replaced by values of previous record.
+In my opinion that is very unexpected behaviour and it should not work that way.</p>
+<p>Tested on: PHP Version 5.6.21; Phalcon Version 3.0.0;</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-dab42f30d2e13321c0d53414-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-dab42f30d2e13321c0d53414-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="39739" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '16</span>
+              </span><br/><a name="C39739" href="#C39739">
+                <time itemprop="dateCreated" datetime="2016-09-05T08:22:27-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You just have wrong relation. hasOne is for actually accessing SONG from album. I mean this is bad example. You just need to change:</p>
+<pre><code class="language-php">$this-&gt;hasOne('albumId', '\Album', 'id', [
+            'alias' =&gt; 'album'
+        ]);</code></pre>
+<p>to:</p>
+<pre><code class="language-php">$this-&gt;belongsTo('albumId', '\Album', 'id', [
+            'alias' =&gt; 'album'
+        ]);</code></pre>
+<p>There you go with good example for what is hasOne:</p>
+<pre><code class="language-php">class User extends Model
+{
+    public $id;
+    public $login;
+    public $profileId;
+
+    public function initialize(
+    {
+        $this-&gt;belongsTo('profileId', 'Profile', 'id', ['alias' =&gt; 'profile']);
+    }
+}
+
+class Profile extends Model
+{
+    public $id;
+    public $firstName;
+    public $lastName;
+
+    public function initialize()
+    {
+         $this-&gt;hasOne('id', 'User', 'profileId', ['alias' =&gt; 'user']);
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39739" data-cf-modified-dab42f30d2e13321c0d53414-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39739" data-cf-modified-dab42f30d2e13321c0d53414-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2f9d231a48fa7d0f8c1b3959d1249975?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/7793/qmegas" class="user-moderator-N"><span itemprop="name">qmegas</span></a>        </span>
+        <br>
+
+        <span class="karma">2.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C40387" href="#C40387">
+                <time itemprop="dateCreated" datetime="2016-09-19T05:19:11-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Now I got reverse problem.</p>
+<p>According to your suggestion I've changes Song class:</p>
+<pre><code class="language-php">class Song extends \BaseModel
+{
+    public $id;
+    public $albumId;
+    public $name;
+
+    public function initialize()
+    {
+        $this-&gt;belongsTo('albumId', '\Album', 'id', [
+            'alias' =&gt; 'album'
+        ]);
+    }
+}</code></pre>
+<p>Now when I try to change album for specific song:</p>
+<pre><code class="language-php">$song = \Song::findFirst(1);
+echo $song-&gt;album-&gt;name;
+$song-&gt;albumId = 2;
+$song-&gt;save();</code></pre>
+<p>It doesn't change it!
+It only works if I don't access relative model:</p>
+<pre><code class="language-php">$song = \Song::findFirst(1);
+$song-&gt;albumId = 2;
+$song-&gt;save();</code></pre>
+<p>How to solve that?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="40387" data-cf-modified-dab42f30d2e13321c0d53414-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="40387" data-cf-modified-dab42f30d2e13321c0d53414-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C40389" href="#C40389">
+                <time itemprop="dateCreated" datetime="2016-09-19T06:08:16-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think this is a known bug. You would need to set <code>$song-&gt;album</code> to new album i think.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="40389" data-cf-modified-dab42f30d2e13321c0d53414-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="40389" data-cf-modified-dab42f30d2e13321c0d53414-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="13353" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

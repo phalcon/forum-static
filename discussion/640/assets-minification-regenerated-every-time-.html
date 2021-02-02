@@ -1,0 +1,396 @@
+---
+layout: default
+title: 'Assets minification, regenerated every time? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Assets minification, regenerated every time?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/352/thierrydev" class="user-moderator-N"><span itemprop="name">thierrydev</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-07-24T12:44:23-07:00">Jul '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-07-24T12:44:23-07:00">Jul '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">10</span>
+                </td>
+                <td>
+                    <label>Views</label><br>2245</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">3</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/baacac7620691b180de092862846e537?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/352/thierrydev" class="user-moderator-N"><span itemprop="name">thierrydev</span></a></span>
+                <span class="karma">2.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C640" href="#C640">
+        <time class="action-date">Jul '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hey all,</p>
+<p>Very happy with the direction Phalcon is taking. I've used it with success on a test internal tool, and we're about to use it on a major project.</p>
+<p>With the recent asset minification fix (<a href="https://github.com/phalcon/cphalcon/issues/811">https://github.com/phalcon/cphalcon/issues/811</a>), it appears the final file is generated every time the page loads. Is this supposed to happen, or am I missing anything? I know the Jsmin/Cssmin are fast as they are part of Phalcon core, but I am worried every landing will result in going through the join/filters.</p>
+<p>Is there a way for Phalcon to distinguish between currently valid minified files and the ones that should be regenerated?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-7d751a5841eee6da02bc202e-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-7d751a5841eee6da02bc202e-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">3</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/09949aa8833070a401ecda79b539aca4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/153/Swader" class="user-moderator-N"><span itemprop="name">Bruno Škvorc</span></a>        </span>
+        <br>
+
+        <span class="karma">25.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2633" href="#C2633">
+                <time itemprop="dateCreated" datetime="2013-07-25T01:34:50-07:00" class="action-date">Jul '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I had suggested an approach to this which automatically generates the minified file from a hash sum of the last modified time of all included files. That way, if any one of the files has a different &quot;last modified&quot; time, the minifier would know it needs to be recompiled, otherwise, it would just load the min file that's already there. The entire discussion is here: <a href="https://github.com/phalcon/cphalcon/issues/549">https://github.com/phalcon/cphalcon/issues/549</a></p>
+<p>Essentially, this is how it would work:</p>
+<p>$assets-&gt;addCss('file.css');
+$assets-&gt;addCss('file2'.css);</p>
+<p>Compiled file would be output file name + <code>md5(filemtime('file.css').filemtime('file2.css'));</code>, so something like 'minified_3q4un9028tb26782638794c238462.css'.</p>
+<p>On next request, the file name is recalculated. If the filemtime is the same, the hash stays the same, and we can do a check like
+<code>if (is_readable($outputFile)) { // echo this minified CSS file }</code>
+however, if the filemtime is different, the hash is different, and the file automatically doesn't exist. This signals the minifier that a recompile is in order and it regenerates everything.</p>
+<p>This ensures the minification is rerun only after every file change (in other words only when needed) and also makes sure your clients get the most up to date CSS and JS at all times, because the filename (the hash part) changes on every change and isn't stuck in cache - basically, this is like versioning. This is how I've had my own minifier for years and it's never let me down.</p>
+<p>I've created a new issue for it here: <a href="https://github.com/phalcon/cphalcon/issues/925">https://github.com/phalcon/cphalcon/issues/925</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2633" data-cf-modified-7d751a5841eee6da02bc202e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2633" data-cf-modified-7d751a5841eee6da02bc202e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/baacac7620691b180de092862846e537?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/352/thierrydev" class="user-moderator-N"><span itemprop="name">thierrydev</span></a>        </span>
+        <br>
+
+        <span class="karma">2.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2643" href="#C2643">
+                <time itemprop="dateCreated" datetime="2013-07-25T11:10:02-07:00" class="action-date">Jul '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks Bruno, I had seen your comment in the ticket #549, but didn't see if it may have been implemented. Thanks for creating a new ticket, although wondering, is it similar to <a href="https://github.com/phalcon/cphalcon/issues/639">https://github.com/phalcon/cphalcon/issues/639</a> (from <a href="https://github.com/phalcon/cphalcon/issues/549#issuecomment-18561130">https://github.com/phalcon/cphalcon/issues/549#issuecomment-18561130</a> bullet point #3)?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2643" data-cf-modified-7d751a5841eee6da02bc202e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2643" data-cf-modified-7d751a5841eee6da02bc202e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/09949aa8833070a401ecda79b539aca4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/153/Swader" class="user-moderator-N"><span itemprop="name">Bruno Škvorc</span></a>        </span>
+        <br>
+
+        <span class="karma">25.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2644" href="#C2644">
+                <time itemprop="dateCreated" datetime="2013-07-25T11:23:30-07:00" class="action-date">Jul '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Indeed. It doesn't seem like it was added, though, or I just can't find a more in-depth explanation on the topic.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2644" data-cf-modified-7d751a5841eee6da02bc202e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2644" data-cf-modified-7d751a5841eee6da02bc202e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/344b80fe47ae42728ce65f265a6b0fd0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/91/philippgerard" class="user-moderator-N"><span itemprop="name">Philipp Gérard</span></a>        </span>
+        <br>
+
+        <span class="karma">19.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2681" href="#C2681">
+                <time itemprop="dateCreated" datetime="2013-07-26T10:23:39-07:00" class="action-date">Jul '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Not every feature request is immediately added ;)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2681" data-cf-modified-7d751a5841eee6da02bc202e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2681" data-cf-modified-7d751a5841eee6da02bc202e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1c5a05d695b9e910398795de90197829?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/334/temuri416" class="user-moderator-N"><span itemprop="name">temuri416</span></a>        </span>
+        <br>
+
+        <span class="karma">51.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2684" href="#C2684">
+                <time itemprop="dateCreated" datetime="2013-07-26T11:13:12-07:00" class="action-date">Jul '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>So what's the current behaviour - is it regenerated every time or not?</p>
+<p>Thanks!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2684" data-cf-modified-7d751a5841eee6da02bc202e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2684" data-cf-modified-7d751a5841eee6da02bc202e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/344b80fe47ae42728ce65f265a6b0fd0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/91/philippgerard" class="user-moderator-N"><span itemprop="name">Philipp Gérard</span></a>        </span>
+        <br>
+
+        <span class="karma">19.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2739" href="#C2739">
+                <time itemprop="dateCreated" datetime="2013-07-28T06:17:19-07:00" class="action-date">Jul '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It is regenerated every time as clearly indicated by the status &quot;open&quot; of the NFR request mentioned some posts earlier. It would, however, be a simple task to implement the desired behavior in PHP.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2739" data-cf-modified-7d751a5841eee6da02bc202e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2739" data-cf-modified-7d751a5841eee6da02bc202e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/09949aa8833070a401ecda79b539aca4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/153/Swader" class="user-moderator-N"><span itemprop="name">Bruno Škvorc</span></a>        </span>
+        <br>
+
+        <span class="karma">25.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2827" href="#C2827">
+                <time itemprop="dateCreated" datetime="2013-08-04T02:48:27-07:00" class="action-date">Aug '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/temuri416">@temuri416</a> I've made an alternative until they implement this. See <a href="http://forum.phalcon.io/discussion/707/alternative-assets-manager">http://forum.phalcon.io/discussion/707/alternative-assets-manager</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2827" data-cf-modified-7d751a5841eee6da02bc202e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2827" data-cf-modified-7d751a5841eee6da02bc202e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9a8f805003aa2975cec225bac168ad0d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/633/vlad4800" class="user-moderator-N"><span itemprop="name">vlad4800</span></a>        </span>
+        <br>
+
+        <span class="karma">8.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3859" href="#C3859">
+                <time itemprop="dateCreated" datetime="2013-10-15T05:23:09-07:00" class="action-date">Oct '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>My approach is much simpler. I only check if the file exists and I return the path. Doing hashes when having, say, 20 files is very punishing on the server cpu. I just attach to the filename the release version(which auto-updates itself) so I don't have to manualy erase the generated files(which is still a valid option though :) )</p>
+<pre><code class="language-php">&lt;?php
+
+namespace KyoLib\Assets;
+
+use Phalcon\Assets\Manager as PhManager;
+
+class Manager extends PhManager
+{
+
+    public function output($collection, $callback, $type=null){
+
+        if( is_file($collection-&gt;getTargetPath())) {
+            if ( $type == 'css' ) {
+                echo \Phalcon\Tag::stylesheetLink( $collection-&gt;getTargetUri() );
+            }
+            if ( $type == 'js' ) {
+                echo \Phalcon\Tag::javascriptInclude( $collection-&gt;getTargetUri() );
+            }
+        }else{
+            parent::output($collection, $callback, $type);
+        }
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3859" data-cf-modified-7d751a5841eee6da02bc202e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3859" data-cf-modified-7d751a5841eee6da02bc202e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8dcdda278bf24f5175d6b3e102f23251?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3735/bluun" class="user-moderator-N"><span itemprop="name">bluun</span></a>        </span>
+        <br>
+
+        <span class="karma">88</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C17586" href="#C17586">
+                <time itemprop="dateCreated" datetime="2015-04-24T01:25:27-07:00" class="action-date">Apr '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Is it still regenerated every time?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17586" data-cf-modified-7d751a5841eee6da02bc202e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17586" data-cf-modified-7d751a5841eee6da02bc202e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3e852c901236e84a192b17e455ffdd22?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10495/parvanova" class="user-moderator-N"><span itemprop="name">Diana Parvanova</span></a>        </span>
+        <br>
+
+        <span class="karma">83</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52611" href="#C52611">
+                <time itemprop="dateCreated" datetime="2017-12-01T06:45:08-07:00" class="action-date">Dec '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/vlad4800">@vlad4800</a> </p>
+<p>Can you please describe how do you use this method? Where do you call it?
+I have $this-&gt;assets-&gt;outputCss() in the view...
+Sorry for the dummy question. I am new to Phalcon.
+Thank you</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52611" data-cf-modified-7d751a5841eee6da02bc202e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52611" data-cf-modified-7d751a5841eee6da02bc202e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f5e691c5de3f84e661d38d831e1eafe9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10505/flyingangel" class="user-moderator-N"><span itemprop="name">Thanh Trung NGUYEN</span></a>        </span>
+        <br>
+
+        <span class="karma">92</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52629" href="#C52629">
+                <time itemprop="dateCreated" datetime="2017-12-03T16:52:47-07:00" class="action-date">Dec '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Issue will hardly get fixed because if you use filemtime to check for modification everytime, every file, it will add an extra overhead to the php script. Slowly, automated things will render Phalcon slower and slower.</p>
+<p>One approach I use is to check for cache existence, if it doesn't exist generate it. It is good for development. But in production, best way is to use a cache builder shell script and bind it to a git hook. This will kill as much overhead as possible.</p>
+<pre><code class="language-php">&lt;?php
+
+use Phalcon\Mvc\Controller;
+use Phalcon\Assets\Filters\Jsmin;
+
+class ControllerBase extends Controller {
+
+//    public function onConstruct() {
+//
+//    }
+    // Executed after every found action
+    public function afterExecuteRoute($dispatcher) {
+        $asset = $this-&gt;assets
+                -&gt;collection('global')
+                -&gt;setTargetPath('assets/all.min.js')
+                -&gt;setTargetUri('assets/all.min.js');
+
+        //if file exist in cache serve it directly
+        if (ENV_PROD &amp;&amp; is_file('assets/all.min.js'))
+            $asset-&gt;addJs('assets/all.min.js');
+        else {
+            //order matter
+            $asset-&gt;addJs('js/script/global.js')
+                    -&gt;join(true)
+                    -&gt;addFilter(new Jsmin());
+        }
+
+        //autodetect controller specific script
+        $controller = $this-&gt;dispatcher-&gt;getControllerName();
+
+        $asset = $this-&gt;assets-&gt;collection('controller')
+                -&gt;setTargetPath("assets/c.$controller.min.js")
+                -&gt;setTargetUri("assets/c.$controller.min.js");
+
+        if (ENV_PROD &amp;&amp; is_file("assets/c.$controller.min.js"))
+            $asset-&gt;addJs("assets/c.$controller.min.js");
+        else {
+            $asset-&gt;addJs("js/script/c.$controller.js")
+                    -&gt;addFilter(new Jsmin());
+        }
+
+        //autodetect action specific script
+        $action = $this-&gt;dispatcher-&gt;getActionName();
+
+        $asset = $this-&gt;assets-&gt;collection('action')
+                -&gt;setTargetPath("assets/$controller/a.$action.min.js")
+                -&gt;setTargetUri("assets/$controller/a.$action.min.js");
+
+        if (ENV_PROD &amp;&amp; is_file("assets/$controller/a.$action.min.js"))
+            $asset-&gt;addJs("assets/$controller/a.$action.min.js");
+        else {
+            //create dir if not exist
+            if (!is_dir("assets/$controller")) {
+                mkdir("assets/$controller");
+                chmod("assets/$controller", 0770);
+            }
+
+            $asset-&gt;addJs("js/script/$controller/a.$action.js")
+                    -&gt;addFilter(new Jsmin());
+        }
+    }
+
+}
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52629" data-cf-modified-7d751a5841eee6da02bc202e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52629" data-cf-modified-7d751a5841eee6da02bc202e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="640" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

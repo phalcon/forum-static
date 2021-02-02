@@ -1,0 +1,173 @@
+---
+layout: default
+title: 'Implementing Middleware Authentication - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/22/micro">Micro</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Implementing Middleware Authentication</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2085/lukeemery" class="user-moderator-N"><span itemprop="name">Luke Emery</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-08-08T17:58:18-07:00">Aug '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-08-08T17:58:18-07:00">Aug '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1986</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/2a53967c1356a452064fc8429f2bf932?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2085/lukeemery" class="user-moderator-N"><span itemprop="name">Luke Emery</span></a></span>
+                <span class="karma">2.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3071" href="#C3071">
+        <time class="action-date">Aug '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I am attempting to create a REST API with oAuth2 Authentication.  I am using ThePHPLeague and Sumeko's libraries and have it set up to a point where I am comfortable going forward in regards to that.  My question however is how to implement that without having redundant code.</p>
+<p>The way that I thought was best was to take advantage of middleware events.  I added the validation to the \Micro before() method and it seems to work generally.  The problem is that when they get the token wrong I am only seemingly able to pass false and not change the headers to 403 and send a message.  Or, at least I am not understanding how to do this, as I am very new to Phalcon.</p>
+<p>This is my current code:</p>
+<pre><code class="language-php">$app-&gt;before(function() use ($app) {
+    try {
+        $app-&gt;resource-&gt;setTokenKey('token');
+        $app-&gt;resource-&gt;isValid();
+        return true;
+    } catch (League\OAuth2\Server\Exception\InvalidAccessTokenException $e) {
+        $body['meta'] = array(
+            'error'   =&gt; TRUE,
+            'status'  =&gt; 403,
+            'message' =&gt; $e-&gt;getMessage()
+        );
+        $app-&gt;response
+            -&gt;setStatusCode(403, 'Forbidden')
+            -&gt;setContentType('application/json')
+            -&gt;setJsonContent(array(
+                'error'   =&gt; TRUE,
+                'status'  =&gt; 403,
+                'message' =&gt; $e-&gt;getMessage()
+        ));
+        return false;
+    }
+});</code></pre>
+<p>But all it returns is a 200 OK response, and that definitely is not what I want.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-4049555baf8d84630d6dded5-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-4049555baf8d84630d6dded5-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C10205" href="#C10205">
+                <time itemprop="dateCreated" datetime="2014-08-10T21:27:12-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Try adding:</p>
+<pre><code class="language-php">$app-&gt;response-&gt;sendHeaders();</code></pre>
+<p>or</p>
+<pre><code class="language-php">$app-&gt;response-&gt;send();</code></pre>
+<p>before return false;</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10205" data-cf-modified-4049555baf8d84630d6dded5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10205" data-cf-modified-4049555baf8d84630d6dded5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2a53967c1356a452064fc8429f2bf932?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2085/lukeemery" class="user-moderator-N"><span itemprop="name">Luke Emery</span></a>        </span>
+        <br>
+
+        <span class="karma">2.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C10209" href="#C10209">
+                <time itemprop="dateCreated" datetime="2014-08-10T22:47:13-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This worked for me, thank you.  If you could somehow add this to documentation I think that it would be useful to a lot of people; it is such a minor thing that was overlooked.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10209" data-cf-modified-4049555baf8d84630d6dded5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10209" data-cf-modified-4049555baf8d84630d6dded5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/21486287fc8e5e5ae73217e2b93abc86?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8289/infobuscador" class="user-moderator-N"><span itemprop="name">Iulian Gafiu</span></a>        </span>
+        <br>
+
+        <span class="karma">3.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C10205"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Phalcon                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C42747" href="#C42747">
+                <time itemprop="dateCreated" datetime="2016-11-07T14:18:12-07:00" class="action-date">Nov '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you!</p>
+<blockquote>
+<p>Try adding:</p>
+<pre><code class="language-php">$app-&gt;response-&gt;sendHeaders();</code></pre>
+<p>or</p>
+<pre><code class="language-php">$app-&gt;response-&gt;send();</code></pre>
+<p>before return false;</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="42747" data-cf-modified-4049555baf8d84630d6dded5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="42747" data-cf-modified-4049555baf8d84630d6dded5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3071" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

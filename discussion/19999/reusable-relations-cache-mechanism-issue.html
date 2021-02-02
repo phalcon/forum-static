@@ -1,0 +1,178 @@
+---
+layout: default
+title: 'Reusable relations cache mechanism issue - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Reusable relations cache mechanism issue</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/8453/antsokol" class="user-moderator-N"><span itemprop="name">Anton Sokolov</span></a></span>
+            <time itemprop="dateCreated" datetime="2019-09-20T07:45:03-07:00">Sep '19</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2019-09-20T07:45:03-07:00">Sep '19</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '19</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>167</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/cbe2b93c8a65410fd2d5dec0f664be57?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/8453/antsokol" class="user-moderator-N"><span itemprop="name">Anton Sokolov</span></a></span>
+                <span class="karma">723</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C19999" href="#C19999">
+        <time class="action-date">Sep '19</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello! Phalcon 3.4.0
+I have two related models: UserSellerDealings as Sellers with reusable relation in UserSellerDealings</p>
+<pre><code class="language-php">    $this-&gt;belongsTo(
+            'sellerId',
+            'Abka\\Business\\Models\\Sellers',
+            'id',
+            [
+                'alias'      =&gt; 'Seller',
+                'foreignKey' =&gt; [
+                    'action'  =&gt; Relation::ACTION_RESTRICT,
+                    'message' =&gt; 'Продавца не существует',
+                ],
+                'reusable'   =&gt; true,
+            ]
+        );</code></pre>
+<p>Then i run code</p>
+<pre><code class="language-php">        $model = ModelsUserSellerDealings::findFirstById(17198);
+        print_r($model-&gt;seller-&gt;property);   // see property value 'someValue'
+
+        // then i update related records by raw query (or code from outside, another process, ets...) 
+        $rawQuery = '
+            UPDATE sellers
+            SET property='newValue'
+            WHERE id=:sellerId
+        ';
+        $this-&gt;db-&gt;query($rawQuery, ['sellerId' =&gt; $dealingsModel-&gt;seller-&gt;id]);
+
+        print_r($model-&gt;seller-&gt;property);   // see property value 'someValue'</code></pre>
+<p>Expected behavior, I see the old value. If the &quot;reusable&quot; parameter is turned off, then we will see a new value. I studied the source code (Model and Manager) and saw that related data is stored in an associative array.</p>
+<p>But if I create a new model, then the cache remains in it!</p>
+<pre><code class="language-php">    $model = ModelsUserSellerDealings::findFirstById(17198);
+    print_r($model-&gt;seller-&gt;property);   // see property value 'someValue'</code></pre>
+<p>I don’t understand how this happens. I use models in workers and have unpredictable behavior and risk of cache overflowIs. it possible to globally reset the cache of related models?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-a66c8962fad067cab568dbc0-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-a66c8962fad067cab568dbc0-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C60935" href="#C60935">
+                <time itemprop="dateCreated" datetime="2019-09-23T03:04:20-07:00" class="action-date">Sep '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><pre><code class="language-php">$model = ModelsUserSellerDealings::findFirstById(17198);
+print_r($model-&gt;seller-&gt;property);   // see property value 'someValue'</code></pre>
+<p>This line is working as expected, the ORM will recognize that the partiucar model had already been queried, and just restores it.</p>
+<p>You could use the get&lt;relation&gt; syntax to manually set the cache lifetime:</p>
+<p><a href="https://docs.phalcon.io/3.4/en/db-models-cache.html">https://docs.phalcon.io/3.4/en/db-models-cache.html</a></p>
+<p>To query one record:</p>
+<pre><code class="language-php">$model = ModelsUserSellerDealings::findFirst([
+    'id = :id:',
+    'bind' =&gt; ['id'=&gt;17198],
+    'cache' =&gt; [
+        'lifetime' =&gt; 0,
+    ],
+]);</code></pre>
+<p>To query related records:</p>
+<pre><code class="language-php">
+$model = ModelsUserSellerDealings::findFirstById(17198);
+$property = $model-&gt;getSeller([
+        'cache' =&gt; [
+            'lifetime' =&gt; 0,
+        ],
+    ])-&gt;getProperty([
+        'cache' =&gt; [
+            'lifetime' =&gt; 0,
+        ],
+    ]);</code></pre>
+<p>(I've never tried this, could not even work....)</p>
+<p>As for the cache overflow, I dont know if Phalcon handles any cache limit out-of-the-box.
+But you could always implement your own cache adapter, and limit the cache recrods from there.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60935" data-cf-modified-a66c8962fad067cab568dbc0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60935" data-cf-modified-a66c8962fad067cab568dbc0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/cbe2b93c8a65410fd2d5dec0f664be57?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8453/antsokol" class="user-moderator-N"><span itemprop="name">Anton Sokolov</span></a>        </span>
+        <br>
+
+        <span class="karma">723</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C60943" href="#C60943">
+                <time itemprop="dateCreated" datetime="2019-09-23T22:56:30-07:00" class="action-date">Sep '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Lajos Bencz, thanks!
+In the future I will use the data cache.
+Now i use only &quot;reusable&quot; feature for accelleration.</p>
+<p>I looked in detail at the source and saw that the model manager has its own cache. Thus, there are two levels of cache. Since I have defined the model manager as a shared service, in the newly created models its cache becomes available.
+The problem was solved by clearing the cache in the worker when starting the next task: </p>
+<pre><code class="language-php">$this-&gt;di-&gt;getShared('modelsManager')-&gt;clearReusableObjects();</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60943" data-cf-modified-a66c8962fad067cab568dbc0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60943" data-cf-modified-a66c8962fad067cab568dbc0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="19999" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

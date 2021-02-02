@@ -1,0 +1,201 @@
+---
+layout: default
+title: 'Crypt.Decrypt return empty string on my Linux hosting - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/16/security">Security</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Crypt.Decrypt return empty string on my Linux hosting</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3960/onytoo" class="user-moderator-N"><span itemprop="name">Riyan Alfa Sonny</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-12-25T06:47:13-07:00">Dec '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-12-25T06:47:13-07:00">Dec '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1095</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/1b146ee37fd2091d146e34c06a9ec592?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3960/onytoo" class="user-moderator-N"><span itemprop="name">Riyan Alfa Sonny</span></a></span>
+                <span class="karma">1.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C9989" href="#C9989">
+        <time class="action-date">Dec '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>This is my first post tode this forum and I'm new to Phalcon.
+I have problem with Crypt-&gt;Decrypt, it always return an empty string, I don't know why.
+This happen on my Linux hosting, but in my local windows this working.</p>
+<p>Please anyone help me.</p>
+<p>Thanks,
+Sonny</p>
+<p>This below my test code:</p>
+<pre><code>&lt;?php
+$cryptPhalcon = new \Phalcon\Crypt();
+
+$text = 'Phalcon Crypto';
+$key = 'The cake is a lie!';
+
+$encrypt = $cryptPhalcon-&gt;encryptBase64($text, $key);
+$decrypt = trim($cryptPhalcon-&gt;decryptBase64($encrypt, $key));
+
+var_dump($text);
+echo '&lt;br&gt; ------------------------- ENCRYPT PHALCON--------------------- &lt;br&gt;';
+var_dump($encrypt);
+echo '&lt;br&gt; ------------------------- DECRYPT PHALCON (always return empty)--------------------- &lt;br&gt;';
+var_dump($decrypt);
+echo '&lt;br&gt;';
+
+var_dump($decrypt == $text);
+
+//die();
+
+// CODE BELOW WORKING ON BOTH MY ENVIRONMENTS
+
+// Define a 32-byte (64 character) hexadecimal encryption key
+// Note: The same encryption key used to encrypt the data must be used to decrypt the data
+define('ENCRYPTION_KEY', 'd0a7e7997b6d5fcd55f4b5c32611b87cd923e88837b63bf2941ef819dc8ca282');
+// Encrypt Function
+function mc_encrypt($encrypt, $key){
+    $encrypt = serialize($encrypt);
+    $iv = mcrypt_create_iv(mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_CBC), MCRYPT_DEV_URANDOM);
+    $key = pack('H*', $key);
+    $mac = hash_hmac('sha256', $encrypt, substr(bin2hex($key), -32));
+    $passcrypt = mcrypt_encrypt(MCRYPT_RIJNDAEL_256, $key, $encrypt.$mac, MCRYPT_MODE_CBC, $iv);
+    $encoded = base64_encode($passcrypt).'|'.base64_encode($iv);
+    return $encoded;
+}
+// Decrypt Function
+function mc_decrypt($decrypt, $key){
+    $decrypt = explode('|', $decrypt.'|');
+    $decoded = base64_decode($decrypt[0]);
+    $iv = base64_decode($decrypt[1]);
+    if(strlen($iv)!==mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_CBC)){ return false; }
+    $key = pack('H*', $key);
+    $decrypted = trim(mcrypt_decrypt(MCRYPT_RIJNDAEL_256, $key, $decoded, MCRYPT_MODE_CBC, $iv));
+    $mac = substr($decrypted, -64);
+    $decrypted = substr($decrypted, 0, -64);
+    $calcmac = hash_hmac('sha256', $decrypted, substr(bin2hex($key), -32));
+    if($calcmac!==$mac){ return false; }
+    $decrypted = unserialize($decrypted);
+    return $decrypted;
+}
+echo '&lt;h1&gt;Rijndael 256-bit CBC Encryption Function&lt;/h1&gt;';
+$data = 'Super secret confidential string data.';
+$encrypted_data = mc_encrypt($data, ENCRYPTION_KEY);
+echo '&lt;h2&gt;Example #1: String Data&lt;/h2&gt;';
+echo 'Data to be Encrypted: ' . $data . '&lt;br/&gt;';
+echo 'Encrypted Data: ' . $encrypted_data . '&lt;br/&gt;';
+echo 'Decrypted Data: ' . mc_decrypt($encrypted_data, ENCRYPTION_KEY) . '&lt;/br&gt;';
+$data = array(1, 5, 8, 9, 22, 10, 61);
+$encrypted_data = mc_encrypt($data, ENCRYPTION_KEY);
+echo '&lt;h2&gt;Example #2: Non-String Data&lt;/h2&gt;';
+echo 'Data to be Encrypted: &lt;pre&gt;';
+print_r($data);
+echo '&lt;/pre&gt;&lt;br/&gt;';
+echo 'Encrypted Data: ' . $encrypted_data . '&lt;br/&gt;';
+echo 'Decrypted Data: &lt;pre&gt;';
+print_r(mc_decrypt($encrypted_data, ENCRYPTION_KEY));
+echo '&lt;/pre&gt;';
+?&gt;
+</code></pre>
+<p>Linux environment:
+<img src="http://i64.tinypic.com/2ur35g9.jpg" alt="" />
+<img src="http://i66.tinypic.com/rj1cgh.jpg" alt="" /></p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-862639ed3d3d3e88b03ea2ee-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-862639ed3d3d3e88b03ea2ee-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/082d639000dca8bb30d9bf7cc12698ac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4945/jeiel" class="user-moderator-N"><span itemprop="name">jeiel</span></a>        </span>
+        <br>
+
+        <span class="karma">81.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C28261" href="#C28261">
+                <time itemprop="dateCreated" datetime="2015-12-25T12:29:10-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>And you enabled the extention  mcript in the php.ini</p>
+<p><a href="http://www.php.net/manual/en/book.mcrypt.php">http://www.php.net/manual/en/book.mcrypt.php</a></p>
+<p>apt-get install php5-mcrypt</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28261" data-cf-modified-862639ed3d3d3e88b03ea2ee-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28261" data-cf-modified-862639ed3d3d3e88b03ea2ee-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1b146ee37fd2091d146e34c06a9ec592?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3960/onytoo" class="user-moderator-N"><span itemprop="name">Riyan Alfa Sonny</span></a>        </span>
+        <br>
+
+        <span class="karma">1.2k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C28261"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/082d639000dca8bb30d9bf7cc12698ac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        jeiel                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C28279" href="#C28279">
+                <time itemprop="dateCreated" datetime="2015-12-25T19:53:23-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>And you enabled the extention  mcript in the php.ini</p>
+<p><a href="http://www.php.net/manual/en/book.mcrypt.php">http://www.php.net/manual/en/book.mcrypt.php</a></p>
+<p>apt-get install php5-mcrypt</p>
+</blockquote>
+<p>It did</p>
+<p><img src="http://i63.tinypic.com/2q0qemb.jpg" alt="" /></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28279" data-cf-modified-862639ed3d3d3e88b03ea2ee-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28279" data-cf-modified-862639ed3d3d3e88b03ea2ee-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="9989" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

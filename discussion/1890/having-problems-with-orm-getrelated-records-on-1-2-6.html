@@ -1,0 +1,394 @@
+---
+layout: default
+title: 'Having problems with ORM getRelated records on 1.2.6 - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Having problems with ORM getRelated records on 1.2.6</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1332/pives" class="user-moderator-N"><span itemprop="name">Philip Ives</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-03-24T09:44:25-07:00">Mar '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-03-24T09:44:25-07:00">Mar '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1942</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9f7466b02b9fa30366f69287a2c55744?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1332/pives" class="user-moderator-N"><span itemprop="name">Philip Ives</span></a></span>
+                <span class="karma">2.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1890" href="#C1890">
+        <time class="action-date">Mar '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I've been struggling with this for a while and I'm at a loss.</p>
+<p>I have 2 related classes  Organization and Campaigns</p>
+<pre><code class="language-php">class Organizations extends \Phalcon\Mvc\Model
+{
+    public $id;
+    public function getSource()
+    {
+        return "bwg_entities";
+    }
+
+    public function initialize() {
+         $this-&gt;hasMany("id", "Users", "entity_id" );
+         $this-&gt;hasMany("campaign_id", "Campaigns", "id", array("foreignKey" =&gt;true));
+    }
+    ....
+}
+
+class Campaigns extends \Phalcon\Mvc\Model
+{
+
+    public $id;
+    public $entity_id;
+    public function getSource()
+    {
+        return "bwg_campaigns";
+    }
+
+    public function initialize() {
+         $this-&gt;belongsTo("entity_id", "Organizations", "id" );
+         $this-&gt;hasMany("id", "CampaignDatafields", "campaign_id");
+
+         $this-&gt;skipAttributesOnCreate(array('date_created'));
+    }
+....
+}</code></pre>
+<p>In my controller, I retrieve organizations but I never get back the related campaigns.</p>
+<pre><code class="language-php">$organization = Organizations::findFirst(array(
+                "entity_code = :org_id: AND is_active = 1",
+                "bind" =&gt; array('org_id' =&gt; $orgId)
+
+                ));
+
+        foreach($organization-&gt;campaigns as $c) {
+             echo json_encode($c);
+        }       
+        exit;
+} </code></pre>
+<p>I've tried using getRelated() fail.
+i've tried above code with $organization-&gt;getCampaigns().. no error but no result.</p>
+<p>Finally, from my mysql :</p>
+<pre><code class="language-sql">select e.*, c.entity_id, c.name from  bwg_entities e left join bwg_campaigns c on c.entity_id = e.id;</code></pre>
+<p>returns:</p>
+<pre><code class="language-php">1000    HRC Human Rights Campaign   Steven Churchill    <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="afdfc6d9cadc84cdd8c8efddcec6c1cad9caddd6d8c7caddca81ccc0c2">[email&#160;protected]</a>    1   1000    HRC dev</code></pre>
+<p>so the data is there. </p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-f0938a60c95031bcf93cef31-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-f0938a60c95031bcf93cef31-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6507" href="#C6507">
+                <time itemprop="dateCreated" datetime="2014-03-24T10:23:20-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Try removing the <code>public $id</code> and <code>public $entityid</code> declarations.  It's unnecessary (for the purposes of ORM) and I have a feeling that may be messing things up.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6507" data-cf-modified-f0938a60c95031bcf93cef31-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6507" data-cf-modified-f0938a60c95031bcf93cef31-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9f7466b02b9fa30366f69287a2c55744?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1332/pives" class="user-moderator-N"><span itemprop="name">Philip Ives</span></a>        </span>
+        <br>
+
+        <span class="karma">2.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="6509" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '14</span>
+              </span><br/><a name="C6509" href="#C6509">
+                <time itemprop="dateCreated" datetime="2014-03-24T10:41:13-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks, I gave that a whirl and still get blanks in the logs. </p>
+<p>i changed the controller code a bit and get this errror in my log:</p>
+<pre><code class="language-php">        if($orgId == null) {
+            $this-&gt;flash-&gt;error('Organization is invalid');
+            $this-&gt;response-&gt;redirect("campaignmanager/index");
+            return;
+        }
+        $organization = Organizations::findFirst(array(
+                "entity_code = :org_id: AND is_active = 1",
+                "bind" =&gt; array('org_id' =&gt; $orgId)
+
+                ));
+       // $this-&gt;logger-&gt;log($organization-&gt;campaigns-&gt;id);
+        $this-&gt;logger-&gt;log($organization-&gt;campaigns[0]-&gt;id);
+        foreach($organization-&gt;campaigns as $c) {
+             $this-&gt;logger-&gt;log( json_encode($c));
+        }</code></pre>
+<p>Phalcon\Mvc\Model\Exception[0]: The index does not exist in the cursor
+[Mon, 24 Mar 14 17:39:01 +0000][INFO] /Proj/BetterWorldGiving/hrc_server/webapp/app/controllers/CampaignmanagerController.php[22]
+[Mon, 24 Mar 14 17:39:01 +0000][DEBUG] Trace:</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6509" data-cf-modified-f0938a60c95031bcf93cef31-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6509" data-cf-modified-f0938a60c95031bcf93cef31-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6510" href="#C6510">
+                <time itemprop="dateCreated" datetime="2014-03-24T10:48:21-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Can't help you with that - I've never seen that error before.</p>
+<p>Do you have a query log turned on?  Can you see the query that Phalcon is sending to MySQL?</p>
+<p>I see in your controller code you're referencing <code>entity_code</code>.  Is that supposed to be <code>entity_id</code>?</p>
+<p>Could you post the structure of your entities &amp; campaigns tables?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6510" data-cf-modified-f0938a60c95031bcf93cef31-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6510" data-cf-modified-f0938a60c95031bcf93cef31-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9f7466b02b9fa30366f69287a2c55744?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1332/pives" class="user-moderator-N"><span itemprop="name">Philip Ives</span></a>        </span>
+        <br>
+
+        <span class="karma">2.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="6515" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '14</span>
+              </span><br/><a name="C6515" href="#C6515">
+                <time itemprop="dateCreated" datetime="2014-03-24T13:06:26-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>how do i turn the query log on ? I was googling for that but my google-fu was not good.</p>
+<pre><code class="language-sql">CREATE TABLE `bwg_entities` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `entity_code` varchar(10) NOT NULL,
+  `entity_name` varchar(255) NOT NULL,
+  `primary_contact_name` varchar(255) NOT NULL,
+  `primary_contact_email` varchar(255) DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1001 DEFAULT CHARSET=utf8;
+
+CREATE TABLE `bwg_campaigns` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT COMMENT 'The internal Campaign ID',
+  `name` varchar(250) NOT NULL DEFAULT '' COMMENT 'The common name of the campaign',
+  `skin_location` varchar(250) DEFAULT NULL COMMENT 'The skin directory or id',
+  `campaign_type` varchar(20) DEFAULT 'Donation' COMMENT 'Donation or Petition',
+  `length` varchar(10) DEFAULT NULL COMMENT 'Long or short',
+  `banner` varchar(255) NOT NULL DEFAULT '' COMMENT 'Path to the image file',
+  `sugg_donation_amount` float DEFAULT NULL COMMENT 'suggested donation amount, changable on iPad',
+  `description` text COMMENT 'About the campaign',
+  `date_created` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Date it was created',
+  `note` text,
+  `internal_id` varchar(20) DEFAULT NULL,
+  `internal_name` varchar(200) DEFAULT NULL,
+  `entity_id` int(11) unsigned NOT NULL,
+  `ROI_ID` varchar(40) NOT NULL DEFAULT 'UNSET',
+  PRIMARY KEY (`id`),
+  KEY `entity_id` (`entity_id`),
+  CONSTRAINT `bwg_campaigns_ibfk_1` FOREIGN KEY (`entity_id`) REFERENCES `bwg_entities` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+
+CREATE TABLE `bwg_users` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `first_name` varchar(80) NOT NULL DEFAULT '',
+  `last_name` varchar(80) NOT NULL DEFAULT '',
+  `address` varchar(255) DEFAULT '',
+  `city` varchar(255) DEFAULT '',
+  `state` varchar(20) DEFAULT NULL,
+  `postal` varchar(10) DEFAULT NULL,
+  `email_address` varchar(255) NOT NULL DEFAULT '',
+  `hashedauth` varchar(255) NOT NULL DEFAULT '',
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  `second_factor_key` varchar(10) DEFAULT '000000',
+  `token` varchar(10) DEFAULT '',
+  `token_created` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `entity_id` int(11) unsigned DEFAULT NULL,
+  `bwg_super_admin_id` int(11) unsigned DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `emailkey` (`email_address`),
+  KEY `entity_id` (`entity_id`),
+  KEY `superadminfk` (`bwg_super_admin_id`),
+  CONSTRAINT `bwg_users_ibfk_1` FOREIGN KEY (`entity_id`) REFERENCES `bwg_entities` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=10010 DEFAULT CHARSET=utf8;</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6515" data-cf-modified-f0938a60c95031bcf93cef31-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6515" data-cf-modified-f0938a60c95031bcf93cef31-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="6516" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '14</span>
+              </span><br/><a name="C6516" href="#C6516">
+                <time itemprop="dateCreated" datetime="2014-03-24T13:09:58-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>2 commands should do it:</p>
+<pre><code class="language-sql">SET GLOBAL general_log = 'ON';
+SET GLOBAL general_log_file = '/path/to/log/file'</code></pre>
+<p>Make sure the log file is writable by your mysql user.  Tail the file with <code>tail -f /path/to/log/file</code> to see the queries get dumped in there in real time.</p>
+<p>The only other thing I can suggest at this point is to remove the foreign key declaration.  I have no reason for suggesting this other than the fact that I don't specify this, and I don't have this problem.  Really just a stab in the dark though.  I have great faith in the query log getting you what you need.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6516" data-cf-modified-f0938a60c95031bcf93cef31-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6516" data-cf-modified-f0938a60c95031bcf93cef31-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9f7466b02b9fa30366f69287a2c55744?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1332/pives" class="user-moderator-N"><span itemprop="name">Philip Ives</span></a>        </span>
+        <br>
+
+        <span class="karma">2.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="6696" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '14</span>
+              </span><br/><a name="C6696" href="#C6696">
+                <time itemprop="dateCreated" datetime="2014-03-29T10:37:00-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>well, i see WHY the query is returning the wrong result, but I have no idea how to fix it. It's passing in Null.</p>
+<pre><code>  13 Query  SELECT IF(COUNT(*)&gt;0, 1 , 0) FROM `INFORMATION_SCHEMA`.`TABLES` WHERE `TABLE_NAME`='bwg_entities'
+           13 Query DESCRIBE `bwg_entities`
+           13 Query SELECT `bwg_entities`.`id`, `bwg_entities`.`entity_code`, `bwg_entities`.`entity_name`, `bwg_entities`.`primary_contact_name`, `bwg_entities`.`primary_contact_email`, `bwg_entities`.`is_active` FROM `bwg_entities` WHERE `bwg_entities`.`entity_code` = 'HRC' AND `bwg_entities`.`is_active` = 1 LIMIT 1
+           13 Query SELECT IF(COUNT(*)&gt;0, 1 , 0) FROM `INFORMATION_SCHEMA`.`TABLES` WHERE `TABLE_NAME`='bwg_campaigns'
+           13 Query DESCRIBE `bwg_campaigns`
+           13 Query SELECT `bwg_campaigns`.`id`, `bwg_campaigns`.`name`, `bwg_campaigns`.`skin_location`, `bwg_campaigns`.`campaign_type`, `bwg_campaigns`.`length`, `bwg_campaigns`.`banner`, `bwg_campaigns`.`sugg_donation_amount`, `bwg_campaigns`.`description`, `bwg_campaigns`.`date_created`, `bwg_campaigns`.`note`, `bwg_campaigns`.`internal_id`, `bwg_campaigns`.`internal_name`, `bwg_campaigns`.`entity_id`, `bwg_campaigns`.`ROI_ID` FROM `bwg_campaigns` WHERE `bwg_campaigns`.`id` = NULL</code></pre>
+<p>Again here's the code:</p>
+<pre><code class="language-php"> $this-&gt;organization = Organizations::findFirst(array(
+                "entity_code = :org_id: AND is_active = 1",
+                "bind" =&gt; array('org_id' =&gt; $orgId)       
+));
+$this-&gt;view-&gt;org=  $this-&gt;organization;
+$this-&gt;view-&gt;campaigns = $this-&gt;organization-&gt;campaigns;</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6696" data-cf-modified-f0938a60c95031bcf93cef31-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6696" data-cf-modified-f0938a60c95031bcf93cef31-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9f7466b02b9fa30366f69287a2c55744?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1332/pives" class="user-moderator-N"><span itemprop="name">Philip Ives</span></a>        </span>
+        <br>
+
+        <span class="karma">2.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="6697" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '14</span>
+              </span><br/><a name="C6697" href="#C6697">
+                <time itemprop="dateCreated" datetime="2014-03-29T11:29:19-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>flipping the keys in the hasMany seemed to work.</p>
+<p>i'm still not quite clear on the params on this function. is it supposed to map class organizations</p>
+<pre><code class="language-php">public function initialize() {
+$this-&gt;hasMany("id", "Campaigns", "entity_id");</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6697" data-cf-modified-f0938a60c95031bcf93cef31-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6697" data-cf-modified-f0938a60c95031bcf93cef31-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6734" href="#C6734">
+                <time itemprop="dateCreated" datetime="2014-03-31T08:08:09-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The order of arguments is</p>
+<ol>
+<li>Name of local variable</li>
+<li>Name of class the current class is related to</li>
+<li>Name of variable in the related class that the named local variable maps to</li>
+</ol>
+<p>So your relation can be read like this: &quot;This class' $id should be the same as many Campaign objects' $entity_id&quot;</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6734" data-cf-modified-f0938a60c95031bcf93cef31-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6734" data-cf-modified-f0938a60c95031bcf93cef31-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1890" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

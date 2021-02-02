@@ -1,0 +1,199 @@
+---
+layout: default
+title: 'application-&gt;handle(), stuck (maybe an infinite loop?) - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">application-&gt;handle(), stuck (maybe an infinite loop?)</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2842/vicaba" class="user-moderator-N"><span itemprop="name">vicaba</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-05-04T04:34:13-07:00">May '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-05-04T04:34:13-07:00">May '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>628</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9675b1ef4270f99bd2a5511fe9713b4f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2842/vicaba" class="user-moderator-N"><span itemprop="name">vicaba</span></a></span>
+                <span class="karma">696</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6616" href="#C6616">
+        <time class="action-date">May '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>I'm using Phalcon as the application framework to use with a Ratchet WebSocket server. Note that Ratchet is a PHP server based on ReactPHP, so it uses the reactor pattern (single thread.)</p>
+<p>On a new connection, I just get the uri and call $application-&gt;handle($uri). I do the same when I receive a message.</p>
+<p>The problem is that when I receive a connection everything works as it is expected, but when I receive a message and I call $application-&gt;handle($uri), the server gets stuck. So I think that the problem is caused by the router.</p>
+<p>Relevant code:</p>
+<p>Phalcon application services (router):</p>
+<pre><code class="language-php">$loader = new Phalcon\Loader();
+
+        $loader-&gt;registerDirs(
+            array(
+                './Mvc/controllers/',
+                './Mvc/models/'
+            )
+        )-&gt;register();
+
+        $di = new Phalcon\DI\FactoryDefault();
+        $di-&gt;set('router', function () {
+
+            $router = new Phalcon\Mvc\Router();
+            $router-&gt;setDefaultNamespace('Wings\WsServer\Mvc\Controllers');
+            $router-&gt;add(
+                "/raw/echo",
+                array(
+                    "controller" =&gt; "Raw",
+                    "action"     =&gt; "echo",
+                )
+            );
+
+            $router-&gt;add(
+                '/GET/resource/ws/{conn_id:[0-9]+}',
+                array(
+                    'controller' =&gt; 'connection',
+                    'action' =&gt; 'new'
+                )
+            );
+
+            $router-&gt;add(
+                '/GET/resource/thing/query',
+                array(
+                    'controller' =&gt; 'thing',
+                    'action' =&gt; 'query'
+                )
+            );
+
+            return $router;
+
+        });
+</code></pre>
+<p>Connection Handler (observe the var_dump($conn-&gt;WebSocket-&gt;request-&gt;getPath()); and var_dump($jsonArray[&quot;uri&quot;]);).</p>
+<pre><code class="language-php">   public function onOpen(ConnectionInterface $conn)
+    {
+        // Store the new connection to send messages to later
+        $this-&gt;clients-&gt;attach($conn);
+
+        echo 'Client connected on WS server!';
+
+        $application = $this-&gt;_di-&gt;getRaw('application');
+        $application-&gt;getDI()-&gt;set('connection', $conn);
+
+        var_dump($conn-&gt;WebSocket-&gt;request-&gt;getPath());
+
+        $content = $application-&gt;handle($conn-&gt;WebSocket-&gt;request-&gt;getPath())-&gt;getContent();
+        echo 'Client connection handled!';
+
+        $conn-&gt;send($content);
+    }
+
+    public function onMessage(ConnectionInterface $from, $msg)
+    {
+        $jsonArray = json_decode($msg, true);
+        $application = $this-&gt;_di-&gt;getRaw('application');
+        $application-&gt;getDI()-&gt;set('connection', $from);
+        $application-&gt;getDI()-&gt;set('data', $jsonArray["query"]);
+
+        var_dump($jsonArray["uri"]);
+
+        $content = $application-&gt;handle($jsonArray["uri"])-&gt;getContent();
+        $from-&gt;send($content);
+    }</code></pre>
+<p>What I get then on the shell is </p>
+<pre><code>Client connected on WS server!string(18) "/GET/resource/ws/1"
+Client connection handled!string(25) "/GET/resource/thing/query"</code></pre>
+<p>and the server gets stuck. If a put an exit(-1); after </p>
+<pre><code class="language-php">$content = $application-&gt;handle($jsonArray["uri"])-&gt;getContent();</code></pre>
+<p>the exit is never reached.</p>
+<p>Any help would be appreciated.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-b0580cd4c54c887b476113e7-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-b0580cd4c54c887b476113e7-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9675b1ef4270f99bd2a5511fe9713b4f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2842/vicaba" class="user-moderator-N"><span itemprop="name">vicaba</span></a>        </span>
+        <br>
+
+        <span class="karma">696</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C17922" href="#C17922">
+                <time itemprop="dateCreated" datetime="2015-05-05T01:00:45-07:00" class="action-date">May '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well, it seems that the problem was inside the controller:</p>
+<pre><code class="language-php">&lt;?php
+
+namespace Wings\WsServer\Mvc\Controllers;
+
+use Phalcon\Mvc\Controller;
+
+class ThingController extends Controller
+{
+
+    public function queryAction()
+    {
+        $phalconResponse = new \Phalcon\Http\Response;
+        $phalconResponse-&gt;setContent($this-&gt;getDI()-&gt;get('data'));
+
+        exit(-1);
+
+        return $phalconResponse;
+    }
+
+}</code></pre>
+<p>it gets stuck in the line</p>
+<pre><code class="language-php">$phalconResponse-&gt;setContent($this-&gt;getDI()-&gt;get('data'));</code></pre>
+<p>It seems that the problem was trying to get an string using a <code>Phalcon\DI:get()</code>, solved using <code>Phalcon\DI:getRaw()</code> instead.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17922" data-cf-modified-b0580cd4c54c887b476113e7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17922" data-cf-modified-b0580cd4c54c887b476113e7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6616" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,181 @@
+---
+layout: default
+title: 'Strange behavior model - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Strange behavior model</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2095/ErickSkrauch" class="user-moderator-N"><span itemprop="name">ErickSkrauch</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-09-05T11:46:51-07:00">Sep '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-09-05T11:46:51-07:00">Sep '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>544</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/0cc499f2859e4604f82d4ca1b11da919?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2095/ErickSkrauch" class="user-moderator-N"><span itemprop="name">ErickSkrauch</span></a></span>
+                <span class="karma">13.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3372" href="#C3372">
+        <time class="action-date">Sep '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have this table:</p>
+<pre><code class="language-sql">CREATE TABLE IF NOT EXISTS `action_history` (
+  `id` int(11) NOT NULL,
+  `timestamp` int(11) NOT NULL,
+  `action` enum('call','logout','in_game','reg') NOT NULL,
+  UNIQUE KEY `id` (`id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;</code></pre>
+<p>And this model:</p>
+<pre><code class="language-php">use Phalcon\Mvc\Model\Behavior\Timestampable;
+
+class ActionHistory extends \Phalcon\Mvc\Model {
+    public $id;
+    public $timestamp;
+    public $action;
+
+    public function getSource() {
+        return 'action_history';
+    }
+
+    public function initialize() {
+        $this-&gt;hasOne("id", "Users", "id", array(
+            "alias" =&gt; "User"
+        ));
+
+        $this-&gt;addBehavior(new Timestampable(array(
+            "beforeValidateOnCreate" =&gt; array(
+                "field" =&gt; "timestamp"
+            )
+        )));
+    }
+
+    public function beforeValidateOnCreate() {
+        $this-&gt;action = 'reg';
+    }
+
+    public function beforeValidate() {
+        // just for testing thats validation not work
+        $this-&gt;timestamp = time();
+    }
+
+}</code></pre>
+<p>And i have this troubles:</p>
+<pre><code class="language-php">/** @var $user Users */
+$ah = new ActionHistory();
+$ah-&gt;user = $user; // store this var in field "user" in model, not as related id
+$ah-&gt;id = $user; // -&gt; fatal error on save by Users don't have __toString()
+$ah-&gt;id = $user-&gt;id; // setted as string and converted in 0
+$ah-&gt;id = (int) $user-&gt;id; // work!
+// $ah-&gt;save() or $ah-&gt;create() don't have any differences</code></pre>
+<p>And even more: behavior or beforeValidate () do not fire at all (checked through xdebug), and immediately takes off gives an error &quot;timestamp is required&quot;.</p>
+<p><strong>WTF?</strong></p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-e0f337918d91bc90129b61d0-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-e0f337918d91bc90129b61d0-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11092" href="#C11092">
+                <time itemprop="dateCreated" datetime="2014-09-05T12:18:27-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>There's no event called beforeValidate: <a href="http://docs.phalcon.io/en/latest/reference/models.html#events-and-events-manager">http://docs.phalcon.io/en/latest/reference/models.html#events-and-events-manager</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11092" data-cf-modified-e0f337918d91bc90129b61d0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11092" data-cf-modified-e0f337918d91bc90129b61d0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/0cc499f2859e4604f82d4ca1b11da919?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2095/ErickSkrauch" class="user-moderator-N"><span itemprop="name">ErickSkrauch</span></a>        </span>
+        <br>
+
+        <span class="karma">13.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11093" href="#C11093">
+                <time itemprop="dateCreated" datetime="2014-09-05T12:33:31-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>oh my... Ok, but what about relation with another model? Why don't work?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11093" data-cf-modified-e0f337918d91bc90129b61d0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11093" data-cf-modified-e0f337918d91bc90129b61d0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11109" href="#C11109">
+                <time itemprop="dateCreated" datetime="2014-09-06T15:12:08-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Could you please elaborate your question?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11109" data-cf-modified-e0f337918d91bc90129b61d0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11109" data-cf-modified-e0f337918d91bc90129b61d0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3372" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

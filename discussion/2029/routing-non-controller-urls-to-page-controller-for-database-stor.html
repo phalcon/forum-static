@@ -1,0 +1,124 @@
+---
+layout: default
+title: 'Routing non-controller urls to page controller for database-stored pages? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Routing non-controller urls to page controller for database-stored pages?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/689/JustinMoody" class="user-moderator-N"><span itemprop="name">Justin Moody</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-04-08T09:50:50-07:00">Apr '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-04-08T09:50:50-07:00">Apr '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>708</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">2</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/50e785f1eaefc9c4f28c5d72dbfcd8ca?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/689/JustinMoody" class="user-moderator-N"><span itemprop="name">Justin Moody</span></a></span>
+                <span class="karma">804</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2029" href="#C2029">
+        <time class="action-date">Apr '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm currently building a CMS using phalcon, and so far I haven't had any issues until now. Currently, I'd like any urls that do not have an associated controller to load the &quot;page&quot; controller I have, which will attempt to find a database-stored page and produce the 404 if one is not found. I've looked at the router documentation about setting a default controller, but that doesn't seem to work, as it always throws the exception error that the controller couldn't be loaded.</p>
+<p>I assume what I would need to do is create an event handler for the exception messages, but the documentation has got my eyes crossing, since I'm not understanding how to implement a listener to handle the exception messages.</p>
+<p>Any ideas what I should be doing to accomplish this?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-299d69a0785e2bd24c8db603-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-299d69a0785e2bd24c8db603-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/50e785f1eaefc9c4f28c5d72dbfcd8ca?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/689/JustinMoody" class="user-moderator-N"><span itemprop="name">Justin Moody</span></a>        </span>
+        <br>
+
+        <span class="karma">804</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="7007" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '14</span>
+              </span><br/><a name="C7007" href="#C7007">
+                <time itemprop="dateCreated" datetime="2014-04-08T12:26:58-07:00" class="action-date">Apr '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I figured this out a few minutes ago. For those who are experiencing the same issue, you need to attach an event listener on the 'dispatcher:beforeException' hook to forward the system via dispatcher to a specific controller. This should be done in the main bootstrap file when setting up the dispatcher.</p>
+<pre><code class="language-php">    $di-&gt;set('dispatcher', function() use ($di) {
+
+        $eventsManager = $di-&gt;getShared('eventsManager');
+
+        // If the path does not match a pre-defined controller, send it to a specific controller for handling
+        $eventsManager-&gt;attach('dispatch:beforeException', 
+            function($event, $dispatcher, $exception){
+                switch ($exception-&gt;getCode()) {
+                    case Phalcon\Mvc\Dispatcher::EXCEPTION_HANDLER_NOT_FOUND:
+                    case Phalcon\Mvc\Dispatcher::EXCEPTION_ACTION_NOT_FOUND:
+                        $dispatcher-&gt;forward(
+                            array(
+                                'controller' =&gt; '[CONTROLLER_NAME_HERE]',
+                                'action'     =&gt; '[ACTION_NAME_HERE]',
+                            )
+                        );
+                        return false;
+                }                
+            }
+        );
+
+        $dispatcher = new Phalcon\Mvc\Dispatcher();
+        $dispatcher-&gt;setEventsManager($eventsManager);
+
+        return $dispatcher;
+    });</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7007" data-cf-modified-299d69a0785e2bd24c8db603-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7007" data-cf-modified-299d69a0785e2bd24c8db603-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2029" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

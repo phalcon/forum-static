@@ -1,0 +1,361 @@
+---
+layout: default
+title: 'I&#039;m unable to get related records using the magic getters - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">I&#039;m unable to get related records using the magic getters</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1305/dotJoel" class="user-moderator-N"><span itemprop="name">Joel Byrnes</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-05-07T16:09:16-07:00">May '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-05-07T16:09:16-07:00">May '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>May '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">5</span>
+                </td>
+                <td>
+                    <label>Views</label><br>2300</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/36091abe6da82e2d4866ce122d1716e0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1305/dotJoel" class="user-moderator-N"><span itemprop="name">Joel Byrnes</span></a></span>
+                <span class="karma">2.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2255" href="#C2255">
+        <time class="action-date">May '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I am trying to figure out how to get my records here...
+I am querying a join table and want to get the records (from Contacts).
+I am pretty damn sure that my relationships are setup correctly.
+I've tried to <code>$contactsInGroup-&gt;getContacts</code> too, which seemed it whould work, but does not.</p>
+<p>Any help appreciated.  I like what I read about Phalcon, but I must admit, it's been a little rocky getting to full speed.</p>
+<p>If it's not clear, the error I am getting is:
+<code>Call to undefined method Phalcon\Mvc\Model\Resultset\Simple::getContacts()</code></p>
+<pre><code class="language-php">            $ContactGroupsContacts = new ContactGroupsContacts();
+            $contactsInGroup = $ContactGroupsContacts-&gt;find(array(
+                'conditions' =&gt; "contact_group_id = '{$contactGroupId}'"
+            ));  // works, but seems to return an instance of Simple..  not what I expected
+
+            foreach ($contactsInGroup-&gt;contacts as $contact) { // does not work. -&gt;contacts does not exist
+                print_r($contact-&gt;email);
+            }</code></pre>
+<p>This also does not work.. if I read your suggestion correctly:</p>
+<pre><code class="language-php">
+// find all subscribers in this group
+$ContactGroupsContacts = new ContactGroupsContacts();
+$params = array('conditions' =&gt; "contact_group_id = '{$contactGroupId}'");
+foreach ($ContactGroupsContacts-&gt;find($params)-&gt;getContacts() as $contact) {
+        print_r($contact);
+}</code></pre>
+<h3>ContactGroupsContacts</h3>
+<pre><code class="language-php">
+/**
+ * Join table between Contacts and ContactGroups
+ *
+ * @author joel
+ */
+class ContactGroupsContacts extends \Phalcon\Mvc\Model {
+
+    public $contact_group_id;
+    public $contact_id;
+
+    public function initialize() {
+        $this-&gt;belongsTo("id", "ContactGroups", "contact_group_id");
+        $this-&gt;belongsTo("id", "Contacts", "contact_id");
+    }
+
+   /**
+     * Return the related "contacts"
+     * (unecessary, but will help IDE hinting)
+     * 
+     * @return \Contacts[]
+     */
+    public function getContacts($parameters = null) {
+        return $this-&gt;getRelated('Contacts', $parameters);
+    }
+
+}</code></pre>
+<h3>Contacts</h3>
+<pre><code class="language-php">
+/**
+ *
+ * @author joel
+ */
+class Contacts extends  \Phalcon\Mvc\Model {
+
+    public $id;
+    public $uid;
+    public $account_id;
+    public $first_name;
+    public $email;
+    public $status;
+    public $creation_method;
+    public $email_format;
+    public $date_created;
+    public $date_modified;
+    public $hb_on_upload;
+    public $is_test_contact;
+
+    public function initialize() {
+        $this-&gt;hasMany("id", "ContactsAttributes", "contact_id", array(
+            //'alias' =&gt; 'contactattributes'
+        ));
+        $this-&gt;hasMany("id", "ContactGroupsContacts", "contact_id");
+    }
+}</code></pre>
+<h3>ContactGroups</h3>
+<pre><code class="language-php">class ContactGroups extends \Phalcon\Mvc\Model {
+
+    public $id;
+    public $type;
+    public $name;
+    public $description;
+    public $status;
+    public $last_modified_date;
+    public $xml_contact_query;
+    public $project_id;
+
+    public function initialize() {
+        //parent::initialize();
+        $this-&gt;hasMany("id", "ReportTickets", "contact_group_id");
+        $this-&gt;hasMany("id", "ContactGroupsContacts", "contact_group_id");
+    }
+
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-b34a64950f3e0cac26bf3cf1-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-b34a64950f3e0cac26bf3cf1-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/65cc66b2174ca0e8408258408af274c2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1371/david-duncan" class="user-moderator-N"><span itemprop="name">David Duncan</span></a>        </span>
+        <br>
+
+        <span class="karma">6.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7714" href="#C7714">
+                <time itemprop="dateCreated" datetime="2014-05-07T21:17:28-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Try not querying the intermediate model if this is a n-n relationship. This is based on my guess of your models. If this doesnt work then edit your post to include the name of your models, and the the relationships you defined in their initialize() function</p>
+<pre><code class="language-php">
+foreach (ContactGroups::findFirstById($contactGroupId)-&gt;getContacts() as $contact)
+{
+    ...
+}
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7714" data-cf-modified-b34a64950f3e0cac26bf3cf1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7714" data-cf-modified-b34a64950f3e0cac26bf3cf1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7722" href="#C7722">
+                <time itemprop="dateCreated" datetime="2014-05-08T08:08:38-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Please show your models and relationship setup code.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7722" data-cf-modified-b34a64950f3e0cac26bf3cf1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7722" data-cf-modified-b34a64950f3e0cac26bf3cf1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/36091abe6da82e2d4866ce122d1716e0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1305/dotJoel" class="user-moderator-N"><span itemprop="name">Joel Byrnes</span></a>        </span>
+        <br>
+
+        <span class="karma">2.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="7723" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '14</span>
+              </span><br/><a name="C7723" href="#C7723">
+                <time itemprop="dateCreated" datetime="2014-05-08T08:13:10-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>original post has been updated with the models.
+thank you for having a look.</p>
+<p><a href="https://forum.phalcon.io/user/0/david">@david</a>-duncan: I did try what you were actually suggesting as well.  I misread it the first time.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7723" data-cf-modified-b34a64950f3e0cac26bf3cf1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7723" data-cf-modified-b34a64950f3e0cac26bf3cf1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7724" href="#C7724">
+                <time itemprop="dateCreated" datetime="2014-05-08T08:21:18-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>So, given a contact group id, you want to get all contacts associated with that group?</p>
+<p>Since many contacts can belong to many contact groups, what you want to set up is a many-to-many relationship between Contacts and ContactGroups, via ContactGroupContacts (say that quickly 5 times).</p>
+<p>I've never personally created a many-to-many relationship, but the docs do cover it here: <a href="http://docs.phalcon.io/en/latest/reference/models.html#relationships-between-models">http://docs.phalcon.io/en/latest/reference/models.html#relationships-between-models</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7724" data-cf-modified-b34a64950f3e0cac26bf3cf1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7724" data-cf-modified-b34a64950f3e0cac26bf3cf1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/36091abe6da82e2d4866ce122d1716e0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1305/dotJoel" class="user-moderator-N"><span itemprop="name">Joel Byrnes</span></a>        </span>
+        <br>
+
+        <span class="karma">2.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7725" href="#C7725">
+                <time itemprop="dateCreated" datetime="2014-05-08T08:24:28-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes, it is a many-to-many.
+My original post has all 3 models now.</p>
+<p>I was following the RobotsParts example, but something ain't right..</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7725" data-cf-modified-b34a64950f3e0cac26bf3cf1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7725" data-cf-modified-b34a64950f3e0cac26bf3cf1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7726" href="#C7726">
+                <time itemprop="dateCreated" datetime="2014-05-08T08:30:22-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I <em>think</em> you want to define your relationship in ContactGroups like this:</p>
+<pre><code class="language-php">$this-&gt;hasManyToMany(
+    "id",
+    "ContactGroupsContacts",
+    "contact_group_id", "contact_id",
+    "Contacts",
+    "id"
+);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7726" data-cf-modified-b34a64950f3e0cac26bf3cf1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7726" data-cf-modified-b34a64950f3e0cac26bf3cf1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/36091abe6da82e2d4866ce122d1716e0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1305/dotJoel" class="user-moderator-N"><span itemprop="name">Joel Byrnes</span></a>        </span>
+        <br>
+
+        <span class="karma">2.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="7727" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '14</span>
+              </span><br/><a name="C7727" href="#C7727">
+                <time itemprop="dateCreated" datetime="2014-05-08T08:44:41-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/quasipickle">@quasipickle</a> - I think you're right.  That is what I was missing.
+I saw the first set of relationships for the 3 models in the docs, then failed to see that you also need to set  <code>$this-&gt;hasManyToMany()</code>.</p>
+<p>I now have <code>foreach</code> code returning my Contacts properties.</p>
+<p>Thank you very much for your time.</p>
+<h3>Working foreach()</h3>
+<pre><code class="language-php">foreach (ContactGroups::findFirstById($contactGroupId)-&gt;getContacts() as $contact) {
+    print_r($contact-&gt;email);
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7727" data-cf-modified-b34a64950f3e0cac26bf3cf1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7727" data-cf-modified-b34a64950f3e0cac26bf3cf1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7728" href="#C7728">
+                <time itemprop="dateCreated" datetime="2014-05-08T08:46:24-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Glad to help.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7728" data-cf-modified-b34a64950f3e0cac26bf3cf1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7728" data-cf-modified-b34a64950f3e0cac26bf3cf1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2255" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

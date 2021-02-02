@@ -1,0 +1,229 @@
+---
+layout: default
+title: 'Getting different memory references on beforeRenderView for views and partials; implementing a View Composer - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Getting different memory references on beforeRenderView for views and partials; implementing a View Composer</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1749/titus-toia" class="user-moderator-N"><span itemprop="name">titus-toia</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-06-17T05:12:44-07:00">Jun '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-06-17T05:12:44-07:00">Jun '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>796</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/dbffb86037139f42cd08fe531cb22d8a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1749/titus-toia" class="user-moderator-N"><span itemprop="name">titus-toia</span></a></span>
+                <span class="karma">1.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2588" href="#C2588">
+        <time class="action-date">Jun '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm trying to implement something which Laravel refers to as a View composer. Summarily, when 'partials/top.volt' is loaded, the assigned composer class or closure should fire and attach variables to the view using <code>setVar</code>.</p>
+<pre><code class="language-php">
+//services - Event manager for views
+...
+  $eventsManager = $di-&gt;getShared('eventsManager');
+  $eventsManager-&gt;attach('view', new ViewComposerLoader());
+...
+
+//services - this will make sense after reading the others
+$di-&gt;set('viewComposer', function() use($di) {
+  //Load up composers
+  $composer = new ViewComposer();
+  $composer-&gt;compose('partials/top', $di-&gt;get('TopComposer'));
+
+  return $composer;
+}, true);
+
+//This is the event handling class...
+class ViewComposerLoader extends Plugin {
+  public function beforeRenderView($event, $view, $viewPath) {
+    $viewName = viewName($this-&gt;view-&gt;getViewsDir(), $viewPath);
+    $composer = $this-&gt;getDI()-&gt;get('viewComposer');
+    $composer-&gt;load($viewName, $view);
+  }
+}
+
+//Which calls this:
+class ViewComposer {
+  protected $composers = array();
+
+  public function compose($view, $composer) {
+    array_push($this-&gt;composers, [$view, $composer]);
+  }
+  public function load($viewName, View $view) {
+    foreach($this-&gt;composers as $arr) {
+      if($viewName == $arr[0]) {
+        if($arr[1] instanceof \Closure) {
+          call_user_func($arr[1], $view);
+        } else if($arr[1] instanceof \ComposerInterface) {
+          $arr[1]-&gt;compose($view);
+        }
+      }
+    }
+  }
+}
+
+//Which finally calls this:
+class TopComposer extends ComposerBase {
+  ....
+  public function compose(View $view) {
+    $view-&gt;setVar('test', 1);
+  }
+}
+
+//And a little helper
+function viewName($viewDir, $viewPath) {
+  $parts = explode('.', substr($viewPath, strlen($viewDir)));
+  if(count($parts) &gt; 1) array_pop($parts);
+  return join('.', $parts);
+}
+</code></pre>
+<p>However, this isn't working because when <code>beforeRenderView</code> is called, the memory reference held by the <code>$view</code> variable is different for the main view and the partial views. In other words, if you attach a variable to a partial in the <code>beforeRenderView</code> event, it is NOT going to be reflected when the final view is assembled. Any idea on how get around this or is this intrinsically insurmountable?</p>
+<p>Edit: This is what I mean by 'different memory references'</p>
+<p><img src="http://snag.gy/kTnsg.jpg" alt="reference1" />
+<img src="http://snag.gy/EQVwD.jpg" alt="reference2" /></p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-b9a89461eccbbb77061debc9-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-b9a89461eccbbb77061debc9-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/dbffb86037139f42cd08fe531cb22d8a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1749/titus-toia" class="user-moderator-N"><span itemprop="name">titus-toia</span></a>        </span>
+        <br>
+
+        <span class="karma">1.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C8877" href="#C8877">
+                <time itemprop="dateCreated" datetime="2014-06-23T06:29:32-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Bump - I'd really love if I could get an answer to this.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8877" data-cf-modified-b9a89461eccbbb77061debc9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8877" data-cf-modified-b9a89461eccbbb77061debc9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bf2876998907a5932aa609a948720862?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/241/gsouf" class="user-moderator-N"><span itemprop="name">Soufiane Ghzal</span></a>        </span>
+        <br>
+
+        <span class="karma">21.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="8879" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '14</span>
+              </span><br/><a name="C8879" href="#C8879">
+                <time itemprop="dateCreated" datetime="2014-06-23T06:55:16-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I just overflew the post.
+Is your view service shared ?</p>
+<p>Maybe it could help to solve</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8879" data-cf-modified-b9a89461eccbbb77061debc9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8879" data-cf-modified-b9a89461eccbbb77061debc9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/dbffb86037139f42cd08fe531cb22d8a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1749/titus-toia" class="user-moderator-N"><span itemprop="name">titus-toia</span></a>        </span>
+        <br>
+
+        <span class="karma">1.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C8880" href="#C8880">
+                <time itemprop="dateCreated" datetime="2014-06-23T07:02:02-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes, it is.</p>
+<pre><code class="language-php">
+$di-&gt;set('view', function () use ($config, $di) {
+
+  $view = new View();
+
+  $eventsManager = $di-&gt;getShared('eventsManager');
+  $eventsManager-&gt;attach('view', new ViewComposerLoader());
+
+  $view-&gt;setViewsDir($config-&gt;application-&gt;viewsDir);
+
+  $view-&gt;registerEngines(array(
+    '.volt' =&gt; function ($view, $di) use ($config) {
+
+        $volt = new VoltEngine($view, $di);
+
+        $volt-&gt;setOptions(array(
+          'compiledPath' =&gt; $config-&gt;application-&gt;cacheDir,
+          'compiledSeparator' =&gt; '_',
+          'compileAlways' =&gt; true
+        ));
+
+        return $volt;
+      },
+    '.phtml' =&gt; 'Phalcon\Mvc\View\Engine\Php'
+  ));
+  $view-&gt;setEventsManager($eventsManager);
+
+  return $view;
+}, true);
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8880" data-cf-modified-b9a89461eccbbb77061debc9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8880" data-cf-modified-b9a89461eccbbb77061debc9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2588" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

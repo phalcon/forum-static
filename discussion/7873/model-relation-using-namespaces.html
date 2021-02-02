@@ -1,0 +1,331 @@
+---
+layout: default
+title: 'Model relation using namespaces - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Model relation using namespaces</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/4503/dubstudios" class="user-moderator-N"><span itemprop="name">Dubstudios</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-07-29T08:48:05-07:00">Jul '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-07-29T08:48:05-07:00">Jul '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>631</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9dff7ce70965023b9bc1aa9bbfc92861?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/4503/dubstudios" class="user-moderator-N"><span itemprop="name">Dubstudios</span></a></span>
+                <span class="karma">5.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C7873" href="#C7873">
+        <time class="action-date">Jul '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi all,</p>
+<p>I'm implementing Phalcon ORM and have an issue with relations between models. To be accurate, I had a test code working with staticly included classes. Then I've started using namespaces, added an autoloader and it doesn't work anymore.</p>
+<p>My test code:</p>
+<pre><code class="language-php">  //includes model class and return a new UsersModel
+  $oUser = $this-&gt;_getModel('users');   
+
+  $aoUsers = $oUser::find(array('order' =&gt; 'id ASC'));
+  foreach($aoUsers as $oUser)
+  {
+     dump($oUser-&gt;id);
+     dump($oUser-&gt;profiles);
+  }</code></pre>
+<p>As expected the resultset was containing the user &amp; profile data. Now I've changed the relation declarations with Namespaces, the resultset only contains the user data. My Models:</p>
+<pre><code class="language-php">namespace Phalcon\Mvc\Model;
+class Users extends \Phalcon\Mvc\Model\ModelBase
+{   
+    namespace Phalcon\Mvc\Model;
+    public function initialize()
+    {
+        $this-&gt;useDynamicUpdate(true);
+        $this-&gt;hasOne("id", "\Phalcon\Mvc\Model\Profiles", "id");
+    }
+
+    public function metaData()
+    {
+        //generating my own meta here.
+    }
+}</code></pre>
+<p>Second model:</p>
+<pre><code class="language-php">  namespace Phalcon\Mvc\Model;
+  class Profiles extends \Phalcon\Mvc\Model\ModelBase
+  { 
+      namespace Phalcon\Mvc\Model;
+      public function initialize()
+      {
+          $this-&gt;useDynamicUpdate(true);
+          $this-&gt;belongsTo("id", "\Phalcon\Mvc\Model\Users", "id");
+      }
+
+      public function metaData()
+      {
+          //generating my own meta here.
+      }
+  }</code></pre>
+<p>If I dump the ModelManager, I see it's set up properly:</p>
+<pre><code class="language-php">
+$oManager = $oUser-&gt;getModelsManager();         
+dump($oManager);
+
+dump('relations ?');
+$oRelation = $oManager-&gt;getRelations("profiles");           
+dump($oRelation);
+
+//Outputs:
+
+Object(Phalcon\Mvc\Model\Manager) =&gt; 
+array(24) {
+  ["*_dependencyInjector"]=&gt;
+  string(24) " *** Phalcon object *** "
+  ["*_eventsManager"]=&gt;
+  NULL
+  ["*_customEventsManager"]=&gt;
+  NULL
+  ["*_readConnectionServices"]=&gt;
+  NULL
+  ["*_writeConnectionServices"]=&gt;
+  NULL
+  ["*_aliases"]=&gt;
+  array(1) {
+    ["phalcon\mvc\model\users$\phalcon\mvc\model\profiles"]=&gt;
+    array(8) {
+      ["*_type"]=&gt;
+      int(2)
+      ["*_referencedModel"]=&gt;
+      string(27) "\Phalcon\Mvc\Model\Profiles"
+      ["*_fields"]=&gt;
+      string(2) "id"
+      ["*_referencedFields"]=&gt;
+      string(2) "id"
+      ["*_intermediateModel"]=&gt;
+      NULL
+      ["*_intermediateFields"]=&gt;
+      NULL
+      ["*_intermediateReferencedFields"]=&gt;
+      NULL
+      ["*_options"]=&gt;
+      NULL
+    }
+  }
+  ["*_hasMany"]=&gt;
+  array(1) {
+    ["phalcon\mvc\model\users$\phalcon\mvc\model\profiles"]=&gt;
+    array(1) {
+      [0]=&gt;
+      [...]
+
+//And relations:
+array (
+  0 =&gt; 
+  Phalcon\Mvc\Model\Relation::__set_state(array(
+     '_type' =&gt; 2,
+     '_referencedModel' =&gt; '\\Phalcon\\Mvc\\Model\\Profiles',
+     '_fields' =&gt; 'id',
+     '_referencedFields' =&gt; 'id',
+     '_intermediateModel' =&gt; NULL,
+     '_intermediateFields' =&gt; NULL,
+     '_intermediateReferencedFields' =&gt; NULL,
+     '_options' =&gt; NULL,
+  )),
+)</code></pre>
+<p>What is wrong ? </p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-8737d623f2ca2ece99a28bda-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-8737d623f2ca2ece99a28bda-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9dff7ce70965023b9bc1aa9bbfc92861?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4503/dubstudios" class="user-moderator-N"><span itemprop="name">Dubstudios</span></a>        </span>
+        <br>
+
+        <span class="karma">5.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C21321" href="#C21321">
+                <time itemprop="dateCreated" datetime="2015-07-29T09:09:13-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well, as a last hope I tried to use aliases, and it works.</p>
+<p>if I declare the relation as    </p>
+<pre><code class="language-php">    $this-&gt;hasMany("id", "\Phalcon\Mvc\Model\Profiles", "user_id",  array('alias' =&gt; 'uprofiles'));</code></pre>
+<p>The query result let let me access the profile data calling    </p>
+<pre><code class="language-php">    dump($oUser-&gt;uprofiles);</code></pre>
+<p>That shows my config is ok, but that's a bit painful to use. Any way to have the ModelManager to interprete the namespace  &quot;\Phalcon\Mvc\Model\Profiles&quot; to let me access the model with $oUser-&gt;profiles  ?</p>
+<p>(aka instanciate the model using \Phalcon\Mvc\Model\Profiles()&quot; but including it in the resultset as &quot;Profiles)</p>
+<p>Cheers</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21321" data-cf-modified-8737d623f2ca2ece99a28bda-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21321" data-cf-modified-8737d623f2ca2ece99a28bda-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/210/andresgutierrez" class="user-moderator-Y"><span itemprop="name">Andres Gutierrez</span></a>        </span>
+        <br>
+
+        <span class="karma">34.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C21323" href="#C21323">
+                <time itemprop="dateCreated" datetime="2015-07-29T09:10:02-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Maybe remove the first \ in the model name would help:</p>
+<pre><code class="language-php">namespace Phalcon\Mvc\Model; // use the framework namespace sounds like a really bad idea
+  class Profiles extends \Phalcon\Mvc\Model\ModelBase
+  { 
+      namespace Phalcon\Mvc\Model; /// &lt; not sure how this works for you
+      public function initialize()
+      {
+          $this-&gt;useDynamicUpdate(true);
+          $this-&gt;belongsTo("id", "Phalcon\Mvc\Model\Users", "id");
+      }
+
+      public function metaData()
+      {
+          //generating my own meta here.
+      }
+  }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21323" data-cf-modified-8737d623f2ca2ece99a28bda-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21323" data-cf-modified-8737d623f2ca2ece99a28bda-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9dff7ce70965023b9bc1aa9bbfc92861?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4503/dubstudios" class="user-moderator-N"><span itemprop="name">Dubstudios</span></a>        </span>
+        <br>
+
+        <span class="karma">5.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C21327" href="#C21327">
+                <time itemprop="dateCreated" datetime="2015-07-29T09:36:45-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks for the reply Andres...</p>
+<ol>
+<li>
+<p>Using Phalcon namespace: it's just a proof of concept for now, that won't stay like this for sure, it's to avoid any possible namespace issue as I build my first ORM. Based on your answer I understand that the ORM should convert  &quot;Phalcon\Mvc\Model\Users&quot;  ==&gt; $oUser-&gt;profiles</p>
+<ul>
+<li>Do you think using phalcon namespace could explain why it's not working ?</li>
+</ul>
+</li>
+<li>
+<p>&quot;namespace Phalcon\Mvc\Model;&quot; in the middle, copy/paste issue, that is not in my actual code.</p>
+</li>
+<li>Leading slash or not, it doesn't work without aliases.</li>
+</ol></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21327" data-cf-modified-8737d623f2ca2ece99a28bda-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21327" data-cf-modified-8737d623f2ca2ece99a28bda-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9dff7ce70965023b9bc1aa9bbfc92861?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4503/dubstudios" class="user-moderator-N"><span itemprop="name">Dubstudios</span></a>        </span>
+        <br>
+
+        <span class="karma">5.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="21379" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '15</span>
+              </span><br/><a name="C21379" href="#C21379">
+                <time itemprop="dateCreated" datetime="2015-07-30T08:39:39-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Update: I've cleaned up my namespaces, moved all the models to \Phapp\Model\ModelName and it sadly still doesn't work without aliases.</p>
+<pre><code class="language-php">
+// Model:
+$this-&gt;hasMany("id", "\Phapp\Model\Profiles", "user_id");  
+
+// Controller:
+$oUser-&gt;profiles-&gt;toArray()
+// Notice: Access to undefined property Phapp\Model\Users::profiles in [...] 
+
+// Model:
+$this-&gt;hasMany("id", "\Phapp\Model\Profiles", "user_id",  array('alias' =&gt; 'profiles'));
+// Controller: works
+$oUser-&gt;profiles-&gt;toArray()</code></pre>
+<p>Is there anything else I could/should do ? Is there a default namespace to set somewhere ?
+Best,</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21379" data-cf-modified-8737d623f2ca2ece99a28bda-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21379" data-cf-modified-8737d623f2ca2ece99a28bda-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/210/andresgutierrez" class="user-moderator-Y"><span itemprop="name">Andres Gutierrez</span></a>        </span>
+        <br>
+
+        <span class="karma">34.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C21385" href="#C21385">
+                <time itemprop="dateCreated" datetime="2015-07-30T09:08:15-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>What's the problem of having aliases?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21385" data-cf-modified-8737d623f2ca2ece99a28bda-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21385" data-cf-modified-8737d623f2ca2ece99a28bda-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="7873" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

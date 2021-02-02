@@ -1,0 +1,244 @@
+---
+layout: default
+title: 'MySQL default values and double save() - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">MySQL default values and double save()</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2026/SakhDelphi" class="user-moderator-N"><span itemprop="name">Mikhail Radomskiy</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-07-05T06:45:16-07:00">Jul '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-07-05T06:45:16-07:00">Jul '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>677</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/fab0a72a0d654416f66bb6d46e281174?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2026/SakhDelphi" class="user-moderator-N"><span itemprop="name">Mikhail Radomskiy</span></a></span>
+                <span class="karma">3.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C7447" href="#C7447">
+        <time class="action-date">Jul '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi everyone! And sorry for my english.</p>
+<p>I have table with some integer fields NULL DEFAULT '0' and I have this php code on phalcon v2.0.3:</p>
+<pre><code class="language-php">$robot = new Robots();
+$robot-&gt;email = $this-&gt;request-&gt;getPost('email', 'email');
+$robot-&gt;ip = $this-&gt;request-&gt;getClientAddress(true);
+...
+//I skip fields with default values
+...
+
+if ($robot-&gt;save()) { //after this save() skipped fields have value 0, all right 
+    if ($this-&gt;request-&gt;hasFiles(true)) {
+        foreach ($this-&gt;request-&gt;getUploadedFiles(true) as $file) {
+            ...
+        }
+
+        if ($robot-&gt;image_id == 0) {
+            $robot-&gt;image_id = $images-&gt;id;
+            $robot-&gt;save(); //but after this save() skipped fields have value NULL, why?
+        }
+    }
+}</code></pre>
+<p>I tried</p>
+<pre><code class="language-php">$this-&gt;useDynamicUpdate(true);</code></pre>
+<p>but it's not help me, I tried annotations, but it's not help me.</p>
+<p>If i use</p>
+<pre><code class="language-php">$robot2 = Robots::findFirst($robot-&gt;id);
+$robot2-&gt;image_id = $images-&gt;id;
+$robot2-&gt;save()</code></pre>
+<p>instead of second</p>
+<pre><code class="language-php">$robot-&gt;save();</code></pre>
+<p>all right.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-7e4f6153364afec521cde114-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-7e4f6153364afec521cde114-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/210/andresgutierrez" class="user-moderator-Y"><span itemprop="name">Andres Gutierrez</span></a>        </span>
+        <br>
+
+        <span class="karma">34.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C20235" href="#C20235">
+                <time itemprop="dateCreated" datetime="2015-07-05T07:25:14-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You have to reload the record after the first save to it will recover the default values from the database:</p>
+<pre><code>$robot-&gt;reload();</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="20235" data-cf-modified-7e4f6153364afec521cde114-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="20235" data-cf-modified-7e4f6153364afec521cde114-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e984ca5d22935b577e77fcbb53edb3e2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1653/stefanchiriac" class="user-moderator-N"><span itemprop="name">Stefan Chiriac</span></a>        </span>
+        <br>
+
+        <span class="karma">16.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C20237" href="#C20237">
+                <time itemprop="dateCreated" datetime="2015-07-05T07:25:32-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>why don't you just save at the end instead of doing an insert and then an update?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="20237" data-cf-modified-7e4f6153364afec521cde114-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="20237" data-cf-modified-7e4f6153364afec521cde114-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fab0a72a0d654416f66bb6d46e281174?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2026/SakhDelphi" class="user-moderator-N"><span itemprop="name">Mikhail Radomskiy</span></a>        </span>
+        <br>
+
+        <span class="karma">3.5k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C20235"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Andres Gutierrez                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C20239" href="#C20239">
+                <time itemprop="dateCreated" datetime="2015-07-05T08:20:17-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>You have to reload the record after the first save to it will recover the default values from the database:</p>
+</blockquote>
+<p>With this line I get</p>
+<pre><code>The method 'reload' doesn't exist on model 'MyProject\MyModule\Models\Robots'</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="20239" data-cf-modified-7e4f6153364afec521cde114-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="20239" data-cf-modified-7e4f6153364afec521cde114-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fab0a72a0d654416f66bb6d46e281174?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2026/SakhDelphi" class="user-moderator-N"><span itemprop="name">Mikhail Radomskiy</span></a>        </span>
+        <br>
+
+        <span class="karma">3.5k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C20237"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/e984ca5d22935b577e77fcbb53edb3e2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Stefan Chiriac                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C20241" href="#C20241">
+                <time itemprop="dateCreated" datetime="2015-07-05T08:23:33-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>why don't you just save at the end instead of doing an insert and then an update?</p>
+</blockquote>
+<p>Because I have to get $robot-&gt;id before saving images.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="20241" data-cf-modified-7e4f6153364afec521cde114-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="20241" data-cf-modified-7e4f6153364afec521cde114-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C20263" href="#C20263">
+                <time itemprop="dateCreated" datetime="2015-07-06T05:12:21-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It must be $robot-&gt;refresh();</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="20263" data-cf-modified-7e4f6153364afec521cde114-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="20263" data-cf-modified-7e4f6153364afec521cde114-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fab0a72a0d654416f66bb6d46e281174?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2026/SakhDelphi" class="user-moderator-N"><span itemprop="name">Mikhail Radomskiy</span></a>        </span>
+        <br>
+
+        <span class="karma">3.5k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C20263"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Phalcon                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C20273" href="#C20273">
+                <time itemprop="dateCreated" datetime="2015-07-06T06:45:08-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>It must be $robot-&gt;refresh();</p>
+</blockquote>
+<p>Thank you, it solved my problem.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="20273" data-cf-modified-7e4f6153364afec521cde114-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="20273" data-cf-modified-7e4f6153364afec521cde114-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="7447" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

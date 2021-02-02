@@ -1,0 +1,300 @@
+---
+layout: default
+title: 'CLI Problem service db wasn&#039;t found in the dependency injection container - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/10/di-ioc">DI/IoC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">CLI Problem service db wasn&#039;t found in the dependency injection container</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2755/xeleniumz" class="user-moderator-N"><span itemprop="name">xeleniumz</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-05-31T02:33:13-07:00">May '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-05-31T02:33:13-07:00">May '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>2864</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/1f10cf3015dc4f8e9ff090600b8cf39f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2755/xeleniumz" class="user-moderator-N"><span itemprop="name">xeleniumz</span></a></span>
+                <span class="karma">11.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6947" href="#C6947">
+        <time class="action-date">May '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi, I'm use phalcon 2.0 and I got the problem with cli  application when query from database. How to fix ?
+here is my code  in /myapp/app/console.php</p>
+<pre><code>&lt;?php
+
+use Phalcon\Cli\Console as ConsoleApp;
+use Phalcon\DI\FactoryDefault\Cli as CliDI;
+
+error_reporting(E_ALL);
+
+define('VERSION', '1.0.0');
+define('APP_PATH', realpath('') . '/');
+
+//Read the configuration
+$config = new Phalcon\Config\Adapter\Ini(APP_PATH . 'app/config/config.ini');
+
+$loader = new \Phalcon\Loader();
+/**
+ * Auto-loader configuration
+ */
+$loader-&gt;registerDirs(
+    array(
+        APP_PATH . $config-&gt;application-&gt;controllersDir,
+        APP_PATH . $config-&gt;application-&gt;pluginsDir,
+        APP_PATH . $config-&gt;application-&gt;libraryDir,
+        APP_PATH . $config-&gt;application-&gt;modelsDir,
+        APP_PATH . $config-&gt;application-&gt;tasksDir,
+    )
+)-&gt;register();
+
+/**
+ * The FactoryDefault Dependency Injector automatically register the right services providing a full stack framework
+ */
+$di = new \Phalcon\DI\FactoryDefault\CLI();
+
+/**
+ * Database connection is created based in the parameters defined in the configuration file
+ */
+$di-&gt;set('db', function () use ($config) {
+    return new \Phalcon\Db\Adapter\Pdo\Mysql(array(
+        "host" =&gt; $config-&gt;database-&gt;host,
+        "username" =&gt; $config-&gt;database-&gt;username,
+        "password" =&gt; $config-&gt;database-&gt;password,
+        "dbname" =&gt; $config-&gt;database-&gt;name,
+    ));
+});
+
+/**
+ * If the configuration specify the use of metadata adapter use it or use memory otherwise
+ */
+$di-&gt;set('modelsMetadata', function () use ($config) {
+    if (isset($config-&gt;models-&gt;metadata)) {
+        $metaDataConfig = $config-&gt;models-&gt;metadata;
+        $metadataAdapter = 'Phalcon\Mvc\Model\Metadata\\' . $metaDataConfig-&gt;adapter;
+        return new $metadataAdapter();
+    } else {
+        return new Phalcon\Mvc\Model\Metadata\Memory();
+    }
+});
+
+$di = new CliDI();
+
+$console = new ConsoleApp();
+$console-&gt;setDI($di);
+
+/**
+ * Process the console arguments
+ */
+$arguments = array();
+foreach ($argv as $k =&gt; $arg) {
+    if ($k == 1) {
+        $arguments['task'] = $arg;
+    } elseif ($k == 2) {
+        $arguments['action'] = $arg;
+    } elseif ($k &gt;= 3) {
+        $arguments['params'][] = $arg;
+    }
+}
+
+// define global constants for the current task and action
+define('CURRENT_TASK', (isset($argv[1]) ? $argv[1] : null));
+define('CURRENT_ACTION', (isset($argv[2]) ? $argv[2] : null));
+
+try {
+    // handle incoming arguments
+    $console-&gt;handle($arguments);
+} catch (\Phalcon\Exception $e) {
+    echo $e-&gt;getMessage();
+    exit(255);
+}
+?&gt;</code></pre>
+<p>and this is my MainTask in /myapp/app/tasks/</p>
+<pre><code>&lt;?php
+
+class MainTask extends \Phalcon\CLI\Task {
+
+    public function mainAction() {
+        echo "\nThis is the default task and the default action \n";
+    }
+
+    public function testAction() {
+        $phql = "SELECT * FROM Users Where username = 'qwe'";
+        $r = $this-&gt;modelsManager-&gt;executeQuery($phql);
+        echo $r-&gt;username;
+    }
+
+    public function test1Action() {
+        echo "11 \n";
+    }
+
+?&gt;
+</code></pre>
+<p>when I type  php app/console.php main test1  the result is </p>
+<blockquote>
+<p>11 </p>
+</blockquote>
+<p>it's ok but when i type with  php app/console.php main test , the response is</p>
+<blockquote>
+<p>Service 'db' wasn't found in the dependency injection container</p>
+</blockquote>
+<p>How to fix this problem . thank you</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-cba8f0006e6ef3e6e27001f5-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-cba8f0006e6ef3e6e27001f5-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1f10cf3015dc4f8e9ff090600b8cf39f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2755/xeleniumz" class="user-moderator-N"><span itemprop="name">xeleniumz</span></a>        </span>
+        <br>
+
+        <span class="karma">11.1k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C18949" href="#C18949">
+                <time itemprop="dateCreated" datetime="2015-05-31T03:12:13-07:00" class="action-date">May '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Ok I found my problem  now , becuase I redeclare $di 2 times so they can't work with 2 instance
+here is my new code</p>
+<pre><code>&lt;?php
+
+use Phalcon\Cli\Console as ConsoleApp;
+use Phalcon\DI\FactoryDefault\Cli as CliDI;
+
+error_reporting(E_ALL);
+
+define('VERSION', '1.0.0');
+define('APP_PATH', realpath('') . '/');
+
+//Read the configuration
+$config = new Phalcon\Config\Adapter\Ini(APP_PATH . 'app/config/config.ini');
+
+/**
+ * Auto-loader configuration
+ */
+require APP_PATH . 'app/config/loader.php';
+/**
+ * The FactoryDefault Dependency Injector automatically register the right services providing a full stack framework
+ */
+
+/**
+ * Database connection is created based in the parameters defined in the configuration file
+ */
+require APP_PATH . 'app/config/services.php';
+
+$di = new CliDI();
+$console = new ConsoleApp();
+$console-&gt;setDI($di);
+
+/**
+ * Process the console arguments
+ */
+$arguments = array();
+foreach ($argv as $k =&gt; $arg) {
+    if ($k == 1) {
+        $arguments['task'] = $arg;
+    } elseif ($k == 2) {
+        $arguments['action'] = $arg;
+    } elseif ($k &gt;= 3) {
+        $arguments['params'][] = $arg;
+    }
+}
+
+// define global constants for the current task and action
+define('CURRENT_TASK', (isset($argv[1]) ? $argv[1] : null));
+define('CURRENT_ACTION', (isset($argv[2]) ? $argv[2] : null));
+
+try {
+    // handle incoming arguments
+    $console-&gt;handle($arguments);
+} catch (\Phalcon\Exception $e) {
+    echo $e-&gt;getMessage();
+    exit(255);
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="18949" data-cf-modified-cba8f0006e6ef3e6e27001f5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="18949" data-cf-modified-cba8f0006e6ef3e6e27001f5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C30509" href="#C30509">
+                <time itemprop="dateCreated" datetime="2016-03-03T09:17:29-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I had similiar requirement, but not only to connect db service but other as well. </p>
+<pre><code class="language-php">
+//$diCli is my CLI IoC DI
+//$di is loaded from the main web app
+//resolve and copy other services
+require_once APPLICATION_PATH . '/services/services.php';
+
+$diCli-&gt;set('db', $di-&gt;get('db'));
+$diCli-&gt;set('webservice', $di-&gt;get('webservice'));
+$diCli-&gt;set('messageBroker', $di-&gt;get('messageBroker'));
+</code></pre>
+<p>In this way it is easy to maintain only one main IoC (the web app). CLI app gets the same services resolved at runtime.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="30509" data-cf-modified-cba8f0006e6ef3e6e27001f5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="30509" data-cf-modified-cba8f0006e6ef3e6e27001f5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6947" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

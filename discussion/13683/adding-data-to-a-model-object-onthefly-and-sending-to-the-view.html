@@ -1,0 +1,132 @@
+---
+layout: default
+title: 'Adding data to a Model object on-the-fly and sending to the View - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Adding data to a Model object on-the-fly and sending to the View</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/7985/bestdamnfriend" class="user-moderator-N"><span itemprop="name">Matthew</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-09-15T07:33:15-07:00">Sep '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-09-15T07:33:15-07:00">Sep '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>901</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/cbcc44a8e75ed0b21312f6054adb0645?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/7985/bestdamnfriend" class="user-moderator-N"><span itemprop="name">Matthew</span></a></span>
+                <span class="karma">3.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C13683" href="#C13683">
+        <time class="action-date">Sep '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Phalcon's <code>ResultSet</code> is great, only storing one record in memory at a time, but it's causing me real headaches trying to add custom data to an object after it's been pulled from the database.</p>
+<p>My indexAction() looks like so:</p>
+<pre><code class="language-php">$webm = new MyModel();
+$visas = $webm-&gt;customFindFunction($variable);
+foreach ($visas as $visa) {
+   $randomVar = $webm-&gt;otherFindFunction($visa-&gt;id);
+   $visa-&gt;newParam = $randomVar;
+}
+$this-&gt;view-&gt;visas = $visas;</code></pre>
+<p>However, because <code>newParam</code> is not part of the Model and because the object is not saved between rows, by the time it's pushed to the view, it's lost (removed from memory and not saved). Is there any way around this? <code>newParam</code> is literally only needed on the View...</p>
+<p>If I <code>print_r()</code> within the <code>for</code> loop I can see my <code>newParam</code> being assigned, but if I <code>print_r()</code> after it has ended, it's gone again.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-eb12492e6d361e85c3b38b9f-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-eb12492e6d361e85c3b38b9f-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C40229" href="#C40229">
+                <time itemprop="dateCreated" datetime="2016-09-15T14:18:32-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It might help a bit to know what you're actually trying to accomplish - it looks like this is just an illustration, but I still have questions as to why you're wanting to do this.</p>
+<p>The reason <code>print_r()</code> within the loop works is because $visa is still a reference to the object you affected.  You're not re-assigning $visa back into $visas.  You could try doing a foreach by reference:</p>
+<pre><code class="language-php">foreach($visas as &amp;$visa)</code></pre>
+<p>But references like that can be troublesome: <a href="https://schlueters.de/blog/archives/141-references-and-foreach.html">https://schlueters.de/blog/archives/141-references-and-foreach.html</a>.  Still, if this is all you're doing, and you're not iterating through $visas again, or using $visa as another variable, it should be safe.</p>
+<p>Is $randomVar a property that's related to each $visa?  If so, might you be able to set up a relationship, then just reference that relationship from the view? I would recommend this method if possible.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="40229" data-cf-modified-eb12492e6d361e85c3b38b9f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="40229" data-cf-modified-eb12492e6d361e85c3b38b9f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C40245" href="#C40245">
+                <time itemprop="dateCreated" datetime="2016-09-16T03:23:21-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It's not about reference, by default all php objects are passed as reference.</p>
+<p>You basically CAN'T modify resultset in anyway in phalcon. </p>
+<p>This part of code:</p>
+<pre><code>foreach ($visas as $visa) {
+
+}</code></pre>
+<p>Is just getting each row as current row and you can do some stuff with it, but there is no way to save it anyhow to $visas. This is how phalcon resultset works and why it's really fast.</p>
+<p>If you want to modify it, then use toArray() method on resultset, and work on arrays with reference.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="40245" data-cf-modified-eb12492e6d361e85c3b38b9f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="40245" data-cf-modified-eb12492e6d361e85c3b38b9f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="13683" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

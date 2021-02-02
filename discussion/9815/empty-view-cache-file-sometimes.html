@@ -1,0 +1,186 @@
+---
+layout: default
+title: 'Empty view cache file sometimes - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/8/cache">Cache</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Empty view cache file sometimes</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/5699/mike542" class="user-moderator-N"><span itemprop="name">mike542</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-12-11T23:19:07-07:00">Dec '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-12-11T23:19:07-07:00">Dec '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>879</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/c13ab132ec3e961ce81dcecae43192bb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/5699/mike542" class="user-moderator-N"><span itemprop="name">mike542</span></a></span>
+                <span class="karma">958</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C9815" href="#C9815">
+        <time class="action-date">Dec '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I use file caching to cache the page output.
+Sometimes all the cache files are ok. Sometimes a few cache files are zero byte. These empty cache files are random (not consistently the same files).</p>
+<p>I am using PHP 5.5.30 and Phalcon 2.0.9. The program is in development environment and I am the only user accessing the pages. </p>
+<p>I cannot find similar problem in this forum or the internet so I think maybe I code my program wrongly. Thanks in advance for any suggestion.</p>
+<p>Below are codes that I used to set up $di and the controller. The generated cache ID is a camel-cased file name without any folder name.</p>
+<pre><code class="language-php">$di-&gt;set('viewCache', function() use ($config){
+        //Cache data for one day by default
+        $frontCache = new Phalcon\Cache\Frontend\Output(array(
+            "lifetime" =&gt; 2592000
+        ));
+        //File backend settings
+        $cache = new Phalcon\Cache\Backend\File($frontCache, array(
+            "cacheDir" =&gt; $config-&gt;application-&gt;cacheDir,
+            //"prefix" =&gt; "php"
+        ));
+        return $cache;
+    });
+
+/**
+ * Setting up the view component
+ */
+$di-&gt;setShared('view', function () use ($config) {
+
+    $view = new View();
+
+    $view-&gt;setViewsDir($config-&gt;application-&gt;viewsDir);
+
+    $view-&gt;registerEngines(array(
+        '.volt' =&gt; function ($view, $di) use ($config) {
+
+            $folder = $config-&gt;application-&gt;cacheDir.'compile/';
+            if ( ! @file_exists($folder))
+            {
+                @mkdir($folder, 0777, TRUE);
+            }
+
+            $volt = new VoltEngine($view, $di);
+
+            $volt-&gt;setOptions(array(
+                //'compiledPath' =&gt; $config-&gt;application-&gt;cacheDir,
+                'compiledPath' =&gt; $folder,
+                'compiledSeparator' =&gt; '_'
+            ));
+
+            return $volt;
+        },
+        '.phtml' =&gt; 'Phalcon\Mvc\View\Engine\Php'
+    ));
+
+    return $view;
+});</code></pre>
+<pre><code class="language-php">use Phalcon\Mvc\Controller;
+use Phalcon\Mvc\View;
+
+class FunController extends Controller
+{
+  public function indexAction()
+  {
+      $pageCacheID = $this-&gt;generatePageCacheID();
+
+      if(!($this-&gt;view-&gt;getCache()-&gt;exists($pageCacheID))) {
+          //generate content
+      }
+
+      //Save page to cache
+      $this-&gt;view-&gt;cache(array('key' =&gt; $pageCacheID, 'lifetime' =&gt; 86400));
+  }
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-1e435b91251a897d6f4a20d9-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-1e435b91251a897d6f4a20d9-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5915f25e654c4f9e60fe51700cdee683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4769/Izopi4a" class="user-moderator-Y"><span itemprop="name">Izo</span></a>        </span>
+        <br>
+
+        <span class="karma">85.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C27669" href="#C27669">
+                <time itemprop="dateCreated" datetime="2015-12-15T00:32:49-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>hmm, my guess would be that, you got an error in the execution of the script, that's why cache is empty.</p>
+<p>Maybe you can disable the cache and play with everything and try to break the application ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27669" data-cf-modified-1e435b91251a897d6f4a20d9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27669" data-cf-modified-1e435b91251a897d6f4a20d9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c13ab132ec3e961ce81dcecae43192bb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5699/mike542" class="user-moderator-N"><span itemprop="name">mike542</span></a>        </span>
+        <br>
+
+        <span class="karma">958</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C27677" href="#C27677">
+                <time itemprop="dateCreated" datetime="2015-12-15T02:23:19-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks for the sugggestion.
+That's also my guess. Maybe there is some problem with the controller.
+I even add in php error handler and monitor the apache error log.
+I tried breaking the errors and fix all errors but now I have no more errors to fix.</p>
+<p>I make some progress in past 24 hours. It seems that my route setting is causing this problem.
+I modify the simple-subcontroller example (given by phalconPHP) and copy my controller over.
+My test program is testing the controller every 15 min and I am not getting any empty cache file for the past 8 hours. </p>
+<p>I need to test for a few days to confirm.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27677" data-cf-modified-1e435b91251a897d6f4a20d9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27677" data-cf-modified-1e435b91251a897d6f4a20d9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="9815" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

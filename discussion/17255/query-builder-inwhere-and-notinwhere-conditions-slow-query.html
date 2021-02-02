@@ -1,0 +1,232 @@
+---
+layout: default
+title: 'Query builder inWhere and notInWhere conditions slow query - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Query builder inWhere and notInWhere conditions slow query</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10417/Giu88" class="user-moderator-N"><span itemprop="name">Giu88</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-11-08T04:44:28-07:00">Nov '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-11-08T04:44:28-07:00">Nov '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>894</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/b16b1cf9ff276ad2862beb0726e23d82?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10417/Giu88" class="user-moderator-N"><span itemprop="name">Giu88</span></a></span>
+                <span class="karma">1.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17255" href="#C17255">
+        <time class="action-date">Nov '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have a problem with phalcon query builder. When I use inWhere/notInWhere conditions, performaces go down and execution of queries is very very slow. </p>
+<p>Following two examples of the same query, the first with notInWhere, the second with array implosion:</p>
+<pre><code class="language-php">$arrayIDs; // array contains about 16k integer IDs. Result of this query: SELECT DISTINCT(Table2.idTable2) AS idTable2 FROM NAMESPACE\idTable2 AS idTable2 WHERE idTable2.Attr1 IS NOT NULL OR idTable2.Attr2 = 1;
+
+// VERSION 1
+$builder = $modelsManager-&gt;createBuilder()
+    -&gt;columns(array('COUNT(*) as CountTable1'))
+    -&gt;from(array('Table1'=&gt;'NAMESPACE\Table1'))
+     -&gt;where('Table1.Attr1 = :Attr1:', array('Attr1' =&gt; 1))
+     -&gt;notInWhere('Table1.idTable1', $arrayIDs);
+$builder-&gt;getQuery()-&gt;execute()-&gt;setHydrateMode(Resultset::HYDRATE_ARRAYS); //execution completed in more than 30 seconds.</code></pre>
+<pre><code class="language-php">// VERSION 2
+$query = 'SELECT COUNT(*) AS CountTable1 FROM Table1 WHERE Table1.Attr1 = 1 AND Table1.idTable1 NOT IN (' . implode(',', $arrayIDs) . ')';
+$modelsManager-&gt;executeQuery($query); //execution completed in more than 30 seconds.</code></pre>
+<p>Instead if I write the query selecting IDs and Count in single statement, the execution is faster. </p>
+<p>Following the example code:</p>
+<pre><code class="language-php">// VERSION 3
+$query = 'SELECT COUNT(*) AS CountTable1 FROM NAMESPACE\Table1 AS Table1 WHERE Table1.Attr1 = 1 AND Table1.idTable1 NOT IN (SELECT DISTINCT(Table2.idTable2) AS idTable2 FROM NAMESPACE\Table2 AS Table2 WHERE Table2.Attr1 IS NOT NULL OR Table2.Attr2 = 1)';
+$$modelsManager-&gt;executeQuery($query);</code></pre>
+<p>Where is the problem? What am I doing wrong? It is possible to obtain the same performaces with query builder?</p>
+<p>Finally, is normal that query with inWhere and notInWhere conditions is so slow with query builder?</p>
+<h6>System configuration:</h6>
+<ul>
+<li>Phalcon: 2.0.10</li>
+<li>PHP: 5.6.26</li>
+<li>MySql: 5.7.12</li>
+<li>OS: CentOS 7.4</li>
+</ul></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-454a7d0e4a177418cd08dbcd-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-454a7d0e4a177418cd08dbcd-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/07dedd51671291aca4f3f84a115c534e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1320/tztztztz" class="user-moderator-N"><span itemprop="name">Tomasz Zadora</span></a>        </span>
+        <br>
+
+        <span class="karma">10.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="52123" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '17</span>
+              </span><br/><a name="C52123" href="#C52123">
+                <time itemprop="dateCreated" datetime="2017-11-08T05:15:30-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Passing 16 thousand ID's into query builder is simply crazy. You shoudnt be suprised it's working slow. It will be slow in every query builder you would use (like Doctrine DBAL).</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52123" data-cf-modified-454a7d0e4a177418cd08dbcd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52123" data-cf-modified-454a7d0e4a177418cd08dbcd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5915f25e654c4f9e60fe51700cdee683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4769/Izopi4a" class="user-moderator-Y"><span itemprop="name">Izo</span></a>        </span>
+        <br>
+
+        <span class="karma">85.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52129" href="#C52129">
+                <time itemprop="dateCreated" datetime="2017-11-08T07:51:02-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>maybe its just the ping ? are php server and mysql close to each other ( same machine maybe ) ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52129" data-cf-modified-454a7d0e4a177418cd08dbcd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52129" data-cf-modified-454a7d0e4a177418cd08dbcd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b16b1cf9ff276ad2862beb0726e23d82?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10417/Giu88" class="user-moderator-N"><span itemprop="name">Giu88</span></a>        </span>
+        <br>
+
+        <span class="karma">1.0k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C52129"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/5915f25e654c4f9e60fe51700cdee683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Izo                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="52137" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '17</span>
+              </span><br/><a name="C52137" href="#C52137">
+                <time itemprop="dateCreated" datetime="2017-11-08T10:07:35-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>maybe its just the ping ? are php server and mysql close to each other ( same machine maybe ) ?</p>
+</blockquote>
+<p>php server and mysq are on different machines but on the same network, so no ping problem.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52137" data-cf-modified-454a7d0e4a177418cd08dbcd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52137" data-cf-modified-454a7d0e4a177418cd08dbcd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52139" href="#C52139">
+                <time itemprop="dateCreated" datetime="2017-11-08T11:08:45-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Are you sure this is is about phalcon? First test it with pdo without framework then on database itself. I know that some old mysqldb old version has sometimes huge performance problems, I had on old version queries for 3 mins after update few ms</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52139" data-cf-modified-454a7d0e4a177418cd08dbcd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52139" data-cf-modified-454a7d0e4a177418cd08dbcd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b16b1cf9ff276ad2862beb0726e23d82?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10417/Giu88" class="user-moderator-N"><span itemprop="name">Giu88</span></a>        </span>
+        <br>
+
+        <span class="karma">1.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52165" href="#C52165">
+                <time itemprop="dateCreated" datetime="2017-11-09T08:26:05-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The problem does not seem to be mysql. I tried to write the query directly on mysql by replacing the id select to exclude a string containing the 16k IDs (like version 2), and the performance is great, 57ms.</p>
+<p>Example of launched query:</p>
+<pre><code class="language-php">SELECT COUNT(*) AS CountTable1 FROM Table1 WHERE Table1.Attr1 = 1 AND Table1.idTable1 NOT IN (1,2,3, ....., 16000)</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52165" data-cf-modified-454a7d0e4a177418cd08dbcd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52165" data-cf-modified-454a7d0e4a177418cd08dbcd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/07dedd51671291aca4f3f84a115c534e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1320/tztztztz" class="user-moderator-N"><span itemprop="name">Tomasz Zadora</span></a>        </span>
+        <br>
+
+        <span class="karma">10.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52171" href="#C52171">
+                <time itemprop="dateCreated" datetime="2017-11-09T12:20:26-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Is there any serious reason to do it this way? Why don't you use subquery like in Version 3 (or even better - JOIN)?</p>
+<p>Passing such huge numbers to NOT IN closure is never a good thing: first you need to fetch it from DB, then pass back to mysql server in form of SQL query. </p>
+<p>It's much faster if whole thing is at mysql server side.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52171" data-cf-modified-454a7d0e4a177418cd08dbcd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52171" data-cf-modified-454a7d0e4a177418cd08dbcd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17255" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

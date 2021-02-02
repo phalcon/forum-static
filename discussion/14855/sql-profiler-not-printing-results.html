@@ -1,0 +1,166 @@
+---
+layout: default
+title: 'SQL Profiler Not Printing Results - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/25/configuration">Configuration</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">SQL Profiler Not Printing Results</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2068/rabrowne85" class="user-moderator-N"><span itemprop="name">Richard Browne</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-11-21T13:35:05-07:00">Nov '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-11-21T13:35:05-07:00">Nov '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>534</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/816905f7620afc94755494ba66da5d9b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2068/rabrowne85" class="user-moderator-N"><span itemprop="name">Richard Browne</span></a></span>
+                <span class="karma">13.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C14855" href="#C14855">
+        <time class="action-date">Nov '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi all!</p>
+<p>I've a problem with the SQL profiler for my setup. i've followed the documentation in order to get the profiler to work and I have the following code in my services file:</p>
+<pre><code class="language-php">$di-&gt;set('db', function () use ($config, $di)
+{
+
+    $em = new EventsManager();
+
+    /**
+     * Enable special profiling in development environments
+     */
+    if ($config-&gt;environment == "development")
+    {
+        $logger = new FileLogger(ENGINE_PATH . "common/logs/debug_" . date("Y-m-d") . ".log");
+        $profiler = $di-&gt;getProfiler();
+
+        /**
+         * Listen to all database events
+         */
+        $em-&gt;attach('db', function($event, $connection) use ($logger, $profiler)
+        {
+            if ($event-&gt;getType() == 'beforeQuery')
+            {
+                $sql = $connection-&gt;getSQLStatement();
+                $logger-&gt;log($sql, Logger::INFO);
+                $profiler-&gt;startProfile($sql);
+            }
+
+            if ($event-&gt;getType() == 'afterQuery')
+            {
+                $profiler-&gt;stopProfile();
+            }
+        });
+    }
+
+    /**
+     * Start the database connection
+     */
+    $connection = new DbAdapter(array(
+        'host'      =&gt; $config-&gt;db-&gt;host,
+        'username'  =&gt; $config-&gt;db-&gt;username,
+        'password'  =&gt; $config-&gt;db-&gt;password,
+        'dbname'    =&gt; $config-&gt;db-&gt;dbname,
+        'charset'   =&gt; $config-&gt;db-&gt;charset
+    ));
+
+    $connection-&gt;setEventsManager($em);
+
+    return $connection;
+});</code></pre>
+<p>As you can see I'm using both the logger and the profiler. The logger is generating a text file correctly and I'm happy this is working. However, the profiler doesn't seem to be working very well.</p>
+<p>If I add <code>print_r($this-&gt;profiler);die();</code> just before the last return I get the following output:
+<code>Phalcon\Db\Profiler Object ( [_allProfiles:protected] =&gt; [_activeProfile:protected] =&gt; [_totalSeconds:protected] =&gt; 0 )</code></p>
+<p>But, if I move the lines up to the end of the &quot;beforeQuery&quot; if section, I get something like: <code>Phalcon\Db\Profiler Object ( [_allProfiles:protected] =&gt; [_activeProfile:protected] =&gt; Phalcon\Db\Profiler\Item Object ( [_sqlStatement:protected] =&gt; SELECT IF(COUNT(*) &gt; 0, 1, 0) FROM `INFORMATION_SCHEMA`.`TABLES` WHERE `TABLE_NAME` = 'system_usergroups' AND `TABLE_SCHEMA` = DATABASE() [_sqlVariables:protected] =&gt; [_sqlBindTypes:protected] =&gt; [_initialTime:protected] =&gt; 1479760233.32 [_finalTime:protected] =&gt; ) [_totalSeconds:protected] =&gt; 0 )</code></p>
+<p>So clearly it's doing something, but when I come to use it in the Volt template and use <code>{% raw %}{{{% endraw %} profiler.getProfiles() {% raw %}}}{% endraw %}</code> I get an error that it's not defined.</p>
+<p>Can anyone spot something I'm doing wrong here? </p>
+<p>Thanks for looking and any help in advance.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-aea3c2c7f7f8134d421e76d0-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-aea3c2c7f7f8134d421e76d0-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/816905f7620afc94755494ba66da5d9b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2068/rabrowne85" class="user-moderator-N"><span itemprop="name">Richard Browne</span></a>        </span>
+        <br>
+
+        <span class="karma">13.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="43145" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '16</span>
+              </span><br/><a name="C43145" href="#C43145">
+                <time itemprop="dateCreated" datetime="2016-11-21T13:55:44-07:00" class="action-date">Nov '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Okay, so as is always the case: I write these questions and I come to a &quot;solution&quot;.</p>
+<p>After reviewing the code a little I reliased that the profiler was being set as follows:</p>
+<pre><code class="language-php">$di-&gt;set('profiler', function ()
+{
+    return new Profiler();
+});</code></pre>
+<p>But in another system that was working I was using:</p>
+<pre><code class="language-php">$di['profiler'] = function () {
+    return new Profiler();
+};</code></pre>
+<p>So I copied it across and sure enough the printing started working. So that got me thinking why? So then I tried using </p>
+<pre><code class="language-php">$di-&gt;setShared('profiler', function ()
+{
+    return new Profiler();
+});</code></pre>
+<p>and that too worked.</p>
+<p>I'm not exactly clear as to why, and someone may be able to provide a detailed reason for it, but I'm going to take a stab at it.</p>
+<p>I assume that when you use the Array based method or the setShared method, these register the profiler into the DI in a way that the volt template engine can access it. Using the set method doesn't do this &quot;name registration&quot; and I would have to do another step to get it work.</p>
+<p>Sorry if I've wasted anyone's time.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="43145" data-cf-modified-aea3c2c7f7f8134d421e76d0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="43145" data-cf-modified-aea3c2c7f7f8134d421e76d0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="14855" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,226 @@
+---
+layout: default
+title: 'Phalcon on IIS - Working Contribution Solution - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/6/installation">Installation</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Phalcon on IIS - Working Contribution Solution</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3921/Skymidt" class="user-moderator-N"><span itemprop="name">Skymidt</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-09-13T14:20:24-07:00">Sep '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-09-13T14:20:24-07:00">Sep '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">5</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1428</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">2</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/857b8420e1d5fe37fa3324badf149743?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3921/Skymidt" class="user-moderator-N"><span itemprop="name">Skymidt</span></a></span>
+                <span class="karma">3.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C16925" href="#C16925">
+        <time class="action-date">Sep '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I recently wrote a solution for IIS because I know some users still program via Windows (This is better with new VS Code). For some XAMPP and WAMPP older machines, they become too slow, making them rely on internal solutions like IIS. I think this topic solves the person who needs it via IIS, in fact I think this code should be part of the Phalcon Dev build (i don't know how to do it) and it would be interesting to be part of Phalcon's Doc as IIS and Phalcon configuration, after installing phalcon.dll within PHP installed by Webmatrix or by WebPlataformInstaller.</p>
+<p>The solution is simple. Installs on IIS machine (works from 6.5 and up). Along with IIS, it installs the desired database and PHP for IIS (whatever version that works with phalcon). The secret for this solution to work is to have URL Rewriter 2.0 installed, this is MANDATORY.</p>
+<p>Manually download the phalcon DLL for your version of PHP and put it inside the PHP ext folder that is inside program files, depending on the version installed, it may be in the x86 folder or in the x64 folder. Running in cmd &quot;php -v&quot; helps identify the version and folder, or a file with phpinfo (); code.</p>
+<p>Now is the solution:
+1 - Create within the root folder of your project the web.config file as following code:</p>
+<pre><code>&lt;?xml version="1.0" encoding="utf-8" ?&gt;
+&lt;configuration&gt;
+    &lt;system.webServer&gt;
+        &lt;rewrite&gt;
+            &lt;rules&gt;
+                &lt;rule name="YourSite Static" stopProcessing="true"&gt;
+                    &lt;match url="([\S]+[.](ogg|ogv|svg|svgz|eot|otf|woff|mp4|ttf|css|rss|atom|js|jpg|jpeg|gif|png|ico|zip|tgz|gz|rar|bz2|doc|xls|exe|ppt|tar|mid|midi|wav|bmp|rtf))" ignoreCase="true" /&gt;
+                    &lt;action type="Rewrite" url="public/{R:1}" redirectType="Permanent" /&gt;
+                &lt;/rule&gt;
+                &lt;rule name="YourSite Rule" stopProcessing="true"&gt;
+                    &lt;match url="(.*)" /&gt;
+                    &lt;conditions logicalGrouping="MatchAll" trackAllCaptures="false"&gt;
+                        &lt;add input="{REQUESTFILENAME}" matchType="IsFile" negate="true" /&gt;
+                        &lt;add input="{REQUESTFILENAME}" matchType="IsDirectory" negate="true" /&gt;
+                    &lt;/conditions&gt;
+                    &lt;action type="Rewrite" url="public/index.php?_url=/{R:1}" appendQueryString="true" logRewrittenUrl="false" /&gt;
+                &lt;/rule&gt;
+            &lt;/rules&gt;
+        &lt;/rewrite&gt;
+    &lt;/system.webServer&gt;
+&lt;/configuration&gt;</code></pre>
+<p>2 - Create inside the / public / folder of your project another web.config with the code:</p>
+<pre><code>&lt;?xml version="1.0" encoding="utf-8" ?&gt;
+&lt;configuration&gt;
+    &lt;system.webServer&gt;
+        &lt;rewrite&gt;
+            &lt;rules&gt;
+                &lt;rule name="YourSite Rule" stopProcessing="true"&gt;
+                    &lt;match url="(.*)" /&gt;
+                    &lt;conditions logicalGrouping="MatchAll" trackAllCaptures="false"&gt;
+                        &lt;add input="{REQUESTFILENAME}" matchType="IsFile" negate="true" /&gt;
+                        &lt;add input="{REQUESTFILENAME}" matchType="IsDirectory" negate="true" /&gt;
+                    &lt;/conditions&gt;
+                    &lt;action type="Rewrite" url="index.php?_url=/{R:1}" appendQueryString="true" logRewrittenUrl="false" /&gt;
+                &lt;/rule&gt;
+            &lt;/rules&gt;
+        &lt;/rewrite&gt;
+    &lt;/system.webServer&gt;
+&lt;/configuration&gt;</code></pre>
+<p>Ready. Now it works within IIS quietly.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-a9599b44afb5c7fba530b7cb-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-a9599b44afb5c7fba530b7cb-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a4422d89d7bed6763f236da321a1747f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9683/petermoo" class="user-moderator-N"><span itemprop="name">Peter</span></a>        </span>
+        <br>
+
+        <span class="karma">9.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C50985" href="#C50985">
+                <time itemprop="dateCreated" datetime="2017-09-13T15:01:49-07:00" class="action-date">Sep '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>XAMPP and WAMPP often create more problems than a straight installation of Apache, MySQL, and PHP. If a Windows user wants to use IIS because WAMPP does not work, I would first suggest removing WAMPP.</p>
+<p>Working with IIS might be of use for companies locked into the Microsoft cloud.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="50985" data-cf-modified-a9599b44afb5c7fba530b7cb-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="50985" data-cf-modified-a9599b44afb5c7fba530b7cb-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="50995" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '17</span>
+              </span><br/><a name="C50995" href="#C50995">
+                <time itemprop="dateCreated" datetime="2017-09-14T01:05:02-07:00" class="action-date">Sep '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Nice work, but I strongly believe virtualization is the way to go. </p>
+<p>Full fledged GNU/Linux as dev environment = production and avoids nasty issues we see all the time here on the forums and on GitHub.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="50995" data-cf-modified-a9599b44afb5c7fba530b7cb-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="50995" data-cf-modified-a9599b44afb5c7fba530b7cb-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/dabaee32fe49d05f6aeb6226af284252?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9887/JABirchall" class="user-moderator-N"><span itemprop="name">Jake Birchall</span></a>        </span>
+        <br>
+
+        <span class="karma">8.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="51001" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '17</span>
+              </span><br/><a name="C51001" href="#C51001">
+                <time itemprop="dateCreated" datetime="2017-09-14T07:51:40-07:00" class="action-date">Sep '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>IIS and MSSQL is actually really fast. I had to do some contract work for a company whoes API ran on 1 server using IIS and their central database was MSSQL.
+They were getting about 500k hits on the api per hour and the database was handling all those requests with no caching and it was handling other requests from payments, their main website, helpdesk and forums.</p>
+<p>I was surprised at how versitile IIS is. but IIS PHP modules are are far out of date. this was 2 years ago and they only provided 5.3. But i figured out how to manually install newer php into IIS.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51001" data-cf-modified-a9599b44afb5c7fba530b7cb-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51001" data-cf-modified-a9599b44afb5c7fba530b7cb-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a4422d89d7bed6763f236da321a1747f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9683/petermoo" class="user-moderator-N"><span itemprop="name">Peter</span></a>        </span>
+        <br>
+
+        <span class="karma">9.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C51009" href="#C51009">
+                <time itemprop="dateCreated" datetime="2017-09-14T20:35:09-07:00" class="action-date">Sep '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/Jake">@Jake</a>, Microsoft applications tend to have better defaults than what you see in MySQL, InnoDB, and Web hosting companies. MySQL used to have defaults set for a Pentium 0.5 from 1932. MSSQL and IIS had defaults closer to a real server. Microsoft products, out of the box, tend to be better than many Linux distributions and anything from Oracle.</p>
+<p>When you start to tune, Microsoft experts are far cheaper than Oracle experts but not a lot better. A difficult to fix problem cannot be diagnosed by looking at the source code. I reported one problem and a solution to Microsoft. The same problem reappeared in every release. The third time I tried to report the problem and the fix, Microsoft wanted to charge me for &quot;helping&quot; me. Never again.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51009" data-cf-modified-a9599b44afb5c7fba530b7cb-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51009" data-cf-modified-a9599b44afb5c7fba530b7cb-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b6dd256c8ddcc6907fc4db2d0ccfb5f2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10998/diplopito" class="user-moderator-N"><span itemprop="name">diplopito</span></a>        </span>
+        <br>
+
+        <span class="karma">502</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="63429" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '20</span>
+              </span><br/><a name="C63429" href="#C63429">
+                <time itemprop="dateCreated" datetime="2020-06-12T19:34:23-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/Skymidt">@Skymidt</a> It works perfectly with IIS 10, thank you very much! Out of curiosity: have you tried Phalcon on Nano Server?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63429" data-cf-modified-a9599b44afb5c7fba530b7cb-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63429" data-cf-modified-a9599b44afb5c7fba530b7cb-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="16925" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

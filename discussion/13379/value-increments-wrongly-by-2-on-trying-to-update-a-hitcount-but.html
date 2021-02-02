@@ -1,0 +1,588 @@
+---
+layout: default
+title: 'Value increments (wrongly) by 2 on trying to update a hitCount but (correctly) by 1 when view is disabled - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Value increments (wrongly) by 2 on trying to update a hitCount but (correctly) by 1 when view is disabled</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/4249/sweetenyi" class="user-moderator-N"><span itemprop="name">sweetenyi</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-09-07T00:36:30-07:00">Sep '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-09-07T00:36:30-07:00">Sep '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>474</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/5e1a0fda7ca52895010656b555a713dc?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/4249/sweetenyi" class="user-moderator-N"><span itemprop="name">sweetenyi</span></a></span>
+                <span class="karma">1.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C13379" href="#C13379">
+        <time class="action-date">Sep '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello, everything works fine in my application but I just discovered something strange</p>
+<p>whenever I hit: '{sitename}/tags/store' in the browser, the 'lastHitPostFk' at tagFk(4) is incrememted by 2 instead of 1 (this increments by one in my old no-module application) below is the files seperated by /////////////////////</p>
+<pre><code class="language-php">THE VERY CONTROLLER//////////////////////////////
+&lt;?php
+
+namespace Frontend\Controller;
+
+class TagsController extends AaController
+{
+    public function initialize()
+    {        
+    }
+    public function indexAction()
+    {
+    }
+     public function storeAction()
+     {  
+         $selectedHitCount = \Model\UserTags::findFirst(
+                        "tagFk = 4"
+                  );
+                  $selectedHitCount-&gt;hitsCount++;    //&lt;&lt;&lt;POINT OF PROBLEM: THIS INCREMENTS BY 2
+                  $selectedHitCount-&gt;lastHitPostFk = 3;
+                  $selectedHitCount-&gt;update();
+                  //$this-&gt;view-&gt;disable(); //&lt;&lt;&lt;WHENEVER I UNCOMMENT THIS IT INCREMENTS BY ONE AS EXPECTED
+     }
+     public function topicsearchAction()
+    {        
+    }    
+}
+
+CONTROLLER ENDS//////////////////////////////////////////////////////////</code></pre>
+<pre><code class="language-php">THE MODEL /////////////////////////////////////////////
+&lt;?php
+namespace Model;
+class UserTags extends AaModel
+{
+    public $userTagsAi;
+    public $userFk;
+    public $tagFk;
+    public $hitsCount;
+    public $lastHitPostFk;
+    public $lastHitTime;
+    public $activeKey;
+    public $disabledKey;
+
+    public function initialize()
+    {       
+    }
+}
+MODEL ENDS//////////////////////////////////////////////////////////////////////////////////</code></pre>
+<pre><code class="language-php">THE MUDULE FILE////////////////////////////////////////////////////////////////////////////////
+
+&lt;?php
+
+namespace Frontend;
+
+use Phalcon\Loader;
+use Phalcon\DiInterface;
+use Phalcon\Mvc\Dispatcher;
+use Phalcon\Mvc\ModuleDefinitionInterface;
+
+class Module implements ModuleDefinitionInterface
+{
+    public function registerAutoloaders(DiInterface $di = null)
+    {
+        $loader = new Loader();
+
+        $loader-&gt;registerNamespaces(array(
+            'Frontend\Controller' =&gt; APP_PATH . 'app/modulefrontend/controllers/',
+                'Model' =&gt; APP_PATH . 'app/models/',
+                'Library' =&gt;  APP_PATH . 'app/library/',
+                'Traitfunction\db' =&gt; APP_PATH . 'app/traits/db/',
+                'Traitfunction\user' =&gt; APP_PATH . 'app/traits/user/'
+        ));
+
+        $loader-&gt;register();
+    }
+
+    public function registerServices(DiInterface $di = null)
+    {
+
+         $di-&gt;set('dispatcher', function () {
+            $dispatcher = new Dispatcher();
+            $dispatcher-&gt;setDefaultNamespace('Frontend\Controller');
+            return $dispatcher;
+        });
+
+        $view = $di-&gt;get('view');
+        $view-&gt;setViewsDir(APP_PATH . 'app/modulefrontend/views/');
+
+        $di-&gt;set('view', $view);
+    }
+}
+
+MODULE ENDS////////////////////////////////////////////////////////////////////////////////</code></pre>
+<pre><code class="language-php">THE BOOTSTRAP FILE (index)/////////////////////////////////////////////////////////
+&lt;?php
+
+error_reporting(E_ALL);
+
+use Phalcon\Di\FactoryDefault;
+use Phalcon\Mvc\Application;
+use Phalcon\Config\Adapter\Php as ConfigPhp;
+
+define('APP_PATH', realpath('..') . '/');
+
+try {
+     $requestPart = explode('/', htmlspecialchars($_SERVER['REQUEST_URI'])); //*/*partitioning the request for individual array use and testing*/
+
+     /**
+     * Injecting all functions needed by the application from a file that also requires a list of all of them
+     */
+     require_once APP_PATH . 'app/globalconfig/includes/aafuncs.php';
+
+     $di = new FactoryDefault();
+
+    /**
+     * Load Base Routes
+     */
+    require_once APP_PATH . 'app/globalconfig/routes/baseroutes.php';
+
+    /**
+     * Load Global Services
+     */
+    require_once APP_PATH . 'app/globalconfig/globalservices/basicservices.php';
+
+    /**
+     * Create an Application
+     */
+    $application = new Application($di);
+
+    $application-&gt;setDefaultModule('modulefrontend');
+    /**
+     * Register the installed modules
+     */
+    $application-&gt;registerModules(
+       array(
+         'modulefrontend' =&gt; array(
+           'className' =&gt; 'Frontend\Module',
+           'path' =&gt; '../app/modulefrontend/Module.php',
+         ),
+         'moduleadmin' =&gt; array(
+           'className' =&gt; 'Admin\Module',
+           'path' =&gt; '../app/moduleadmin/Module.php',
+         )
+       )
+    ); 
+
+    if ($requestPart[2] == 'a') {       /*bootstrap codes that is needed by the ajax request and not the view(ed) request*/
+        $application-&gt;useImplicitView(false);
+    };
+    /**
+     * Finally, handle the request!
+     */
+    echo $application-&gt;handle()-&gt;getContent();
+
+    /**
+     * If e wan fall hand
+     */
+} catch (Exception $e) {
+    echo $e-&gt;getMessage() . '&lt;br&gt;';
+    echo '&lt;pre&gt;' . $e-&gt;getTraceAsString() . '&lt;/pre&gt;';
+}
+bootstap ends/////////////////////////////////////</code></pre>
+<pre><code class="language-php">
+THE (basic)SERVICE FILE/////////////////////////////////////////////////////////
+&lt;?php
+
+use Phalcon\Mvc\View;
+use Phalcon\Crypt;
+use Phalcon\Security;
+use Phalcon\Escaper;
+//use Phalcon\Mvc\Dispatcher;
+use Phalcon\Mvc\Url as UrlResolver;
+use Phalcon\Db\Adapter\Pdo\Mysql as DbAdapter;
+//use Phalcon\Mvc\View\Engine\Volt as VoltEngine;
+use Phalcon\Mvc\Model\Metadata\Files as MetaDataAdapter;
+use Phalcon\Session\Adapter\Files as SessionAdapter;
+//use Phalcon\Flash\Direct as Flash;
+//use Phalcon\Di;
+//use Phalcon\Mvc\Model;
+use Phalcon\Mvc\Model\Manager as ModelsManager;
+//use Phalcon\Db\Adapter\Pdo\Sqlite as Connection;
+use Phalcon\Mvc\Model\Metadata\Memory as MetaData;
+use Phalcon\Flash\Direct as FlashDirect;
+use Phalcon\Http\Response\Cookies;
+
+$di-&gt;setShared('db', function() {
+        return new DbAdapter(array(
+            "host"     =&gt; "localhost",
+            "username" =&gt; "root",
+            "password" =&gt; "",
+            "dbname"   =&gt; "mydatabase"
+        ));
+    });
+
+$di-&gt;setShared('url', function () {
+    $url = new UrlResolver();
+    $url-&gt;setBaseUri('/mysite/');
+    return $url;
+});
+
+$di-&gt;set('registry', function() {
+    $registry = new \Phalcon\Registry();
+    return $registry;
+});
+
+$di-&gt;set('flash', function () {
+    $flash = new FlashDirect(
+        array(
+            'error'   =&gt; 'alert alert-danger',
+            'success' =&gt; 'alert alert-success',
+            'notice'  =&gt; 'alert alert-info',
+            'warning' =&gt; 'alert alert-warning'
+        )
+    );
+
+    return $flash;
+});
+
+$di-&gt;set('cookies', function () {
+    $cookies = new Cookies();
+     $cookies-&gt;useEncryption(false);
+
+    return $cookies;
+});
+
+$di-&gt;set('modelsManager', new ModelsManager());
+
+$di-&gt;set('modelsManager', function () {
+    $manager = new ModelsManager();
+    return $manager;
+});
+
+// Use the memory meta-data adapter or other
+$di-&gt;set('modelsMetadata', new MetaData());
+
+$di-&gt;set('view', function () {
+
+    $view = new View();
+
+    return $view;
+});
+
+$di-&gt;setShared('sessionj', function () {
+    $session = new Phalcon\Session\Adapter\Files();
+    $session-&gt;start();
+    return $session;
+});
+
+$di-&gt;set('session', function () {
+    $session = new SessionAdapter();
+    $session-&gt;start();
+    return $session;
+});
+
+$di-&gt;set('assets', function () {
+    $assets = new Phalcon\Assets\Manager();
+    return $assets;
+});
+
+$di-&gt;set('escaper', function () {
+    $escape = new \Phalcon\Escaper();
+     $escape-&gt;setHtmlQuoteType('ENT_HTML');
+    return $escape;
+});
+
+SERVICE FILE ENDS //////////////////////////////////</code></pre>
+<p>Please help look at the entire code gainst PHP/PHALCON principle misconception, I tend to code through trial and error and with source code rather than documentation...also check my view, dispatcher, namespacing, loading, modul(ing) implementations</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-6794d68fa673924892285f59-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-6794d68fa673924892285f59-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5e1a0fda7ca52895010656b555a713dc?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4249/sweetenyi" class="user-moderator-N"><span itemprop="name">sweetenyi</span></a>        </span>
+        <br>
+
+        <span class="karma">1.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="39845" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '16</span>
+              </span><br/><a name="C39845" href="#C39845">
+                <time itemprop="dateCreated" datetime="2016-09-07T01:38:26-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I'll be so glad if Andy, Sergy, Niden, Carvahal, Sid, Ovr, Mruz, (You reading) and all other masters &quot;slap my head&quot; and correct my bad practice in some areas...or ask me to start doing something cus I'm seriously in love with this electronic bird called Phalcon!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39845" data-cf-modified-6794d68fa673924892285f59-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39845" data-cf-modified-6794d68fa673924892285f59-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5915f25e654c4f9e60fe51700cdee683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4769/Izopi4a" class="user-moderator-Y"><span itemprop="name">Izo</span></a>        </span>
+        <br>
+
+        <span class="karma">85.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="39849" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '16</span>
+              </span><br/><a name="C39849" href="#C39849">
+                <time itemprop="dateCreated" datetime="2016-09-07T03:17:37-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>maybe some ajax request is called also ? you just call it twice ( probably )</p>
+<p><a href="http://php.net/manual/en/function.debug-backtrace.php">http://php.net/manual/en/function.debug-backtrace.php</a></p>
+<p>and try to find between all the crap inside the dump what exacly is causing the problem</p>
+<p>check routes / dispachers</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39849" data-cf-modified-6794d68fa673924892285f59-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39849" data-cf-modified-6794d68fa673924892285f59-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5e1a0fda7ca52895010656b555a713dc?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4249/sweetenyi" class="user-moderator-N"><span itemprop="name">sweetenyi</span></a>        </span>
+        <br>
+
+        <span class="karma">1.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39863" href="#C39863">
+                <time itemprop="dateCreated" datetime="2016-09-07T05:30:41-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you Izo, but my eyes are hurting now from comparing the dump in my old 'no-module' app  (that increments properly) to the new 'module/namespace' app (that does by two)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39863" data-cf-modified-6794d68fa673924892285f59-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39863" data-cf-modified-6794d68fa673924892285f59-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5e1a0fda7ca52895010656b555a713dc?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4249/sweetenyi" class="user-moderator-N"><span itemprop="name">sweetenyi</span></a>        </span>
+        <br>
+
+        <span class="karma">1.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="39875" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '16</span>
+              </span><br/><a name="C39875" href="#C39875">
+                <time itemprop="dateCreated" datetime="2016-09-07T06:40:28-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I even tried creating it with the onContruct just to store and fill it in when findFirst is call but it gives just the same 'double' result</p>
+<pre><code class="language-php">class TagsController extends \Phalcon\Mvc\Controller
+{
+    protected $hitCount;
+
+     public function initialize()
+    {
+
+    }
+
+     public function onConstruct()
+     {
+         $selectedHitCount = UserTags::findFirst(
+                        "tagFk = 3"
+                  );
+                  $this-&gt;hitCount = $selectedHitCount-&gt;hitsCount + 1;  
+     }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39875" data-cf-modified-6794d68fa673924892285f59-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39875" data-cf-modified-6794d68fa673924892285f59-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="39915" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '16</span>
+              </span><br/><a name="C39915" href="#C39915">
+                <time itemprop="dateCreated" datetime="2016-09-07T12:12:02-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Add event listener to your dispatcher in beforeExecuteRoute and log it to some file to check if action is not executed two times perhaps ? Or to db to check queries log or whatever ? Just anyway you should have them, i have logs and most of the time if something is going wrong then checking dispatcher befor execution/exception/query log is enough to fix most of issues.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39915" data-cf-modified-6794d68fa673924892285f59-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39915" data-cf-modified-6794d68fa673924892285f59-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5e1a0fda7ca52895010656b555a713dc?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4249/sweetenyi" class="user-moderator-N"><span itemprop="name">sweetenyi</span></a>        </span>
+        <br>
+
+        <span class="karma">1.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39931" href="#C39931">
+                <time itemprop="dateCreated" datetime="2016-09-08T02:53:36-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Finally I have come up with something that seems to work at the moment
+I have decided to initially take processing of the hits to a different controller and then bring back into the desired with redirects. (<strong>Just hope it doesn't affect SEO</strong>)</p>
+<pre><code class="language-php">class HitsController extends AaController
+{
+     public function initialize()
+    {
+    }
+
+    public function indexAction()
+    {
+    }
+
+     public function tagsAction()
+    {
+        $tags = model::findFirst();
+
+        //code here;
+
+        $tags-&gt;update();
+        $this-&gt;response-&gt;redirect('');
+    }</code></pre>
+<p>If you feel I'm breaking something please help correct, else like or comment so that I accept my answer and we can close the post for good and for the benefit of those who would make reference to it in future.</p>
+<p>Many thanks and credits to <strong>Izo</strong> and <strong>Woj</strong>... &lt;3</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39931" data-cf-modified-6794d68fa673924892285f59-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39931" data-cf-modified-6794d68fa673924892285f59-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5e1a0fda7ca52895010656b555a713dc?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4249/sweetenyi" class="user-moderator-N"><span itemprop="name">sweetenyi</span></a>        </span>
+        <br>
+
+        <span class="karma">1.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39967" href="#C39967">
+                <time itemprop="dateCreated" datetime="2016-09-08T10:29:06-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I also used $response-&gt;redirect() in an interesting way. As this may be so poor and obvious to the masters, it may benefit somone...</p>
+<p>in the documentation, you do '$response-&gt;redirect(&quot;posts/index&quot;)' and have no way of reusing your request link but the below seem to be working for me without trouble.</p>
+<pre><code class="language-php">$pathParts = explode('/', htmlspecialchars($_SERVER['REQUEST_URI']));
+foreach($pathParts as $pathPart)
+            {
+                if($pathPart == 'mysite' || $pathPart == 'h') continue;/*Please refactor the 'mysite' as it will not work when domain name changes*/
+                $newUri[] = $pathPart;
+            }
+            /*manipulating the redirect to take all the parameters of the $_SERVER['REQUEST_URI']*/
+         $this-&gt;response-&gt;redirect( $newUri[1] . '/' . $newUri[2] . '/' . $newUri[3] );</code></pre>
+<p>my router initially understands <em>'/topic/2439/want-to-marry-her-not-because-she-is'</em> and takes you straight to my topics, but I had to add a 'h' in the link building to make <em>/topic/<strong>h</strong>/2439/want-to-marry-her-not-because-she-is</em>...and with the presence of that 'h' the router brings you into this controller for the 'hitCount' and at the end of the day, the above code removes it and you are pushed to the desired 'topics' as required.</p>
+<p>All these headache just to break an annoying 'double increment'!...JUST HOPE IT HAS GONE FOR GOOD!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39967" data-cf-modified-6794d68fa673924892285f59-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39967" data-cf-modified-6794d68fa673924892285f59-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39969" href="#C39969">
+                <time itemprop="dateCreated" datetime="2016-09-08T10:53:06-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I don't see how you even solve it to be honest. You didn't solve it, you just did some kind of workaround. As i posted - use events manager for logging dispatcher execution/mysql queries and fine really root of what causing action to be executed two times.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39969" data-cf-modified-6794d68fa673924892285f59-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39969" data-cf-modified-6794d68fa673924892285f59-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5e1a0fda7ca52895010656b555a713dc?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4249/sweetenyi" class="user-moderator-N"><span itemprop="name">sweetenyi</span></a>        </span>
+        <br>
+
+        <span class="karma">1.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C39969"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C39971" href="#C39971">
+                <time itemprop="dateCreated" datetime="2016-09-08T11:39:44-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>I don't see how you even solve it to be honest. You didn't solve it, you just did some kind of workaround. As i posted - use events manager for logging dispatcher execution/mysql queries and fine really root of what causing action to be executed two times.</p>
+</blockquote>
+<p>Yes boss, I'd do that right away...</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39971" data-cf-modified-6794d68fa673924892285f59-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39971" data-cf-modified-6794d68fa673924892285f59-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="13379" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,234 @@
+---
+layout: default
+title: 'Multimodule annotation routing - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Multimodule annotation routing</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2699/kaiohken1982" class="user-moderator-N"><span itemprop="name">Sergio Rinaudo</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-11-25T07:42:44-07:00">Nov '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-11-25T07:42:44-07:00">Nov '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>663</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/3f7853a23c7b1f200615f23bfc48eb71?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2699/kaiohken1982" class="user-moderator-N"><span itemprop="name">Sergio Rinaudo</span></a></span>
+                <span class="karma">6.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4087" href="#C4087">
+        <time class="action-date">Nov '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi everyone,
+I've seen there are lots of discussions about annotations routing with a multi module setup,
+however reading them didn't fix my problem.</p>
+<p>I am not able to make the application work with the above mentioned setup, and the exception stack trace and message that I get on screen are the follow</p>
+<pre><code>#0 [internal function]: Phalcon\Annotations\Reader-&gt;parse('PostsController') 
+#1 [internal function]: Phalcon\Annotations\Adapter-&gt;get('PostsController') 
+#2 [internal function]: Phalcon\Mvc\Router\Annotations-&gt;handle(NULL) 
+#3 /usr/share/nginx/www/phalcon.multi/public/index.php(49): Phalcon\Mvc\Application-&gt;handle() 
+#4 {main}
+
+Class PostsController does not exist</code></pre>
+<p>This is my current setup on the index.php bootstrap file (located at /public/index.php)</p>
+<pre><code>&lt;?php
+use Phalcon\Mvc\Router,
+    Phalcon\Mvc\Application,
+    Phalcon\DI\FactoryDefault, 
+    Phalcon\Mvc\Router\Annotations as AnnotationsRouter,
+  Phalcon\Loader;
+
+$di = new FactoryDefault();
+
+$loader = new Loader();
+$loader-&gt;registerNamespaces(
+    array(
+        'Multiple\Frontend' =&gt; '../apps/frontend',
+        'Multiple\Frontend\Controller' =&gt; '../apps/frontend/controllers', 
+    )
+);
+$loader-&gt;register();
+
+// Annotation router test
+$di-&gt;set('router', function () {
+    $router = new AnnotationsRouter(false);
+  //$router-&gt;addResource('Posts');
+    $router-&gt;addModuleResource('frontend', 'Posts', '/api/posts');
+
+    //Read the annotations from ProductsController if the uri starts with /api/products
+    //$router-&gt;addResource('Posts', '/api/posts');
+
+    return $router;
+});
+
+try {
+    //Create an application
+    $application = new Application($di);
+    // Register the installed modules
+    $application-&gt;registerModules(
+        array(
+            'frontend' =&gt; array(
+                'className' =&gt; 'Multiple\Frontend\Module',
+                'path' =&gt; '../apps/frontend/Module.php',
+            ),
+            'backend' =&gt; array(
+                'className' =&gt; 'Multiple\Backend\Module',
+                'path' =&gt; '../apps/backend/Module.php',
+            )
+        )
+    );
+
+    //Handle the request
+    echo $application-&gt;handle()-&gt;getContent();
+} catch(\Exception $e){
+    echo $e-&gt;__toString() . "&lt;br /&gt;&lt;br /&gt;";
+    echo $e-&gt;getPrevious() . "&lt;br /&gt;&lt;br /&gt;";
+    echo $e-&gt;getTraceAsString() . "&lt;br /&gt;&lt;br /&gt;";
+    echo $e-&gt;getMessage();
+}</code></pre>
+<p>and this is the PostsController (/apps/frontend/controllers/PostsController.php)</p>
+<pre><code>namespace Multiple\Frontend\Controllers;
+
+use Phalcon\Mvc\Controller;
+
+/**
+ * @RoutePrefix("/api/posts")
+ */
+class PostsController extends Controller
+{
+    /**
+     * @Get("/")
+     */
+    public function indexAction() 
+    {
+        die('Just GET /');
+    }
+
+    /**
+     * @Get("/edit/{id:[0-9]+}", name="edit-post")
+     */
+    public function editAction() 
+    {
+        echo "Edit action with params";
+
+        var_dump($this-&gt;dispatcher-&gt;getParams());
+
+        die();
+    }
+}</code></pre>
+<p>What's wrong in my configuration? Any clue?</p>
+<p>Thanks</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-aede779cc6d260f8f2b14f41-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-aede779cc6d260f8f2b14f41-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e008d7c8aa0c868f618211c399d1e927?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2111/praswicaksono" class="user-moderator-N"><span itemprop="name">Prasetyo</span></a>        </span>
+        <br>
+
+        <span class="karma">7.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C13650" href="#C13650">
+                <time itemprop="dateCreated" datetime="2014-11-25T22:53:04-07:00" class="action-date">Nov '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>have tried  include namespace?</p>
+<pre><code class="language-php"> $router-&gt;addModuleResource('frontend', 'Multiple\\Frontend\\Controllers\\Posts', '/api/posts');</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13650" data-cf-modified-aede779cc6d260f8f2b14f41-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13650" data-cf-modified-aede779cc6d260f8f2b14f41-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3f7853a23c7b1f200615f23bfc48eb71?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2699/kaiohken1982" class="user-moderator-N"><span itemprop="name">Sergio Rinaudo</span></a>        </span>
+        <br>
+
+        <span class="karma">6.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C13654" href="#C13654">
+                <time itemprop="dateCreated" datetime="2014-11-26T01:45:12-07:00" class="action-date">Nov '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yeah,
+same error :(</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13654" data-cf-modified-aede779cc6d260f8f2b14f41-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13654" data-cf-modified-aede779cc6d260f8f2b14f41-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/86d2a960506486850995e6dd25403554?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2144/valVk" class="user-moderator-N"><span itemprop="name">valVk</span></a>        </span>
+        <br>
+
+        <span class="karma">12.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C13755" href="#C13755">
+                <time itemprop="dateCreated" datetime="2014-11-28T09:56:57-07:00" class="action-date">Nov '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi, please see this repo <a href="https://github.com/valVk/ph-test">https://github.com/valVk/ph-test</a></p>
+<p>Do <code>git checkout twomodules</code></p>
+<p>And try to compare with your code.</p>
+<p>Tahnks.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13755" data-cf-modified-aede779cc6d260f8f2b14f41-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13755" data-cf-modified-aede779cc6d260f8f2b14f41-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4087" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

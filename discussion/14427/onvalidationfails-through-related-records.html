@@ -1,0 +1,160 @@
+---
+layout: default
+title: 'onValidationFails through related records - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">onValidationFails through related records</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/4715/Storebuddy" class="user-moderator-N"><span itemprop="name">Storebuddy</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-10-11T05:19:35-07:00">Oct '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-10-11T05:19:35-07:00">Oct '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>319</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/4cafb74a0018b3fc98a15b0a83451fb9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/4715/Storebuddy" class="user-moderator-N"><span itemprop="name">Storebuddy</span></a></span>
+                <span class="karma">6.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C14427" href="#C14427">
+        <time class="action-date">Oct '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi all</p>
+<p>Note: I'm using v2.0.13</p>
+<p>I have a case where i use the method <code>onValidationFails()</code> in a model, which is created through a relation.
+So the conceptual case is:</p>
+<pre><code class="language-php">&lt;?php
+
+class Robots extends Model
+
+public function initialize()
+    {
+        $this-&gt;hasMany(
+            "id",
+            "RobotsParts",
+            "robots_id"
+        );
+    }</code></pre>
+<pre><code class="language-php">
+&lt;?php
+
+class RobotsParts extends Model
+
+public function initialize()
+    $this-&gt;belongsTo(
+                "robots_id",
+                "Robots",
+                "id"
+            );
+        }
+
+public function validation()
+{
+    // Some validation
+}
+
+public function onValidationFails()
+{
+    $Setting = new SettingModel();
+    $Setting-&gt;var = 'test';
+    $Setting-&gt;update();
+}</code></pre>
+<p>When I create a <code>RobotsParts</code> through <code>Robots</code> and the validation in <code>RobotsParts</code> fails, then <code>onValidationFails</code> is executed and the <code>$Setting-&gt;update()</code> returns TRUE! The problem is that <code>$Setting-&gt;var</code> is not updated in the database, it seems like that everything is rolled back. When I test create a <code>RobotParts</code> directly as <code>RobotParts-&gt;create()</code> then is <code>$Setting-&gt;var</code> updated in the database if validation fails.</p>
+<p>Is this behavior expected and is there a way to establish a new transaction in the model which is not affected by the roolback.</p>
+<p>Thanks in advance</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-a813ab38220229f38f5dc74b-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-a813ab38220229f38f5dc74b-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="41529" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '16</span>
+              </span><br/><a name="C41529" href="#C41529">
+                <time itemprop="dateCreated" datetime="2016-10-11T08:16:27-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes, this is happening because of transaction and it's expected. Why you can't just do:</p>
+<pre><code class="language-php">if(!$robots-&gt;update()){
+    $Setting = new SettingModel();
+    $Setting-&gt;var = 'test';
+    $Setting-&gt;create();
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="41529" data-cf-modified-a813ab38220229f38f5dc74b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="41529" data-cf-modified-a813ab38220229f38f5dc74b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4cafb74a0018b3fc98a15b0a83451fb9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4715/Storebuddy" class="user-moderator-N"><span itemprop="name">Storebuddy</span></a>        </span>
+        <br>
+
+        <span class="karma">6.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C41549" href="#C41549">
+                <time itemprop="dateCreated" datetime="2016-10-11T22:55:30-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The problem is that there is several validations in RobotParts and the Settings table should only be updated if specific validations fails. I can control that in the RobotsParts model, but i think this is difficult in the suggeted solution. The settings table should neither be updated if the validation of Robots fails.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="41549" data-cf-modified-a813ab38220229f38f5dc74b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="41549" data-cf-modified-a813ab38220229f38f5dc74b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="14427" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

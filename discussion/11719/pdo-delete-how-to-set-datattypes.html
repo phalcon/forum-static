@@ -1,0 +1,118 @@
+---
+layout: default
+title: 'PDO Delete, How to set DatatTypes - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">PDO Delete, How to set DatatTypes</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1445/CheckMater" class="user-moderator-N"><span itemprop="name">Walter Pulido</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-06-02T12:06:40-07:00">Jun '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-06-02T12:06:40-07:00">Jun '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>474</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/8c53379b6527781429c9664d9277ed2b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1445/CheckMater" class="user-moderator-N"><span itemprop="name">Walter Pulido</span></a></span>
+                <span class="karma">12.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C11719" href="#C11719">
+        <time class="action-date">Jun '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi, I'm trying to delete a record from a table where the ID column is a string:</p>
+<pre><code class="language-php">$this-&gt;_adapter-&gt;delete('my_table', "id = :token",
+            array('token' =&gt; $tokenId),
+            array('token' =&gt; Column::BIND_PARAM_STR)
+        );</code></pre>
+<p>When I try to execute the query it is raising the following syntax error:</p>
+<p>LINE 1: DELETE FROM &quot;my_table&quot; WHERE id=816c85cdb28556d0a</p>
+<p>The error occurs because the query is sending the token as numeric instead of as a string, how can I properly set the data type of the token, so the token is added as a string to the SQL query?</p>
+<p>Thanks in advance!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-e58c195b534a865016fff424-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-e58c195b534a865016fff424-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="35007" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '16</span>
+              </span><br/><a name="C35007" href="#C35007">
+                <time itemprop="dateCreated" datetime="2016-06-02T14:34:54-07:00" class="action-date">Jun '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><code>public boolean delete (string|array $table, [string $whereCondition], [array $placeholders], [array $dataTypes]) inherited from Phalcon\Db\Adapter</code></p>
+<p>This method deletes data from a table using custom RBDM SQL syntax, so you can only supply string in a where condition.</p>
+<p>Internally, this method uses PDO's execute with placeholders and dataTypes supplied, even though the condition itself is not treated but is taken as is (string).</p>
+<p>Pay attention how this method works in Zephir:</p>
+<pre><code class="language-zep">        if !empty whereCondition {
+            let sql = "DELETE FROM " . escapedTable . " WHERE " . whereCondition;
+        } else {
+            let sql = "DELETE FROM " . escapedTable;
+        }</code></pre>
+<p>This is excerpt from my project:</p>
+<pre><code class="language-php">        $whereCondition = "$primaryKey = $this-&gt;id";
+                    //Warning! If $whereCondition is string it not escaped.
+                    //But since we're fetching primary key dynamically from the table definition, i.e. not from an user input, this is a safe way to handle it
+                    //Deletes data from a table using custom RBDM SQL syntax
+                    $delete = static::$adapter-&gt;delete($table, $whereCondition);
+
+            //Returns the number of affected rows by the lastest INSERT/UPDATE/DELETE executed in the database system
+                    return $delete ? static::$adapter-&gt;affectedRows() : 0x00;</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="35007" data-cf-modified-e58c195b534a865016fff424-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="35007" data-cf-modified-e58c195b534a865016fff424-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="11719" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

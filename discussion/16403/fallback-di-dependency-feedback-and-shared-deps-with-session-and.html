@@ -1,0 +1,151 @@
+---
+layout: default
+title: 'Fallback DI Dependency Feedback and Shared Deps with Session and FlashSession - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/20/internals">Internals</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Fallback DI Dependency Feedback and Shared Deps with Session and FlashSession</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/9751/ninjapanzer" class="user-moderator-N"><span itemprop="name">Paul Scarrone</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-06-25T03:41:55-07:00">Jun '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-06-25T03:41:55-07:00">Jun '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>333</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/f4c4108dbf45073cddc83b9e869b2631?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/9751/ninjapanzer" class="user-moderator-N"><span itemprop="name">Paul Scarrone</span></a></span>
+                <span class="karma">2.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C16403" href="#C16403">
+        <time class="action-date">Jun '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>During my &quot;Lets Code&quot; live stream last night I had a little issue dealing with the dependency chain between <code>Flash/Session</code> and its required <code>Session</code> adapter. That said the issue was I was trying to register <code>Flash/Session</code>'s DI container without an existing <code>Session</code> adapter to inject into it. You can see what I am talking about here at the specific point in my video: <code>https://www.youtube.com/watch?v=-dCB3pCn_WM&amp;t=13045</code></p>
+<p>Under further inspection of <code>Flash/Session</code> I noticed that in this instance <code>Flash/Session</code> calls out to DI to get a shared copy of the <code>Session</code> dependency but does not seem to return any kind of logging or error message in the event that the dependency cannot be met. <a href="https://github.com/phalcon/cphalcon/blob/107b6f0197b0464d9f6b11ff390a560c000bf448/phalcon/flash/session.zep#L39-L44"><a href="https://github.com/phalcon/cphalcon/blob/107b6f0197b0464d9f6b11ff390a560c000bf448/phalcon/flash/session.zep#L39-L44">https://github.com/phalcon/cphalcon/blob/107b6f0197b0464d9f6b11ff390a560c000bf448/phalcon/flash/session.zep#L39-L44</a></a></p>
+<p>I dug a little deeper into <code>DI</code> and found:
+<a href="https://github.com/phalcon/cphalcon/blob/107b6f0197b0464d9f6b11ff390a560c000bf448/phalcon/di.zep#L225-L245"><a href="https://github.com/phalcon/cphalcon/blob/107b6f0197b0464d9f6b11ff390a560c000bf448/phalcon/di.zep#L225-L245">https://github.com/phalcon/cphalcon/blob/107b6f0197b0464d9f6b11ff390a560c000bf448/phalcon/di.zep#L225-L245</a></a>
+Which definitley shows an error message could be raised through an execption as a possibility but <code>public function get(string! name, parameters = null)</code> also acts as a builder in the case that the dependency has not been registered. This leads me to the assumption that either this fallback builder isn't working or it has created a new session adapter on each request leaving me unable to share my state over a persistent session.</p>
+<p>Ultimately, I would be happy to create a PR for this issue but I wanted to make sure I was observing a design &quot;oversight&quot; and not my own ignorance.</p>
+<h3>Proposal</h3>
+<p>Provide feedback to PHP error logger when a fallback dependency container is created as a warning with a link to the documentation for that service. For DI dependencies that require explicit shared state it should somehow be enforced.</p>
+<p>Let me know what you all think and I will get to work.</p>
+<p>My Phalcon Init from the video
+<code>https://github.com/ninjapanzer/phalcon_php_fullcalendar/blob/master/public/index.php</code></p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-27983f426cbfb231458e8570-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-27983f426cbfb231458e8570-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="49105" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '17</span>
+              </span><br/><a name="C49105" href="#C49105">
+                <time itemprop="dateCreated" datetime="2017-06-25T05:10:18-07:00" class="action-date">Jun '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If you use <code>Phalcon\Di\FactoryDefault</code> then you already have session service. But the problem with it is that it's not started by default so it's pretty much useless and best just add it yourself.</p>
+<p><a href="https://github.com/phalcon/cphalcon/issues/12921">https://github.com/phalcon/cphalcon/issues/12921</a> check this issue</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49105" data-cf-modified-27983f426cbfb231458e8570-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49105" data-cf-modified-27983f426cbfb231458e8570-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C49153" href="#C49153">
+                <time itemprop="dateCreated" datetime="2017-06-27T07:17:48-07:00" class="action-date">Jun '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Fix the video link :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49153" data-cf-modified-27983f426cbfb231458e8570-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49153" data-cf-modified-27983f426cbfb231458e8570-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f4c4108dbf45073cddc83b9e869b2631?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9751/ninjapanzer" class="user-moderator-N"><span itemprop="name">Paul Scarrone</span></a>        </span>
+        <br>
+
+        <span class="karma">2.8k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C49153"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Jonathan Aaron Steel                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C49329" href="#C49329">
+                <time itemprop="dateCreated" datetime="2017-07-04T11:24:08-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Updated
+<code>https://www.youtube.com/watch?v=-dCB3pCn_WM&amp;t=13045</code></p>
+<blockquote>
+<p>Fix the video link :)</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49329" data-cf-modified-27983f426cbfb231458e8570-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49329" data-cf-modified-27983f426cbfb231458e8570-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="16403" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

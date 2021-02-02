@@ -1,0 +1,372 @@
+---
+layout: default
+title: 'Splitting logic to indexAction and editAction - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Splitting logic to indexAction and editAction</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3678/elcreator" class="user-moderator-N"><span itemprop="name">Artur Kyryliuk</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-09-10T16:01:47-07:00">Sep '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-09-10T16:01:47-07:00">Sep '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">7</span>
+                </td>
+                <td>
+                    <label>Views</label><br>447</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/efd7d9a9ed8c97d06d8db1c869cf7286?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3678/elcreator" class="user-moderator-N"><span itemprop="name">Artur Kyryliuk</span></a></span>
+                <span class="karma">12.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C8471" href="#C8471">
+        <time class="action-date">Sep '15</time>
+    </a>
+</div>
+<div class="post-content"><div><pre><code class="language-php">class ProfileController extends \Phalcon\Mvc\Controller
+{
+    // route GET /profile
+    public function indexAction()
+    {
+        $user = $this-&gt;_getUser();
+        $this-&gt;view-&gt;pick('registered/profile'); // &lt;form action="/profile/edit" method="post"&gt;&lt;input type="text" name="username" value="{% raw %}{{{% endraw %} user.fullname {% raw %}}}{% endraw %}" /&gt; ... &lt;/form&gt;
+        $this-&gt;view-&gt;setVar('user', $user);
+    }
+
+    // route POST /profile/edit
+    public function editAction()
+    {
+        $validator = new Validation();
+        $fullName = $this-&gt;request-&gt;getPost('username', 'string');
+        $validator-&gt;rules('username', array(
+            new Validator\PresenceOf(array('message' =&gt; 'Please input username')),
+            //...        
+        ));
+
+        $validator-&gt;validate($this-&gt;request-&gt;getPost());
+        $validationResult = $validator-&gt;getMessages();
+        if (count($validationResult))
+        {
+            // *****************************************
+            // here I need redirect user to indexAction, i.e. /profile, not render the same in /profile/edit
+            // How can I pass all validation messages to indexAction?
+            // *****************************************
+            return;
+        }
+
+        $user = $this-&gt;_getUser();
+        $user-&gt;fullname = $fullName;
+        $user-&gt;save();
+        $this-&gt;response-&gt;redirect('/profile');
+    }
+
+    /**
+     * @return User
+     */
+    private function _getUser()
+    {
+        $userId = $this-&gt;session-&gt;get(User::SESSION_ID);
+        $user = User::findFirst(array("id = ?0", "bind" =&gt; array($userId)));
+        return $user;
+    }
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/efd7d9a9ed8c97d06d8db1c869cf7286?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3678/elcreator" class="user-moderator-N"><span itemprop="name">Artur Kyryliuk</span></a>        </span>
+        <br>
+
+        <span class="karma">12.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C23183" href="#C23183">
+                <time itemprop="dateCreated" datetime="2015-09-10T16:05:53-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Can I use this flow (i.e., show content and validation messages in one action, and receive data from user in another action)?
+Of course, I can save validation messages (for example, in session) and get it back in indexAction, but I think it's tricky way.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23183" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23183" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/7d07df1c3468ad43eaeaaf58e2623676?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2638/OpenEX" class="user-moderator-N"><span itemprop="name">OpenEX</span></a>        </span>
+        <br>
+
+        <span class="karma">9.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="23191" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '15</span>
+              </span><br/><a name="C23191" href="#C23191">
+                <time itemprop="dateCreated" datetime="2015-09-11T01:49:10-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Sorry, i haven't read carefully. $this-&gt;dispaltcher-&gt;forward(........). This as i know is the basic tool for forwarding flow without using the response-&gt;redirect. By this and maybe if the forwarded action is in the same controller you can retain some variables that are already defined in a class or POST and globals.
+Then validation messages could be in $this-&gt;validationResult or self::$validationResult or so.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23191" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23191" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/efd7d9a9ed8c97d06d8db1c869cf7286?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3678/elcreator" class="user-moderator-N"><span itemprop="name">Artur Kyryliuk</span></a>        </span>
+        <br>
+
+        <span class="karma">12.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="23197" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '15</span>
+              </span><br/><a name="C23197" href="#C23197">
+                <time itemprop="dateCreated" datetime="2015-09-11T02:24:57-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If you use $this-&gt;dispaltcher-&gt;forward, user see results of indexAction (UI, validation messages), but remains on /profile/edit .
+I don't want this behavior, because:</p>
+<ol>
+<li>I haven't GET route to /profile/edit and don't want to add it, because it's incorrect - &quot;edit&quot; action will not be called without data editing.</li>
+<li>If user close browser and open it again, browser make GET request to last page /profile/edit and user will receive error. Or I need workaround, it's not good.</li>
+</ol></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23197" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23197" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/7d07df1c3468ad43eaeaaf58e2623676?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2638/OpenEX" class="user-moderator-N"><span itemprop="name">OpenEX</span></a>        </span>
+        <br>
+
+        <span class="karma">9.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="23199" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '15</span>
+              </span><br/><a name="C23199" href="#C23199">
+                <time itemprop="dateCreated" datetime="2015-09-11T02:56:12-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I have such a situation that i store some messages during response redirect (redirecting when user is authorised). So as you mentioned session would be good. You would need to set serialise and then unserialise the messages somehow,
+if the messages are difficult to serialise/unserialise you would need to make some simple array out of it and then serialise. </p>
+<p>Something like that
+$this-&gt;session-&gt;set('outstanding_messages_from_redirected_page', serialize($validationResult));<br />
+And then on the redirected page:
+$validationResult=unsersialize($this-&gt;session-&gt;get('outstanding_messages_from_redirected_page'));<br />
+And don't forget to clean the session entry.</p>
+<p>You know something like that.
+Sorry if it once again is not useful for you :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23199" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23199" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/7d07df1c3468ad43eaeaaf58e2623676?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2638/OpenEX" class="user-moderator-N"><span itemprop="name">OpenEX</span></a>        </span>
+        <br>
+
+        <span class="karma">9.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C23201" href="#C23201">
+                <time itemprop="dateCreated" datetime="2015-09-11T03:23:43-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It would be good to check how much data such a serialized object have. You know strlen $this-&gt;session-&gt;get('outstandingmessagesfromredirectedpage')
+If it's was too big the simple array would be better.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23201" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23201" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/efd7d9a9ed8c97d06d8db1c869cf7286?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3678/elcreator" class="user-moderator-N"><span itemprop="name">Artur Kyryliuk</span></a>        </span>
+        <br>
+
+        <span class="karma">12.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C23203" href="#C23203">
+                <time itemprop="dateCreated" datetime="2015-09-11T03:27:52-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you. Maybe, people provide another solution, so I not close this answer yet.
+Also today I found another acceptable solution myself:
+Don't add /profile/edit URL at all but assign POST /profile route to editAction and GET /profile route to indexAction.
+After it I can use $this-&gt;dispaltcher-&gt;forward and private variable in controller to save message.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23203" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23203" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/7d07df1c3468ad43eaeaaf58e2623676?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2638/OpenEX" class="user-moderator-N"><span itemprop="name">OpenEX</span></a>        </span>
+        <br>
+
+        <span class="karma">9.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="23205" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '15</span>
+              </span><br/><a name="C23205" href="#C23205">
+                <time itemprop="dateCreated" datetime="2015-09-11T04:02:07-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Additionall thing for forum users.
+I've learned that there is $this-&gt;<strong>flashSession</strong> available if someone uses $this-&gt;flash system which aims to print messages after redirection (is uses session for it). There is documentation for it.
+Documentation states that you need to start session first to use this, and at the moment i don't know whether or not you must register flashSession in di manually.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23205" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23205" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e1731ca2cc82170fb565554fd13b9f7c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1017/baychae" class="user-moderator-N"><span itemprop="name">baychae</span></a>        </span>
+        <br>
+
+        <span class="karma">47.7k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="23213" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '15</span>
+              </span><br/><a name="C23213" href="#C23213">
+                <time itemprop="dateCreated" datetime="2015-09-11T06:28:28-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://docs.phalcon.io/en/latest/reference/flash.html"><a href="https://docs.phalcon.io/en/latest/reference/flash.html">https://docs.phalcon.io/en/latest/reference/flash.html</a></a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23213" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23213" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C23233" href="#C23233">
+                <time itemprop="dateCreated" datetime="2015-09-11T14:07:23-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Your business logic - mostly validation etc should be stored in model. You can do it by validation() function in model. Any database actions should be done in repositories like getting/storing/saving/deleteing something - they can be static helpers or just services. Application logic should be stored in services. In controllers you should have only getting params/returning response/checking security(acl)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23233" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23233" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/efd7d9a9ed8c97d06d8db1c869cf7286?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3678/elcreator" class="user-moderator-N"><span itemprop="name">Artur Kyryliuk</span></a>        </span>
+        <br>
+
+        <span class="karma">12.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C23241" href="#C23241">
+                <time itemprop="dateCreated" datetime="2015-09-11T17:33:07-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Validation of user input is the responsibility of Controller in common MVC understanding.
+Model is for business logic, all data that controller gives to model will be safe and clean.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23241" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23241" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C23255" href="#C23255">
+                <time itemprop="dateCreated" datetime="2015-09-12T04:26:36-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yea, of corse, but why do that, when validation() will handle it just fine ? Just use $user-&gt;save($params,$whitelist - dont forget about setting it) and validation() will user input too, im using it and i like it more than validating user input in controller too.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23255" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23255" data-cf-modified-8ca5ae41d5b6abc8286089cc-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="8471" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

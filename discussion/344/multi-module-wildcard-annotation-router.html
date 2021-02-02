@@ -1,0 +1,416 @@
+---
+layout: default
+title: 'multi-module wildcard annotation router - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">multi-module wildcard annotation router</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/177/dalu" class="user-moderator-N"><span itemprop="name">dalu</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-05-20T07:42:33-07:00">May '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-05-20T07:42:33-07:00">May '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>May '13</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>2289</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">3</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/4fdbcbfb119569f767e69872943483aa?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/177/dalu" class="user-moderator-N"><span itemprop="name">dalu</span></a></span>
+                <span class="karma">3.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C344" href="#C344">
+        <time class="action-date">May '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Ok where to start...</p>
+<p>I want a structure like this:</p>
+<pre><code>/public
+/app
+/app/cache
+/app/config
+/src
+/src/Vendor
+/src/Vendor/Module</code></pre>
+<p>So I want my modules in /src
+and I want the annotation router to parse all my controllers in that module (and add those to the global routing table)
+I do NOT want to add every controller manually when I create a new controller file.</p>
+<p>So far my bootstrap looks like this:</p>
+<pre><code class="language-php">&lt;?php
+
+use Phalcon\Mvc\Router,
+    Phalcon\Mvc\Application,
+    Phalcon\DI\FactoryDefault,
+    Phalcon\Exception;
+
+$di = new FactoryDefault();
+$di-&gt;set('router', function()
+{
+    $router = new \Phalcon\Mvc\Router\Annotations(false);
+    $router-&gt;setDefaultModule('ServerManager');
+    $router-&gt;setDefaultNamespace('Dalu\ServerManager');
+    $router-&gt;addModuleResource('ServerManager','Dalu\ServerManager\Index');
+    //var_dump($router);
+    return $router;
+
+});
+
+try
+{
+    //Create an application
+    $application = new Application();
+    $application-&gt;setDI($di);
+
+    $application-&gt;registerModules(
+        array(
+            'ServerManager' =&gt; array(
+                'className' =&gt; 'Dalu\ServerManager\Module',
+                'path' =&gt; dirname(__DIR__) . '/src/Dalu/ServerManager/Module.php'
+            )
+        )
+    );
+
+    //Handle the request
+    echo $application-&gt;handle()-&gt;getContent();
+
+}
+catch(Exception $e)
+{
+    echo $e-&gt;getMessage();
+}</code></pre>
+<p>Module.php</p>
+<pre><code class="language-php">&lt;?php
+namespace Dalu\ServerManager;
+
+use Phalcon\Loader,
+    Phalcon\Mvc\Dispatcher,
+    Phalcon\Mvc\View,
+    Phalcon\Mvc\ModuleDefinitionInterface;
+
+class Module implements ModuleDefinitionInterface
+{
+
+    /**
+     * Register a specific autoloader for the module
+     */
+    public function registerAutoloaders()
+    {
+        echo "RegisterAutoloaders:" . __DIR__ . "\n";
+        $loader = new Loader();
+
+        $loader-&gt;registerNamespaces(
+            array(
+                'Dalu\ServerManager\Controller' =&gt; __DIR__ . 'Controller/',
+                'Dalu\ServerManager\Model'      =&gt; __DIR__ . 'Model/',
+            )
+        );
+
+        $loader-&gt;register();
+    }
+
+    /**
+     * Register specific services for the module
+     */
+    public function registerServices($di)
+    {
+        //Registering a dispatcher
+        $di-&gt;set('dispatcher', function()
+        {
+            $dispatcher = new Dispatcher();
+            $dispatcher-&gt;setDefaultNamespace('Dalu\ServerManager\Controller');
+            return $dispatcher;
+        });
+
+        //Registering the view component
+        $di-&gt;set('view', function()
+        {
+            $view = new View();
+            $view-&gt;setViewsDir('Views/');
+            return $view;
+        });
+    }
+
+}</code></pre>
+<p>Error:</p>
+<pre><code>Fatal error: Uncaught exception 'ReflectionException' with message 'Class Dalu\ServerManager\IndexController does not exist' in /home/darko/NetBeansProjects/phal/app/bootstrap.php:51 
+Stack trace: 
+#0 [internal function]: ReflectionClass-&gt;__construct('Dalu\ServerMana...') 
+#1 [internal function]: Phalcon\Annotations\Reader-&gt;parse('Dalu\ServerMana...') 
+#2 [internal function]: Phalcon\Annotations\Adapter-&gt;get('Dalu\ServerMana...') 
+#3 [internal function]: Phalcon\Mvc\Router\Annotations-&gt;handle(NULL) 
+#4 /home/darko/NetBeansProjects/phal/app/bootstrap.php(51): Phalcon\Mvc\Application-&gt;handle() 
+#5 /home/darko/NetBeansProjects/phal/public/index.php(4): require('/home/darko/Net...') 
+#6 {main} thrown in /home/darko/NetBeansProjects/phal/app/bootstrap.php on line 51</code></pre>
+<p>line 51:</p>
+<pre><code class="language-php">    echo $application-&gt;handle()-&gt;getContent();</code></pre>
+<p>Can this be done and if so, how?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-2bb29d3e738638cb25494088-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-2bb29d3e738638cb25494088-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">3</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C1433" href="#C1433">
+                <time itemprop="dateCreated" datetime="2013-05-20T09:04:39-07:00" class="action-date">May '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The autoloader is being registered in the module definition:</p>
+<pre><code class="language-php">$loader-&gt;registerNamespaces(
+            array(
+                'Dalu\ServerManager\Controller' =&gt; __DIR__ . 'Controller/',
+                'Dalu\ServerManager\Model'      =&gt; __DIR__ . 'Model/',
+            )
+);</code></pre>
+<p>But the router needs to know all the routes to tell the application what module must be started, know all routes means read the annotations from controllers, to read annotations from controllers, the router needs to be able to access the controller classes.</p>
+<p>Solution: you need to use a global autoloader instead of a per-module autoloader.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="1433" data-cf-modified-2bb29d3e738638cb25494088-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="1433" data-cf-modified-2bb29d3e738638cb25494088-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4fdbcbfb119569f767e69872943483aa?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/177/dalu" class="user-moderator-N"><span itemprop="name">dalu</span></a>        </span>
+        <br>
+
+        <span class="karma">3.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="1447" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '14</span>
+              </span><br/><a name="C1447" href="#C1447">
+                <time itemprop="dateCreated" datetime="2013-05-20T12:04:31-07:00" class="action-date">May '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>New error message:
+The pattern must be string</p>
+<p>Probably thrown in Router::add</p>
+<pre><code class="language-php">&lt;?php
+
+use Phalcon\Mvc\Router,
+    Phalcon\Mvc\Application,
+    Phalcon\DI\FactoryDefault,
+    Phalcon\Exception,
+    Phalcon\Session\Adapter\Files as SessionAdapter,
+    Phalcon\Loader;
+
+$loader = new Loader();
+
+$loader-&gt;registerNamespaces(
+    array(
+        'Dalu\ServerManager' =&gt; dirname(__DIR__) . '/src/Dalu/ServerManager',
+        'Dalu\ServerManager\Controller' =&gt; dirname(__DIR__) . '/src/Dalu/ServerManager/Controller', // probably overkill
+    )
+);
+
+$loader-&gt;register();
+
+$di = new FactoryDefault();
+
+$di-&gt;set('router', function()
+{
+    $router = new \Phalcon\Mvc\Router\Annotations(false);
+    $router-&gt;addModuleResource('ServerManager','Dalu\ServerManager\Controller\Index');
+    return $router;
+
+});
+
+try
+{
+    //Create an application
+    $application = new Application();
+
+    $application-&gt;registerModules(
+        array(
+            'ServerManager' =&gt; array(
+                'className' =&gt; 'Dalu\ServerManager\Module',
+                'path' =&gt; dirname(__DIR__) . '/src/Dalu/ServerManager/Module.php'
+            )
+        )
+    );
+
+    $application-&gt;setDI($di);
+
+    //Handle the request
+    echo $application-&gt;handle()-&gt;getContent();
+
+}
+catch(Exception $e)
+{
+    echo $e-&gt;getMessage();
+}</code></pre>
+<p>Module is same as before</p>
+<p>IndexController</p>
+<pre><code class="language-php">&lt;?php
+namespace Dalu\ServerManager\Controller;
+
+class IndexController extends ControllerBase
+{
+    /**
+     * @Get("/")
+     */
+    public function indexAction()
+    {
+        echo "Hello";
+
+    }
+
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="1447" data-cf-modified-2bb29d3e738638cb25494088-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="1447" data-cf-modified-2bb29d3e738638cb25494088-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C1453" href="#C1453">
+                <time itemprop="dateCreated" datetime="2013-05-20T14:13:38-07:00" class="action-date">May '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It seems the route is being created with pattern = null, you can avoid that exception this way:</p>
+<pre><code class="language-php">/**
+ * @RoutePrefix("")
+ */
+class IndexController extends ControllerBase
+{
+    /**
+     * @Get("/")
+     */
+    public function indexAction()
+    {
+        echo "Hello";
+    }
+
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="1453" data-cf-modified-2bb29d3e738638cb25494088-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="1453" data-cf-modified-2bb29d3e738638cb25494088-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4fdbcbfb119569f767e69872943483aa?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/177/dalu" class="user-moderator-N"><span itemprop="name">dalu</span></a>        </span>
+        <br>
+
+        <span class="karma">3.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C1459" href="#C1459">
+                <time itemprop="dateCreated" datetime="2013-05-20T14:40:35-07:00" class="action-date">May '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>oh my god, thank you so much :) finally some progress.
+Ok do I understand this right that
+$router-&gt;addModuleResource
+is sufficient for every module, that it defines the entry point of a module?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="1459" data-cf-modified-2bb29d3e738638cb25494088-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="1459" data-cf-modified-2bb29d3e738638cb25494088-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4fdbcbfb119569f767e69872943483aa?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/177/dalu" class="user-moderator-N"><span itemprop="name">dalu</span></a>        </span>
+        <br>
+
+        <span class="karma">3.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C1467" href="#C1467">
+                <time itemprop="dateCreated" datetime="2013-05-21T06:01:31-07:00" class="action-date">May '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The answer is no
+Router::setDefaultModule does this
+and addModuleResource isn't necessary (so far)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="1467" data-cf-modified-2bb29d3e738638cb25494088-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="1467" data-cf-modified-2bb29d3e738638cb25494088-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C1472" href="#C1472">
+                <time itemprop="dateCreated" datetime="2013-05-21T07:21:14-07:00" class="action-date">May '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If the application have a single-module, addResource is enough, but addModuleResource is necessary if you have more than one module in your application.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="1472" data-cf-modified-2bb29d3e738638cb25494088-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="1472" data-cf-modified-2bb29d3e738638cb25494088-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="344" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

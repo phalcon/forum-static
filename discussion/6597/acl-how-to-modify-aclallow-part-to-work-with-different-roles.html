@@ -1,0 +1,410 @@
+---
+layout: default
+title: 'ACL: how to modify \Acl::ALLOW part to work with different roles - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/17/acl">Acl</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">ACL: how to modify \Acl::ALLOW part to work with different roles</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3609/PaulSh84" class="user-moderator-N"><span itemprop="name">Paul</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-05-02T07:06:11-07:00">May '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-05-02T07:06:11-07:00">May '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>May '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1254</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/21e7f3deb49deffd563b413262ded48f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3609/PaulSh84" class="user-moderator-N"><span itemprop="name">Paul</span></a></span>
+                <span class="karma">14.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6597" href="#C6597">
+        <time class="action-date">May '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>This is an example of how beforeExecuteRoute method is dealing with allowing users and guests to appropriate area resources:</p>
+<pre><code> if($allowed != Phalcon\Acl::ALLOW) 
+        {
+
+        //If he doesn't have access forward him to the index controller
+                $this-&gt;flashSession-&gt;warning("You don't have access to this module");
+                $this-&gt;response-&gt;redirect('/index');
+
+        //Returning "false" we tell to the dispatcher to stop the current operation
+        return false;
+        }</code></pre>
+<p>What if i have one more role - admins and don't want to have users end up in index page when they try to enter admin area(also want to send another message than to guests)??
+Here is my Security.php code:</p>
+<pre><code>&lt;?php
+
+use Phalcon\Events\Event,
+Phalcon\Mvc\Dispatcher,
+Phalcon\Acl,
+Phalcon\Acl\Adapter\Memory as AclList,
+Phalcon\Mvc\User\Plugin;
+
+class Security extends Plugin
+{
+
+    public function _getAcl()
+    {
+          $this-&gt;persistent-&gt;destroy();
+
+        if (!isset($this-&gt;persistent-&gt;acl))
+        {
+
+        //Create the ACL
+        $acl = new AclList();
+
+        //The default action is DENY access
+        $acl-&gt;setDefaultAction(Acl::DENY);
+
+        //Register three roles, Users are registered users, 
+        //Admin is the registered SuperUser
+        //and Guests are users without a defined identity
+
+        $roles = array(
+            'users' =&gt; new Phalcon\Acl\Role('Users'),
+            'guests' =&gt; new Phalcon\Acl\Role('Guests'),
+            'admin' =&gt; new Phalcon\Acl\Role('Admin')
+        );
+            foreach ($roles as $role)
+            {
+                $acl-&gt;addRole($role);
+            }
+
+            //Admin area resources
+        $adminResources = array(
+            'users' =&gt; array('index', 'new', 'edit', 'delete'),
+        );
+
+            foreach ($adminResources as $resource =&gt; $actions)
+            {
+                $acl-&gt;addResource(new Phalcon\Acl\Resource($resource), $actions);
+            } 
+
+            // User area resources
+        $userResources = array(
+            'calendar' =&gt; array('index', 'update', 'book', 'done'),
+        );
+            foreach ($userResources as $resource =&gt; $actions)
+            {
+                $acl-&gt;addResource(new Phalcon\Acl\Resource($resource), $actions);
+            } 
+
+            //Public area resources (frontend)
+        $publicResources = array(
+            'session' =&gt; array('index', 'start', 'end'),
+            'notfound' =&gt; array('route404')
+        );
+            foreach ($publicResources as $resource =&gt; $actions)
+            {
+                $acl-&gt;addResource(new Phalcon\Acl\Resource($resource), $actions);
+            }
+
+        //Grant access to public areas to all
+        foreach ($roles as $role)
+        {
+            foreach ($publicResources as $resource =&gt; $actions)
+            {
+                $acl-&gt;allow($role-&gt;getName(), $resource, '*');
+            }
+        }
+
+        //Grant access to calendar area to roles Users and Admin
+        foreach ($userResources as $resource =&gt; $actions)
+        {
+            foreach ($actions as $action)
+            {
+                $acl-&gt;allow('Users', $resource, $action);
+                $acl-&gt;allow('Admin', $resource, $action);
+            }
+        }
+        //Grant access to admin area to role Admin only
+        foreach ($adminResources as $resource =&gt; $actions)
+        {
+            foreach ($actions as $action)
+            {
+                $acl-&gt;allow('Admin', $resource, $action);
+            }
+        }
+        return $acl;
+        }
+    }
+
+    public function beforeExecuteRoute(Event $event, Dispatcher $dispatcher)
+    {
+        //Check whether the "auth" variable exists in session to define the active role
+
+        $auth = $this-&gt;session-&gt;get('auth');
+        if(!$auth)
+        {
+            $role = 'Guests';
+        }
+        else if($auth['admin_role'] == 0)
+        {
+            $role = 'Users';
+        }
+        else
+        {
+            $role = 'Admin';
+        }
+
+        //Take the active controller/action from the dispatcher
+
+        $controller = $dispatcher-&gt;getControllerName();
+        $action = $dispatcher-&gt;getActionName();
+
+        //Obtain the ACL list
+
+        $acl = $this-&gt;_getAcl();
+
+        //Check if the Role have access to the controller (resource)
+        $allowed = $acl-&gt;isAllowed($role, $controller, $action);
+
+        if($acl-&gt;isAllowed('Users', 'users', 'index'))
+        {
+                $this-&gt;flashSession-&gt;warning("You don't have access to admin area");
+
+            //It does not work this way!!       
+        }
+        if($allowed != Phalcon\Acl::ALLOW) 
+        {
+
+        //If he doesn't have access forward him to the session/index controller
+                $this-&gt;flashSession-&gt;warning("You don't have access to this module");
+                $this-&gt;response-&gt;redirect('session/index');
+
+        //Returning "false" we tell to the dispatcher to stop the current operation
+        return false;
+        }
+
+    }
+
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-19d885d0ad8d9ce2c25d5fb5-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-19d885d0ad8d9ce2c25d5fb5-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/21e7f3deb49deffd563b413262ded48f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3609/PaulSh84" class="user-moderator-N"><span itemprop="name">Paul</span></a>        </span>
+        <br>
+
+        <span class="karma">14.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="17858" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '15</span>
+              </span><br/><a name="C17858" href="#C17858">
+                <time itemprop="dateCreated" datetime="2015-05-02T12:29:18-07:00" class="action-date">May '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>well, i found myself the way, it can be done:</p>
+<pre><code>if($allowed != Phalcon\Acl::ALLOW) 
+        {
+            if($role == 'Users' &amp;&amp; $controller == 'users')
+            {
+                $this-&gt;flashSession-&gt;warning("You don't have access to admin area");
+
+            }
+            else
+            {
+                    //If guests don't have access forward them to the session/start controller
+                $this-&gt;flashSession-&gt;warning("You are not logged in!");
+                $this-&gt;response-&gt;redirect('');
+            }
+
+            //Returning "false" we tell to the dispatcher to stop the current operation
+        return false;
+        }</code></pre>
+<p>i have another question, regarding notfound Cntroller
+i have mentioned it as a public resource, </p>
+<pre><code> $publicResources = array(
+        'session' =&gt; array('index', 'start', 'end'),
+        'notfound' =&gt; array('route404')
+    );</code></pre>
+<p>but still i cannot get 404 error page whatever incorrect URL i use.</p>
+<p>What;s the proper way of ACL working with Notfound??</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17858" data-cf-modified-19d885d0ad8d9ce2c25d5fb5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17858" data-cf-modified-19d885d0ad8d9ce2c25d5fb5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/21e7f3deb49deffd563b413262ded48f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3609/PaulSh84" class="user-moderator-N"><span itemprop="name">Paul</span></a>        </span>
+        <br>
+
+        <span class="karma">14.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C17859" href="#C17859">
+                <time itemprop="dateCreated" datetime="2015-05-02T12:39:16-07:00" class="action-date">May '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I tried:</p>
+<pre><code>if($allowed != Phalcon\Acl::ALLOW) 
+        {
+            if($role == 'Users' &amp;&amp; $controller == 'users')
+            {
+                $this-&gt;flashSession-&gt;warning("You don't have access to admin area");
+
+            }
+            else if($controller == 'NotFound')
+            {
+                $this-&gt;dispatcher-&gt;forward(array(
+                    'controller' =&gt; 'NotFound',
+                    'action' =&gt; 'route404'
+                ));
+            }
+            else
+            {
+                    //If guests don't have access forward them to the session/start controller
+                $this-&gt;flashSession-&gt;warning("You are not logged in!");
+                $this-&gt;response-&gt;redirect('');
+            }
+
+            //Returning "false" we tell to the dispatcher to stop the current operation
+        return false;
+        }</code></pre>
+<p>But it giver an error:</p>
+<p>Dispatcher has detected a cyclic routing causing stability problems</p>
+<p>Please advise!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17859" data-cf-modified-19d885d0ad8d9ce2c25d5fb5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17859" data-cf-modified-19d885d0ad8d9ce2c25d5fb5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e984ca5d22935b577e77fcbb53edb3e2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1653/stefanchiriac" class="user-moderator-N"><span itemprop="name">Stefan Chiriac</span></a>        </span>
+        <br>
+
+        <span class="karma">16.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C17883" href="#C17883">
+                <time itemprop="dateCreated" datetime="2015-05-04T02:30:17-07:00" class="action-date">May '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hello,</p>
+<p>I would advise you to drop the not found from acl and register it in dispatcher as a event beforeException. What you did, if the page is not found it will redirect to not found which results in an infinite loop.</p>
+<p>This is my approach and works wonderful for me</p>
+<pre><code>public function beforeException($event, $dispatcher, $exception) {
+    if ($exception instanceof Exception) {
+        $dispatcher-&gt;forward(
+            [
+                'module' =&gt; 'core',
+                'namespace' =&gt; 'Core\Controllers',
+                'controller' =&gt; 'error',
+                'action' =&gt; 'show404'
+            ]
+        );
+        return false;
+    }
+    // Handle other exceptions.
+    $dispatcher-&gt;forward(
+        [
+            'module' =&gt; 'core',
+            'namespace' =&gt; 'Core\Controllers',
+            'controller' =&gt; 'error',
+            'action' =&gt; 'show503'
+        ]
+    );
+    return $event-&gt;isStopped();
+}</code></pre>
+<p><a href="https://github.com/magnxpyr/cms/blob/master/app/engine/Plugins/ErrorHandler.php">https://github.com/magnxpyr/cms/blob/master/app/engine/Plugins/ErrorHandler.php</a></p>
+<p>And then in bootstrap</p>
+<pre><code>    //Obtain the standard eventsManager from the DI
+    $eventsManager = new \Phalcon\Events\Manager();
+
+    //Registering a dispatcher
+    $dispatcher = new \Phalcon\Mvc\Dispatcher();
+
+    // Attach the Security plugin
+    $eventsManager-&gt;attach('dispatch', new \Engine\Plugins\Security());
+    // Attach the Error handler
+    $eventsManager-&gt;attach('dispatch', new \Engine\Plugins\ErrorHandler());
+
+    //Bind the EventsManager to the Dispatcher
+    $dispatcher-&gt;setEventsManager($eventsManager);
+
+    $di-&gt;set('dispatcher', $dispatcher);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17883" data-cf-modified-19d885d0ad8d9ce2c25d5fb5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17883" data-cf-modified-19d885d0ad8d9ce2c25d5fb5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/21e7f3deb49deffd563b413262ded48f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3609/PaulSh84" class="user-moderator-N"><span itemprop="name">Paul</span></a>        </span>
+        <br>
+
+        <span class="karma">14.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C17888" href="#C17888">
+                <time itemprop="dateCreated" datetime="2015-05-04T03:25:29-07:00" class="action-date">May '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>wow, it just works perfect!! Thanx Stefan!!!</p>
+<p>However, since i denied access  to all events except public Resources, i can't drop NotFound from acl completely. Will leave it in public resources</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17888" data-cf-modified-19d885d0ad8d9ce2c25d5fb5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17888" data-cf-modified-19d885d0ad8d9ce2c25d5fb5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6597" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

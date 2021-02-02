@@ -1,0 +1,141 @@
+---
+layout: default
+title: 'BIT_COUNT not supported by phalcon? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">BIT_COUNT not supported by phalcon?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/8625/Jonuz" class="user-moderator-N"><span itemprop="name">Jonuz</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-01-18T15:08:31-07:00">Jan '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-01-18T15:08:31-07:00">Jan '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>350</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/5ccba87745b9fdd167554d66ba379d27?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/8625/Jonuz" class="user-moderator-N"><span itemprop="name">Jonuz</span></a></span>
+                <span class="karma">1.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17641" href="#C17641">
+        <time class="action-date">Jan '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hey,
+I'm trying to find duplicate files by using following code, but I keep getting expection &quot;Unknown expression type 94&quot;</p>
+<pre><code>File::find([
+                "BIT_COUNT (phash ^ ?0) &lt; 4",
+                "bind" =&gt; $file-&gt;phash
+            ]);</code></pre>
+<p>Which leads to following trace
+{
+&quot;function&quot;: &quot;_getExpression&quot;,
+&quot;class&quot;: &quot;Phalcon\Mvc\Model\Query&quot;,
+&quot;type&quot;: &quot;-&gt;&quot;,
+&quot;args&quot;: [
+{
+&quot;type&quot;: 94,
+&quot;left&quot;: {
+&quot;type&quot;: 355,
+&quot;name&quot;: &quot;phash&quot;
+},
+&quot;right&quot;: {
+&quot;type&quot;: 273,
+&quot;value&quot;: &quot;?0&quot;
+}
+}
+]
+},</p>
+<p>If I can't use BIT_COUNT with phalcon ORM, is there some other way to accomplish same result, while keeping reslt as model format? </p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-e9108970380a6a92e006158b-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-e9108970380a6a92e006158b-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-positive reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c897fab3d4f3e07ca673337a1efa9cbf?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6133/corentin-begne" class="user-moderator-N"><span itemprop="name">corentin-begne</span></a>        </span>
+        <br>
+
+        <span class="karma">12.8k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C53547" href="#C53547">
+                <time itemprop="dateCreated" datetime="2018-01-18T16:15:49-07:00" class="action-date">Jan '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You need to register custom function, example :</p>
+<pre><code class="language-php">&lt;?php
+use Phalcon\Db\Dialect\MySQL as SqlDialect,
+Phalcon\Db\Adapter\Pdo\Mysql;
+
+$di-&gt;set('db', function () use ($config) {  
+    $dialect = new SqlDialect();
+    $dialect-&gt;registerCustomFunction('BIT_COUNT', function($dialect, $expression) {
+            return sprintf(
+                'BIT_COUNT(%d)',
+                $dialect-&gt;getSqlExpression($expression['arguments'][0])
+             );
+        }
+    ); 
+    return new Mysql([
+        'host' =&gt; $config[ENV]-&gt;database-&gt;host,
+        'username' =&gt; $config[ENV]-&gt;database-&gt;username,
+        'password' =&gt; $config[ENV]-&gt;database-&gt;password,
+        'dbname' =&gt; $config[ENV]-&gt;database-&gt;dbname,
+        'charset' =&gt; $config[ENV]-&gt;database-&gt;charset,
+        'dialectClass' =&gt; $dialect
+    ]);
+});</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="53547" data-cf-modified-e9108970380a6a92e006158b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="53547" data-cf-modified-e9108970380a6a92e006158b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">4</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17641" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

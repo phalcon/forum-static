@@ -1,0 +1,218 @@
+---
+layout: default
+title: 'Aliased Many-To-Many relation doesn&#039;t create correct JOIN query - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Aliased Many-To-Many relation doesn&#039;t create correct JOIN query</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2782/lfbittencourt" class="user-moderator-N"><span itemprop="name">LF Bittencourt</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-12-27T09:29:47-07:00">Dec '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-12-27T09:29:47-07:00">Dec '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>867</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9ab87270227212b876cf4d06dd19cf93?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2782/lfbittencourt" class="user-moderator-N"><span itemprop="name">LF Bittencourt</span></a></span>
+                <span class="karma">2.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4339" href="#C4339">
+        <time class="action-date">Dec '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm facing the same issue that <a href="https://github.com/phalcon/cphalcon/issues/2568">HitoriSensei opened on GitHub</a>. There's no answer still now.</p>
+<p>You can use the models below to reproduce that issue:</p>
+<pre><code class="language-php">&lt;?php
+
+class Post extends \Phalcon\Mvc\Model
+{
+
+    /**
+     * @Primary
+     * @Identity
+     * @Column(type="integer", nullable=false)
+     */
+    public $id;
+
+    /**
+     * @Column(type="string", length=100, nullable=false)
+     */
+    public $title;
+
+    protected function initialize()
+    {
+        $this-&gt;hasManyToMany(
+            'id',
+            'PostCategory',
+            'post_id', 'category_id',
+            'Category',
+            'id',
+            ['alias' =&gt; 'Categories']
+        );
+    }
+
+}</code></pre>
+<pre><code class="language-php">&lt;?php
+
+class Category extends \Phalcon\Mvc\Model
+{
+
+    /**
+     * @Primary
+     * @Identity
+     * @Column(type="integer", nullable=false)
+     */
+    public $id;
+
+    /**
+     * @Column(type="string", length=100, nullable=false)
+     */
+    public $name;
+
+}</code></pre>
+<pre><code class="language-php">&lt;?php
+
+class PostCategory extends \Phalcon\Mvc\Model
+{
+
+    /**
+     * @Column(type="integer", nullable=false)
+     */
+    public $post_id;
+
+    /**
+     * @Column(type="integer", nullable=false)
+     */
+    public $category_id;
+
+}</code></pre>
+<p>Now, if you run the following PHQL...</p>
+<pre><code>SELECT * FROM Post JOIN Category</code></pre>
+<p>... raw SQL won't contain inner relationships:</p>
+<pre><code class="language-sql">SELECT ... FROM `post` INNER JOIN `category`</code></pre>
+<p>However, when you remove <code>Post</code> categories alias...</p>
+<pre><code class="language-php">$this-&gt;hasManyToMany(
+    'id',
+    'PostCategory',
+    'post_id', 'category_id',
+    'Category',
+    'id'/*,
+    ['alias' =&gt; 'Categories']*/
+);</code></pre>
+<p>... it works:</p>
+<pre><code class="language-sql">SELECT ... FROM `post` INNER JOIN `post_category` ON `post`.`id` = `post_category`.`post_id`  INNER JOIN `category` ON `post_category`.`category_id` = `category`.`id`</code></pre>
+<p>BTW: it works properly with 1:N relationships, aliased or not.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-ebb21c8a1a44ab405495a4ea-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-ebb21c8a1a44ab405495a4ea-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/533985d102feef881f5c41933bd43bfb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/283/calinrada" class="user-moderator-N"><span itemprop="name">Calin Rada</span></a>        </span>
+        <br>
+
+        <span class="karma">51.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C14663" href="#C14663">
+                <time itemprop="dateCreated" datetime="2015-01-08T07:56:26-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><pre><code class="language-php">class Post
+{
+    public function initialize()
+    {
+        $this-&gt;hasManyToMany(
+            "id",
+            "PostCategoryPost",
+            "post_id",
+            "category_id",
+            "Category",
+            "id",
+            array(
+                'alias' =&gt; 'categories'
+            )
+        );  
+    }
+}
+
+class PostCategoryPost
+{
+    public function initialize()
+    {
+        $this-&gt;belongsTo('category_id', 'Category', 'id',
+            array('alias' =&gt; 'category')
+        );
+
+        $this-&gt;belongsTo('post_id', 'Post', 'id',
+            array('alias' =&gt; 'post')
+        );
+    }
+}
+
+class Category
+{
+    public function initialize()
+    {
+        $this-&gt;hasManyToMany(
+            "id",
+            "PostCategoryPost",
+            "category_id",
+            "post_id",
+            "Post",
+            "id",
+            array('alias' =&gt; 'posts')
+        );
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14663" data-cf-modified-ebb21c8a1a44ab405495a4ea-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14663" data-cf-modified-ebb21c8a1a44ab405495a4ea-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4339" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,492 @@
+---
+layout: default
+title: 'Phalcon is not trully modular framework - and how to solve it. - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Phalcon is not trully modular framework - and how to solve it.</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10383/pwilkowski" class="user-moderator-N"><span itemprop="name">pwilkowski</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-11-26T06:14:24-07:00">Nov '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-11-26T06:14:24-07:00">Nov '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '19</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">6</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1397</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">4</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/47fa4428512dae547117cdec4b09e84e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10383/pwilkowski" class="user-moderator-N"><span itemprop="name">pwilkowski</span></a></span>
+                <span class="karma">4.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17365" href="#C17365">
+        <time class="action-date">Nov '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Disclaimer: <em>All the above is my opinion.</em> I have checked few apps out there that implemented MVC in phalcon but none of them suit my needs.</p>
+<p>First and the biggest problem in phalcon about modularity is the lack of standard module structure. Lack of any automated way to load your modules. When checking docs, you find how to register module:</p>
+<pre><code class="language-php">    public function registerAutoloaders(DiInterface $di = null)
+    {
+        $loader = new Loader();
+
+        $loader-&gt;registerNamespaces(
+            [
+                'Multiple\Backend\Controllers' =&gt; '../apps/backend/controllers/',
+                'Multiple\Backend\Models'      =&gt; '../apps/backend/models/',
+            ]
+        );
+
+        $loader-&gt;register();
+    }</code></pre>
+<p>Each module would need to have another loader class. This is highly redundant. Not to mention you need to provide paths.</p>
+<p>Second thing how you actually register modules. There are multiple problems with how it is done:</p>
+<pre><code class="language-php">$application-&gt;registerModules(
+    [
+        'frontend' =&gt; [
+            'className' =&gt; 'Multiple\Frontend\Module',
+            'path'      =&gt; '../apps/frontend/Module.php',
+        ],
+        'backend'  =&gt; [
+            'className' =&gt; 'Multiple\Backend\Module',
+            'path'      =&gt; '../apps/backend/Module.php',
+        ]
+    ]
+);</code></pre>
+<p>And what does the registerModules does? Well, nothing (Phalcon\Mcv\Application does not override this):
+<a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/application.zep">https://github.com/phalcon/cphalcon/blob/master/phalcon/application.zep</a>
+<a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/application.zep">https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/application.zep</a></p>
+<pre><code class="language-zep">    public function registerModules(array modules, boolean merge = false) -&gt; &lt;Application&gt;
+    {
+        if merge {
+            let this-&gt;_modules = array_merge(this-&gt;_modules, modules);
+        } else {
+            let this-&gt;_modules = modules;
+        }
+
+        return this;
+    }</code></pre>
+<p>So what are those problems here? That initialization class of each modules is not a singleton, it is not called UNLESS router tells it to.
+If you check <code>handle</code> method of Phalcon\Mvc\Application, you will see that only the currently used module is being called. Other modules intialization classes are ignored. This is a serious problem. Imagine a simple scenario:
+You have <code>auth</code> module which handles user authentication and needs to bind beforeDispatch event to redirect user to login page if he tries to access some specific content.
+It is simply impossible with current phalcon implementation to do that. Modules should be autonomous, like in practically any other modern PHP framework.</p>
+<p>My solution to this problem was to extend Application (and ConsoleApplication because of the same thing) and override registerModules method like this:</p>
+<pre><code class="language-php">    public function registerModules(array $modules, $merge = null)
+    {
+        parent::registerModules($modules, $merge);
+
+        /** @var View $view */
+        $view = $this-&gt;di-&gt;get('view');
+        foreach ($this-&gt;getModules() as $moduleName =&gt; $module) {
+            $initClass = $this-&gt;getModuleClass($moduleName);
+            $initClass-&gt;registerAutoloaders($this-&gt;di);
+            $initClass-&gt;registerServices($this-&gt;di);
+
+            if (method_exists($initClass, 'init')) {
+                $initClass-&gt;init($this-&gt;di);
+            }
+
+            if (method_exists($initClass, 'registerEvents')) {
+                $initClass-&gt;registerEvents($this-&gt;di);
+            }
+
+            $this-&gt;registerRoutes($moduleName, $module);
+            $view-&gt;registerViewPaths($moduleName, $module);
+        }
+    }</code></pre>
+<p>As you can see I have added 2 methods that can be called as well. Currently initialization classes aka. Module.php (Init.php in my case) have only <code>registerServices</code> and <code>registerAutoloaders</code>. Frankly, they might have been merged into one <code>moduleInit</code> method.</p>
+<p>If you ever need to get the module initialization class, which should be possible, you create function like this:</p>
+<pre><code class="language-php">    /**
+     * @param $module
+     * @return \Phalcon\Mvc\ModuleDefinitionInterface|null
+     */
+    public function getModuleClass($module)
+    {
+        if (isset($this-&gt;moduleInitClass[$module])) {
+            return $this-&gt;moduleInitClass[$module];
+        }
+
+        $mod = $this-&gt;getModule($module);
+        $class = $mod['className'];
+
+        return $this-&gt;moduleInitClass[$module] = new $class;
+    }</code></pre>
+<p>Which forces them to become singletons.</p>
+<p>This was done because I needed such functionality. To have fully autonomous modules, inside one directory.</p>
+<p>What am i saying right now. Phalcon needs to have better module initialization process. The one that:</p>
+<ol>
+<li>Loads all modules classes and register: autoloaders, services, events etc.</li>
+<li>Is well aware of modules components such as models and controllers by default (with the ability to change it)</li>
+<li>Does know where modules resides in so that you don't need to provide paths (but you should have ability to change it)</li>
+</ol>
+<p>I skipped views on purpose because it can be decoupled from your application, also here is the topic about views (so lets not talk about problems with View itself) <a href="https://forum.phalcon.io/discussion/17305/phalcon-with-completely-custom-view-system">https://forum.phalcon.io/discussion/17305/phalcon-with-completely-custom-view-system</a></p>
+<p>So how a minimal module definition should look like?</p>
+<pre><code class="language-php">$modulesDirectory = APP_PATH . 'modules/';
+$modules = [
+    'moduleName' =&gt; [
+        'namespace' =&gt; 'Vendor\ModuleName'
+    ]
+]</code></pre>
+<p>And thats it, application should be able to resolve class initialization, make instance of it, keep it as singleton.
+Then register Autoloades (if needed), register services, and register events.</p>
+<p>If you need more customization then </p>
+<pre><code class="language-php">$modulesDirectory = APP_PATH . 'modules/';
+$modules = [
+    'moduleName' =&gt; [
+        'namespace' =&gt; 'Vendor\ModuleName',
+        'path' =&gt; APP_PATH . 'custom/path/to/your/module', //this should not point to a Module.php, initialization class can be autoloaded if you register namespace, original path that pointed to one file is redundant
+        'className' =&gt; 'Init', //no point in providing full namespace, as it is inside module it can be appended to namespace ex. $module['namespace'] . '\\' . $module['className']
+        'priority' =&gt; 20, //as phalcon doesnt load all modules it still should be possible to have some sort of priority loading mechanism
+        'controllersDirectory' =&gt; 'MyAwesome/Controllers', // ability to customize controllers directory for example if you wish it to be somewhere deeper, by default it may be 'Controllers'
+        'modeslDirectory' =&gt; 'MyAwesome/Models', // same as above but for models
+    ]
+]</code></pre>
+<p>I cannot provide a full code but I can provide some parts of it if needed.
+In my application all you need to do is to provide module.json inside APP_PATH /modules/<em>/</em>/ directories and they are being autoloaded with everything that is needed.</p>
+<pre><code class="language-json">{
+    "name": "auth",
+    "enabled": true,
+    "priority": 1
+}</code></pre>
+<p>and thats it. </p>
+<p>Here is how my app looks like:
+<a href="https://i.imgur.com/RR0cLz1.png">https://i.imgur.com/RR0cLz1.png</a></p>
+<p>And it is working 100%. I am using Twig for views and not using default phalcon View so extending/including cross module is possible.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-feb5b5440e383d6ce92037d3-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-feb5b5440e383d6ce92037d3-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">4</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52473" href="#C52473">
+                <time itemprop="dateCreated" datetime="2017-11-26T07:52:31-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well, perhaps you could submit a PR with Zephir code which will resolve those concerns and make Phalcon &quot;truly&quot; modular, at least one leap in that direction.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52473" data-cf-modified-feb5b5440e383d6ce92037d3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52473" data-cf-modified-feb5b5440e383d6ce92037d3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52497" href="#C52497">
+                <time itemprop="dateCreated" datetime="2017-11-26T08:56:07-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>For me this is bad idea. I like how all modules are indepndent and making applications faster, it's stupid to initialize all modules if they don't used.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52497" data-cf-modified-feb5b5440e383d6ce92037d3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52497" data-cf-modified-feb5b5440e383d6ce92037d3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">3</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/47fa4428512dae547117cdec4b09e84e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10383/pwilkowski" class="user-moderator-N"><span itemprop="name">pwilkowski</span></a>        </span>
+        <br>
+
+        <span class="karma">4.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="52505" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '17</span>
+              </span><br/><a name="C52505" href="#C52505">
+                <time itemprop="dateCreated" datetime="2017-11-26T11:23:54-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Well, perhaps you could submit a PR with Zephir code which will resolve those concerns and make Phalcon &quot;truly&quot; modular, at least one leap in that direction.</p>
+</blockquote>
+<p>That might be some idea however i don't know zephyr that much, i can cooperate and provide my php code to someone willing to translate it into zephyr.</p>
+<blockquote>
+<p>I like how all modules are indepndent and making applications faster,</p>
+</blockquote>
+<p>They are not making application faster. Your statement is wrong on so many levels. If my application would be like default phalcon i would still need to register all the services and all the events in some place. I just split that initialization into meaninigful modules like auth, crud, admin, helpers etc.</p>
+<blockquote>
+<p>it's stupid to initialize all modules if they don't used.</p>
+</blockquote>
+<p>You don't get it at all. They are used, and they are doing something meaningful (adding services, using events), For all the other modules it would just creating one empty class.</p>
+<p>Right now phalcon lets you basically split application into 2 modules: frontend and backend.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52505" data-cf-modified-feb5b5440e383d6ce92037d3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span><span itemprop="downvoteCount">2</span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52505" data-cf-modified-feb5b5440e383d6ce92037d3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="52557" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '17</span>
+              </span><br/><a name="C52557" href="#C52557">
+                <time itemprop="dateCreated" datetime="2017-11-27T12:20:40-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think this is a poor naming decision and a matter of semantics. The functionality you are describing falls into the roles of Plugins in the Phalcon world.</p>
+<p>Modules are decoupled blocks of code, I think of them as application sharding.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52557" data-cf-modified-feb5b5440e383d6ce92037d3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52557" data-cf-modified-feb5b5440e383d6ce92037d3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/47fa4428512dae547117cdec4b09e84e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10383/pwilkowski" class="user-moderator-N"><span itemprop="name">pwilkowski</span></a>        </span>
+        <br>
+
+        <span class="karma">4.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52587" href="#C52587">
+                <time itemprop="dateCreated" datetime="2017-11-28T20:17:04-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Since when module is decoupled blocks of code? In just about every modern framework a &quot;module&quot; does have access to events.
+Laravel? Yep there is a service, and you have option to &quot;boot&quot; your module:
+<a href="http://kamranahmed.info/blog/2015/12/03/creating-a-modular-application-in-laravel/">http://kamranahmed.info/blog/2015/12/03/creating-a-modular-application-in-laravel/</a></p>
+<p>Symfony calls modules a bundles (which is fine):
+<a href="https://symfony.com/doc/current/bundles.html">https://symfony.com/doc/current/bundles.html</a>
+and yes, you can hook events there, without writing a custom code to initialize your modules.</p>
+<p>Plugins? You mean like this?
+<a href="https://github.com/phalcon/invo/blob/master/app/plugins/SecurityPlugin.php">https://github.com/phalcon/invo/blob/master/app/plugins/SecurityPlugin.php</a></p>
+<p>Then it falls short compared to true module.</p>
+<p>Lets take a look at authentication/user example:
+Module name: UserModule (or AuthModule)</p>
+<p>What it should be able to do?</p>
+<ol>
+<li>Encapsulate user model and all user-related models like remember token, confirmation token, roles</li>
+<li>Encapsulate auth and user related controllers like auth and profile controller</li>
+<li>Encapsulate services like Auth (which does the actual job of logging in customer) and Acl (which checks if user has access to specific content)</li>
+<li>Encapsulate routes specific to those controllers (doesn't matter if they are automatic or not)</li>
+<li>Hook events that will let module to restrict access to content for example beforeDispatch</li>
+</ol>
+<p>Why is that important to have everything in one place? Because if I ever want to create application that will not need users or authentication at all I can simply remove module folder and with some minor template tweaks (removal of acl checks) application will be running in full open mode.</p>
+<p>And again you cannot call this a &quot;plugin&quot;, it is a fully fledged module. Which almost works in bare phalcon Application except for point 5. And that is because modules are not initialized, they do not have a possibility to hook any events, they don't have any init/boot/whatever function that is called regardless of which is the &quot;current&quot; module.</p>
+<p>Another example:
+AdminActionLogModule - a module responsible of logging each admin user actions. Such module needs to hook every action (either before or afterDispatch). If phalcon would let that by default it would be pretty easy to write it in one place.</p>
+<p>There are tons of examples of modules that simply needs to initialize on every request, or hook some global event.</p>
+<p>Now there is another thing, check this repo:
+<a href="https://github.com/phalcon/mvc">https://github.com/phalcon/mvc</a>
+and search for setDefaultNamespace in file named Module.php</p>
+<p>Why would you need to define default namespace in each module? That is a unnecessary redundancy.
+Why is module namespace not defined in module definition?</p>
+<p>By knowing:</p>
+<ol>
+<li>directory of where modules are located</li>
+<li>Namespace of each module</li>
+</ol>
+<p>We have access to every namespace and path that is required. Instead we have to provide className and path to &quot;Module.php&quot; (which is redundancy by itself). It is cool if we have option to customize paths, namespaces but that should not be required but optional.</p>
+<p>What am i saying is that modules in phalcon are incomplete, just as if modularity was a new idea and never implemented to the end.
+And by modularity I mean a possibility to encapsulate whole code related to specific field.</p>
+<p>What about CLI tools for module? There is no way to keep your tasks inside a module. For example I want to have a cli command inside Auth/User module that lets me create admin users in console. I fixed that problem in my application but that required me to rewrite ConsoleApplication and convert zephyr code from Phalcon/Cli/Console back to PHP, namely &quot;handle&quot; function. Why was that a problem? Because code had no idea where CLI task resides in, code needed to know what is the namespace of Cli task of each module.</p>
+<p>So to sumamrize what IN MY OPINION is wrong in phalcon about modules:</p>
+<ol>
+<li>Modules has no way to initialize themselves.</li>
+<li>Dispatcher is not aware of module namespace, and you cannot set namespace in module definition</li>
+<li>Router has the same problem as dispatcher</li>
+</ol></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52587" data-cf-modified-feb5b5440e383d6ce92037d3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52587" data-cf-modified-feb5b5440e383d6ce92037d3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52599" href="#C52599">
+                <time itemprop="dateCreated" datetime="2017-11-29T01:50:29-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The questions you raise are valid, Modules in Phalcon do seem a bit awkward to use. I've ended up heavily customizing them to suit my needs.</p>
+<p>I think this topic is worth a github discussion. Changing the responsibility, or renaming <code>Module</code> is not possible (unless in a major?), so I guess a new class should be introduced to handle the functionality you are describing. Bundle is not used anywhere yet :]</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52599" data-cf-modified-feb5b5440e383d6ce92037d3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52599" data-cf-modified-feb5b5440e383d6ce92037d3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/47fa4428512dae547117cdec4b09e84e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10383/pwilkowski" class="user-moderator-N"><span itemprop="name">pwilkowski</span></a>        </span>
+        <br>
+
+        <span class="karma">4.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52615" href="#C52615">
+                <time itemprop="dateCreated" datetime="2017-12-02T05:35:22-07:00" class="action-date">Dec '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>That might be idea however I am not the one to decide.
+There would be 2 ways to handle this. Either make bundles completely separate of modules (which may be a bad idea) or make bundles like extended modules that work exactly like modules but has addtional features:</p>
+<pre><code class="language-php">$bundlesDirectory = APP_PATH . 'modules/';
+$bundles = [
+    'bundleName' =&gt; [
+        'namespace' =&gt; 'Vendor\BundleName'
+    ]
+]
+$app-&gt;registerBundles($bundles);</code></pre>
+<p>Which would roughly translate to something like:</p>
+<pre><code class="language-php">$modules = [
+    'bundleName' =&gt; [
+        'namespace' =&gt; 'Vendor\BundleName',
+        'className' =&gt; '...',
+        'path' =&gt; '...',
+        'type' =&gt; 'bundle'
+    ]
+]</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52615" data-cf-modified-feb5b5440e383d6ce92037d3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52615" data-cf-modified-feb5b5440e383d6ce92037d3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1ee665b7487435315b05302e5e1186fb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2328/betrixed" class="user-moderator-N"><span itemprop="name">Michael Rynn</span></a>        </span>
+        <br>
+
+        <span class="karma">584</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="53075" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '17</span>
+              </span><br/><a name="C53075" href="#C53075">
+                <time itemprop="dateCreated" datetime="2017-12-22T20:37:51-07:00" class="action-date">Dec '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I am using my customization of multi-module setup in PCan, - which is behind parracan.org.au  - Parramatta Climate Action Network. So it presents a home page of link records to other web pages, on other sites or its own.   It has the default 'app' module, an 'admin' module , a mailchimp interface module, and a few other experments for site-ideas I tried but not followed through or sold on to anybody. My documentation is poor, but I have been coming round to learning to add some to the code, at least when I'm rewriting it for the second and third time.
+in this rewrite round of site initialization code, my goal was to reduce the amounts of unncessary router configuration for modules that are not going to run for a given URL.  PHP efficiency is about figuring out how to systematically involve the least number of lines of script necessary to get the job done. Loading up routes for all possible modules for every request seems un-neccessary, especially if strict discipline on module seperation is followed, to avoid URL clashes. The other general kind of aim is to move control of the processing to the appropropriate module as early as possible.  </p>
+<p>Phalcon enforces module separation, especially in that normal 'forward' is done within the same module.  A redirect produces another request. </p>
+<p>First is to peek at the rewrite URL early, before creating a router object, and check the first  part matches some /{module-name-or-alias}/  If it doesn't then I only need to setup routes for the default module, otherwise just the routes for the only named module. There is a global config, containing data for an associative array called 'modules' .  The keys are either a module name, with values as useful and customizable module configuation, or the key is an 'alias' (also defined in routes for that module), which must have a value as the primary name of the module configuration.
+Given this 'keyed' module configuation, finding which module is just a simple lookup of the first part of the URL into the array.
+An alias match is also followed to its module configuration. Add the single module registration, and set up the Router with just the one modules routes, dispatch away.</p>
+<p>I haven't actually got this version in production yet, or even checked them back to github, which I ought to do now, since I have been working out the bugs in other bits of flakey code exposed by the changes, and I was doing it as part of writing a proper website setup code, with database initialisation and assets and environment initialization. But these initialization parts seem to working well enough now. I partially integrated devtools and have been modifying migrations output, which needs work.
+There is too much stuff that needs to be automatically done, rather than by bug trip discovery and fix.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="53075" data-cf-modified-feb5b5440e383d6ce92037d3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="53075" data-cf-modified-feb5b5440e383d6ce92037d3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/47fa4428512dae547117cdec4b09e84e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10383/pwilkowski" class="user-moderator-N"><span itemprop="name">pwilkowski</span></a>        </span>
+        <br>
+
+        <span class="karma">4.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C53189" href="#C53189">
+                <time itemprop="dateCreated" datetime="2017-12-30T21:49:57-07:00" class="action-date">Dec '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think you missed the point.
+Module separation is not a good thing, and not even close to being a real modulatiry solution.</p>
+<blockquote>
+<p>Loading up routes for all possible modules for every request seems un-neccessary</p>
+</blockquote>
+<p>Routes are not a problem at all, you can cache them. In fact, building something before router that would look up the url would only slow down application unnecessarily. Unless you have many dynamic routes (and by many i mean many combinations, not url entities) like for example magento (multiple URLs for a single product) then you would need to think about other solution or a custom router.</p>
+<p>The real problem lies within not being able to hook on global event, not being able to register a service within a module.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="53189" data-cf-modified-feb5b5440e383d6ce92037d3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="53189" data-cf-modified-feb5b5440e383d6ce92037d3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2acdb75de28ee5c8e3578450493d2214?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11729/fiskolini" class="user-moderator-N"><span itemprop="name">Francisco Carvalho</span></a>        </span>
+        <br>
+
+        <span class="karma">136</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C61199" href="#C61199">
+                <time itemprop="dateCreated" datetime="2019-10-29T08:42:46-07:00" class="action-date">Oct '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/pwilkowski">@pwilkowski</a> yous point is so damn right!
+Thanks for sharing your great thoughts about this topic.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="61199" data-cf-modified-feb5b5440e383d6ce92037d3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="61199" data-cf-modified-feb5b5440e383d6ce92037d3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17365" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

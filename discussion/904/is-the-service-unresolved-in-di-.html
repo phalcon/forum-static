@@ -1,0 +1,213 @@
+---
+layout: default
+title: 'Is the Service unresolved in DI? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/10/di-ioc">DI/IoC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Is the Service unresolved in DI?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/334/temuri416" class="user-moderator-N"><span itemprop="name">temuri416</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-09-16T16:33:44-07:00">Sep '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-09-16T16:33:44-07:00">Sep '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '13</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>496</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/1c5a05d695b9e910398795de90197829?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/334/temuri416" class="user-moderator-N"><span itemprop="name">temuri416</span></a></span>
+                <span class="karma">51.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C904" href="#C904">
+        <time class="action-date">Sep '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have my DI container with custom service in it:</p>
+<pre><code class="language-php">$di = new Phalcon\Di;
+$di-&gt;set('whatever', function(){
+    return new Whatever();
+}, true); // It is shared.</code></pre>
+<p>Shared service &quot;whatever&quot; may or may not be resolved (instantiated/set) by my application.</p>
+<p>At the end of request cycle I need to know whether it was resolved or not.</p>
+<p>Obviously, I don't want to do:</p>
+<pre><code class="language-php">$di-&gt;get('whatever);</code></pre>
+<p>because that will resolve it for sure.</p>
+<p>Is there a way of knowing whether &quot;whatever&quot; has been resolved?</p>
+<p>Thanks,
+Temuri</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-970d655d5f46abb1514e5737-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-970d655d5f46abb1514e5737-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bf2876998907a5932aa609a948720862?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/241/gsouf" class="user-moderator-N"><span itemprop="name">Soufiane Ghzal</span></a>        </span>
+        <br>
+
+        <span class="karma">21.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3464" href="#C3464">
+                <time itemprop="dateCreated" datetime="2013-09-17T01:44:26-07:00" class="action-date">Sep '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I'm on the purpose that you to create a class that extends phalcon DI.</p>
+<p>In it you redefine the get method ; add the  _isresolved propertie ; and a isResolved Method:</p>
+<pre><code class="language-php">// make your class
+// Class MyDi extend Phalcon\DI...
+
+protected $_resolvedList;
+
+public functoin __construct(){
+       parent::__construct();
+       $_resolvedList = array();
+}
+
+public function get($name,$parameters=array()){
+     $this-&gt;_resolvedList[$name] = true;
+    return parrent::get($name,$parameters);
+}
+
+// according to the doc there is also getRaw, getService, getShared they may need to be redefined (need to check the sources to know if they need to be redefined)
+
+public function isResolved($name){
+     return isset( $this-&gt;_resolvedList[$name] ) &amp;&amp;  $this-&gt;_resolvedList[$name] === true;
+}
+</code></pre>
+<p>Then you can use it : </p>
+<pre><code class="language-php">$di = new MyDi(); // intead of $di = new Phalcon\Di;</code></pre>
+<p>Doc : <a href="http://api.phalcon.io/en/1.2.3/Phalcon/DI#get-details">http://api.phalcon.io/en/1.2.3/Phalcon/DI#get-details</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3464" data-cf-modified-970d655d5f46abb1514e5737-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3464" data-cf-modified-970d655d5f46abb1514e5737-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1c5a05d695b9e910398795de90197829?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/334/temuri416" class="user-moderator-N"><span itemprop="name">temuri416</span></a>        </span>
+        <br>
+
+        <span class="karma">51.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3466" href="#C3466">
+                <time itemprop="dateCreated" datetime="2013-09-17T05:51:02-07:00" class="action-date">Sep '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks, that's an obvious solution. However, that adds a complexity of supplying your own DI object into all DI instantiations.</p>
+<p>What I'd like to do is to simply fetch that information from default DI container.</p>
+<p>Thanks</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3466" data-cf-modified-970d655d5f46abb1514e5737-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3466" data-cf-modified-970d655d5f46abb1514e5737-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1c5a05d695b9e910398795de90197829?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/334/temuri416" class="user-moderator-N"><span itemprop="name">temuri416</span></a>        </span>
+        <br>
+
+        <span class="karma">51.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3467" href="#C3467">
+                <time itemprop="dateCreated" datetime="2013-09-17T05:58:44-07:00" class="action-date">Sep '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>NFR created: <a href="https://github.com/phalcon/cphalcon/issues/1242">https://github.com/phalcon/cphalcon/issues/1242</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3467" data-cf-modified-970d655d5f46abb1514e5737-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3467" data-cf-modified-970d655d5f46abb1514e5737-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e1ea6dd91fb1ca75a6d77cf0fae89e5f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/522/nexik" class="user-moderator-N"><span itemprop="name">Tomasz Ślązok</span></a>        </span>
+        <br>
+
+        <span class="karma">7.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3480" href="#C3480">
+                <time itemprop="dateCreated" datetime="2013-09-17T11:34:05-07:00" class="action-date">Sep '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Phalcon shouldn't solve all your problem. It is framework to write your own app.</p>
+<p>YOU STILL NEED TO WRITE YOUR OWN CODE</p>
+<p>If you can, you should extend DI (I do this in every app) and maybe create pull request in phalcon/incubator. That way people who need it will benefit from your work and people who don't want, will be happy you didn't slow down framework.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3480" data-cf-modified-970d655d5f46abb1514e5737-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3480" data-cf-modified-970d655d5f46abb1514e5737-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1c5a05d695b9e910398795de90197829?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/334/temuri416" class="user-moderator-N"><span itemprop="name">temuri416</span></a>        </span>
+        <br>
+
+        <span class="karma">51.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3481" href="#C3481">
+                <time itemprop="dateCreated" datetime="2013-09-17T11:48:32-07:00" class="action-date">Sep '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/Tomasz">@Tomasz</a>:</p>
+<p>I agree that Phalcon should not solve developer's specific problems, however, IMO, this should be available on system/extension level as fundamental functionality.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3481" data-cf-modified-970d655d5f46abb1514e5737-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3481" data-cf-modified-970d655d5f46abb1514e5737-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="904" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

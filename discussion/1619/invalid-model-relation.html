@@ -1,0 +1,361 @@
+---
+layout: default
+title: 'Invalid Model Relation - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Invalid Model Relation</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1087/camcima" class="user-moderator-N"><span itemprop="name">Carlos Cima</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-02-16T06:55:48-07:00">Feb '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-02-16T06:55:48-07:00">Feb '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>May '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>956</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/d2b15afce2571a0e61fc7a41b1d1ae3e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1087/camcima" class="user-moderator-N"><span itemprop="name">Carlos Cima</span></a></span>
+                <span class="karma">1.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1619" href="#C1619">
+        <time class="action-date">Feb '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm working on a module to accept vouchers in a store. The vouchers are created in the database beforehand, and when the user types the voucher in the checkout, it is registered to him. I'm having a problem in my integration test suite with an invalid relation that pops up when the full test suite is run.</p>
+<p>The Voucher model looks like this:</p>
+<pre><code class="language-php">
+class Voucher extends \Phalcon\Mvc\Model
+{
+    protected $id;
+    protected $code;
+    protected $amount;
+    protected $campaignId;
+    protected $expireAt;
+    protected $expiredAt;
+    protected $userId;
+    protected $registeredAt;
+    protected $orderId;
+    protected $amountUsed;
+    protected $usedAt;
+    protected $isActive;
+    protected $createdAt;
+
+    public function initialize()
+    {
+        $this-&gt;setSource('vouchers');
+        $this-&gt;useDynamicUpdate(true);
+        $this-&gt;skipAttributesOnCreate(['created_at', 'updated_at']);
+        $this-&gt;skipAttributesOnUpdate(['created_at', 'updated_at']);
+        $this-&gt;setup([
+            'notNullValidations' =&gt; false,
+        ]);
+        $this-&gt;belongsTo('campaignId', '\MyApp\Core\Model\VoucherCampaign', 'id', ['alias' =&gt; 'campaign']);
+        $this-&gt;belongsTo('userId', '\MyApp\Core\Model\User', 'id', ['alias' =&gt; 'user']);
+        $this-&gt;belongsTo('orderId', '\MyApp\Core\Model\Order', 'id', ['alias' =&gt; 'order']);
+    }
+
+    public function columnMap()
+    {
+        return [
+            'id' =&gt; 'id',
+            'hash' =&gt; 'hash',
+            'code' =&gt; 'code',
+            'amount' =&gt; 'amount',
+            'campaign_id' =&gt; 'campaignId',
+            'expire_at' =&gt; 'expireAt',
+            'expired_at' =&gt; 'expiredAt',
+            'user_id' =&gt; 'userId',
+            'registered_at' =&gt; 'registeredAt',
+            'order_id' =&gt; 'orderId',
+            'amount_used' =&gt; 'amountUsed',
+            'used_at' =&gt; 'usedAt',
+            'is_active' =&gt; 'isActive',
+            'created_at' =&gt; 'createdAt',
+        ];
+    }
+
+    // Getter and Setters
+}</code></pre>
+<p>The test looks like this:</p>
+<pre><code class="language-php">&lt;?php
+
+class VoucherManagerTest extends \PHPUnit_Framework_TestCase
+
+    public function testRegisterVoucher()
+    {
+        $user = $this-&gt;getUserFixture();
+        $voucherCampaign = $this-&gt;getCampaignFixture();
+
+        $voucher = new Voucher();
+        $voucher-&gt;setHash(md5(1));
+        $voucher-&gt;setCode($voucherCode);
+        $voucher-&gt;setAmount(12);
+        $voucher-&gt;campaign = $voucherCampaign;
+        $voucher-&gt;setExpireAt(new \DateTime('+1 day'));
+        $voucher-&gt;setIsActive(true);
+        $resultCreateVoucher = $voucher-&gt;create();
+        $this-&gt;assertTrue($resultCreateVoucher);
+
+        $actual = $this-&gt;voucherManager-&gt;registerVoucher($voucherCode, $user);
+
+        // Asserts come here
+    }
+}</code></pre>
+<p>The registerVoucher method looks like this:</p>
+<pre><code class="language-php">&lt;?php
+
+    /**
+     * Register voucher to user
+     * 
+     * @param string $voucherCode
+     * @param \MyApp\Core\Model\User $user
+     * @return boolean
+     */
+    public function registerVoucher($voucherCode, User $user)
+    {
+        $voucher = $this-&gt;voucherRepository-&gt;getVoucherByCode($voucherCode); // The error occurs in this call
+</code></pre>
+<p>I've changed the following method for debugging purposes:</p>
+<pre><code class="language-php">&lt;?php
+
+    /**
+     * Get voucher by code
+     * 
+     * @param string $voucherCode
+     * @return type
+     */
+    public function getVoucherByCode($voucherCode)
+    {
+        $v = new Voucher();
+        $db = $v-&gt;getReadConnection();
+        $fetch = $db-&gt;fetchAll('SELECT order_id FROM vouchers');
+        var_dump('Database', $fetch);
+
+        $voucher = Voucher::findFirst([
+                'conditions' =&gt; 'isActive = true AND userId IS NULL AND code = ?1',
+                'bind' =&gt; [
+                    1 =&gt; $voucherCode
+                ]
+        ]);
+        var_dump('getOrderId', $voucher-&gt;getOrderId(), 'order-&gt;getId()', $voucher-&gt;order-&gt;getId());
+
+        return $voucher;
+    }</code></pre>
+<p>The output looks like this:</p>
+<pre><code class="language-php">string(8) "Database"
+array(1) {
+  [0]=&gt;
+  array(2) {
+    ["order_id"]=&gt;
+    NULL
+    [0]=&gt;
+    NULL
+  }
+}
+string(10) "getOrderId"
+NULL
+string(14) "order-&gt;getId()"
+string(1) "1"</code></pre>
+<p>From this output we can conclude that:</p>
+<ol>
+<li>The database is correct;</li>
+<li>The Voucher model is also correct, since $voucher-&gt;getOrderId() is null;</li>
+<li>The order relation is incorrect, since $voucher-&gt;order-&gt;getId() is 1.</li>
+</ol>
+<p>I've tried refreshing the model but it didn't help. This error does not occur when running this test all by itself, so it seems it is being influenced by a previous test.</p>
+<p>Is there some kind of cache for the relations? If so, is there any way to disable it? Is this a bug?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-32e51d2a624d9264572f3404-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-32e51d2a624d9264572f3404-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d2b15afce2571a0e61fc7a41b1d1ae3e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1087/camcima" class="user-moderator-N"><span itemprop="name">Carlos Cima</span></a>        </span>
+        <br>
+
+        <span class="karma">1.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C5551" href="#C5551">
+                <time itemprop="dateCreated" datetime="2014-02-16T07:05:29-07:00" class="action-date">Feb '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Maybe it has something to do with the reported issue #2040 (<a href="https://github.com/phalcon/cphalcon/issues/2040">https://github.com/phalcon/cphalcon/issues/2040</a>).</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="5551" data-cf-modified-32e51d2a624d9264572f3404-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="5551" data-cf-modified-32e51d2a624d9264572f3404-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d2b15afce2571a0e61fc7a41b1d1ae3e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1087/camcima" class="user-moderator-N"><span itemprop="name">Carlos Cima</span></a>        </span>
+        <br>
+
+        <span class="karma">1.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C5552" href="#C5552">
+                <time itemprop="dateCreated" datetime="2014-02-16T07:07:55-07:00" class="action-date">Feb '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>also  issue #1879 (<a href="https://github.com/phalcon/cphalcon/issues/1879">https://github.com/phalcon/cphalcon/issues/1879</a>).</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="5552" data-cf-modified-32e51d2a624d9264572f3404-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="5552" data-cf-modified-32e51d2a624d9264572f3404-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1a790072fa9a2786f05f70a956fceda2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/502/konsultaner" class="user-moderator-N"><span itemprop="name">Richard</span></a>        </span>
+        <br>
+
+        <span class="karma">9.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C5654" href="#C5654">
+                <time itemprop="dateCreated" datetime="2014-02-25T10:05:41-07:00" class="action-date">Feb '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hey Carlos!</p>
+<p>I currently develop a portal that has a lot of models and relations. I do as well test my stuff as you do. I ran into similar problems. Best practise for working with models for me was to just always pass IDs to the related models. I never use the aliased magic member variables. I use them for reading only. Secondly -&gt;belongsTo means it really belongs to the model. so changing an orderId after reading the magic alias &quot;order&quot; is impossible. So I decided to change everything into a hasOne instead of a belongsTo. This makes testing a lot easier. I usually unset magic variables before I change their corresponding IDs. I do this if i have read the magic variable before writing the ID in my test cases.</p>
+<p>Hope this helps for testing.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="5654" data-cf-modified-32e51d2a624d9264572f3404-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="5654" data-cf-modified-32e51d2a624d9264572f3404-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d2b15afce2571a0e61fc7a41b1d1ae3e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1087/camcima" class="user-moderator-N"><span itemprop="name">Carlos Cima</span></a>        </span>
+        <br>
+
+        <span class="karma">1.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C8091" href="#C8091">
+                <time itemprop="dateCreated" datetime="2014-05-23T19:32:05-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hey Phalcon Team, there is a serious issue with your ORM. We're talking here about the persistence layer. I cannot trust Phalcon ORM anymore since its behavior is unpredictable. I'm already planning a refactory to completely remove Phalcon ORM from 2 application we have recently developed using it.</p>
+<p>Help me out here<a href="https://forum.phalcon.io/user/0/quasipickle"> @quasipickle</a>!</p>
+<p>Cheers!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8091" data-cf-modified-32e51d2a624d9264572f3404-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8091" data-cf-modified-32e51d2a624d9264572f3404-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fd188ae36c4626d42e1f874b129cf978?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/90/andersonamuller" class="user-moderator-N"><span itemprop="name">Anderson Müller</span></a>        </span>
+        <br>
+
+        <span class="karma">843</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C8092" href="#C8092">
+                <time itemprop="dateCreated" datetime="2014-05-24T03:49:02-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I'm doing the same as<a href="https://forum.phalcon.io/user/0/Richi"> @Richi</a>, because indeed the ORM behavior is unpredictable. This part of the framework really needs some love, or finish the 2.0 so we all can contribute using Zephir.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8092" data-cf-modified-32e51d2a624d9264572f3404-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8092" data-cf-modified-32e51d2a624d9264572f3404-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d2b15afce2571a0e61fc7a41b1d1ae3e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1087/camcima" class="user-moderator-N"><span itemprop="name">Carlos Cima</span></a>        </span>
+        <br>
+
+        <span class="karma">1.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C8095" href="#C8095">
+                <time itemprop="dateCreated" datetime="2014-05-24T09:16:04-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi all,</p>
+<p>I've managed to build a simple test that shows the bug happening.</p>
+<p><a href="https://github.com/camcima/phalcon-model-bug">https://github.com/camcima/phalcon-model-bug</a></p>
+<p>Just clone it and run phpunit. I've built 3 versions: sqlite, mysql and postgresql, and the bug happens in all of them.</p>
+<p>Good debugging!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8095" data-cf-modified-32e51d2a624d9264572f3404-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8095" data-cf-modified-32e51d2a624d9264572f3404-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d2b15afce2571a0e61fc7a41b1d1ae3e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1087/camcima" class="user-moderator-N"><span itemprop="name">Carlos Cima</span></a>        </span>
+        <br>
+
+        <span class="karma">1.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C8098" href="#C8098">
+                <time itemprop="dateCreated" datetime="2014-05-24T14:46:54-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Github Issue: <a href="https://github.com/phalcon/cphalcon/issues/2464">https://github.com/phalcon/cphalcon/issues/2464</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8098" data-cf-modified-32e51d2a624d9264572f3404-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8098" data-cf-modified-32e51d2a624d9264572f3404-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1619" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

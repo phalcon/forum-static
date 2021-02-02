@@ -1,0 +1,342 @@
+---
+layout: default
+title: 'Why model hooks may not work? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Why model hooks may not work?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2566/TrogWarZ" class="user-moderator-N"><span itemprop="name">Roman</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-01-26T06:44:02-07:00">Jan '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-01-26T06:44:02-07:00">Jan '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>856</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/f14f7a0c1c40e4c1aee7f4c26287e5f6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2566/TrogWarZ" class="user-moderator-N"><span itemprop="name">Roman</span></a></span>
+                <span class="karma">21.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4589" href="#C4589">
+        <time class="action-date">Jan '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello!</p>
+<p>Trying to use model hooks before/after create/update/save/delete and they're don't work. What i'm doing wrong?</p>
+<p>This page (<a href="http://docs.phalcon.io/en/latest/reference/models.html#events-and-events-manager">http://docs.phalcon.io/en/latest/reference/models.html#events-and-events-manager</a>) says, that everything i must to do is just add method to model with this name like onConstruct or initialize.</p>
+<p>But when i create model, it not works.</p>
+<h3>System info</h3>
+<pre><code class="language-bash"># uname -a
+Linux packer-virtualbox-iso 3.11.0-15-generic #25~precise1-Ubuntu SMP Thu Jan 30 17:39:31 UTC 2014 x86_64 x86_64 x86_64 GNU/Linux
+
+# php -v
+PHP 5.4.36-1+deb.sury.org~precise+2 (cli) (built: Dec 21 2014 20:28:53)
+Copyright (c) 1997-2014 The PHP Group
+Zend Engine v2.4.0, Copyright (c) 1998-2014 Zend Technologies
+    with Xdebug v2.2.3, Copyright (c) 2002-2013, by Derick Rethans
+
+# php -r "echo \Phalcon\Version::get();"
+1.3.4</code></pre>
+<h3>index.php</h3>
+<pre><code class="language-php">&lt;?php
+
+use Phalcon\Mvc\Micro as WebApp;
+
+$root   = dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR;
+$config = require_once $root . 'config/config.php';
+require_once ROOT_PATH . 'config/services.php';
+require_once ROOT_PATH . 'config/loader.php';
+
+$app = new WebApp($di);
+require_once ROOT_PATH . 'config/routes.php';
+
+$app-&gt;handle();
+?&gt;</code></pre>
+<h3>services.php</h3>
+<pre><code class="language-php">&lt;?php
+$di = new \Phalcon\DI\FactoryDefault();
+$di-&gt;setShared('db', function () {
+    return new \Phalcon\Db\Adapter\Pdo\Mysql(array(
+        'adapter'  =&gt; 'Mysql',
+        'host'     =&gt; 'localhost',
+        'username' =&gt; 'vasya',
+        'password' =&gt; 'supersecret',
+        'dbname'   =&gt; 'vasyas_database',
+        'options'  =&gt; array(
+            \PDO::ATTR_DEFAULT_FETCH_MODE =&gt; PDO::FETCH_OBJ,
+            \PDO::MYSQL_ATTR_INIT_COMMAND =&gt; "SET NAMES 'UTF8'",
+        ),
+    ));
+});
+?&gt;</code></pre>
+<h3>BaseModel</h3>
+<pre><code class="language-php">&lt;?php
+
+namespace Api\Models;
+
+use Phalcon\Mvc\Model;
+
+class Base extends Model
+{
+    protected function getCache() { /* ... */}
+    public function serialize() { /* ... */}
+
+    public function validation() { /* ... */}
+    public function validationRules() { /* ... */}
+    public function getErrorMessages() { /* ... */}
+
+    public function columnMap() { /* ... */}
+    public function publicColumns() { /* ... */}
+}
+
+?&gt;</code></pre>
+<h3>Cars</h3>
+<pre><code class="language-php">&lt;?php
+
+namespace Api\Models;
+
+class Cars extends Base
+{
+    public $id;
+    public $name;
+    public $status; // NOT NULL in database
+
+    const STATUS_DELETED = 0;
+    const STATUS_ACTIVE  = 1;
+    public static $statuses = array(
+        self::STATUS_DELETED,
+        self::STATUS_ACTIVE,
+    );
+
+    /* HOOKS */
+    public function beforeCreate()
+    {
+        $this-&gt;status = self::STATUS_ACTIVE;
+    }
+
+    /* CONFIG */
+    public function getSource() { return 'cars_list'; }
+    public function columnMap()
+    {
+        return array(
+            'id'     =&gt; 'id',
+            'name'   =&gt; 'name',
+            'status' =&gt; 'status',
+        );
+    }
+}
+
+?&gt;</code></pre>
+<h3>Somewhere in controller</h3>
+<pre><code class="language-php">&lt;?php
+
+namespace Api\Controllers;
+
+class CarsController extends RestController
+{
+    public function createOne()
+    {
+        $whiteList = array(
+            'name',
+        );
+
+        $car = new Cars();
+
+        // OK it's empty
+        var_export($car-&gt;toArray()); // array ( 'id' =&gt; NULL, 'name' =&gt; NULL, 'status' =&gt; NULL, )
+
+        // Let's create new!
+        $created = $car-&gt;create($this-&gt;request-&gt;getPost(), $whiteList);
+
+        // Why status is NULL? beforeSave does not working?
+        var_export($car-&gt;toArray()); // array ( 'id' =&gt; NULL, 'name' =&gt; 'foo', 'status' =&gt; NULL, )
+
+        // $created == false
+        if ($created) $this-&gt;respond($car-&gt;toArray());
+
+        // Here i've got error:"status is required"
+        $this-&gt;error($car-&gt;getErrorMessages());
+    }
+}
+
+?&gt;</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-c928c6d76641ba70678c5d64-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-c928c6d76641ba70678c5d64-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9a998e084495cefe223e97ff0bfe2d8b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3050/7thcubic" class="user-moderator-N"><span itemprop="name">7thcubic</span></a>        </span>
+        <br>
+
+        <span class="karma">2.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="15323" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '15</span>
+              </span><br/><a name="C15323" href="#C15323">
+                <time itemprop="dateCreated" datetime="2015-01-26T06:52:13-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>er....</p>
+<p>$car-&gt;save()?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="15323" data-cf-modified-c928c6d76641ba70678c5d64-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="15323" data-cf-modified-c928c6d76641ba70678c5d64-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f14f7a0c1c40e4c1aee7f4c26287e5f6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2566/TrogWarZ" class="user-moderator-N"><span itemprop="name">Roman</span></a>        </span>
+        <br>
+
+        <span class="karma">21.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C15323"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/9a998e084495cefe223e97ff0bfe2d8b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        7thcubic                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C15324" href="#C15324">
+                <time itemprop="dateCreated" datetime="2015-01-26T06:59:08-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks for the reply!</p>
+<p>I've right now tried adding status, fill whitelist from Cars::columnMap() and even use Model::create() without any whitelist.. but no, var_export($car-&gt;toArray()) after create is the same in all these tests and i've got same error.</p>
+<p>In post data i have in this case simple array: array ('name' =&gt; 'foobar')</p>
+<blockquote>
+<p>$whiteList = array(
+'name',
+);</p>
+<p>because whitelist doesnt include status maybe? whitelist is used to verify which fields can be altered.</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="15324" data-cf-modified-c928c6d76641ba70678c5d64-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="15324" data-cf-modified-c928c6d76641ba70678c5d64-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9a998e084495cefe223e97ff0bfe2d8b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3050/7thcubic" class="user-moderator-N"><span itemprop="name">7thcubic</span></a>        </span>
+        <br>
+
+        <span class="karma">2.1k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="15325" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '15</span>
+              </span><br/><a name="C15325" href="#C15325">
+                <time itemprop="dateCreated" datetime="2015-01-26T07:00:10-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>found your answer..</p>
+<p>beforeValidationOnCreate</p>
+<p>beforeValidationOnCreate    Is executed before the fields are validated for not nulls/empty strings or foreign keys when an insertion operation is being made</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="15325" data-cf-modified-c928c6d76641ba70678c5d64-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="15325" data-cf-modified-c928c6d76641ba70678c5d64-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f14f7a0c1c40e4c1aee7f4c26287e5f6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2566/TrogWarZ" class="user-moderator-N"><span itemprop="name">Roman</span></a>        </span>
+        <br>
+
+        <span class="karma">21.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C15325"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/9a998e084495cefe223e97ff0bfe2d8b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        7thcubic                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="15329" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '15</span>
+              </span><br/><a name="C15329" href="#C15329">
+                <time itemprop="dateCreated" datetime="2015-01-26T07:16:32-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hell yeah, &quot;beforeValidationOnCreate&quot; did the trick!</p>
+<p>I didn't know that validation on database layer is validation even on application too (Phalcon in this case) layer (o.0) Strange behaviour.</p>
+<p>Thank you!</p>
+<blockquote>
+<p>found your answer..</p>
+<p>beforeValidationOnCreate</p>
+<p>beforeValidationOnCreate   Is executed before the fields are validated for not nulls/empty strings or foreign keys when an insertion operation is being made</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="15329" data-cf-modified-c928c6d76641ba70678c5d64-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="15329" data-cf-modified-c928c6d76641ba70678c5d64-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9a998e084495cefe223e97ff0bfe2d8b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3050/7thcubic" class="user-moderator-N"><span itemprop="name">7thcubic</span></a>        </span>
+        <br>
+
+        <span class="karma">2.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C15330" href="#C15330">
+                <time itemprop="dateCreated" datetime="2015-01-26T07:37:30-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Its because of meta data =)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="15330" data-cf-modified-c928c6d76641ba70678c5d64-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="15330" data-cf-modified-c928c6d76641ba70678c5d64-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4589" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

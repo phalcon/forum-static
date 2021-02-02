@@ -1,0 +1,502 @@
+---
+layout: default
+title: 'Google API Loader - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Google API Loader</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/457/dlusignan" class="user-moderator-N"><span itemprop="name">Daniel</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-08-28T18:40:12-07:00">Aug '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-08-28T18:40:12-07:00">Aug '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">8</span>
+                </td>
+                <td>
+                    <label>Views</label><br>2469</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">2</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/e2fc7e2dd9d373126cccff6bb4d7169b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/457/dlusignan" class="user-moderator-N"><span itemprop="name">Daniel</span></a></span>
+                <span class="karma">31.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C834" href="#C834">
+        <time class="action-date">Aug '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>HI,</p>
+<p>I try to load with the Loader, the src of the Google API. But, it keeps telling me the he can't find the class Google_Client.</p>
+<p>Fatal error: Class 'Google_FileCache' not found in /usr/local/zend/apache2/htdocs/vendor/google/src/Google_Client.php on line 94</p>
+<p>This is my config file (By the way it works very find for the incubator :</p>
+<pre><code>'application' =&gt; array(
+
+    'controllersDir' =&gt; __DIR__ . '/../../app/controllers/',
+    'modelsDir'      =&gt; __DIR__ . '/../../app/models/',
+    'viewsDir'       =&gt; __DIR__ . '/../../app/views/',
+    'pluginsDir'     =&gt; __DIR__ . '/../../app/plugins/',
+    'libraryDir'     =&gt; __DIR__ . '/../../app/library/',
+    'incubator'      =&gt; __DIR__ . '/../../vendor/phalcon/incubator/Library/',
+    'googleAPI'      =&gt; __DIR__ . '/../../vendor/google/src/'
+),</code></pre>
+<p>This my code in the index.php :</p>
+<pre><code>$config = include(__DIR__ . "/../app/config/config.php");
+
+$loader = new \Phalcon\Loader();
+
+/**
+ * We're a registering a set of directories taken from the configuration file
+ */
+$loader-&gt;registerDirs( 
+
+    array(
+
+        $config-&gt;application-&gt;incubator,
+        $config-&gt;application-&gt;controllersDir,
+        $config-&gt;application-&gt;modelsDir,
+        $config-&gt;application-&gt;pluginsDir,
+        $config-&gt;application-&gt;googleAPI,
+))-&gt;register();</code></pre>
+<p>This the code where I try using it :</p>
+<p>public function googleAction() {</p>
+<pre><code>    $client = new Google_Client();
+    $client-&gt;setApplicationName("");
+
+    $client-&gt;setClientId('');
+    $client-&gt;setClientSecret('');
+    $client-&gt;setRedirectUri('');
+    //$client-&gt;setDeveloperKey('');
+
+    $oauth2 = new Google_Oauth2Service($client);
+
+    $code = $this-&gt;request-&gt;get('code');
+
+    if (isset($code)) {
+
+        $client-&gt;authenticate($code);
+        $_SESSION['token'] = $client-&gt;getAccessToken();
+        $redirect = 'http://' . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'];
+        header('Location: ' . filter_var($redirect, FILTER_SANITIZE_URL));
+        return;
+    }
+
+    if (isset($_SESSION['token'])) {
+
+        $client-&gt;setAccessToken($_SESSION['token']);
+    }
+
+    /*if (isset($_REQUEST['logout'])) {
+
+        unset($_SESSION['token']);
+        $client-&gt;revokeToken();
+    }*/
+
+    if ($client-&gt;getAccessToken()) {
+
+        $user = $oauth2-&gt;userinfo-&gt;get();
+
+        // These fields are currently filtered through the PHP sanitize filters.
+        // See http://www.php.net/manual/en/filter.filters.sanitize.php
+        $email = filter_var($user['email'], FILTER_SANITIZE_EMAIL);
+        $img = filter_var($user['picture'], FILTER_VALIDATE_URL);
+        $personMarkup = "$email&lt;div&gt;&lt;img src='$img?sz=50'&gt;&lt;/div&gt;";
+
+        // The access token may have been updated lazily.
+        $_SESSION['token'] = $client-&gt;getAccessToken();
+    } else {
+
+        $authUrl = $client-&gt;createAuthUrl();
+    }
+
+    $this-&gt;response-&gt;redirect($authUrl, true);
+}</code></pre>
+<p>Does someone have an idea or a solution ?</p>
+<p>Thank you !</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-18b9f1643e46c31838584a35-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-18b9f1643e46c31838584a35-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3237" href="#C3237">
+                <time itemprop="dateCreated" datetime="2013-08-29T08:11:27-07:00" class="action-date">Aug '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Is Google_Client.php located at /../../vendor/google/src/?</p>
+<p>Try adding an events manager to the loader to check why the route is not being loaded: <a href="http://docs.phalcon.io/en/latest/reference/loader.html#autoloading-events">http://docs.phalcon.io/en/latest/reference/loader.html#autoloading-events</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3237" data-cf-modified-18b9f1643e46c31838584a35-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3237" data-cf-modified-18b9f1643e46c31838584a35-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e2fc7e2dd9d373126cccff6bb4d7169b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/457/dlusignan" class="user-moderator-N"><span itemprop="name">Daniel</span></a>        </span>
+        <br>
+
+        <span class="karma">31.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3238" href="#C3238">
+                <time itemprop="dateCreated" datetime="2013-08-29T08:21:43-07:00" class="action-date">Aug '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi,</p>
+<p>Thanks for the answer. Yes, the Google_Client is in the /../../vendor/google/src/</p>
+<p>Here's the eventManager answer:</p>
+<p>/usr/local/zend/apache2/htdocs/maestro/app/config/../../vendor/phalcon/incubator/Library/Security.php
+/usr/local/zend/apache2/htdocs/maestro/app/config/../../app/controllers/Security.php
+/usr/local/zend/apache2/htdocs/maestro/app/config/../../app/models/Security.php
+/usr/local/zend/apache2/htdocs/maestro/app/config/../../app/plugins/Security.php</p>
+<p>it's loon like the folder is not loaded. I don't know why.</p>
+<p>Thanks !</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3238" data-cf-modified-18b9f1643e46c31838584a35-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3238" data-cf-modified-18b9f1643e46c31838584a35-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3249" href="#C3249">
+                <time itemprop="dateCreated" datetime="2013-08-30T08:16:42-07:00" class="action-date">Aug '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>can you print_r($loader)? This to see the directories in the internal properties.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3249" data-cf-modified-18b9f1643e46c31838584a35-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3249" data-cf-modified-18b9f1643e46c31838584a35-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e2fc7e2dd9d373126cccff6bb4d7169b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/457/dlusignan" class="user-moderator-N"><span itemprop="name">Daniel</span></a>        </span>
+        <br>
+
+        <span class="karma">31.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3252" href="#C3252">
+                <time itemprop="dateCreated" datetime="2013-08-30T11:01:05-07:00" class="action-date">Aug '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Here's the output of print_r command :</p>
+<p>Phalcon\Loader Object ( [_eventsManager:protected] =&gt; Phalcon\Events\Manager Object ( [_events:protected] =&gt; Array ( [loader] =&gt; Array ( [0] =&gt; Closure Object ( [parameter] =&gt; Array ( [$event] =&gt; [$loader] =&gt; ) ) ) ) [_collect:protected] =&gt; [_enablePriorities:protected] =&gt; [_responses:protected] =&gt; ) [_foundPath:protected] =&gt; [_checkedPath:protected] =&gt; [_prefixes:protected] =&gt; [_classes:protected] =&gt; [_extensions:protected] =&gt; Array ( [0] =&gt; php ) [_namespaces:protected] =&gt; [_directories:protected] =&gt; Array ( [0] =&gt; /usr/local/zend/apache2/htdocs/maestro/app/config/../../vendor/phalcon/incubator/Library/ [1] =&gt; /usr/local/zend/apache2/htdocs/maestro/app/config/../../app/controllers/ [2] =&gt; /usr/local/zend/apache2/htdocs/maestro/app/config/../../app/models/ [3] =&gt; /usr/local/zend/apache2/htdocs/maestro/app/config/../../app/plugins/ [4] =&gt; /usr/local/zend/apache2/htdocs/maestro/app/config/../../vendor/google/src/ ) [_registered:protected] =&gt; 1 )</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3252" data-cf-modified-18b9f1643e46c31838584a35-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3252" data-cf-modified-18b9f1643e46c31838584a35-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/10f6ce98d0abb484ea803be3a29ef9ef?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/607/geass" class="user-moderator-N"><span itemprop="name">geass</span></a>        </span>
+        <br>
+
+        <span class="karma">39.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4142" href="#C4142">
+                <time itemprop="dateCreated" datetime="2013-11-07T05:50:05-07:00" class="action-date">Nov '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi , if anyone cant resolve that problem . i did like  that;</p>
+<p>First change Google_client.php to GoogleClient.php  (and of course in file change class name to GoogleClient)</p>
+<p>and on config file set the location and registerDirs</p>
+<p><strong>DIR</strong> . $config-&gt;application-&gt;googleAPI,</p>
+<p>it will be solved</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4142" data-cf-modified-18b9f1643e46c31838584a35-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4142" data-cf-modified-18b9f1643e46c31838584a35-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e2fc7e2dd9d373126cccff6bb4d7169b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/457/dlusignan" class="user-moderator-N"><span itemprop="name">Daniel</span></a>        </span>
+        <br>
+
+        <span class="karma">31.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4145" href="#C4145">
+                <time itemprop="dateCreated" datetime="2013-11-07T07:33:33-07:00" class="action-date">Nov '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Wow I will give it a try.</p>
+<p>Thank you.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4145" data-cf-modified-18b9f1643e46c31838584a35-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4145" data-cf-modified-18b9f1643e46c31838584a35-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/971af0d3b6bd66c489b5d87fa5acc457?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2013/vinhquang" class="user-moderator-N"><span itemprop="name">Quang</span></a>        </span>
+        <br>
+
+        <span class="karma">85</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="9780" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '14</span>
+              </span><br/><a name="C9780" href="#C9780">
+                <time itemprop="dateCreated" datetime="2014-07-27T03:29:20-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hello,</p>
+<p>I got almost same problem for lastest Google API:</p>
+<pre><code>Warning: require_once(Google/Auth/AssertionCredentials.php): failed to open stream: No such file or directory in /var/www/phalcon/test/vendor/google/src/Google/Client.php on line 18</code></pre>
+<p>Anyone know this issue?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9780" data-cf-modified-18b9f1643e46c31838584a35-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9780" data-cf-modified-18b9f1643e46c31838584a35-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4953ab121bc82272e81884d9c6e7392e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2011/panchtatvam" class="user-moderator-N"><span itemprop="name">Akash Kumar Sharma</span></a>        </span>
+        <br>
+
+        <span class="karma">159</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C9780"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/971af0d3b6bd66c489b5d87fa5acc457?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Quang                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="12507" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '14</span>
+              </span><br/><a name="C12507" href="#C12507">
+                <time itemprop="dateCreated" datetime="2014-10-23T10:57:47-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Hello,</p>
+<p>I got almost same problem for lastest Google API:</p>
+<pre><code>Warning: require_once(Google/Auth/AssertionCredentials.php): failed to open stream: No such file or directory in /var/www/phalcon/test/vendor/google/src/Google/Client.php on line 18</code></pre>
+<p>Anyone know this issue?</p>
+</blockquote>
+<hr />
+<p>मैंने <a href="https://developers.google.com/api-client-library/php/start/installation">गूगल की संस्थापना निर्देशिका</a> के प्रयोग से <code>inlcude_path</code> को public पद्धति ग्रंथ के <code>index.php</code> में निर्धारित किया।
+<code>set_include_path(get_include_path() . PATH_SEPARATOR . "path/to/google-api-php-client/src");</code></p>
+<hr />
+<p>I used <a href="https://developers.google.com/api-client-library/php/start/installation">Google Installation Guide</a> to put <code>include_path</code> in <code>index.php</code> of the public folder.
+<code>set_include_path(get_include_path() . PATH_SEPARATOR . "path/to/google-api-php-client/src");</code></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12507" data-cf-modified-18b9f1643e46c31838584a35-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12507" data-cf-modified-18b9f1643e46c31838584a35-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/971af0d3b6bd66c489b5d87fa5acc457?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2013/vinhquang" class="user-moderator-N"><span itemprop="name">Quang</span></a>        </span>
+        <br>
+
+        <span class="karma">85</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12714" href="#C12714">
+                <time itemprop="dateCreated" datetime="2014-10-31T00:06:21-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks for you reply,</p>
+<p>I resolved it by this:</p>
+<p>My project folders tree:</p>
+<blockquote>
+<ul>
+<li>config</li>
+<li>controllers</li>
+<li>library
+<ul>
+<li>Social
+<ul>
+<li>Google
+<ul>
+<li>Auth</li>
+<li>Cache</li>
+<li>...</li>
+</ul></li>
+<li>Google.php</li>
+</ul></li>
+</ul></li>
+</ul>
+</blockquote>
+<p>Set library folder for Phalcon\Loader()</p>
+<p>Google.php</p>
+<blockquote>
+<p>&lt;?php</p>
+<p>$path = <strong>DIR</strong>;</p>
+<p>set_include_path($path . PATH_SEPARATOR . get_include_path());</p>
+<p>class Google extends \Phalcon\Mvc\User\Component {</p>
+<pre><code>public function authenticate() {
+
+}</code></pre>
+<p>}</p>
+</blockquote>
+<p>Use it:</p>
+<blockquote>
+<ul>
+<li>$google = New Google();</li>
+<li>$google-&gt;authenticate();</li>
+</ul>
+</blockquote>
+<p>Sorry, it's very hard to format the thing here.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12714" data-cf-modified-18b9f1643e46c31838584a35-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12714" data-cf-modified-18b9f1643e46c31838584a35-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/856c5a1acba3910ddb0fdb973c83e9fd?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3004/benzhanghf" class="user-moderator-N"><span itemprop="name">Ben Zhang</span></a>        </span>
+        <br>
+
+        <span class="karma">2.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="61373" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '19</span>
+              </span><br/><a name="C61373" href="#C61373">
+                <time itemprop="dateCreated" datetime="2019-11-20T02:56:21-07:00" class="action-date">Nov '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I have use phalcon version 3.4 developed a production eCommerce ready project, starting early 2019 and we had the same issue with this Google library which their developer is not going to rewrite the code to support PSR-4 so it is not going to work with phalcon loader which already remove the prefix loading function like it was in 2.x version so here is the work around:</p>
+<p>We use composer just as a downloader and mapper but not using its loader, we use phalcon loader to load anything, and we only commit those vendor files that is actually used no license no tests no docs, as we use git to deploy to production.We don't use composer to build as there is no need to build when you using PHP (you like build too much then use java or dotnet or nodejs) composer is never going to be like npm or yarn it will not give you compressed source code but big code including their .git files and so many sample files and your production code will be so messy</p>
+<p>So use phalcon loader only</p>
+<ol>
+<li>
+<p>update composer.json file</p>
+<pre><code>{
+....
+"autoload": {
+"classmap": [
+    "vendor/google/apiclient/src/Google",
+    "vendor/google/apiclient-services/src/Google/Service"
+]
+}
+}</code></pre>
+</li>
+<li>
+<p>run command line</p>
+<pre><code>php composer dump-autoload</code></pre>
+</li>
+<li>using phalcon loader to replace composer
+most important files from composer is in /vendor/composer/autoload_xxxx.php files
+this files are actually mapping files returning you as arrays
+there are 9000+ class names dump to the file for all the google api and services (google cloud services)</li>
+</ol>
+<pre><code>&lt;?php
+use Phalcon\Loader;
+$loader = new Loader();
+$vendorDir = dirname(__DIR__) . DS . 'vendor';
+$classMapFile = $vendorDir . DS . 'composer' . DS . 'autoload_classmap.php';
+if (file_exists($classMapFile)) {
+    $classMap = include $classMapFile;
+    $loader-&gt;registerClasses($classMap);
+}
+$loader-&gt;register();</code></pre>
+<p>similar mapping but might need to change the namespace one as composer using array not string</p>
+<p>as all the files are exported to autoload_classmap.php you don't need to register dir or namespaces and it wont work anyway</p>
+<p>You could test this solution by running something like</p>
+<pre><code>$classname = '\Google_Service_Oauth2';
+if (class_exists($classname)) {
+    print_r($classname . ' exist');
+} else {
+    print_r($classname . ' not exist');
+}</code></pre>
+<p>Currently Google and Google_Service 2 big package are still PSR-0 but \Google\Auth is already PSR-4 so you don't need to dump that package.
+I have tested locally using phalcon loader vs composer loader without APCu cache is 10ms vs 30ms but keep in mind that my vendor folder is much msaller than normal vendor folder if you include all pacakge like Magento2 did your IDE will crash in no time</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="61373" data-cf-modified-18b9f1643e46c31838584a35-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="61373" data-cf-modified-18b9f1643e46c31838584a35-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/32afd02cdd2d9ba52ba0bbc8f36d7f12?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/14203/hemlacarss" class="user-moderator-N"><span itemprop="name">hemlacarss</span></a>        </span>
+        <br>
+
+        <span class="karma">95</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C64397" href="#C64397">
+                <time itemprop="dateCreated" datetime="2020-09-29T00:12:06-07:00" class="action-date">Sep '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Column 'referer_id' doesn't belong to any of the chosen fashions (2), whilst making ready: SELECT referer_id FROM user WHERE call = :name:</p>
+<p>This because it tries to insert it into the model structure, however I simply want an id, don't need the model. <a href="https://driver.pk/">Read here</a> [<a href="http://docs.phalcon.io/en/latest/reference/phql.html#using-raw-sql]http://docs.phalcon.io/en/latest/reference/phql.html#using-raw-sql">http://docs.phalcon.io/en/latest/reference/phql.html#using-raw-sql]http://docs.phalcon.io/en/latest/reference/phql.html#using-raw-sql</a>)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64397" data-cf-modified-18b9f1643e46c31838584a35-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64397" data-cf-modified-18b9f1643e46c31838584a35-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="834" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

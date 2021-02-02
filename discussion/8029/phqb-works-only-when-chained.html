@@ -1,0 +1,371 @@
+---
+layout: default
+title: 'PHQB - works only when chained? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">PHQB - works only when chained?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3776/ReDev1L" class="user-moderator-N"><span itemprop="name">Kirill Naumenko</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-08-11T07:01:02-07:00">Aug '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-08-11T07:01:02-07:00">Aug '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>520</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/84b9e441e5f387a5c7e56e4c2b0cb6d0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3776/ReDev1L" class="user-moderator-N"><span itemprop="name">Kirill Naumenko</span></a></span>
+                <span class="karma">781</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C8029" href="#C8029">
+        <time class="action-date">Aug '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Query builder works only when chained instantly? i cant get working result if i split applying methods to PHQB in different parts of code.</p>
+<p>This code works:</p>
+<pre><code class="language-php">        if ($this-&gt;request-&gt;isPost() &amp;&amp; $this-&gt;request-&gt;isAjax()) {
+
+            switch ($this-&gt;request-&gt;getPost('type')) {
+                case 'getEmergencyCities':
+                    $district_id                = $this-&gt;request-&gt;getPost('district_id', 'int');
+                    $result['e_objects_cities'] = Cities::findByDistrictId($district_id)-&gt;toArray();
+                    $emergency_objects          = $this-&gt;modelsManager-&gt;createBuilder()-&gt;columns([
+                        'o.id',
+                        'c.value AS city',
+                        'a.value AS address',
+                        'o.house_number',
+                        'o.flats_count',
+                        'o.area'
+                    ])
+                        -&gt;from(['o' =&gt; 'Main\Models\EmergencyObjects'])
+                        -&gt;join('Main\Models\Addresses', 'o.address_id = a.id', 'a')
+                        -&gt;join('Main\Models\Cities', 'o.city_id = c.id', 'c')
+                        -&gt;where('o.district_id = :district_id:', ['district_id' =&gt; $district_id])
+                        -&gt;getQuery()-&gt;execute()-&gt;toArray();
+                    break;
+
+                case 'getEmergencyAddresses':
+                    $city_id                       = $this-&gt;request-&gt;getPost('city_id', 'int');
+                    $result['e_objects_addresses'] = Addresses::findByCityId($city_id)-&gt;toArray();
+                    $emergency_objects             = $this-&gt;modelsManager-&gt;createBuilder()-&gt;columns([
+                        'o.id',
+                        'c.value AS city',
+                        'a.value AS address',
+                        'o.house_number',
+                        'o.flats_count',
+                        'o.area'
+                    ])
+                        -&gt;from(['o' =&gt; 'Main\Models\EmergencyObjects'])
+                        -&gt;join('Main\Models\Addresses', 'o.address_id = a.id', 'a')
+                        -&gt;join('Main\Models\Cities', 'o.city_id = c.id', 'c')
+                        -&gt;where('o.city_id = :city_id:', ['city_id' =&gt; $city_id])
+                        -&gt;getQuery()-&gt;execute()-&gt;toArray();
+                    break;
+
+                case 'getEmergencyObjects':
+                    $address_id        = $this-&gt;request-&gt;getPost('address_id');
+                    $emergency_objects = $this-&gt;modelsManager-&gt;createBuilder()-&gt;columns([
+                        'o.id',
+                        'c.value AS city',
+                        'a.value AS address',
+                        'o.house_number',
+                        'o.flats_count',
+                        'o.area'
+                    ])
+                        -&gt;from(['o' =&gt; 'Main\Models\EmergencyObjects'])
+                        -&gt;join('Main\Models\Addresses', 'o.address_id = a.id', 'a')
+                        -&gt;join('Main\Models\Cities', 'o.city_id = c.id', 'c')
+                        -&gt;where('o.address_id = :address_id:', ['address_id' =&gt; $address_id])
+                        -&gt;getQuery()-&gt;execute()-&gt;toArray();
+                    break;
+            }
+            $result['emergency_objects'] = $emergency_objects;
+            echo json_encode($result, JSON_NUMERIC_CHECK);
+        }</code></pre>
+<p>And this doesnt:</p>
+<pre><code class="language-php">if ($this-&gt;request-&gt;isPost() &amp;&amp; $this-&gt;request-&gt;isAjax()) {
+
+            $emergency_objects = $this-&gt;modelsManager-&gt;createBuilder()-&gt;columns([
+                'o.id',
+                'c.value AS city',
+                'a.value AS address',
+                'o.house_number',
+                'o.flats_count',
+                'o.area'
+            ])
+                -&gt;from(['o' =&gt; 'Main\Models\EmergencyObjects'])
+                -&gt;join('Main\Models\Addresses', 'o.address_id = a.id', 'a')
+                -&gt;join('Main\Models\Cities', 'o.city_id = c.id', 'c');
+            switch ($this-&gt;request-&gt;getPost('type')) {
+                case 'getEmergencyCities':
+                    $district_id                = $this-&gt;request-&gt;getPost('district_id', 'int');
+                    $result['e_objects_cities'] = Cities::findByDistrictId($district_id)-&gt;toArray();
+                    $emergency_objects-&gt;where('o.district_id = :district_id:', ['district_id' =&gt; $district_id]);
+                    break;
+                case 'getEmergencyAddresses':
+                    $city_id                       = $this-&gt;request-&gt;getPost('city_id', 'int');
+                    $result['e_objects_addresses'] = Addresses::findByCityId($city_id)-&gt;toArray();
+                    $emergency_objects-&gt;where('o.city_id = :city_id:', ['city_id' =&gt; $city_id]);
+                    break;
+                case 'getEmergencyObjects':
+                    $address_id = $this-&gt;request-&gt;getPost('address_id');
+                    $emergency_objects-&gt;where('o.address_id = :address_id:', ['address_id' =&gt; $address_id]);
+                    break;
+            }
+            $emergency_objects-&gt;getQuery()-&gt;execute()-&gt;toArray();
+            $result['emergency_objects'] = $emergency_objects;
+            echo json_encode($result, JSON_NUMERIC_CHECK);
+        }</code></pre>
+<p>Last one returns PHQB object, w/o applied $emergency_objects-&gt;getQuery()-&gt;execute()-&gt;toArray();</p>
+<p>Anyone know whats the problem?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-d92ef265a237cb90bf9f6785-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-d92ef265a237cb90bf9f6785-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/210/andresgutierrez" class="user-moderator-Y"><span itemprop="name">Andres Gutierrez</span></a>        </span>
+        <br>
+
+        <span class="karma">34.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C21769" href="#C21769">
+                <time itemprop="dateCreated" datetime="2015-08-11T15:08:29-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>And this doesnt:</p>
+</blockquote>
+<p>Are you getting an error or something?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21769" data-cf-modified-d92ef265a237cb90bf9f6785-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21769" data-cf-modified-d92ef265a237cb90bf9f6785-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/170206b860e7c67e8c052af0edeb8043?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1367/melz" class="user-moderator-N"><span itemprop="name">Melissa P.</span></a>        </span>
+        <br>
+
+        <span class="karma">382</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C21771" href="#C21771">
+                <time itemprop="dateCreated" datetime="2015-08-11T16:51:02-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Switch:</p>
+<pre><code>  $emergency_objects-&gt;getQuery()-&gt;execute()-&gt;toArray();
+  $result['emergency_objects'] = $emergency_objects;</code></pre>
+<p>to:</p>
+<pre><code>  $result['emergency_objects'] = $emergency_objects-&gt;getQuery()-&gt;execute()-&gt;toArray();</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21771" data-cf-modified-d92ef265a237cb90bf9f6785-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21771" data-cf-modified-d92ef265a237cb90bf9f6785-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/84b9e441e5f387a5c7e56e4c2b0cb6d0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3776/ReDev1L" class="user-moderator-N"><span itemprop="name">Kirill Naumenko</span></a>        </span>
+        <br>
+
+        <span class="karma">781</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C21771"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/170206b860e7c67e8c052af0edeb8043?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Melissa P.                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C21773" href="#C21773">
+                <time itemprop="dateCreated" datetime="2015-08-12T01:03:24-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks, that fix worked</p>
+<blockquote>
+<p>Switch:</p>
+<pre><code> $emergency_objects-&gt;getQuery()-&gt;execute()-&gt;toArray();
+ $result['emergency_objects'] = $emergency_objects;</code></pre>
+<p>to:</p>
+<pre><code> $result['emergency_objects'] = $emergency_objects-&gt;getQuery()-&gt;execute()-&gt;toArray();</code></pre>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21773" data-cf-modified-d92ef265a237cb90bf9f6785-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21773" data-cf-modified-d92ef265a237cb90bf9f6785-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/84b9e441e5f387a5c7e56e4c2b0cb6d0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3776/ReDev1L" class="user-moderator-N"><span itemprop="name">Kirill Naumenko</span></a>        </span>
+        <br>
+
+        <span class="karma">781</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C21769"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Andres Gutierrez                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C21775" href="#C21775">
+                <time itemprop="dateCreated" datetime="2015-08-12T01:03:54-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>No, there was no error</p>
+<blockquote>
+<blockquote>
+<p>And this doesnt:</p>
+</blockquote>
+<p>Are you getting an error or something?</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21775" data-cf-modified-d92ef265a237cb90bf9f6785-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21775" data-cf-modified-d92ef265a237cb90bf9f6785-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/84b9e441e5f387a5c7e56e4c2b0cb6d0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3776/ReDev1L" class="user-moderator-N"><span itemprop="name">Kirill Naumenko</span></a>        </span>
+        <br>
+
+        <span class="karma">781</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="21777" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '15</span>
+              </span><br/><a name="C21777" href="#C21777">
+                <time itemprop="dateCreated" datetime="2015-08-12T01:19:21-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>posting code just in case someone will google something similar</p>
+<pre><code class="language-php">
+        if ($this-&gt;request-&gt;isPost() &amp;&amp; $this-&gt;request-&gt;isAjax()) {
+            $requestType = $this-&gt;request-&gt;getPost('type');
+            $result  = [];
+            $objects = $this-&gt;modelsManager-&gt;createBuilder()-&gt;columns([
+                'o.id',
+                'c.value AS city',
+                'a.value AS address',
+                'o.house_number',
+                'o.flats_count',
+                'o.area'
+            ])
+                -&gt;join('Main\Models\Addresses', 'o.address_id = a.id', 'a')
+                -&gt;join('Main\Models\Cities', 'o.city_id = c.id', 'c');
+            switch ($requestType) {
+                case 'getEmergencyCities':
+                    $district_id                = $this-&gt;request-&gt;getPost('district_id', 'int');
+                    $result['e_objects_cities'] = Cities::findByDistrictId($district_id)-&gt;toArray();
+                    $objects
+                        -&gt;from(['o' =&gt; 'Main\Models\EmergencyObjects'])
+                        -&gt;where('o.district_id = :district_id:', ['district_id' =&gt; $district_id]);
+                    break;
+
+                case 'getEmergencyAddresses':
+                    $city_id                       = $this-&gt;request-&gt;getPost('city_id', 'int');
+                    $result['e_objects_addresses'] = Addresses::findByCityId($city_id)-&gt;toArray();
+                    $objects
+                        -&gt;from(['o' =&gt; 'Main\Models\EmergencyObjects'])
+                        -&gt;where('o.city_id = :city_id:', ['city_id' =&gt; $city_id]);
+                    break;
+
+                case 'getEmergencyObjects':
+                    $address_id                  = $this-&gt;request-&gt;getPost('address_id');
+                    $objects
+                        -&gt;from(['o' =&gt; 'Main\Models\EmergencyObjects'])
+                        -&gt;where('o.address_id = :address_id:', ['address_id' =&gt; $address_id]);
+                    break;
+
+                case 'getTargetCities':
+                    $district_id              = $this-&gt;request-&gt;getPost('district_id', 'int');
+                    $result['target_cities']  = Cities::findByDistrictId($district_id)-&gt;toArray();
+                    $objects
+                        -&gt;from(['o' =&gt; 'Main\Models\TargetObjects'])
+                        -&gt;where('o.district_id = :district_id:', ['district_id' =&gt; $district_id]);
+                    break;
+
+                case 'getTargetAddresses':
+                    $city_id                    = $this-&gt;request-&gt;getPost('city_id', 'int');
+                    $result['target_addresses'] = Addresses::findByCityId($city_id)-&gt;toArray();
+                    $objects
+                        -&gt;from(['o' =&gt; 'Main\Models\TargetObjects'])
+                        -&gt;where('o.city_id = :city_id:', ['city_id' =&gt; $city_id]);
+                    break;
+
+                case 'getTargetObjects':
+                    $address_id               = $this-&gt;request-&gt;getPost('address_id');
+                    $objects
+                        -&gt;from(['o' =&gt; 'Main\Models\TargetObjects'])
+                        -&gt;where('o.address_id = :address_id:', ['address_id' =&gt; $address_id]);
+                    break;
+            }
+
+            switch (substr($requestType, 0, 4)){
+                case 'getT':
+                    $result['target_objects'] = $objects-&gt;getQuery()-&gt;execute()-&gt;toArray();
+                    break;
+                case 'getE':
+                    $result['emergency_objects'] = $objects-&gt;getQuery()-&gt;execute()-&gt;toArray();
+                    break;
+            }
+            echo json_encode($result, JSON_NUMERIC_CHECK);
+        }
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21777" data-cf-modified-d92ef265a237cb90bf9f6785-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21777" data-cf-modified-d92ef265a237cb90bf9f6785-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="8029" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

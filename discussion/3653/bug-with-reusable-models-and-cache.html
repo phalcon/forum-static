@@ -1,0 +1,206 @@
+---
+layout: default
+title: 'Bug with reusable models and cache - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Bug with reusable models and cache</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1619/mrbubblesort" class="user-moderator-N"><span itemprop="name">mrbubblesort</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-10-10T02:17:57-07:00">Oct '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-10-10T02:17:57-07:00">Oct '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1049</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/7ec583c4bfea6535413376e50b5b2e32?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1619/mrbubblesort" class="user-moderator-N"><span itemprop="name">mrbubblesort</span></a></span>
+                <span class="karma">4.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3653" href="#C3653">
+        <time class="action-date">Oct '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>This problem is kinda hard to explain so bare with me, but I've got 3 models: User, Product, and ProductStatus.  Each Product has one Status, and a User can have many Products.</p>
+<pre><code class="language-php">    class User extends \My\Models { //which extends \Phalcon\Mvc\Model
+        public function initialize() {
+            $this-&gt;hasMany("user_id", "Product", "user_id", array('alias'=&gt;'products'));
+        }
+    }
+
+    class Product extends \My\Models {
+        public function initialize() {
+            $this-&gt;belongsTo("user_id", "User", "user_id", array('alias'=&gt;'user'));
+            $this-&gt;hasOne("product_id", "ProductStatus", "product_id", array('alias'=&gt;'status', 'reusable' =&gt; true));
+        }
+    }
+
+    class ProductStatus extends \My\Models {
+        public static $cacheable = true; //switch I added to turn off caching, not relevant but shown for completeness sake
+        public function initialize() {
+            $this-&gt;hasOne("product_id", "Product", "product_id", array('alias'=&gt;'product'));
+        }
+    }</code></pre>
+<p>I'm also using a custom modelsManager to save models to a redis cache using the Backend\Redis class from Phalcon Incubator.  </p>
+<pre><code class="language-php">    //In my setup
+    $di-&gt;setShared('modelsCache', function() {
+        $redis = new Redis();
+        $redis-&gt;connect(....);
+        $frontCache = new \Phalcon\Cache\Frontend\Data(array(
+            "lifetime" =&gt; 86400
+        ));
+        $cache = new \Phalcon\Cache\Backend\Redis($frontCache, array(
+            'redis' =&gt; $redis
+        ));
+        return $cache;
+    });
+
+    //mananger class (This is literally all it is, mostly copied from "Caching in the ORM" doc)
+    class Manager extends Phalcon\Mvc\Model\Manager {
+
+        public function getReusableRecords($modelName, $key) {
+            $cache = $this-&gt;getDI()-&gt;get('modelsCache');
+            if($search_result = $cache-&gt;exists($key) {
+                return $cache-&gt;get($key);
+            }
+
+            return parent::getReusableRecords($modelName, $key);
+        }
+
+        public function setReusableRecords($modelName, $key, $record) {
+            if(is_subclass_of($records,'\My\Models') &amp;&amp; $records::$cacheable == true) {
+                $cache = $this-&gt;getDI()-&gt;get('modelsCache');
+                $cache-&gt;save($save_key, $records, 3600);
+            }
+            return parent::setReusableRecords($modelName, $key, $records);
+        }
+    }</code></pre>
+<p>So here's where it gets weird.  Lets say $user-&gt;products = (Product id #5, #12, #27) and Product #5 is saved in cache from an earlier page load.  And then I do this to update a user's statuses:</p>
+<pre><code class="language-php">    foreach($user-&gt;products as $p) {
+        $status = $p-&gt;status;
+        $status-&gt;date_updated = date('Y-m-d');
+        $status-&gt;save();
+    }</code></pre>
+<p>Every loop generates the exact same update sql: </p>
+<pre><code class="language-sql">    UPDATE product_status VALUES (...) WHERE product_status_id = 5</code></pre>
+<p>What's happening is that on the first loop it finds the key in cache and returns.  On the next loop though it MISSES CACHE of course and goes to parent::getReusableRecords().  Phalcon does whatever it does there, then it comes back to setReusableRecords().  However, if I var_dump the $record that's getting passed back to there, it looks like this:</p>
+<pre><code>    My\Model\Product {
+        ... bunch of other di stuff ...
+        [_uniqueKey:protected] =&gt; `product_status_id` = ?
+        [_uniqueParams:protected] =&gt; Array
+            (
+                [0] =&gt; 5
+            )
+        [product_status_id] =&gt; 12
+        [user_id] =&gt; 80112
+        [date_updated] =&gt; 2014-10-10
+        ...
+    }</code></pre>
+<p>It seems as if it's reused the internals of the previous object to build the next one.  This only happens with models marked as 'reusable' =&gt; true, anything else is fine.  Doesn't seem to be a problem with redis either, the only thing in there is a serialized version of the model.  Any ideas?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-7e589ccfa517135cf23b2ac8-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-7e589ccfa517135cf23b2ac8-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12082" href="#C12082">
+                <time itemprop="dateCreated" datetime="2014-10-10T08:05:32-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The key you're using to store the cache is an undefined variable $save_key:</p>
+<pre><code class="language-php">public function setReusableRecords($modelName, $key, $record) {
+    if (is_subclass_of($records,'\My\Models') &amp;&amp; $records::$cacheable == true) {
+                $cache = $this-&gt;getDI()-&gt;get('modelsCache');
+                $cache-&gt;save($save_key, $records, 3600);
+    }
+    return parent::setReusableRecords($modelName, $key, $records);
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12082" data-cf-modified-7e589ccfa517135cf23b2ac8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12082" data-cf-modified-7e589ccfa517135cf23b2ac8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/7ec583c4bfea6535413376e50b5b2e32?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1619/mrbubblesort" class="user-moderator-N"><span itemprop="name">mrbubblesort</span></a>        </span>
+        <br>
+
+        <span class="karma">4.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C12082"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Phalcon                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C12156" href="#C12156">
+                <time itemprop="dateCreated" datetime="2014-10-13T17:08:20-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>The key you're using to store the cache is an undefined variable $save_key:</p>
+<pre><code class="language-php">public function setReusableRecords($modelName, $key, $record) {
+  if (is_subclass_of($records,'\My\Models') &amp;&amp; $records::$cacheable == true) {
+               $cache = $this-&gt;getDI()-&gt;get('modelsCache');
+               $cache-&gt;save($save_key, $records, 3600);
+  }
+  return parent::setReusableRecords($modelName, $key, $records);
+}</code></pre>
+</blockquote>
+<p>Sorry, about that.  I just typed it wrong in the post.  It is actually $key</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12156" data-cf-modified-7e589ccfa517135cf23b2ac8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12156" data-cf-modified-7e589ccfa517135cf23b2ac8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3653" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,276 @@
+---
+layout: default
+title: 'Error: Dispatcher has detected a cyclic routing causing stability problems whilst trying to show 404 page - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/10/di-ioc">DI/IoC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Error: Dispatcher has detected a cyclic routing causing stability problems whilst trying to show 404 page</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2068/rabrowne85" class="user-moderator-N"><span itemprop="name">Richard Browne</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-07-26T07:47:36-07:00">Jul '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-07-26T07:47:36-07:00">Jul '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>791</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/816905f7620afc94755494ba66da5d9b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2068/rabrowne85" class="user-moderator-N"><span itemprop="name">Richard Browne</span></a></span>
+                <span class="karma">13.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C7805" href="#C7805">
+        <time class="action-date">Jul '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi all!</p>
+<p>I'm having a little problem with the following error appearing whenever I try and test my page not found excpetion: <code>Dispatcher has detected a cyclic routing causing stability problems</code></p>
+<p>Now I understand that this is becuase the dispatcher has clearly got stuck in a loop and exceeded its max iterations. However, I'm at a loss as to why it's getting stuck in the loop to start with.</p>
+<p>I have a multi-module setup with namespaces. I have a fairly large routing to accommodate the various modules. What I'm trying to achieve is upon a controller or action not being found, it redirects to the controller and action to show the 404 page.</p>
+<p>My services file includes the following:</p>
+<pre><code class="language-php">    $di-&gt;set('dispatcher', function ()
+    {
+        // Create an EventsManager
+        $eventsManager = new EventsManager();
+
+      // Attach a listener
+      $eventsManager-&gt;attach("dispatch:beforeException", function ($event, $dispatcher, $exception)
+      {
+
+          // Controller or action doesn't exist
+          if ($event-&gt;getType() == 'beforeException')
+          {
+              switch ($exception-&gt;getCode())
+              {
+                  case Dispatcher::EXCEPTION_HANDLER_NOT_FOUND:
+                  case Dispatcher::EXCEPTION_ACTION_NOT_FOUND:
+                      $dispatcher-&gt;forward(array(
+                          'module' =&gt; 'frontend',
+                          'controller' =&gt; 'index',
+                          'action' =&gt; 'show404',
+                          'namespace' =&gt; 'app\Frontend\Controllers'
+                      ));
+                      return false;
+              }
+          }
+      });
+
+      $dispatcher = new MvcDispatcher();
+
+      // Bind the EventsManager to the dispatcher
+      $dispatcher-&gt;setEventsManager($eventsManager);
+      $dispatcher-&gt;setDefaultNamespace('app\Frontend\Controllers');
+
+      return $dispatcher;
+
+    }, true);</code></pre>
+<p>Then I also have the following:</p>
+<pre><code class="language-php">    $di['router'] = function () {
+
+    $router = new Router(FALSE);
+
+    // This is the default route. Update to suit as needed.
+    $router-&gt;add("/", array(
+        "namespace"     =&gt; "app\CRM\Controllers",
+        "module"        =&gt; "crm",
+        "controller"    =&gt; "customers",
+        "action"        =&gt; "index"
+        ));
+
+    // frontend
+    $frontend = new Router\Group(array(
+        "module"        =&gt; "frontend",
+        "controller"    =&gt; "index",
+        "action"        =&gt; "index",
+        "namespace"     =&gt; "app\frontend\Controllers"
+        ));
+
+    $frontend-&gt;setPrefix("/frontend");
+
+    $frontend-&gt;add("", array(
+        "controller"    =&gt; 'index',
+        'action'        =&gt; 'index'
+        ));
+
+    $frontend-&gt;add("/:controller", array(
+        "controller"    =&gt; 1
+        ));
+
+    $frontend-&gt;add("/:controller/:action", array(
+        "controller"    =&gt; 1,
+        "action"        =&gt; 2
+        ));
+
+    $frontend-&gt;add("/:controller/:action/:params", array(
+        "controller"    =&gt; 1,
+        "action"        =&gt; 2,
+        "params"        =&gt; 3
+        ));
+
+    $router-&gt;mount($frontend);
+
+    // What about not found?
+    $router-&gt;notFound(array(
+        "namespace"     =&gt; "app\Frontend\Controllers",
+        "module"        =&gt; "frontend",
+        "controller"    =&gt; "index",
+        "action"        =&gt; "show404"
+        ));
+
+    // Remove trailing slashes:
+    $router-&gt;removeExtraSlashes(true);
+
+    return $router;
+    };</code></pre>
+<p>In the controller <code>IndexController</code> I have the <code>show404Action</code> function which sets the header as follows:</p>
+<pre><code class="language-php">    public function show404Action()
+    {
+        $this-&gt;response-&gt;setHeader('HTTP/1.0 404','Not Found');
+        $this-&gt;view-&gt;setVar('body_class', "error-page");
+    }</code></pre>
+<p>If I browse to the controller and action manually, it works great. However, if I try an invalid URL as part of another module i the error from above i.e. I have a module called core so if I go to <a href="http://localhost/core/undefined">http://localhost/core/undefined</a>, I get the error.</p>
+<p>Can anyone help me?</p>
+<p>As always your advice is greatly appreciated, and I thanks you in advance.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-5d960696ad056867228d93e2-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-5d960696ad056867228d93e2-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/210/andresgutierrez" class="user-moderator-Y"><span itemprop="name">Andres Gutierrez</span></a>        </span>
+        <br>
+
+        <span class="karma">34.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C21175" href="#C21175">
+                <time itemprop="dateCreated" datetime="2015-07-27T05:13:31-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This means a rediection to the same combination of controller and actions is being made again and again. Before doing the forward:</p>
+<pre><code class="language-php">$dispatcher-&gt;forward(array(
+    'module' =&gt; 'frontend',
+    'controller' =&gt; 'index',
+    'action' =&gt; 'show404',
+    'namespace' =&gt; 'app\Frontend\Controllers'
+));</code></pre>
+<p>So you have to check first if the controller $dispatcher-&gt;getControllerName() != 'index' and $dispatcher-&gt;getActionName() != 'show404'. </p>
+<p>Also, Mvc\Dispatcher is unique per module, so pass the module name there will not redirect to other module. You have to make a response-&gt;redirect.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21175" data-cf-modified-5d960696ad056867228d93e2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21175" data-cf-modified-5d960696ad056867228d93e2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/816905f7620afc94755494ba66da5d9b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2068/rabrowne85" class="user-moderator-N"><span itemprop="name">Richard Browne</span></a>        </span>
+        <br>
+
+        <span class="karma">13.3k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="21225" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '15</span>
+              </span><br/><a name="C21225" href="#C21225">
+                <time itemprop="dateCreated" datetime="2015-07-27T13:20:50-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks Andres for your help. I think I get what you're saying, but please correct me if I'm wrong.</p>
+<p>If I try and access module2/test which doesn't exist the forward would only try to route to module2/index/show404 and would not go to frontend/index/show404 as per the code because the dispatcher is unique to the module. Therefore it ignores the namespace and the module parameters in this instance. This means that the redirect is the only method to get the 404 to show everytime. </p>
+<p>With that in mind, I was able to find the following post: <a href="https://forum.phalcon.io/discussion/6215/how-to-display-error-404-page-in-multi-modules-using-main-error-#C16763">here</a></p>
+<p>Based on that post I have modified the code to get it to work. I haven't tried all use cases, but for the majority of them it seems to work. So, in case anyone else has the problem in the future, this is the code that I am now using:</p>
+<pre><code class="language-php">    **
+     * Handle Exceptions:
+     */
+    $di['dispatcher'] = function () use ($di)
+    {
+      // Create an EventsManager
+      $eventsManager = new EventsManager();
+
+      // Attach a listener
+      $eventsManager-&gt;attach("dispatch:beforeException", function ($event, $dispatcher, $exception) use ($di)
+      {
+
+          if ($event-&gt;getType() == 'beforeNotFoundAction')
+          {
+              $di-&gt;get('response')-&gt;redirect('site/error/notFound');
+              return false;
+          }
+
+          // Controller or action doesn't exist
+          if ($event-&gt;getType() == 'beforeException')
+          {
+              switch ($exception-&gt;getCode())
+              {
+                  case Dispatcher::EXCEPTION_HANDLER_NOT_FOUND:
+                  case Dispatcher::EXCEPTION_ACTION_NOT_FOUND:
+                      $di-&gt;get('response')-&gt;redirect('/show404');
+                      return false;
+                  default:
+                      $di-&gt;get('response')-&gt;redirect('/show500');
+                      return false;
+              }
+          }
+      });
+
+      $dispatcher = new MvcDispatcher();
+
+      // Bind the EventsManager to the dispatcher
+      $dispatcher-&gt;setEventsManager($eventsManager);
+      $dispatcher-&gt;setDefaultNamespace('app\Frontend\Controllers');
+
+      return $dispatcher;
+    };</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21225" data-cf-modified-5d960696ad056867228d93e2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21225" data-cf-modified-5d960696ad056867228d93e2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="7805" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

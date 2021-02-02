@@ -1,0 +1,207 @@
+---
+layout: default
+title: 'Request Filters - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Request Filters</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/522/nexik" class="user-moderator-N"><span itemprop="name">Tomasz Ślązok</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-03-08T11:17:35-07:00">Mar '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-03-08T11:17:35-07:00">Mar '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1222</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/e1ea6dd91fb1ca75a6d77cf0fae89e5f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/522/nexik" class="user-moderator-N"><span itemprop="name">Tomasz Ślązok</span></a></span>
+                <span class="karma">7.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1738" href="#C1738">
+        <time class="action-date">Mar '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Is there in Phalcon official way to handle request filters.</p>
+<p>Currently after initializing application I execute numer of filter objects like:</p>
+<ul>
+<li>HttpsFilters (make sure request use SSL connection)</li>
+<li>LanguageFilter (set language base on request in session)</li>
+<li>RememberMeFilter (login user base on remember me cookie)</li>
+<li>SecurityFilter (check if user has access to routed resource - ACL)</li>
+</ul></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-c0215593e05dbdabcda24c87-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-c0215593e05dbdabcda24c87-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/693cd29a926f2659ccec45ba126abd71?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11/doit76" class="user-moderator-N"><span itemprop="name">Karol Marcinkiewicz</span></a>        </span>
+        <br>
+
+        <span class="karma">40.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6028" href="#C6028">
+                <time itemprop="dateCreated" datetime="2014-03-08T12:18:20-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi Tomasz,
+As I know there are no official way ;)</p>
+<p>I did it in this way, it is only simple example checking if session admin is set </p>
+<p>index.php</p>
+<pre><code class="language-php">$di-&gt;set("dispatcher", function() {
+        $eventManager = new \Phalcon\Events\Manager();
+        $eventManager-&gt;attach("dispatch:beforeException", function($event, $dispatcher, $exception) {
+                if($exception instanceof \Phalcon\Mvc\Dispatcher\Exception) {
+                    $dispatcher-&gt;forward(array(
+                            "controller" =&gt; "index",
+                            "action" =&gt; "index"
+                        ));
+                    return false;
+                }
+            });
+
+        $dispatcher = new \Phalcon\Mvc\Dispatcher();
+
+        $dispatcher-&gt;setEventsManager($eventManager);
+
+        return $dispatcher;
+    });</code></pre>
+<p>Base Controller  </p>
+<pre><code class="language-php">class ControllerBase extends Phalcon\Mvc\Controller
+{
+    public function onConstruct() //this constructor/initializator is executed even if action isn't exist, you could handle your filter here
+    {
+        if($this-&gt;session-&gt;get("admin")!==1)
+        {
+            $this-&gt;request-&gt;redirect("login/index");
+        }
+    }
+
+    public function initialize()
+    {
+
+    }
+}</code></pre>
+<p>IndexController  </p>
+<pre><code class="language-php">class IndexController extends ControllerBase  //i use it for every controller
+{
+    public function indexAction()
+    {
+
+    }
+}</code></pre>
+<p>LoginController</p>
+<pre><code class="language-php">class LoginController extends \Phalcon\Mvc\Controller //i use it when no admin
+{
+    public function indexAction()
+    {
+
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6028" data-cf-modified-c0215593e05dbdabcda24c87-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6028" data-cf-modified-c0215593e05dbdabcda24c87-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6032" href="#C6032">
+                <time itemprop="dateCreated" datetime="2014-03-08T14:43:55-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You can use beforeMatch in the case to implement a similar behavior:</p>
+<pre><code class="language-php">&lt;?php
+
+class AjaxFilter
+{
+    public function check()
+    {
+        return $_SERVER['X_REQUESTED_WITH'] == 'xmlhttprequest';
+    }
+}</code></pre>
+<pre><code class="language-php">&lt;?php
+
+$router-&gt;add('/get/info/{id}', array(
+    'controller' =&gt; 'products',
+    'action' =&gt; 'info'
+))-&gt;beforeMatch(array(new AjaxFilter(), 'check'));</code></pre>
+<p><a href="http://docs.phalcon.io/en/latest/reference/routing.html#match-callbacks">http://docs.phalcon.io/en/latest/reference/routing.html#match-callbacks</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6032" data-cf-modified-c0215593e05dbdabcda24c87-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6032" data-cf-modified-c0215593e05dbdabcda24c87-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6060" href="#C6060">
+                <time itemprop="dateCreated" datetime="2014-03-10T10:09:09-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Just a note that you can do your HTTPS redirection in Apache or .htaccess, without needing to instantiate any PHP code.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6060" data-cf-modified-c0215593e05dbdabcda24c87-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6060" data-cf-modified-c0215593e05dbdabcda24c87-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1738" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

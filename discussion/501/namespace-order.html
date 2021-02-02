@@ -1,0 +1,400 @@
+---
+layout: default
+title: 'Namespace order - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/4/offtopic">Offtopic</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Namespace order</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/263/mitris" class="user-moderator-N"><span itemprop="name">Dmitry Korniychuk</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-06-27T14:36:16-07:00">Jun '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-06-27T14:36:16-07:00">Jun '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>May '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">9</span>
+                </td>
+                <td>
+                    <label>Views</label><br>3102</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">5</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/5e6e0849da7e56863dae7c9c16e4bce0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/263/mitris" class="user-moderator-N"><span itemprop="name">Dmitry Korniychuk</span></a></span>
+                <span class="karma">8.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C501" href="#C501">
+        <time class="action-date">Jun '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>What order for namespaces is correct?</p>
+<pre><code class="language-php">$loader = new Phalcon\Loader();
+$loader-&gt;registerNamespaces(
+  [
+    'App\\Frontend' =&gt; '/../app/frontend',
+    'App\\Frontend\\Controllers' =&gt; '/../app/frontend/controllers',
+  ]
+);
+$loader-&gt;register();</code></pre>
+<p>or:</p>
+<pre><code class="language-php">$loader = new Phalcon\Loader();
+$loader-&gt;registerNamespaces(
+  [
+    'App\\Frontend\\Controllers' =&gt; '/../app/frontend/controllers',
+    'App\\Frontend' =&gt; '/../app/frontend',
+  ]
+);
+$loader-&gt;register();</code></pre>
+<p>UPD: the number of registered namespaces affect performance? For example, if i register all available namespaces in one place this not decrease performance?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-a97cdab646a77d3b65545e57-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-a97cdab646a77d3b65545e57-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">5</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2078" href="#C2078">
+                <time itemprop="dateCreated" datetime="2013-06-27T16:21:21-07:00" class="action-date">Jun '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Basically, if you have the following namespace/location registered:</p>
+<pre><code class="language-php">'App\Frontend' =&gt; '../app/frontend/'</code></pre>
+<p>the process made by the auto-loader if the class to load is App\Frontend\Controllers\MyController is:</p>
+<p>1) Traverse all the registered namespaces
+2) Check if the class name to load start with one of the registered namespace prefixes
+3) If a prefix is found then the prefix is removed from the beginning of the string, in our case: App\Frontend\Controllers\MyController - App\Frontend = Controllers\MyController
+4) The path related to the prefix is prepended to the string generated in step 3 plus the .php extension resulting in '../app/frontend/' + Controllers/MyController + .php = '../app/frontend/Controllers/MyController.php
+5) The auto-loader checks if this file exists, if yes, the file is required, otherwise try with another prefix</p>
+<p>As seen above, the path contains the &quot;Controllers&quot; word with the first letter as it is in the class name, if a developer wants another name, for example: &quot;controllers&quot; in lowercase, it's necessary register a specific path for it: 'App\Frontend\Controllers' =&gt; '../app/frontend/controllers/'.</p>
+<p>The idea behind using this auto-loader is reduce the number of stats performed in each request, a higher number of prefixes registered don't affect performance, but a high number of stats made (access the filesystem) lead to a bad performance. According to the steps mentioned above, just one stat was performed which is good.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2078" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2078" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5e6e0849da7e56863dae7c9c16e4bce0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/263/mitris" class="user-moderator-N"><span itemprop="name">Dmitry Korniychuk</span></a>        </span>
+        <br>
+
+        <span class="karma">8.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2079" href="#C2079">
+                <time itemprop="dateCreated" datetime="2013-06-27T16:38:41-07:00" class="action-date">Jun '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hmmm, registering only top level of namespace does not work.
+When i'm try set default dispatcher namespace to 'App\Frontend\Controllers' it's throw exception like 'App\Frontend\Controllers\IndexController handler class cannot be loaded'
+upd: all files exists and work nice when i'm register nested namespaces</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2079" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2079" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2080" href="#C2080">
+                <time itemprop="dateCreated" datetime="2013-06-27T17:01:19-07:00" class="action-date">Jun '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think the problem is the slash at the beginning of the path: '/../app/frontend/controllers'</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2080" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2080" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5e6e0849da7e56863dae7c9c16e4bce0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/263/mitris" class="user-moderator-N"><span itemprop="name">Dmitry Korniychuk</span></a>        </span>
+        <br>
+
+        <span class="karma">8.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2088" href="#C2088">
+                <time itemprop="dateCreated" datetime="2013-06-28T11:04:13-07:00" class="action-date">Jun '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>No, slash is not problem.
+These are the paths which I'm trying to use:</p>
+<pre><code class="language-php">  'App\Frontend' =&gt; '../app/frontend'</code></pre>
+<p>and</p>
+<pre><code class="language-php">  'App\Frontend' =&gt; '/home/mitris/www/framework/app/frontend'</code></pre>
+<p>Paths with a slash at the end also does not have effect</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2088" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2088" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2089" href="#C2089">
+                <time itemprop="dateCreated" datetime="2013-06-28T11:16:45-07:00" class="action-date">Jun '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Try follow one of the samples that use namespaces:</p>
+<p>Album O'Rama:
+<a href="http://album-o-rama.phalcon.io/">http://album-o-rama.phalcon.io/</a>
+<a href="https://github.com/phalcon/album-o-rama">https://github.com/phalcon/album-o-rama</a>
+<a href="https://github.com/phalcon/album-o-rama/blob/master/apps/frontend/Module.php#L13">https://github.com/phalcon/album-o-rama/blob/master/apps/frontend/Module.php#L13</a></p>
+<p>Vokuro
+<a href="http://vokuro.phalcon.io/">http://vokuro.phalcon.io/</a>
+<a href="https://github.com/phalcon/vokuro">https://github.com/phalcon/vokuro</a>
+<a href="https://github.com/phalcon/vokuro/blob/master/app/config/loader.php#L8">https://github.com/phalcon/vokuro/blob/master/app/config/loader.php#L8</a></p>
+<p>Phosphorum
+<a href="http://forum.phalcon.io/">http://forum.phalcon.io/</a>
+<a href="https://github.com/phalcon/forum">https://github.com/phalcon/forum</a>
+<a href="https://github.com/phalcon/forum/blob/master/app/config/loader.php#L6">https://github.com/phalcon/forum/blob/master/app/config/loader.php#L6</a></p>
+<p>Or add an events manager to the loader to see which paths are being tried by it:
+<a href="http://docs.phalcon.io/en/latest/reference/loader.html#autoloading-events">http://docs.phalcon.io/en/latest/reference/loader.html#autoloading-events</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2089" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2089" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5e6e0849da7e56863dae7c9c16e4bce0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/263/mitris" class="user-moderator-N"><span itemprop="name">Dmitry Korniychuk</span></a>        </span>
+        <br>
+
+        <span class="karma">8.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2091" href="#C2091">
+                <time itemprop="dateCreated" datetime="2013-06-28T11:34:16-07:00" class="action-date">Jun '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>In all examples you manually registered a namespace for controllers.
+in my situation event listener told me that load this path like
+/home/mitris/www/framework/app/frontend/Controllers/IndexController.php
+thanks, but I'm not fully understand why loader camelizes only controller dir. so if i auto load app dir like 'App' =&gt; '../app', autoloader try find controller in ../app/Frontend/Controllers dir?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2091" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2091" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2092" href="#C2092">
+                <time itemprop="dateCreated" datetime="2013-06-28T11:42:33-07:00" class="action-date">Jun '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The loader does not camelize the directories, they're used as they come in the class name:</p>
+<p>If the class is App\Frontend\Controllers\MyController it just remove the prefix and add &quot;.php&quot;: ../app/Frontend\Controllers\MyController.php</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2092" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2092" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5e6e0849da7e56863dae7c9c16e4bce0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/263/mitris" class="user-moderator-N"><span itemprop="name">Dmitry Korniychuk</span></a>        </span>
+        <br>
+
+        <span class="karma">8.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2093" href="#C2093">
+                <time itemprop="dateCreated" datetime="2013-06-28T12:03:52-07:00" class="action-date">Jun '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>When I'm simply registering 'App' namespace which contain 'Frontend/Controlles' folder it's working too.
+Is it normal to register a top level namespace? Or is better register App\Frontend and App\Backend separately?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2093" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2093" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2124" href="#C2124">
+                <time itemprop="dateCreated" datetime="2013-07-01T08:51:54-07:00" class="action-date">Jul '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You can register a top level namespace, but only if you're comfortable with directories as they're in the class names</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2124" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2124" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/aebf40971f53d78b90456eba2b66eefe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/730/Sorbing" class="user-moderator-N"><span itemprop="name">Stanislav Butsenko</span></a>        </span>
+        <br>
+
+        <span class="karma">20</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4213" href="#C4213">
+                <time itemprop="dateCreated" datetime="2013-11-13T03:39:12-07:00" class="action-date">Nov '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Is it possible to enable (or implement) camelization for the directories names?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4213" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4213" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c0f5ce4b134833b4b1f8273c2910b4c8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/201/borzov" class="user-moderator-N"><span itemprop="name">Maxim Borzov</span></a>        </span>
+        <br>
+
+        <span class="karma">6.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4895" href="#C4895">
+                <time itemprop="dateCreated" datetime="2014-01-08T13:11:21-07:00" class="action-date">Jan '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Here is a simple way to split frontend and backend in Phalcon project without modules:
+<a href="https://github.com/borzov/phalcon-templates">https://github.com/borzov/phalcon-templates</a></p>
+<p>I use it on small projects. Maybe it will help you.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4895" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4895" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/793db817fcc226cc09b1a3880d2e13cd?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1483/aveniri" class="user-moderator-N"><span itemprop="name">Avenir Cokaj</span></a>        </span>
+        <br>
+
+        <span class="karma">107</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="7239" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '14</span>
+              </span><br/><a name="C7239" href="#C7239">
+                <time itemprop="dateCreated" datetime="2014-04-15T14:49:52-07:00" class="action-date">Apr '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I was having a problem with loading the ControllerBase and the rest of the controllers in the controllers folder using namespaces. I was having a hard time since other example projects worked fine and I realized that i was missing a small detail in the despatcher declaration where I was supposed to setDefaultNamespace </p>
+<p>(ref: <a href="https://github.com/phalcon/vokuro/blob/master/app/config/services.php">https://github.com/phalcon/vokuro/blob/master/app/config/services.php</a>)</p>
+<p>$di-&gt;set('dispatcher', function () {</p>
+<pre><code>$dispatcher = new Dispatcher();
+
+$dispatcher-&gt;setDefaultNamespace('Vokuro\Controllers');
+
+return $dispatcher;</code></pre>
+<p>});</p>
+<p>after that it worked fine, even though it shouldn't be like that since namespaces are registered in the loader file
+anyhow, I hope it helps, good luck</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7239" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7239" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">3</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/7a962aef26bb3d35836e8fab0c6a0438?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1043/VaheGrigorian" class="user-moderator-N"><span itemprop="name">Vahe</span></a>        </span>
+        <br>
+
+        <span class="karma">98</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="7944" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '14</span>
+              </span><br/><a name="C7944" href="#C7944">
+                <time itemprop="dateCreated" datetime="2014-05-16T05:11:36-07:00" class="action-date">May '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks a lot, <a href="http://forum.phalcon.io/user/1483/aveniri">Avenir</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7944" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7944" data-cf-modified-a97cdab646a77d3b65545e57-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="501" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

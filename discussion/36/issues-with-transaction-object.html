@@ -1,0 +1,563 @@
+---
+layout: default
+title: 'Issues with Transaction object - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Issues with Transaction object</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/7/odiel" class="user-moderator-N"><span itemprop="name">odiel</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-02-05T10:46:23-07:00">Feb '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-02-05T10:46:23-07:00">Feb '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Feb '13</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">9</span>
+                </td>
+                <td>
+                    <label>Views</label><br>886</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">3</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/4fbdf4d34dbf4054700053297aed58ac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/7/odiel" class="user-moderator-N"><span itemprop="name">odiel</span></a></span>
+                <span class="karma">12.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C36" href="#C36">
+        <time class="action-date">Feb '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm having an issue using Transactions, here is some code example:</p>
+<p>//Doing values insertion
+try {
+$transactionManager = new Phalcon\Mvc\Model\Transaction\Manager();</p>
+<pre><code>    $transaction = $transactionManager-&gt;get();
+
+    $user = Users::findFirst("uid='".$userId."'");
+
+    if ($user == false) {
+        $user = new Users();
+    }
+
+    $user-&gt;setTransaction($transaction);
+    $user-&gt;uid = $userId;
+    $user-&gt;status = 'active';
+    $user-&gt;created = date('Y-m-d H:i:s');
+
+    $ipAddress = explode(',', $app-&gt;request-&gt;getClientAddress(true));
+
+    if ($user-&gt;save() == true) {
+        $toolbar = new Toolbars_Install();
+        $toolbar-&gt;setTransaction($transaction);
+        $toolbar-&gt;ip_address = $ipAddress[0];
+        $toolbar-&gt;created = date('Y-m-d H:i:s');
+        $toolbar-&gt;uid = $user-&gt;id;
+
+        if ($toolbar-&gt;save() == true) {
+            $user-&gt;toolbar_install_id = $toolbar-&gt;id;
+            $user-&gt;save();
+        } else {
+            $transaction-&gt;rollback('Unable to save model [toolbar], error: '.$errors);
+        }
+    } else {
+        $transaction-&gt;rollback('Unable to save model [user], error: '.$errors);
+    }
+
+    $transaction-&gt;commit();
+
+} catch(Phalcon\Mvc\Model\Transaction\Failed $e) {
+    \Classes\Utils\Log::exception($app-&gt;config-&gt;logs-&gt;toolbars-&gt;install, $e);
+} catch (Exception $e) {
+    \Classes\Utils\Log::exception($app-&gt;config-&gt;logs-&gt;toolbars-&gt;install, $e);
+}</code></pre>
+<p>doing this I'm getting an exception</p>
+<p>Line: 120, Code: 23000, Message: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '2-c749b72fda4299b64363cab38dfb280d' for key 'PRIMARY'</p>
+<p>Line 120 in my file is the line related to: $user-&gt;save();</p>
+<p>Looking into the generated queries, Phalcon is generating a sencond INSERT for the Users model.</p>
+<p>If I do:</p>
+<p>$user-&gt;update(array(
+'toolbar_install_id' =&gt; $toolbar-&gt;id
+));</p>
+<p>The update query is not getting generated.</p>
+<p>I'm using Phalcon 0.8.0</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">3</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C156" href="#C156">
+                <time itemprop="dateCreated" datetime="2013-02-05T13:21:35-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Could you post the table structure for table Users?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="156" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="156" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4fbdf4d34dbf4054700053297aed58ac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/7/odiel" class="user-moderator-N"><span itemprop="name">odiel</span></a>        </span>
+        <br>
+
+        <span class="karma">12.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C158" href="#C158">
+                <time itemprop="dateCreated" datetime="2013-02-05T13:32:20-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I can't.</p>
+<p>If I do this after the transaction commit;</p>
+<p>$user = Users::findFirst(&quot;uid='&quot;.$userId.&quot;'&quot;);</p>
+<pre><code>    if ($user != false) {
+        $user-&gt;update(array('toolbar_install_id' =&gt; $toolbar-&gt;id));
+    }</code></pre>
+<p>then the users tablet is updated properly.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="158" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="158" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C159" href="#C159">
+                <time itemprop="dateCreated" datetime="2013-02-05T13:41:24-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The SQL table structure? show create table users?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="159" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="159" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4fbdf4d34dbf4054700053297aed58ac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/7/odiel" class="user-moderator-N"><span itemprop="name">odiel</span></a>        </span>
+        <br>
+
+        <span class="karma">12.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C160" href="#C160">
+                <time itemprop="dateCreated" datetime="2013-02-05T13:51:38-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes I know what you mean, but my company don't allow me to do that.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="160" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="160" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1eb2415bda000b22fd1f801bb9e8c003?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2/niden" class="user-moderator-Y"><span itemprop="name">Nikolaos Dimopoulos</span></a>        </span>
+        <br>
+
+        <span class="karma">39.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C162" href="#C162">
+                <time itemprop="dateCreated" datetime="2013-02-05T14:07:24-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/Odiel">@Odiel</a></p>
+<p>Make two tables of your own (not the ones you use in your company). Use similar primary key-&gt;foreign key linking but show say Robots and Parts. That should allow us to have a look at it and perhaps find where the issue lies.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="162" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="162" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C163" href="#C163">
+                <time itemprop="dateCreated" datetime="2013-02-05T14:07:38-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>ok, The error says that primary key has two fields 2-c749b72fda4299b64363cab38dfb280d, I assume the primary key on that table is a compound primary key, but you get the record using $user = Users::findFirst(&quot;uid='&quot;.$userId.&quot;'&quot;);, maybe are you missing a field there?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="163" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="163" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4fbdf4d34dbf4054700053297aed58ac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/7/odiel" class="user-moderator-N"><span itemprop="name">odiel</span></a>        </span>
+        <br>
+
+        <span class="karma">12.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C164" href="#C164">
+                <time itemprop="dateCreated" datetime="2013-02-05T14:17:22-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes as you said Phalcon, the table has two fields for the primary key.</p>
+<p>One is 'id'  which is auto increment, and the other one is some I insert.</p>
+<p>$user = Users::findFirst(&quot;uid='&quot;.$userId.&quot;'&quot;);</p>
+<p>This is only to check if the user exist, but the error I got was having no users in the table, so the code:</p>
+<p>if ($user == false) {
+$user = new Users();
+}</p>
+<p>was executed for sure, creating a new instance of User model.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="164" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="164" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4fbdf4d34dbf4054700053297aed58ac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/7/odiel" class="user-moderator-N"><span itemprop="name">odiel</span></a>        </span>
+        <br>
+
+        <span class="karma">12.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C165" href="#C165">
+                <time itemprop="dateCreated" datetime="2013-02-05T14:27:15-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Tables structure:</p>
+<p>CREATE TABLE <code>users</code> (
+<code>id</code> bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+<code>uid</code> varchar(32) NOT NULL,
+<code>status</code> varchar(50) NOT NULL DEFAULT 'active',
+<code>created</code> datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+<code>toolbar_install_id</code> int(10) unsigned DEFAULT NULL,
+PRIMARY KEY (<code>id</code>,<code>uid</code>),
+UNIQUE KEY <code>uid</code> (<code>uid</code>) USING BTREE,
+KEY <code>created</code> (<code>created</code>)
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=latin1</p>
+<p>CREATE TABLE <code>toolbars_install</code> (
+<code>id</code> bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+<code>uid</code> bigint(20) NOT NULL,
+<code>ip_address</code> varchar(15) NOT NULL,
+<code>created</code> datetime NOT NULL,
+PRIMARY KEY (<code>id</code>),
+KEY <code>uid</code> (<code>uid</code>),
+KEY <code>ip_address</code> (<code>ip_address</code>) USING BTREE,
+KEY <code>created</code> (<code>created</code>)
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=latin1</p>
+<p>I did a test with the same code I put here, and change my tables structure, still having the same error.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="165" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="165" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C168" href="#C168">
+                <time itemprop="dateCreated" datetime="2013-02-05T14:54:00-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I created this gist, is this ok?
+<a href="https://gist.github.com/phalcon/4718070">https://gist.github.com/phalcon/4718070</a></p>
+<p>You can see it running at <a href="http://test.phalcon.io/tx.php">http://test.phalcon.io/tx.php</a></p>
+<p>Current data on tables:</p>
+<pre><code class="language-sql">mysql&gt; select * from users;
++----+----------------------------------+--------+---------------------+--------------------+
+| id | uid                              | status | created             | toolbar_install_id |
++----+----------------------------------+--------+---------------------+--------------------+
+| 12 | 5d41402abc4b2a76b9719d911017c592 | active | 2013-02-05 16:52:42 |                 17 |
++----+----------------------------------+--------+---------------------+--------------------+
+1 row in set (0.00 sec)</code></pre>
+<pre><code class="language-php">mysql&gt; select * from toolbars_install;
++----+-----+------------+---------------------+
+| id | uid | ip_address | created             |
++----+-----+------------+---------------------+
+| 14 |  12 | 1          | 2013-02-05 16:52:11 |
+| 15 |  12 | 1          | 2013-02-05 16:52:38 |
+| 16 |  12 | 1          | 2013-02-05 16:52:40 |
+| 17 |  12 | 1          | 2013-02-05 16:52:42 |
++----+-----+------------+---------------------+
+4 rows in set (0.00 sec)</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="168" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="168" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4fbdf4d34dbf4054700053297aed58ac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/7/odiel" class="user-moderator-N"><span itemprop="name">odiel</span></a>        </span>
+        <br>
+
+        <span class="karma">12.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C170" href="#C170">
+                <time itemprop="dateCreated" datetime="2013-02-05T15:46:53-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes your example looks perfect. </p>
+<p>But even that I'm still having the issue, I double checked your code with me, to see if I have any error or something.</p>
+<p>I switch Phalcon version to 090 Beta2</p>
+<p>The code this time don't trigger an exception but the field toolbar_install_id is not getting populated.</p>
+<p>This are the generated queries:</p>
+<p>[Tue, 05 Feb 13 22:39:58 +0000][INFO] SET NAMES UTF8;
+[Tue, 05 Feb 13 22:39:58 +0000][INFO] SELECT <code>users</code>.<code>id</code>, <code>users</code>.<code>uid</code>, <code>users</code>.<code>status</code>, <code>users</code>.<code>created</code>, <code>users</code>.<code>toolbar_install_id</code> FROM <code>users</code> WHERE <code>users</code>.<code>uid</code> = 'c749b72fda4299b64363cab38dfb280d' LIMIT 1
+[Tue, 05 Feb 13 22:39:58 +0000][INFO] SELECT COUNT(*) AS rowcount FROM <code>users</code> WHERE <code>id</code> = ? AND <code>uid</code> = ?
+[Tue, 05 Feb 13 22:39:58 +0000][INFO] INSERT INTO <code>users</code> (<code>uid</code>, <code>status</code>, <code>created</code>, <code>toolbar_install_id</code>, <code>id</code>) VALUES (?, ?, ?, null, null)
+[Tue, 05 Feb 13 22:39:58 +0000][INFO] INSERT INTO <code>toolbars_install</code> (<code>uid</code>, <code>ip_address</code>, <code>created</code>, <code>id</code>) VALUES (?, ?, ?, null)
+[Tue, 05 Feb 13 22:39:58 +0000][INFO] UPDATE <code>users</code> SET <code>status</code> = ?, <code>created</code> = ?, <code>toolbar_install_id</code> = ? WHERE <code>id</code> = ? AND <code>uid</code> = ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="170" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="170" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C171" href="#C171">
+                <time itemprop="dateCreated" datetime="2013-02-05T15:52:30-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Are you using manual meta-data on model Users?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="171" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="171" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4fbdf4d34dbf4054700053297aed58ac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/7/odiel" class="user-moderator-N"><span itemprop="name">odiel</span></a>        </span>
+        <br>
+
+        <span class="karma">12.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C172" href="#C172">
+                <time itemprop="dateCreated" datetime="2013-02-05T15:55:46-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>No the models are empty, only have the getSource definition.</p>
+<p>BTW, can you truncate the tables you have, and run only once the code, then check if the field toolbar_install_id is being populated?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="172" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="172" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4fbdf4d34dbf4054700053297aed58ac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/7/odiel" class="user-moderator-N"><span itemprop="name">odiel</span></a>        </span>
+        <br>
+
+        <span class="karma">12.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C173" href="#C173">
+                <time itemprop="dateCreated" datetime="2013-02-05T16:00:26-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I ran it in my local computer, and got same behavior I described before, values are inserted in the tables, but the field toolbar_install_id  don't have value first time the script run.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="173" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="173" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C176" href="#C176">
+                <time itemprop="dateCreated" datetime="2013-02-05T16:25:30-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I added some truncate before execute the script, also you can pass a userId with <a href="http://test.phalcon.io/tx.php?userId=x">http://test.phalcon.io/tx.php?userId=x</a> the x is passed to md5</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="176" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="176" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C177" href="#C177">
+                <time itemprop="dateCreated" datetime="2013-02-05T16:29:26-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The second user update is not being done</p>
+<pre><code class="language-sql">mysql&gt; select * from users;
++----+----------------------------------+--------+---------------------+--------------------+
+| id | uid                              | status | created             | toolbar_install_id |
++----+----------------------------------+--------+---------------------+--------------------+
+|  1 | 6d865d85813b1261953b3e79cdb04716 | active | 2013-02-05 18:27:53 |               NULL |
++----+----------------------------------+--------+---------------------+--------------------+
+1 row in set (0.00 sec)</code></pre>
+<pre><code class="language-sql">mysql&gt; select * from toolbars_install;
++----+-----+------------+---------------------+
+| id | uid | ip_address | created             |
++----+-----+------------+---------------------+
+|  1 |   1 | 127.0.0.1  | 2013-02-05 18:27:53 |
++----+-----+------------+---------------------+
+1 row in set (0.00 sec)</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="177" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="177" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4fbdf4d34dbf4054700053297aed58ac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/7/odiel" class="user-moderator-N"><span itemprop="name">odiel</span></a>        </span>
+        <br>
+
+        <span class="karma">12.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C189" href="#C189">
+                <time itemprop="dateCreated" datetime="2013-02-06T08:34:51-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Exactly, so?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="189" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="189" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C193" href="#C193">
+                <time itemprop="dateCreated" datetime="2013-02-06T12:54:25-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I added a fix for this in 0.9.0 stable, could you reinstall/install that version?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="193" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="193" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4fbdf4d34dbf4054700053297aed58ac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/7/odiel" class="user-moderator-N"><span itemprop="name">odiel</span></a>        </span>
+        <br>
+
+        <span class="karma">12.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C216" href="#C216">
+                <time itemprop="dateCreated" datetime="2013-02-08T15:34:41-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>So far, so good with this, everything looks great and working, thanks.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="216" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="216" data-cf-modified-f9ad8021261b8106d7b4f566-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="36" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

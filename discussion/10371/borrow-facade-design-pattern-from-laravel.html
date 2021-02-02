@@ -1,0 +1,329 @@
+---
+layout: default
+title: 'Borrow Facade design pattern from Laravel - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/24/show-community">Show to Community</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Borrow Facade design pattern from Laravel</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3635/huoybb" class="user-moderator-N"><span itemprop="name">huoybb</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-02-02T07:37:14-07:00">Feb '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-02-02T07:37:14-07:00">Feb '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1516</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/2b4db4eed8ca8b786c8af3d3c5c0598d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3635/huoybb" class="user-moderator-N"><span itemprop="name">huoybb</span></a></span>
+                <span class="karma">7.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C10371" href="#C10371">
+        <time class="action-date">Feb '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I like the way Laravel use to get service throgh facade design pattern.</p>
+<pre><code class="language-php">    public function isValid($data = null)
+    {
+        if(SessionFacade::has('auth')) return true;
+        if(CookieFacade::has('auth')) {
+            $user = Users::findByCookieAuth($this-&gt;getCookie());
+            if(!$user) return false;
+            FlashFacade::success('欢迎'.$user-&gt;name.'登录！你上次登录的时间是：'.$user-&gt;updated_at);
+            //利用cookie实现登录
+            EventFacade::fire('auth:login',$user,['remember'=&gt;'on']);
+            return true;
+        }
+        return false;
+    }
+    private function getCookie()
+    {
+        $auth = CookieFacade::get('auth')-&gt;getValue();
+        foreach($auth as $key=&gt;$value){
+            $auth[$key]=CryptFacade::decrypt($value);
+        }
+        return $auth;
+    }</code></pre>
+<p>To achieve this, I found I could borrow some code from laravel.</p>
+<pre><code class="language-php"> abstract class Facade
+{
+    /**
+     * Get the registered name of the component.
+     *
+     * @return string
+     * @throws \RuntimeException
+     */
+    public static function getFacadeAccessor()
+    {
+        throw new RuntimeException('Facade does not implement getFacadeAccessor method.');
+    }
+    public static function getService()
+    {
+        return \Phalcon\Di::getDefault()-&gt;get(static::getFacadeAccessor());
+    }
+    public static function __callStatic($method, $args)
+    {
+        $instance = static::getService();
+        if (! $instance) {
+            throw new RuntimeException('A facade root has not been set.');
+        }
+        switch (count($args)) {
+            case 0:
+                return $instance-&gt;$method();
+            case 1:
+                return $instance-&gt;$method($args[0]);
+            case 2:
+                return $instance-&gt;$method($args[0], $args[1]);
+            case 3:
+                return $instance-&gt;$method($args[0], $args[1], $args[2]);
+            case 4:
+                return $instance-&gt;$method($args[0], $args[1], $args[2], $args[3]);
+            default:
+                return call_user_func_array([$instance, $method], $args);
+        }
+    }
+}</code></pre>
+<p>Then you can extend this abstract Facade class, like:</p>
+<pre><code class="language-php"> class SessionFacade extends Facade
+{
+    public static function getFacadeAccessor()
+    {
+        return 'session';
+    }
+}</code></pre>
+<p>And if you like the autocomplete function provided by PHPStorm, then you could put the file _ide_helper.php in your root path.</p>
+<pre><code class="language-php">namespace {
+
+  exit("This file should not be included, only analyzed by your IDE");
+  class SessionFacade extends \Facade{
+        /**
+         * Gets a session variable from an application context
+         * &lt;code&gt;
+         * $session-&gt;get('auth', 'yes');
+         * &lt;/code&gt;
+         *
+         * @param string $index
+         * @param mixed $defaultValue
+         * @param bool $remove
+         * @return mixed
+         */
+        public static function get($index, $defaultValue = null, $remove = false) {}
+        /**
+         * Sets a session variable in an application context
+         * &lt;code&gt;
+         * $session-&gt;set('auth', 'yes');
+         * &lt;/code&gt;
+         *
+         * @param string $index
+         * @param mixed $value
+         */
+        public static function set($index, $value) {}
+        /**
+         * Check whether a session variable is set in an application context
+         * &lt;code&gt;
+         * var_dump($session-&gt;has('auth'));
+         * &lt;/code&gt;
+         *
+         * @param string $index
+         * @return bool
+         */
+        public static function has($index) {}
+        /**
+         * Removes a session variable from an application context
+         * &lt;code&gt;
+         * $session-&gt;remove('auth');
+         * &lt;/code&gt;
+         *
+         * @param string $index
+         */
+        public static function remove($index) {}
+        /**
+         * Destroys the active session
+         * &lt;code&gt;
+         * var_dump($session-&gt;destroy());
+         * var_dump($session-&gt;destroy(true));
+         * &lt;/code&gt;
+         *
+         * @param bool $removeData
+         * @return bool
+         */
+        public static function destroy($removeData = false) {}
+    }
+}</code></pre>
+<p>If you want to expose more functions, just edit this helper file.
+Do you like  this method? Or have better idea?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-76aa5fe56aa89907973bd42d-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span><span itemprop="downvoteCount">1</span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-76aa5fe56aa89907973bd42d-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2b4db4eed8ca8b786c8af3d3c5c0598d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3635/huoybb" class="user-moderator-N"><span itemprop="name">huoybb</span></a>        </span>
+        <br>
+
+        <span class="karma">7.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C29685" href="#C29685">
+                <time itemprop="dateCreated" datetime="2016-02-06T18:47:06-07:00" class="action-date">Feb '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Facade pattern help me understand Why Di is called service container. So that makes me think more clear!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="29685" data-cf-modified-76aa5fe56aa89907973bd42d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="29685" data-cf-modified-76aa5fe56aa89907973bd42d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e089a17872ac028d8745a75f56e34d54?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2493/SidRoberts" class="user-moderator-N"><span itemprop="name">Sid Roberts</span></a>        </span>
+        <br>
+
+        <span class="karma">1.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C29701" href="#C29701">
+                <time itemprop="dateCreated" datetime="2016-02-08T09:30:57-07:00" class="action-date">Feb '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I would strongly recommend making getFacadeAccessor() abstract:</p>
+<pre><code>abstract public static function getFacadeAccessor();</code></pre>
+<p>You'll be able to find errors much quicker.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="29701" data-cf-modified-76aa5fe56aa89907973bd42d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="29701" data-cf-modified-76aa5fe56aa89907973bd42d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2b4db4eed8ca8b786c8af3d3c5c0598d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3635/huoybb" class="user-moderator-N"><span itemprop="name">huoybb</span></a>        </span>
+        <br>
+
+        <span class="karma">7.0k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C29701"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/e089a17872ac028d8745a75f56e34d54?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Sid Roberts                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C29713" href="#C29713">
+                <time itemprop="dateCreated" datetime="2016-02-09T04:03:45-07:00" class="action-date">Feb '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes, this method could be defined as abstract. Like I said the Codes is borrowed from laravel, it just works.</p>
+<blockquote>
+<p>I would strongly recommend making getFacadeAccessor() abstract:</p>
+<p>abstract public static function getFacadeAccessor();</p>
+<p>You'll be able to find errors much quicker.</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="29713" data-cf-modified-76aa5fe56aa89907973bd42d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="29713" data-cf-modified-76aa5fe56aa89907973bd42d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C29685"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/2b4db4eed8ca8b786c8af3d3c5c0598d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        huoybb                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C30513" href="#C30513">
+                <time itemprop="dateCreated" datetime="2016-03-03T09:28:12-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Facade pattern help me understand Why Di is called service container. So that makes me think more clear!</p>
+</blockquote>
+<p>OKAY, but what is then actually missing in Phalcon? You have a nice, clean and lean IoC / DI and you can extend / intercept anything you need from there.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="30513" data-cf-modified-76aa5fe56aa89907973bd42d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="30513" data-cf-modified-76aa5fe56aa89907973bd42d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2b4db4eed8ca8b786c8af3d3c5c0598d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3635/huoybb" class="user-moderator-N"><span itemprop="name">huoybb</span></a>        </span>
+        <br>
+
+        <span class="karma">7.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C30513"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Jonathan Aaron Steel                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C30521" href="#C30521">
+                <time itemprop="dateCreated" datetime="2016-03-03T12:17:05-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think this is not about sth missing, this is about sth the framework can provide to make the job easy. Facade pattern is not invented by Laravel guys, but the code above is. And Facade Pattern can be a powerful tool to help coder think more clear about service.</p>
+<p>I am just learning to practice some idea, and have found sth good. Just share some idea and want some feedback. </p>
+<blockquote>
+<blockquote>
+<p>Facade pattern help me understand Why Di is called service container. So that makes me think more clear!</p>
+</blockquote>
+<p>OKAY, but what is then actually missing in Phalcon? You have a nice, clean and lean IoC / DI and you can extend / intercept anything you need from there.</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="30521" data-cf-modified-76aa5fe56aa89907973bd42d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="30521" data-cf-modified-76aa5fe56aa89907973bd42d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="10371" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

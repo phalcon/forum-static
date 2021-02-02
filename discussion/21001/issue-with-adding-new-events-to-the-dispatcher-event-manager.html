@@ -1,0 +1,228 @@
+---
+layout: default
+title: 'Issue with adding new events to the dispatcher event manager - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/11/events-manager">Events</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Issue with adding new events to the dispatcher event manager</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/6853/Hoet" class="user-moderator-N"><span itemprop="name">Hoet</span></a></span>
+            <time itemprop="dateCreated" datetime="2020-11-29T11:45:30-07:00">Nov '20</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2020-11-29T11:45:30-07:00">Nov '20</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>80</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/cfe29c6fec2b71ae311c675cdc3d7562?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/6853/Hoet" class="user-moderator-N"><span itemprop="name">Hoet</span></a></span>
+                <span class="karma">4.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C21001" href="#C21001">
+        <time class="action-date">Nov '20</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I seem to have an issue with adding events to an event manager that was previous defined.</p>
+<p>In the bootstrap I set the dispatcher like this</p>
+<pre><code class="language-php">      $di-&gt;set( 'dispatcher', function()
+      {
+        // Create a new dispatcher
+        $dispatcher = new Dispatcher();
+        $dispatcher-&gt;setDefaultNamespace( '\\Controllers' );
+
+        // Create an EventsManager
+        $eventsManager =new EventsManager();
+
+        // Bind the EventsManager to the dispatcher
+        $dispatcher-&gt;setEventsManager( $eventsManager );
+
+        return $dispatcher;
+      });</code></pre>
+<p>A little further down in the bootstrap process I add modules to the project. These modules are initiated with an init.php that sets stuff up for the module itself.</p>
+<p>In the users module I defined a few events in the init.php that need to be fire when certain conditions occur. See below for the simplified events.</p>
+<pre><code class="language-php">      /** @var Dispatcher $dispatcher */
+      $dispatcher =$di-&gt;getDispatcher();
+
+      // Get the current manager
+      $manager =$dispatcher-&gt;getEventsManager();
+
+      var_dump( $manager );  // displays a manager withour any events in it
+
+      $manager-&gt;attach( 'dispatch:afterDispatch',
+        function( Event $event, Dispatcher $dispatcher ) use ( $di )
+        {
+          echo "dispatch:afterDispatch";
+        }
+      );
+
+      $manager-&gt;attach( 'dispatch:beforeExecuteRoute',
+        function( Event $event, Dispatcher $dispatcher ) use ( $di )
+        {
+          echo "dispatch:beforeExecuteRoute";
+        }
+      );
+
+      var_dump( $manager );  // This displays the above two events in the manager. so far so good
+
+      $di-&gt;getDispatcher()-&gt;setEventsManager( $manager );  // sets the manager back with the two events in it
+
+      var_dump( $di-&gt;getDispatcher()-&gt;getEventsManager());  // shows a manager without any events in it
+      exit;</code></pre>
+<p>With the last 3 lines I set an event manager with 2 events in it, but when I retrieve the manager again it is again empty like nothing was set.</p>
+<p>It seems that I'am unable to set/change the event manager for the dispachter from another location then the initial definition. Which is strange as my code was working without issues on phalcon 3.4. but not on 4.0. </p>
+<p>Anyone know what I might be doing incorrect. The events are working when I define them in the initial set-up, but not when I get the manager from the dispatcher, attach a few events to it and then set it again.</p>
+<p>below the output from the var_dumps in the code block above. The First is the manager from the initial dispacher set-up. The second is the same manager with two events attached to it which should be stored via the set function. An the last should be the same as the second block, but instead it seems to be the same as the first dump.</p>
+<pre><code>/var/www/phalcon.test/web/backend/modules/Users/Init.php:30:
+object(Phalcon\Events\Manager)[76]
+  protected 'collect' =&gt; boolean false
+  protected 'enablePriorities' =&gt; boolean false
+  protected 'events' =&gt; null
+  protected 'responses' =&gt; null
+
+/var/www/phalcon.test/web/backend/modules/Users/Init.php:83:
+object(Phalcon\Events\Manager)[76]
+  protected 'collect' =&gt; boolean false
+  protected 'enablePriorities' =&gt; boolean false
+  protected 'events' =&gt; 
+    array (size=2)
+      'dispatch:afterDispatch' =&gt; 
+        object(SplPriorityQueue)[75]
+          private 'flags' =&gt; int 1
+          private 'isCorrupted' =&gt; boolean false
+          private 'heap' =&gt; 
+            array (size=1)
+              ...
+      'dispatch:beforeExecuteRoute' =&gt; 
+        object(SplPriorityQueue)[73]
+          private 'flags' =&gt; int 1
+          private 'isCorrupted' =&gt; boolean false
+          private 'heap' =&gt; 
+            array (size=1)
+              ...
+  protected 'responses' =&gt; null
+
+/var/www/phalcon.test/web/backend/modules/Users/Init.php:87:
+object(Phalcon\Events\Manager)[72]
+  protected 'collect' =&gt; boolean false
+  protected 'enablePriorities' =&gt; boolean false
+  protected 'events' =&gt; null
+  protected 'responses' =&gt; null</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-c8721186bd10944710815854-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-c8721186bd10944710815854-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/cfe29c6fec2b71ae311c675cdc3d7562?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6853/Hoet" class="user-moderator-N"><span itemprop="name">Hoet</span></a>        </span>
+        <br>
+
+        <span class="karma">4.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="64983" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '20</span>
+              </span><br/><a name="C64983" href="#C64983">
+                <time itemprop="dateCreated" datetime="2020-11-29T12:31:27-07:00" class="action-date">Nov '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>According to the .zep file the internal variable eventmanager is protected and the get/set function just sets and gets the variable. No processing is done to the object. </p>
+<p>So this should set the manager </p>
+<pre><code class="language-php">$di-&gt;getDispatcher()-&gt;setEventsManager( $manager )</code></pre>
+<p>and this should retrieve the exact same manager as set before</p>
+<pre><code class="language-php">$di-&gt;getDispatcher()-&gt;getEventsManager()</code></pre>
+<p>and yet the get returns the manager that is set in the initial set-up instead of the one that I just set with the set function</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64983" data-cf-modified-c8721186bd10944710815854-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64983" data-cf-modified-c8721186bd10944710815854-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="64997" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '20</span>
+              </span><br/><a name="C64997" href="#C64997">
+                <time itemprop="dateCreated" datetime="2020-11-30T08:59:24-07:00" class="action-date">Nov '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I <em>think</em> the issue might be the dispatcher is <code>set()</code> rather than <code>setShared()</code>.  Currently, every time you <code>getDispatcher()</code>, you're getting a new instance of <code>Dispatcher</code>.  If you set it with <code>setShared()</code>, <code>getDispatcher()</code> will return a singleton instead.</p>
+<p>Also, I added syntax highlighting to some of your code blocks.  Simply adding <code>php</code> (or whatever language you want) after the three backticks will cause the code block to be highlighted.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64997" data-cf-modified-c8721186bd10944710815854-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64997" data-cf-modified-c8721186bd10944710815854-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/cfe29c6fec2b71ae311c675cdc3d7562?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6853/Hoet" class="user-moderator-N"><span itemprop="name">Hoet</span></a>        </span>
+        <br>
+
+        <span class="karma">4.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C65003" href="#C65003">
+                <time itemprop="dateCreated" datetime="2020-11-30T12:05:25-07:00" class="action-date">Nov '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You are right. Strange that I missed that. I have all the other services set to shared. Code is working now. Thanks</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="65003" data-cf-modified-c8721186bd10944710815854-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="65003" data-cf-modified-c8721186bd10944710815854-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="21001" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

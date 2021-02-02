@@ -1,0 +1,164 @@
+---
+layout: default
+title: 'Bug in PHQL Subquery? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Bug in PHQL Subquery?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/8931/krazzer" class="user-moderator-N"><span itemprop="name">Kaz</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-09-28T00:04:32-07:00">Sep '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-09-28T00:04:32-07:00">Sep '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>325</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/144ffe4dc6e3636abbde0b00519375a3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/8931/krazzer" class="user-moderator-N"><span itemprop="name">Kaz</span></a></span>
+                <span class="karma">2.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C18853" href="#C18853">
+        <time class="action-date">Sep '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I created a query with an EXISTS subquery, which works fine:</p>
+<pre><code class="language-php">$query = (new Builder())
+    -&gt;from(['a' =&gt; Activity::class])
+    -&gt;columns(['id', 'name', 'DATE_FORMAT(booked_start, "%Y") AS year'])
+    -&gt;where('NOT EXISTS(SELECT e.id FROM ' . Event::class . ' e WHERE e.activity_id = a.id)');</code></pre>
+<p>But now when I try to add an order:</p>
+<pre><code class="language-php">$query = (new Builder())
+    -&gt;from(['a' =&gt; Activity::class])
+    -&gt;columns(['id', 'name', 'DATE_FORMAT(booked_start, "%Y") AS year'])
+    -&gt;where('NOT EXISTS(SELECT e.id FROM ' . Event::class . ' e WHERE e.activity_id = a.id)')
+    -&gt;orderBy('year ASC');</code></pre>
+<p>I get this error: <code>Column 'year' doesn't belong to any of the selected models (1), when preparing: ...</code></p>
+<p>If I remove the subquery:</p>
+<pre><code class="language-php">$query = (new Builder())
+    -&gt;from(['a' =&gt; Activity::class])
+    -&gt;columns(['id', 'name', 'DATE_FORMAT(booked_start, "%Y") AS year'])
+    -&gt;orderBy('year ASC');</code></pre>
+<p>It <em>does</em> work</p>
+<p>Is this a bug?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-281ac057209d45e90d9b6c14-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-281ac057209d45e90d9b6c14-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="57485" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '18</span>
+              </span><br/><a name="C57485" href="#C57485">
+                <time itemprop="dateCreated" datetime="2018-09-28T02:56:12-07:00" class="action-date">Sep '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Perhaps try with:</p>
+<pre><code class="language-php">  -&gt;orderBy('booked_start');</code></pre>
+<p>just to rule out columns precedence.</p>
+<p>I guess your <code>Event</code> table does not have column <code>year</code>?</p>
+<p>Also why don't you do JOIN on those tables? DB will then filter out NOT exists case for you...</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57485" data-cf-modified-281ac057209d45e90d9b6c14-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57485" data-cf-modified-281ac057209d45e90d9b6c14-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/144ffe4dc6e3636abbde0b00519375a3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8931/krazzer" class="user-moderator-N"><span itemprop="name">Kaz</span></a>        </span>
+        <br>
+
+        <span class="karma">2.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="57487" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '18</span>
+              </span><br/><a name="C57487" href="#C57487">
+                <time itemprop="dateCreated" datetime="2018-09-28T04:01:38-07:00" class="action-date">Sep '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Ordering by an existing column <em>does</em> work. And <code>Event</code> doesn't have a column <code>year</code>.</p>
+<p>I know I can also use JOIN, I already did that in my code, I'm just trying to figure out if this is a bug.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57487" data-cf-modified-281ac057209d45e90d9b6c14-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57487" data-cf-modified-281ac057209d45e90d9b6c14-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C57487"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/144ffe4dc6e3636abbde0b00519375a3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Kaz                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C57495" href="#C57495">
+                <time itemprop="dateCreated" datetime="2018-10-01T00:09:34-07:00" class="action-date">Oct '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>And <code>Event</code> doesn't have a column <code>year</code>.</p>
+</blockquote>
+<p>So that is the culprit. PHQL will try to use latter table.... for some reason. IDK whenever it's a bug or &quot;by design&quot; thing. Hope someone with more in-depth knowledge about it will reply.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57495" data-cf-modified-281ac057209d45e90d9b6c14-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57495" data-cf-modified-281ac057209d45e90d9b6c14-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="18853" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

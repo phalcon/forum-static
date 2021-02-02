@@ -1,0 +1,479 @@
+---
+layout: default
+title: 'Query tells &quot;field is required&quot;, but is set - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Query tells &quot;field is required&quot;, but is set</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10345/Nyde" class="user-moderator-N"><span itemprop="name">Nyde</span></a></span>
+            <time itemprop="dateCreated" datetime="2020-04-19T09:03:48-07:00">Apr '20</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2020-04-19T09:03:48-07:00">Apr '20</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">6</span>
+                </td>
+                <td>
+                    <label>Views</label><br>257</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9842e74678b8a899c45d1c57223d12c9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10345/Nyde" class="user-moderator-N"><span itemprop="name">Nyde</span></a></span>
+                <span class="karma">4.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C20567" href="#C20567">
+        <time class="action-date">Apr '20</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello everyone,</p>
+<p>I came across a problem with inserting data into the mysql database.</p>
+<p>I'm trying to insert a huge bunch a data rows into the database (talking about 98k single rows). My first approach was this one (<code>$data</code> is the huge array):</p>
+<pre><code class="language-php">$sql = "INSERT INTO ".$suppdata['supp_tbl']." ($head_fields) VALUES (";
+
+        for($i = 1; $i &lt;= $suppdata['num_fields']; $i++)
+            $sql .= ":tmp".$i.":, ";
+
+        $sql = substr($sql, 0, -2).")";
+
+        $query = $this-&gt;modelsManager-&gt;createQuery($sql);
+
+        for($i = 0; $i &lt; sizeof($data); $i++)
+        {
+            $row = array();
+
+            for($j = 0; $j &lt; $suppdata['num_fields']; $j++)
+                $row['tmp'.($j+1)] = $data[$i][$j];
+
+            $status = $query-&gt;execute($row);
+
+        }</code></pre>
+<p>A bit of explaination:</p>
+<ul>
+<li>there are different data sources, so I had to keep the number of binding values dynamic (is this even possible? I'm basically porting a script which was written in &quot;raw&quot; PHP)</li>
+<li>the model name comes from <code>$suppdata['supp_tbl']</code></li>
+</ul>
+<p>So what I do is to build a query string with the binding parameters <code>:tmpX:</code>, building up an array for each row, bind it and execute it.</p>
+<p>The array which I use to bind the data (<code>$row</code>) looks fine, and so does the built query (<code>$sql</code>)</p>
+<p>What I get is an error &quot;Artnr is required&quot;. &quot;Artnr&quot; is the first field in the table, and also its primary key. I can say for sure it is provided. I even tried to do the &quot;model way&quot;, so create an instance of the model, use all the setters and then just <code>$obj-&gt;save()</code> it, but it throws the same error there.</p>
+<p>Why do I keep getting this error, although the required data is set?</p>
+<p>And by the way, is there a way to see the query the model manager executes, with the data bound?</p>
+<p>€dit:</p>
+<p>I'm still working on this issue, I even tried it the hard way (just for testing purposes)</p>
+<pre><code class="language-php">$query-&gt;execute([
+                'tmp1' =&gt; $data[$i][0],
+                'tmp2' =&gt; $data[$i][1],
+                'tmp3' =&gt; $data[$i][2],
+                'tmp4' =&gt; $data[$i][3],
+                'tmp5' =&gt; $data[$i][4],
+                'tmp6' =&gt; $data[$i][5],
+                'tmp7' =&gt; $data[$i][6],
+                'tmp8' =&gt; $data[$i][7],
+                'tmp9' =&gt; $data[$i][8],
+                'tmp10' =&gt; $data[$i][9],
+                'tmp11' =&gt; $data[$i][10],
+                'tmp12' =&gt; $data[$i][11],
+                'tmp13' =&gt; $data[$i][12],
+                'tmp14' =&gt; $data[$i][13],
+                'tmp15' =&gt; $data[$i][14],
+                'tmp16' =&gt; $data[$i][15]
+            ]);</code></pre>
+<p>I checked on the MySQL server, and saw that the query submitted looked like this:</p>
+<pre><code class="language-sql">INSERT INTO (table)` (`Artnr`, (other fields)) VALUES (null, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT)</code></pre>
+<p>Seeing this explains at least the error message, but I don't understand the reason; the array of which I bind the data is populated, but it seems not to bind the values.</p>
+<p>Thank you.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C62913" href="#C62913">
+                <time itemprop="dateCreated" datetime="2020-04-21T07:43:41-07:00" class="action-date">Apr '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Good job troubleshooting - you've done everything I would have suggested.</p>
+<p>The resulting query looks odd.  If you're inserting data, why are all the other fields <code>DEFAULT</code>?  Is <code>$data</code> populated as you expect?</p>
+<p>My next step would be to output the query and the data for a single value of <code>$i</code> - just to get a glimpse into what the query and the data looks like on the PHP side.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62913" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62913" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9842e74678b8a899c45d1c57223d12c9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10345/Nyde" class="user-moderator-N"><span itemprop="name">Nyde</span></a>        </span>
+        <br>
+
+        <span class="karma">4.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="62925" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '20</span>
+              </span><br/><a name="C62925" href="#C62925">
+                <time itemprop="dateCreated" datetime="2020-04-21T10:45:51-07:00" class="action-date">Apr '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I already checked on <code>$row</code>, which is populated by <code>$data[$i]</code>, its looks fine. </p>
+<p>For testing purposes, I got rid of the binding and replaced the placeholders myself with a simple <code>str_replace</code>, to see if the query gets populated this way:</p>
+<pre><code class="language-php">for($i = 0; $i &lt; sizeof($data); $i++)
+        {   
+            $tmpSql = $sql;
+
+            for($j = 0; $j &lt; $suppdata['num_fields']; $j++)
+                $sql = str_replace(':tmp'.($j+1).':', $data[$i][$j], $sql);
+
+            echo $sql;
+            $status = $this-&gt;modelsManager-&gt;executeQuery($sql);
+
+            $sql = $tmpSql;
+
+            foreach($status-&gt;getMessages() as $m)
+                echo $m."&lt;br /&gt;";
+
+        }</code></pre>
+<p>Aside from missing quotation marks for the string values, I get a perfectly fine query from it, so there seems to be a problem with the binding, not with the data.</p>
+<p>How can I check the query before it gets sent up to the database? <code>$query-&gt;getSql()</code> just gives me the placeholder version I generated, but not the filled version However, I am able to see what is sent to the database, I think Phalcon itself wouldn't generate another output for me.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62925" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62925" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C62927" href="#C62927">
+                <time itemprop="dateCreated" datetime="2020-04-21T11:32:43-07:00" class="action-date">Apr '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Can you show the placeholder version and an example <code>$row</code>?  I know you said you checked on <code>$row</code> already, but maybe another set of eyes will find something - or maybe I'm totally wrong.</p>
+<p>You said you tried it the hard way.  Have you tried it by binding not with data from <code>$data</code>, but with hardcoded values?</p>
+<p>Do you have access to your MySQL server's error log?  Maybe something's going funky with the binding, but is somehow being recovered.</p>
+<p>Also, an irrelevant-to-your-question note on your code - your first <code>for</code> loop is looping starting at 1, but your third is looping from 0, but then being incremented.  That just seems overly complicated.</p>
+<p>Why not have your first <code>for</code> loop start at 0:</p>
+<pre><code class="language-php">for($i = ; $i &lt; $suppdata['num_fields']; $i++)</code></pre>
+<p>Then you can simplify the third loop:</p>
+<pre><code class="language-php">for($j = 0; $j &lt; $suppdata['num_fields']; $j++)
+     $row['tmp'.$j] = $data[$i][$j];</code></pre>
+<p>Personally I'd use <code>foreach</code> loops.</p>
+<p>And finally, I edited your posts to show syntax highlighting - if you [Edit] your post you can see I added <code>php</code>, and <code>sql</code> after the three opening backticks.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62927" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62927" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9842e74678b8a899c45d1c57223d12c9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10345/Nyde" class="user-moderator-N"><span itemprop="name">Nyde</span></a>        </span>
+        <br>
+
+        <span class="karma">4.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="62929" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '20</span>
+              </span><br/><a name="C62929" href="#C62929">
+                <time itemprop="dateCreated" datetime="2020-04-21T14:24:20-07:00" class="action-date">Apr '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Oh, I've seen this syntax highlighting here before, but didn't know how to set it, so thank you ;)</p>
+<p>The placeholder version looks like this:</p>
+<pre><code class="language-sql">INSERT INTO (table) (Artnr, (field2, field3, .., field16)) VALUES (:tmp0:, :tmp1:, :tmp2:, :tmp3:, :tmp4:, :tmp5:, :tmp6:, :tmp7:, :tmp8:, :tmp9:, :tmp10:, :tmp11:, :tmp12:, :tmp13:, :tmp14:, :tmp15:)</code></pre>
+<p>This is a <code>var_dump()</code> of <code>$row</code>:</p>
+<pre><code class="language-php">array (size=16)
+  'tmp0' =&gt; int 100868
+  'tmp1' =&gt; int 1
+  'tmp2' =&gt; string 'PRODUCT SLOGAN' (length=14)
+  'tmp3' =&gt; string 'PRODUCT INGREDIENTS' (length=19)
+  'tmp4' =&gt; int 9515
+  'tmp5' =&gt; int 12
+  'tmp6' =&gt; int 2
+  'tmp7' =&gt; string 'S' (length=1)
+  'tmp8' =&gt; string 'ST' (length=2)
+  'tmp9' =&gt; float 0.99
+  'tmp10' =&gt; string '2,000' (length=5)
+  'tmp11' =&gt; int 0
+  'tmp12' =&gt; string '0001-01-01' (length=10)
+  'tmp13' =&gt; string '2001-09-21' (length=10)
+  'tmp14' =&gt; string 'J' (length=1)
+  'tmp15' =&gt; string '0001-01-01' (length=10)</code></pre>
+<p>There are no funky errors in the MySQL error logs.</p>
+<p>Hard coded values yield the same error.</p>
+<p>And to your suggestion: you're right, thats more simple. Don't know what had me doing that..</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62929" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62929" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C62931" href="#C62931">
+                <time itemprop="dateCreated" datetime="2020-04-21T14:56:33-07:00" class="action-date">Apr '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well nuts - I'm not sure what else to look for.  The <em>only</em> thing that looks off to me is the fact you've got <code>field2</code> to <code>field16</code> in another set of parethesis.  I've never done or even seen that.  Try changing it to just</p>
+<pre><code class="language-php">(Artnr, field2, field3, field4)</code></pre>
+<p>That's really grasping at straws though.</p>
+<p>You've successfully executed a query with no binding right?  Just putting the values directly in the query?</p>
+<p>I've never encountered this problem.  Are you running v3 or v4?</p>
+<p>Maybe try not using <code>modelsManager</code> and PHQL and instead use the basic DB service, which is PDO, and try it that way.  Maybe Phalcon's messing up but raw PDO will work?  You'll need to use positional placeholders, but it should be pretty easy to at least test.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62931" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62931" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9842e74678b8a899c45d1c57223d12c9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10345/Nyde" class="user-moderator-N"><span itemprop="name">Nyde</span></a>        </span>
+        <br>
+
+        <span class="karma">4.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="62933" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '20</span>
+              </span><br/><a name="C62933" href="#C62933">
+                <time itemprop="dateCreated" datetime="2020-04-21T15:18:21-07:00" class="action-date">Apr '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The other set of parenthesis was just to display here, the fields are all in the same set of parenthesis. I just didn't want to have a long line of field2, field3, field4, ... and so on in the code block. So in conclusion, the query looks like this:</p>
+<pre><code class="language-sql">INSERT INTO table (Artnr, field2, field3, field4, field5, field6, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16) VALUES (:tmp0:, :tmp1:, :tmp2:, :tmp3:, :tmp4:, :tmp5:, :tmp6:, :tmp7:, :tmp8:, :tmp9:, :tmp10:, :tmp11:, :tmp12:, :tmp13:, :tmp14:, :tmp15:)</code></pre>
+<p>Yes, I successfully executed the query without binding, and the model way with like</p>
+<pre><code class="language-php">$entry = new TableInMatter();
+$entry-&gt;setArtnr(123);
+$entry-&gt;setField2(321);
+...
+$entry-&gt;setField16('somestring');
+$entry-&gt;save();</code></pre>
+<p>produces the same error. Do the model internals work similiar, with building queries, binding values and then execute them?</p>
+<p>Currently, I'm running Phalcon 4.0.5 on PHP 7.4.4 and MySQL 5.7.11 on Windows 10. PHP and Phalcon are fresh installs.</p>
+<p>Fun thing is, in another controller, I don't have any problems with binding and executing queries via the modelsManager. Only differences are column count and (far) less variable work.</p>
+<pre><code class="language-php">$query = $this-&gt;modelsManager-&gt;createQuery('INSERT INTO anothertable (node_id, text) VALUES (:node_id:, :text:)');
+
+for($i = 1; $i &lt; sizeof($data); $i++) // the point of $i = 1 here is that the data comes from a csv file, and $data[0] contains the column names
+{
+    $query-&gt;execute([
+        'node_id' =&gt; $data[$i][0],
+        'text' =&gt; $data[$i][1]
+    ]);     
+}</code></pre>
+<p>I'll try out the basic DB service tomorrow.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62933" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62933" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C62935" href="#C62935">
+                <time itemprop="dateCreated" datetime="2020-04-21T15:41:59-07:00" class="action-date">Apr '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I would imagine Models use the same phql abstraction layer.</p>
+<p>I wonder if, somehow, it's your table definition.  Could you post that?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62935" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62935" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9842e74678b8a899c45d1c57223d12c9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10345/Nyde" class="user-moderator-N"><span itemprop="name">Nyde</span></a>        </span>
+        <br>
+
+        <span class="karma">4.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C62937" href="#C62937">
+                <time itemprop="dateCreated" datetime="2020-04-21T16:09:03-07:00" class="action-date">Apr '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Turns out PHQL can't run EXPLAIN, so here is the CREATE statement from MySQL. </p>
+<pre><code class="language-sql">CREATE TABLE `supp_table` (
+  `Artnr` int(6) NOT NULL,
+  `field2` int(3) DEFAULT NULL,
+  `field3` varchar(60) DEFAULT NULL,
+  `field4` varchar(60) DEFAULT NULL,
+  `field5` int(4) DEFAULT NULL,
+  `field6` int(1) DEFAULT NULL,
+  `field7` int(1) DEFAULT NULL,
+  `field8` varchar(1) DEFAULT NULL,
+  `field9` varchar(2) DEFAULT NULL,
+  `field10` double DEFAULT NULL,
+  `field11` varchar(10) DEFAULT NULL,
+  `field12` int(10) DEFAULT NULL,
+  `field13` date DEFAULT NULL,
+  `field14` date DEFAULT NULL,
+  `field15` varchar(1) DEFAULT NULL,
+  `field16` date DEFAULT NULL,
+  PRIMARY KEY (`Artnr`),
+  KEY `supp_idx` (`Artnr`,`field10`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='supp_name';</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62937" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62937" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9842e74678b8a899c45d1c57223d12c9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10345/Nyde" class="user-moderator-N"><span itemprop="name">Nyde</span></a>        </span>
+        <br>
+
+        <span class="karma">4.0k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C62931"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Dylan Anderson                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C62947" href="#C62947">
+                <time itemprop="dateCreated" datetime="2020-04-22T03:32:13-07:00" class="action-date">Apr '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Maybe try not using <code>modelsManager</code> and PHQL and instead use the basic DB service, which is PDO, and try it that way.  Maybe Phalcon's messing up but raw PDO will work?  You'll need to use positional placeholders, but it should be pretty easy to at least test.</p>
+</blockquote>
+<p>This works, so thank you so far for this suggestion. Still wondering what causes the problem with the <code>modelsManager</code> though.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62947" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62947" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C62949" href="#C62949">
+                <time itemprop="dateCreated" datetime="2020-04-22T07:31:04-07:00" class="action-date">Apr '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I have no idea.  Like I said, I've never encountered anything like this.  Maybe it's a bug in v4?  If it's possible to create a reproducable test case, I'd encourage you to file a bug report on GitHub.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62949" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62949" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/07dedd51671291aca4f3f84a115c534e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1320/tztztztz" class="user-moderator-N"><span itemprop="name">Tomasz Zadora</span></a>        </span>
+        <br>
+
+        <span class="karma">10.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C62953" href="#C62953">
+                <time itemprop="dateCreated" datetime="2020-04-23T01:29:22-07:00" class="action-date">Apr '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>What's Your version of Phalcon? There was a bug  in 4.0.4 resulting in similiar behaviour you're presenting, fixed in 4.0.5</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62953" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62953" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9842e74678b8a899c45d1c57223d12c9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10345/Nyde" class="user-moderator-N"><span itemprop="name">Nyde</span></a>        </span>
+        <br>
+
+        <span class="karma">4.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C62957" href="#C62957">
+                <time itemprop="dateCreated" datetime="2020-04-23T02:15:32-07:00" class="action-date">Apr '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I'm running 4.0.5. Do you have a link to the issue?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62957" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62957" data-cf-modified-b63bae12f37b80a5cdd84f66-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="20567" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

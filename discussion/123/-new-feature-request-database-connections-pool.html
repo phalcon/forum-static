@@ -1,0 +1,385 @@
+---
+layout: default
+title: '[New Feature Request] Database connections pool - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">[New Feature Request] Database connections pool</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/114/roman-kulish" class="user-moderator-N"><span itemprop="name">roman-kulish</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-03-10T22:13:54-07:00">Mar '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-03-10T22:13:54-07:00">Mar '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1407</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">3</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/177525cf68cabf12fac5fc4c3603ecba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/114/roman-kulish" class="user-moderator-N"><span itemprop="name">roman-kulish</span></a></span>
+                <span class="karma">5.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C123" href="#C123">
+        <time class="action-date">Mar '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>The purpose of this topic is to engage people into discussion of a new feature or improvement.</p>
+<p>===</p>
+<p>Background:</p>
+<p>Phalcon\Mvc\Model has basic support for sharding, see <a href="http://blog.phalcon.io/post/44715359754/phalcon-1-0-0-beta-released">http://blog.phalcon.io/post/44715359754/phalcon-1-0-0-beta-released</a>, Vertical/Horizontal Sharding Improvements</p>
+<p>How to work with federated data / sharding is demonstrated in the blog post above.</p>
+<p>Scenario:</p>
+<p>Company A uses single database on their website.</p>
+<p>Company B uses one database instance for writing and one database instance for reading.</p>
+<p>Company C uses one master and one slave (fallback connection) for writing and one master and one slave (fallback connection) for reading.</p>
+<p>Company D utilizes a small database cluster for saving statistical data (write only). Considering that the cluster works under heavy load some databases in it may not be available immediately and so they require their application to use “the first successful connection”.</p>
+<p>Company E hosts their invoicing application which runs queries against a number of databases servers to fetch (federated) data. They require their application to cause even load across database servers.</p>
+<p>Proposal:</p>
+<p>Implement “connection pool” functionality which can:</p>
+<ul>
+<li>manage single and multiple connections</li>
+<li>provide connections separation by operation (read / write)</li>
+<li>provide different access strategies to databases</li>
+<li>support “default” (always available fallback) connection</li>
+<li>be compatible with Phalcon\Mvc\Model; and </li>
+<li>exist as a standalone object to be reused in other areas besides Model</li>
+</ul>
+<p>API and object structure:</p>
+<pre><code class="language-php">
+namespace Phalcon\Db;
+
+class ConnectionPool
+{
+    const STRATEGY_DEFAULT = 'default';
+    const STRATEGY_ROUND_ROBIN = 'round_robin';
+
+    /**
+     * One of ConnectionPool::STRATEGY_DEFAULT or
+     * ConnectionPool::STRATEGY_ROUND_ROBIN constants
+     *
+     * @var string
+     */
+    protected $strategy = self::STRATEGY_DEFAULT;
+
+    /**
+     * Default connection
+     *
+     * @var null|array|Adapter
+     */
+    protected $defaultConnection = null;
+
+    /**
+     * Write connections stack
+     *
+     * @var array
+     */
+    protected $writeConnections = array();
+
+    /**
+     * Write connection parameters stack
+     *
+     * @var array
+     */
+    protected $writeConnectionParameters = array();
+
+    /**
+     * Write connection counter (for round-robin strategy)
+     *
+     * @var integer
+     */
+    protected $writeConnectionCounter = 0;
+
+    /**
+     * Read connections stack
+     *
+     * @var array
+     */
+    protected $readConnections = array();
+
+    /**
+     * Read connection parameters stack
+     *
+     * @var array
+     */
+    protected $readConnectionParameters = array();
+
+    /**
+     * Read connection counter (for round-robin strategy)
+     *
+     * @var integer
+     */
+    protected $readConnectionCounter = 0;
+
+    /**
+     * Constructor
+     */
+    public function __construct($defaultConnection = null, $strategy = self::STRATEGY_DEFAULT) {}
+
+    /**
+     * Set connection selection strategy
+     *
+     * @param string $strategy
+     *   One of ConnectionPool::STRATEGY_DEFAULT or
+     *   ConnectionPool::STRATEGY_ROUND_ROBIN constants
+     * @return ConnectionPool
+     * @throws ConnectionPool\InvalidArgumentException
+     */
+    public function setStrategy($strategy) {}
+
+    /**
+     * Get connection selection strategy
+     *
+     * @return string
+     */
+    public function getStrategy() {}
+
+    /**
+     * Set default database connection
+     *
+     * @param null|array|Adapter $connection
+     *   Connection parameters or Adapter object
+     * @return ConnectionPool
+     * @throws ConnectionPool\InvalidArgumentException
+     */
+    public function setDefaultConnection($connection) {}
+
+    /**
+     * Get default database connection
+     *
+     * @return null|Adapter $connection
+     * @throws ConnectionPool\RuntimeException
+     */
+    public function getDefaultConnection() {}
+
+    /**
+     * Add database connection to the write connections pool
+     *
+     * @param array|Adapter $connection
+     *   Connection parameters or Adapter object
+     * @return ConnectionPool
+     * @throws ConnectionPool\InvalidArgumentException
+     */
+    public function addWriteConnection($connection) {}
+
+    /**
+     * Get write database connection
+     *
+     * @return Adapter $connection
+     * @throws ConnectionPool\RuntimeException
+     */
+    public function getWriteConnection() {}
+
+    /**
+     * Add database connection to the read connections pool
+     *
+     * @param array|Adapter $connection
+     *   Connection parameters or Adapter object
+     * @return ConnectionPool
+     * @throws ConnectionPool\InvalidArgumentException
+     */
+    public function addReadConnection($connection) {}
+
+    /**
+     * Get read database connection
+     *
+     * @return Adapter $connection
+     * @throws ConnectionPool\RuntimeException
+     */
+    public function getReadConnection() {}
+
+    /**
+     * Create database connection from $parameters
+     *
+     * @param array $parameters
+     *   Connection parameters
+     * @return Adapter $connection
+     * @throws ConnectionPool\RuntimeException
+     */
+    protected function createConnectionFromParameters(array $parameters) {}
+}
+
+namespace Phalcon\Db\ConnectionPool;
+
+class InvalidArgumentException extends \InvalidArgumentException
+{
+
+}
+
+class RuntimeException extends \RuntimeException
+{
+
+}```
+
+Theory of Operation:
+
+Phalcon\Db\ConnectionPool::setStrategy($strategy) and Phalcon\Db\ConnectionPool::getStrategy()
+
+Allow to set new connection selection strategy and retrieve the current one. Strategy can be either:
+
+Phalcon\Db\ConnectionPool::STRATEGY_DEFAULT - returns first successful connection; or 
+Phalcon\Db\ConnectionPool::STRATEGY_ROUND_ROBIN - returns connections one-by-one on each access
+
+Phalcon\Db\ConnectionPool::setDefaultConnection($connection) and Phalcon\Db\ConnectionPool::getDefaultConnection()
+
+Allow setting up default (always available fallback) connection and retrieve it. If multiple connections are configured then using default connection is optional.
+
+$connection can be either array or instance of Phalcon\Db\Adapter. If connection is array then Adapter is created from it at first request.
+
+Phalcon\Db\ConnectionPool::addWriteConnection($connection)
+
+Adds write connection to the pool of write connections. 
+
+$connection can be either array or instance of Phalcon\Db\Adapter. If connection is array then $connection parameters are added to Phalcon\Db\ConnectionPool::$writeConnectionParameters stack and Adapter is created at first request. 
+
+This “lazy loading” implementation saves resources and establishes connections “when needed”.
+
+Otherwise $connection is added to Phalcon\Db\ConnectionPool::$writeConnections stack.
+
+Phalcon\Db\ConnectionPool::addReadConnection($connection)
+
+Adds read connection to the pool of read connections. 
+
+$connection can be either array or instance of Phalcon\Db\Adapter. If connection is array then $connection parameters are added to Phalcon\Db\ConnectionPool::$readConnectionParameters stack and Adapter is created at first request. 
+
+This “lazy loading” implementation saves resources and establishes connections “when needed”.
+
+Otherwise $connection is added to Phalcon\Db\ConnectionPool::$readConnections stack.
+
+Phalcon\Db\ConnectionPool::getWriteConnection()
+
+Returns database connection for writing.
+
+If Phalcon\Db\ConnectionPool::STRATEGY_DEFAULT is set then first database connection is returned from Phalcon\Db\ConnectionPool::$writeConnections stack.
+
+if Phalcon\Db\ConnectionPool::STRATEGY_ROUND_ROBIN is set then next created connection is returned.
+
+Algo: 
+
+```php
+$connectionId = (Phalcon\Db\ConnectionPool::$writeConnectionCounter++) % ( sizeof(Phalcon\Db\ConnectionPool::$writeConnections) + sizeof(Phalcon\Db\ConnectionPool::$writeConnectionParameters) )</code></pre>
+<p>if $connectionId is in Phalcon\Db\ConnectionPool::$writeConnections then Phalcon\Db\ConnectionPool::$writeConnections[$connectionId] is returned.</p>
+<p>Otherwise a new Adapter instance is created: </p>
+<pre><code class="language-php">$parameters = array_shift(Phalcon\Db\ConnectionPool::$writeConnectionParameters)
+
+try {
+    $adapter = Phalcon\Db\ConnectionPool::createConnectionFromParameters($parameters);
+} catch {\Exception $exception} {
+    // connection parameters is invalid or database is not available.
+    // since multiple connections are configured, we can proceed with next connection
+
+    // try next Phalcon\Db\ConnectionPool::$writeConnectionParameters
+}
+
+Phalcon\Db\ConnectionPool::$writeConnections[] = $adapter;
+return $adapter;</code></pre>
+<p>If adapter cannot be created / retrieved from the stack (e.g., no connections configured or all connections failed or invalid) and default connection is set, then default connection is returned.</p>
+<p>Otherwise exception should be thrown.</p>
+<p>Phalcon\Db\ConnectionPool::getReadConnection()</p>
+<p>Return read database connection (see Phalcon\Db\ConnectionPool::getWriteConnection() for details).</p>
+<p>Phalcon\Db\ConnectionPool::createConnectionFromParameters(array $parameters)</p>
+<p>Creates and returns an instance of Phalcon\Db\Adapter from array $parameters.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-3607c23747a83d97abf4799e-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-3607c23747a83d97abf4799e-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">3</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/177525cf68cabf12fac5fc4c3603ecba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/114/roman-kulish" class="user-moderator-N"><span itemprop="name">roman-kulish</span></a>        </span>
+        <br>
+
+        <span class="karma">5.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C526" href="#C526">
+                <time itemprop="dateCreated" datetime="2013-03-12T01:14:22-07:00" class="action-date">Mar '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Too much text I assume :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="526" data-cf-modified-3607c23747a83d97abf4799e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="526" data-cf-modified-3607c23747a83d97abf4799e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f995126f75088cac3803b91febd711fb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/87/noobiwan" class="user-moderator-N"><span itemprop="name">Lewiz</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C14240" href="#C14240">
+                <time itemprop="dateCreated" datetime="2014-12-16T22:14:56-07:00" class="action-date">Dec '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I like the idea. Any updates on this implementation?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14240" data-cf-modified-3607c23747a83d97abf4799e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14240" data-cf-modified-3607c23747a83d97abf4799e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/7578579205c2103576b553edd4880b3d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/120/aleemb" class="user-moderator-N"><span itemprop="name">aleemb</span></a>        </span>
+        <br>
+
+        <span class="karma">9.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C14290" href="#C14290">
+                <time itemprop="dateCreated" datetime="2014-12-19T02:59:40-07:00" class="action-date">Dec '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If there is any implementation of this would like to give it a go. I have had the need to round-robin between connections and/or fallback.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14290" data-cf-modified-3607c23747a83d97abf4799e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14290" data-cf-modified-3607c23747a83d97abf4799e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="123" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

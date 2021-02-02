@@ -1,0 +1,139 @@
+---
+layout: default
+title: 'Possible bug in Mvc\Router. If a single parameter is 0 it is treated as non-existent always. - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Possible bug in Mvc\Router. If a single parameter is 0 it is treated as non-existent always.</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1795/fsando" class="user-moderator-N"><span itemprop="name">Finn Sandø</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-05-03T02:15:05-07:00">May '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-05-03T02:15:05-07:00">May '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>463</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/21697c9beb69ab1f65753c880a077141?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1795/fsando" class="user-moderator-N"><span itemprop="name">Finn Sandø</span></a></span>
+                <span class="karma">9.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6606" href="#C6606">
+        <time class="action-date">May '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I previously posted <a href="http://forum.phalcon.io/discussion/4554/phalcon-converts-zero-to-null-when-passed-as-last-parameter-in-u">this about the bug</a>, I reported it as a bug against 1.3 <a href="https://github.com/phalcon/cphalcon/issues/3274">https://github.com/phalcon/cphalcon/issues/3274</a> and made this PR: <a href="https://github.com/phalcon/cphalcon/pull/3280">https://github.com/phalcon/cphalcon/pull/3280</a> against 2.0.0.</p>
+<p>The PR was closed without being applied, I don't know why but my guess is that either it's not considered a bug, my solution isn't good or the PR-message was too unclear or all of the above.</p>
+<p>The reason I believe this is a bug is that Phalcon is unable to distinguish between a situation when a parameter is actually 0 and a situation when no parameter is given in the url. In my opinion these two situations are radically different and should be clearly distinguishable. Also as my examples below show, 0 and 0.0 are treated very differently which further indicates to me that this is a bug.</p>
+<p>So Now I will try to state the issue more clearly and see if anybody can confirm if this is indeed a bug or the expected behavior.</p>
+<p>The function IndexController::bugAction:</p>
+<pre><code class="language-php">    class IndexController extends Controller
+    {
+        public function bugAction($param=null)
+        {
+            $matches = $this-&gt;router-&gt;getMatches();
+            echo "&lt;pre&gt;matches:",print_r($matches,true),"&lt;/pre&gt;";
+            echo "&lt;pre&gt;param:",print_r($param,true),"&lt;/pre&gt;";
+        }
+    }</code></pre>
+<p>An url in the browser that triggers the bug:</p>
+<pre><code class="language-php">    http://mysite/index/bug/0</code></pre>
+<p>The result when bug is triggered:</p>
+<pre><code class="language-php">    matches:Array
+    (
+        [0] =&gt; /index/bug/0
+        [1] =&gt; bug
+        [2] =&gt; /0
+    )
+
+    param:
+</code></pre>
+<p>An url in the browser that doesn not trigger the bug:</p>
+<pre><code class="language-php">    http://mysite/index/bug/0.0</code></pre>
+<p>The result when bug is not triggered:</p>
+<pre><code class="language-php">    matches:Array
+    (
+        [0] =&gt; /index/bug/0.0
+        [1] =&gt; bug
+        [2] =&gt; /0.0
+    )
+
+    param:0.0
+</code></pre>
+<p>EDIT:</p>
+<p>It occurred to me that the routes probably are relevant so here they are:</p>
+<pre><code class="language-php">$router-&gt;add(
+    "(.*)",
+    array(
+        'namespace' =&gt; 'Myapp\Controllers',
+        "controller" =&gt; "index",
+        "action" =&gt; "index",
+    )
+);
+// index with action, params
+$router-&gt;add(
+    "/index/:action/:params",
+    array(
+        "namespace" =&gt; 'Myapp\Controllers',
+        "controller" =&gt; "index",
+        "action" =&gt; 1,
+        "params" =&gt; 2,
+    )
+);
+
+// index with action
+$router-&gt;add(
+    "/index/:action",
+    array(
+        "namespace" =&gt; 'Myapp\Controllers',
+        "controller" =&gt; "index",
+        "action" =&gt; 1,
+    )
+);
+</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-8e6c1c1eec82cb61b8b03e77-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-8e6c1c1eec82cb61b8b03e77-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6606" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,174 @@
+---
+layout: default
+title: 'How to redirect to index using Phalcon php Micro application and custom routing - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How to redirect to index using Phalcon php Micro application and custom routing</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1276/Tareck117" class="user-moderator-N"><span itemprop="name">Tareck117</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-03-17T12:14:43-07:00">Mar '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-03-17T12:14:43-07:00">Mar '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1392</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/4d3fcf081cb3bbc79c5d3f5f4458a3a6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1276/Tareck117" class="user-moderator-N"><span itemprop="name">Tareck117</span></a></span>
+                <span class="karma">2.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1813" href="#C1813">
+        <time class="action-date">Mar '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm building an Ajax driven web application using Php and the Phalcon framework.</p>
+<p>When a user access the website, his request will be handle in my pageNotFound method, which will render the index.php view, and this view will call my server adding the Page prefix to the current url to load HTML in a div.</p>
+<p>So www.mywebsite.com/home will call my server www.mywebsite.com/Page/Home which will render the html in the div.</p>
+<p>I want to redirect the user to the home page if he's trying to access the Page url directly from it's url input in its browser.</p>
+<p>But when I try to redirect him, the url becomes : ww.mywebsite.com/public/index/index</p>
+<p>Do someone know why Phalcon his doing this ? And what could be a possible solution to my problem ?</p>
+<p>The only way I was able to do what I wanted what with the following code :</p>
+<p>header(&quot;location:/&quot;);</p>
+<p>Here's my original code.
+StackOverflow : <a href="http://stackoverflow.com/questions/22444295/how-to-redirect-to-index-using-phalcon-php-micro-application-and-custom-routing">http://stackoverflow.com/questions/22444295/how-to-redirect-to-index-using-phalcon-php-micro-application-and-custom-routing</a></p>
+<pre><code class="language-php">&lt;?php
+
+    try {
+
+    //Register an autoloader
+    $loader = new \Phalcon\Loader();
+    $loader-&gt;registerDirs(
+        array(
+            '../app/controllers/',
+            '../app/models/'
+            )
+        )-&gt;register();    
+
+    //Create a DI
+    $di = new Phalcon\DI\FactoryDefault();
+    $app = new \Phalcon\Mvc\Micro();
+
+    $di-&gt;set('view', function() {
+
+        $view = new Phalcon\Mvc\View\Simple();
+
+        $view-&gt;setViewsDir('../app/views/');
+
+        return $view;
+
+    }, true);
+
+    $app-&gt;setDI($di);
+
+    $app-&gt;map('/', function () use ($app) { 
+        echo $app['view']-&gt;render("index/index");
+    });
+
+    $app-&gt;map('/Page/Home', function () use ($app) {  
+        if ($app-&gt;request-&gt;isAjax()) {
+            echo $app['view']-&gt;render("page/Home");
+        }      
+        else{
+            //It means that the user is trying to access the page manually in the url input
+            //I would like to redirect him to my index page / page not found.
+            //But when I try to do it redirect me to the following url
+            // http://localhost/public/index/index
+
+            $app-&gt;response-&gt;redirect("index/index")-&gt;sendHeaders();
+        }
+    });
+
+    $app-&gt;notFound(function () use ($app) {          
+        //Ajax "Page" request that is not found
+        if ($app-&gt;request-&gt;isAjax() &amp;&amp; $app-&gt;request-&gt;isGet()) {
+            echo $app['view']-&gt;render("page/pageNotFound");
+        }
+        //Ajax "API" request that is not found
+        elseif ($app-&gt;request-&gt;isAjax() &amp;&amp; $app-&gt;request-&gt;isPost()) {
+            $app-&gt;response-&gt;setStatusCode(400, "Bad Request");
+            $app-&gt;response-&gt;send();
+        }
+        //We render the index page, which will run the ajax call that will surely check 
+        // if it's a real Page not found error.
+        else{
+            echo $app['view']-&gt;render("index/index");
+        }
+    });
+
+    $app-&gt;handle();
+
+    } catch(\Phalcon\Exception $e) {
+       echo "PhalconException: ", $e-&gt;getMessage();
+    }</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-16f1a5895a2eda8d1d6344d8-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-16f1a5895a2eda8d1d6344d8-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6296" href="#C6296">
+                <time itemprop="dateCreated" datetime="2014-03-17T15:17:58-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Try adding a definition for the URL service:</p>
+<pre><code class="language-php">$di['url'] = function(){
+        $url = new \Phalcon\Mvc\Url();
+        $url-&gt;setBaseUri('/');
+        return $url;
+};</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6296" data-cf-modified-16f1a5895a2eda8d1d6344d8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6296" data-cf-modified-16f1a5895a2eda8d1d6344d8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1813" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

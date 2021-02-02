@@ -1,0 +1,302 @@
+---
+layout: default
+title: 'Going from 2-&gt;3... Problem accessing model - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Going from 2-&gt;3... Problem accessing model</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-09-08T12:37:21-07:00">Sep '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-09-08T12:37:21-07:00">Sep '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>397</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/e00a6fdd3e722135512e013b7f1e9693?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a></span>
+                <span class="karma">17.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C13515" href="#C13515">
+        <time class="action-date">Sep '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Kind of modelling my latest project after Vokuro and running into an issue.  When I try to do User::findFirst([...]), I'm getting a 500 error that &quot; Class 'Zipline\Controllers\User' not found in /var/www/html/zipline/app/controllers/NoauthajaxController.php on line 11&quot;</p>
+<p>Here is part of my config:</p>
+<pre><code class="language-php">    'application' =&gt; [
+        'controllersDir' =&gt; APP_PATH . '/controllers/',
+        'modelsDir' =&gt; APP_PATH . '/models/',
+        //'formsDir' =&gt; APP_PATH . '/forms/',
+        'viewsDir' =&gt; APP_PATH . '/views/',
+        'libraryDir' =&gt; APP_PATH . '/library/',
+        //'pluginsDir' =&gt; APP_PATH . '/plugins/',
+        //'cacheDir' =&gt; BASE_PATH . '/cache/',
+    ],</code></pre>
+<p>Here is my loader:</p>
+<pre><code class="language-php">    &lt;?php
+
+    use Phalcon\Loader;
+
+    $loader = new Loader();
+
+    /**
+     * We're a registering a set of directories taken from the configuration file
+     */
+    $loader-&gt;registerNamespaces([
+        'Zipline\Models' =&gt; $config-&gt;application-&gt;modelsDir,
+        'Zipline\Controllers' =&gt; $config-&gt;application-&gt;controllersDir,
+        //'Zipline\Forms' =&gt; $config-&gt;application-&gt;formsDir,
+        'Zipline' =&gt; $config-&gt;application-&gt;libraryDir
+    ]);
+
+    $loader-&gt;register();
+
+    // Use composer autoloader to load vendor classes
+    require_once BASE_PATH . '/vendor/autoload.php';</code></pre>
+<p>Here is my controller:</p>
+<pre><code class="language-php">    &lt;?php namespace Zipline\Controllers;
+
+    use Phalcon\Http\Response;
+    use Phalcon\Http\Request;
+
+    class NoauthajaxController extends ControllerBase {
+
+        public function userloginAction() {
+            $response = $this-&gt;getResponse();
+            $request = $this-&gt;getRequest();
+            $U = User::findFirst([
+                'conditions' =&gt; 'email = :username:',
+                'bind' =&gt; [
+                    'username' =&gt; $request-&gt;username
+                ]
+            ]);
+            if (empty($U)) {
+                $response['error'] = "Invalid username or password.";
+            } else if ($U-&gt;login($request)) {
+                $response['success'] = true;
+                $response['data']['user'] = $this-&gt;session-&gt;get('auth_user');
+            } else {
+                $response['error'] = $this-&gt;errors($U-&gt;getMessages());
+            }
+
+            $this-&gt;respond($response);
+        }
+    }</code></pre>
+<p>Here is my model:</p>
+<pre><code class="language-php">    &lt;?php namespace Zipline\Models;
+
+    use Phalcon\Mvc\Model;
+    use Phalcon\Mvc\Model\Message;
+    /*
+    use Phalcon\Validation;
+    use Phalcon\Mvc\Model\Validator\Uniqueness;
+    use Phalcon\Mvc\Model\Validator\Email;
+    use Phalcon\Mvc\Model\Validator\PresenceOf;
+    use Phalcon\Mvc\Model\Behavior\SoftDelete;
+    */
+
+    class User extends Model {
+
+        public function initialize() {
+            $this-&gt;setSource("users");
+        }
+
+        public function login() {
+            var_dump($this-&gt;toArray());
+        }
+
+    }</code></pre>
+<p>Trying to make this as simple as possible, but for some reason when I call User::findFirst, it's thinking I'm looking for a controller named User... Not the model.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-9aa35d25abc82c8e20b50034-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-9aa35d25abc82c8e20b50034-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39975" href="#C39975">
+                <time itemprop="dateCreated" datetime="2016-09-08T12:48:40-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><ol>
+<li>Start using IDE.</li>
+<li>Add <code>use Zipline\Models\User;</code> in controller after namespace</li>
+</ol></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39975" data-cf-modified-9aa35d25abc82c8e20b50034-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39975" data-cf-modified-9aa35d25abc82c8e20b50034-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e00a6fdd3e722135512e013b7f1e9693?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a>        </span>
+        <br>
+
+        <span class="karma">17.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39977" href="#C39977">
+                <time itemprop="dateCreated" datetime="2016-09-08T12:52:21-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks, didn't realize you had to add the use statement in the controller.</p>
+<p>Is it better to go this route or go back to not using namespaces?  In my previous Phalcon apps I didn't have to specify the models in the use statements, but I also just loaded the directories instead of registering namespaces.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39977" data-cf-modified-9aa35d25abc82c8e20b50034-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39977" data-cf-modified-9aa35d25abc82c8e20b50034-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39979" href="#C39979">
+                <time itemprop="dateCreated" datetime="2016-09-08T13:09:56-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It's definitely better to seperate your application to namespaces. Just use some IDE :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39979" data-cf-modified-9aa35d25abc82c8e20b50034-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39979" data-cf-modified-9aa35d25abc82c8e20b50034-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e00a6fdd3e722135512e013b7f1e9693?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a>        </span>
+        <br>
+
+        <span class="karma">17.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39981" href="#C39981">
+                <time itemprop="dateCreated" datetime="2016-09-08T13:56:36-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Using PHP Storm, but it doesn't do anything like that for me.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39981" data-cf-modified-9aa35d25abc82c8e20b50034-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39981" data-cf-modified-9aa35d25abc82c8e20b50034-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="39983" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '16</span>
+              </span><br/><a name="C39983" href="#C39983">
+                <time itemprop="dateCreated" datetime="2016-09-08T16:25:48-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>What ? <img src="http://i.imgur.com/lh5pZfk.png" alt="Imgur" /></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39983" data-cf-modified-9aa35d25abc82c8e20b50034-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39983" data-cf-modified-9aa35d25abc82c8e20b50034-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e00a6fdd3e722135512e013b7f1e9693?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a>        </span>
+        <br>
+
+        <span class="karma">17.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39989" href="#C39989">
+                <time itemprop="dateCreated" datetime="2016-09-08T20:03:41-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yeah, nope... I don't get that for some reason.  Not sure wny.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39989" data-cf-modified-9aa35d25abc82c8e20b50034-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39989" data-cf-modified-9aa35d25abc82c8e20b50034-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39991" href="#C39991">
+                <time itemprop="dateCreated" datetime="2016-09-08T22:01:11-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Maybe you have disabled inspection about it in options ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39991" data-cf-modified-9aa35d25abc82c8e20b50034-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39991" data-cf-modified-9aa35d25abc82c8e20b50034-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="13515" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

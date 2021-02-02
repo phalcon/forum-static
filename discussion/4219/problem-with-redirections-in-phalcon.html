@@ -1,0 +1,211 @@
+---
+layout: default
+title: 'Problem with redirections in phalcon - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Problem with redirections in phalcon</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1458/angay9" class="user-moderator-N"><span itemprop="name">angay9</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-12-09T19:17:11-07:00">Dec '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-12-09T19:17:11-07:00">Dec '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>672</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/8174881ef4f37598c33cd7d85efd6e4a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1458/angay9" class="user-moderator-N"><span itemprop="name">angay9</span></a></span>
+                <span class="karma">28.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4219" href="#C4219">
+        <time class="action-date">Dec '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello everyone. I am building a sample app for myself and I am having a little problem with redirects. What I am basically trying to achieve is something like route filters in laravel. The code I have is:</p>
+<p>FIlters Collection:</p>
+<pre><code>&lt;?php
+namespace Network\Filters;
+
+use Phalcon\Mvc\User\Plugin;
+
+class FilterGroup extends Plugin {
+
+    private $_filters;
+
+    public function __construct ()
+    {
+        $this-&gt;add('auth', new AuthFilter())
+            -&gt;add('csrf', new CsrfFilter());
+    }
+
+    public function add ($key, FilterInterface $filter)
+    {
+        if (!isset($this-&gt;_filters[$key])) {
+            $this-&gt;_filters[$key] = $filter;
+
+        }   
+        return $this;   
+    }
+
+    public function remove ($key)
+    {
+        if (!isset($this-&gt;_filters[$key])) {
+            unset($this-&gt;_filters[$key]);
+
+        }   
+        return $this;   
+    }
+
+    public function __get ($property)
+    {
+        if (isset($this-&gt;_filters[$property])) 
+        {
+            return $this-&gt;_filters[$property];
+        }
+    }
+
+}</code></pre>
+<p>Authentication filter:
+&lt;?php
+namespace Network\Filters;</p>
+<pre><code>use Phalcon\Text;
+use Phalcon\Mvc\User\Plugin;
+
+class AuthFilter extends Plugin implements FilterInterface
+{
+    public function filter (array $actions = null)
+    {
+        // die(var_dump($array[0] == '*')); {1}
+
+        if (empty($actions) || 
+            in_array(strtolower($this-&gt;dispatcher-&gt;getActionName()), array_map('strtolower', $actions)) || 
+            $array[0] == '*') {
+            // die(var_dump('test')); {2}
+
+            if ($this-&gt;auth-&gt;isGuest()) {
+
+                $this-&gt;response-&gt;redirect('');
+                return false;               
+            }
+        }
+    }
+
+}</code></pre>
+<p>And an ordinary controller:</p>
+<pre><code>&lt;?php
+
+use Network\Forms\StatusForm;
+use Network\Statuses\GetStatusesQuery;
+use Network\Statuses\PostStatusCommand;
+
+class StatusesController extends ControllerBase 
+{
+    private $_form;
+
+    public function beforeExecuteRoute ($d)
+    {
+        $this-&gt;filters-&gt;auth-&gt;filter(['*']);
+
+    }
+
+    public function initialize ()
+    {
+        parent::initialize();
+        $this-&gt;_form = new StatusForm();    
+    }
+    /**
+     * Display all statuses
+     * @return void
+     */
+    public function indexAction ()
+    {
+
+        $this-&gt;view-&gt;form = $this-&gt;_form;
+
+        $this-&gt;view-&gt;statuses = $this-&gt;queryBus-&gt;execute(new GetStatusesQuery([
+            'orderBy' =&gt; 'updatedAt',
+            'orderDir' =&gt; 'desc',
+            'limit' =&gt; 10,
+            'currentPage' =&gt; $this-&gt;dispatcher-&gt;getParam('page') ? (int)$this-&gt;dispatcher-&gt;getParam('page') : 1
+        ]));
+    }
+
+}</code></pre>
+<p>And a simple route:
+$this-&gt;addGet('/@{username}/statuses[/]?{page:[0-9]+}?', 'Statuses::index');</p>
+<p>The problem is that when I filter, the redirection doesn't happen. I am guessing that a problem might be caused by the redirect method wich requires 2 http requests.
+(<a href="http://docs.phalcon.io/pt/latest/reference/dispatching.html#forwarding-to-other-actions">http://docs.phalcon.io/pt/latest/reference/dispatching.html#forwarding-to-other-actions</a>)</p>
+<p>I also get a fatal error that a variable doesn't exist in my statuses/index.volt view file. But it will exist only if user is authenticated. This may also be causing an error.</p>
+<p>When I used my first die(var_dump()), the condioon was true, but it never got to the second die(var_dump()).
+is there a way to make it work as I expect ?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-5977a56cd0679bcebddba73a-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-5977a56cd0679bcebddba73a-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c0ce8f5e133750a4dfea4712e533a178?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/15/le51" class="user-moderator-N"><span itemprop="name">le51</span></a>        </span>
+        <br>
+
+        <span class="karma">43.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C14101" href="#C14101">
+                <time itemprop="dateCreated" datetime="2014-12-11T15:21:16-07:00" class="action-date">Dec '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi,</p>
+<p>so far as I understand, I would have write in Authentication filter:</p>
+<pre><code class="language-php">
+if (!empty($actions) || ......
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14101" data-cf-modified-5977a56cd0679bcebddba73a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14101" data-cf-modified-5977a56cd0679bcebddba73a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4219" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

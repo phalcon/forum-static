@@ -1,0 +1,535 @@
+---
+layout: default
+title: 'Multi Module App Nginx issue - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/26/http-environment">HTTP Environment</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Multi Module App Nginx issue</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2315/nathanbgn" class="user-moderator-N"><span itemprop="name">nathanbgn</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-09-17T13:35:45-07:00">Sep '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-09-17T13:35:45-07:00">Sep '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1697</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/d85790378be0a0c209e2b11cac99fe45?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2315/nathanbgn" class="user-moderator-N"><span itemprop="name">nathanbgn</span></a></span>
+                <span class="karma">1.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3474" href="#C3474">
+        <time class="action-date">Sep '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi guys,</p>
+<p>I got an issue putting online a <strong>Multi Module</strong> Phalcon App on my Debian Wheezy VPS using <strong>Nginx</strong> 1.2.1, php-fpm and Mariadb.
+When I try to access my website, i got an <strong>&quot;This webpage has a redirect loop&quot;</strong> error.</p>
+<p>This is my nginx conf file properly symlink in site-enabled:</p>
+<pre><code>server {
+        listen  80;
+        server_name l-huitre-pedagogique.com www.l-huitre-pedagogique.com;
+        root /var/www/l-huitre-pedagogique.com/public;
+        set $root_path '/var/www/l-huitre-pedagogique.com/public';
+        try_files $uri $uri/ @rewrite;
+
+        location @rewrite {
+            rewrite ^/(.*)$ /index.php?_url=/$1;
+        }
+        index index.php;
+        location ~ \.php$ {
+                       try_files $uri =404;
+                       root /var/www/l-huitre-pedagogique.com/public;
+                       fastcgi_pass unix:/var/run/php5-fpm.sock;
+                       fastcgi_index index.php;
+                       fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+                       include /etc/nginx/fastcgi_params;
+
+        }
+        location ~* ^/(css|img|js|flv|swf|download)/(.+)$ {
+            root $root_path;
+        }
+        error_log /var/log/nginx/test.lan-error.log;
+}</code></pre>
+<p>this is my public/index.php:</p>
+<pre><code class="language-php">
+&lt;?php
+
+use Phalcon\Mvc\Router,
+Phalcon\Mvc\Application,
+Phalcon\DI\FactoryDefault;
+
+$environment = getenv("APPLICATION_ENV");
+
+define("SITE_NAME", "L'Huître Pédagogique");
+define("SEND_MAIL", true);
+if ($environment == "development")
+{
+    define("DOMAIN_NAME", "http://hp.local");
+    define("MAIL_ADMIN", "<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="3b515453555f545e7b5c565a525715585456">[email&#160;protected]</a>");
+    define("MAIL_FROM_MAIL", "<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="b2d8dddadcf2d6ddd7">[email&#160;protected]</a>");
+    define("MAIL_FROM_NAME", "Thanatos");
+}
+else
+{
+    define("DOMAIN_NAME", "http://www.l-huitre-pedagogique.com");
+    define("MAIL_ADMIN", "<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="305a515e55545f55705c1d5845594442551d40555451575f57594145551e535f5d">[email&#160;protected]</a>");
+    define("MAIL_FROM_MAIL", "<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c1afa49eb1a0b29eb3a4b1aeafa5b3a481adeca9b4a8b5b3a4ecb1a4a5a0a6aea6a8b0b4a4efa2aeac">[email&#160;protected]</a>");
+    define("MAIL_FROM_NAME", "L'Huître Pédagogique");
+}
+
+$di = new FactoryDefault();
+
+//Specify routes for modules
+$di-&gt;set('router', function () {
+
+    $router = new \Phalcon\Mvc\Router\Annotations(\FALSE);
+    $router-&gt;removeExtraSlashes(\TRUE);
+    $router-&gt;setUriSource(
+    \Phalcon\Mvc\Router\Annotations::URI_SOURCE_SERVER_REQUEST_URI);
+
+    $router-&gt;setDefaultModule("www");
+    $router-&gt;addModuleResource("www", "Multiple\Apps\WWW\Controllers\Index", "/");
+    $router-&gt;add("/", array(
+    'module' =&gt; 'www',
+    'controller' =&gt; 'index',
+    'action' =&gt; 'index',
+    ));
+
+    $router-&gt;notFound(array(
+        "controller" =&gt; "index",
+        "action" =&gt; "index"
+    ));
+
+    $router-&gt;add("/admin/", array(
+        'module' =&gt; 'admin',
+        'controller' =&gt; 'index',
+        'action' =&gt; 'index',
+        ));
+    $router-&gt;add("/admin/:controller", array(
+        'module' =&gt; 'admin',
+        'controller' =&gt; 1,
+        ));
+    $router-&gt;add("/admin/:controller/:action", array(
+        'module' =&gt; 'admin',
+        'controller' =&gt; 1,
+        'action' =&gt; 2,
+        ));
+    $router-&gt;add("/admin/:controller/:action/:params", array(
+        'module' =&gt; 'admin',
+        'controller' =&gt; 1,
+        'action' =&gt; 2,
+        'params' =&gt; 3,
+        ));
+    $router-&gt;add("/admin/page/{page:[0-9]+}", array(
+        'module' =&gt; 'admin',
+        "controller" =&gt; "page",
+        "action" =&gt; "index",
+        ));
+    $router-&gt;add("/admin/mailbox/{page:[0-9]+}", array(
+        'module' =&gt; 'admin',
+        "controller" =&gt; "mailbox",
+        "action" =&gt; "index",
+        ));
+    $router-&gt;add("/admin/image/{page:[0-9]+}", array(
+        'module' =&gt; 'admin',
+        "controller" =&gt; "image",
+        "action" =&gt; "index",
+        ));
+    $router-&gt;add("/admin/album/{page:[0-9]+}", array(
+        'module' =&gt; 'admin',
+        "controller" =&gt; "album",
+        "action" =&gt; "index",
+        ));
+
+    $router-&gt;add("/page", array(
+        'module' =&gt; 'www',
+        "controller" =&gt; "index",
+        "action" =&gt; "list",
+        ));
+
+    $router-&gt;add("/page/{page}", array(
+        'module' =&gt; 'www',
+        "controller" =&gt; "index",
+        "action" =&gt; "page",
+        ));
+    $router-&gt;add("/album", array(
+        'module' =&gt; 'www',
+        "controller" =&gt; "index",
+        "action" =&gt; "album",
+        ));
+
+    $router-&gt;add("/album/{album}", array(
+        'module' =&gt; 'www',
+        "controller" =&gt; "index",
+        "action" =&gt; "albumpage",
+        ));
+
+    $router-&gt;add("/category/{category}", array(
+        'module' =&gt; 'www',
+        "controller" =&gt; "index",
+        "action" =&gt; "category",
+        ));
+    $router-&gt;add("/category/{category}/{page}", array(
+        'module' =&gt; 'www',
+        "controller" =&gt; "index",
+        "action" =&gt; "categorypage",
+        ));
+
+    $router-&gt;add("/about", array(
+        'module' =&gt; 'www',
+        "controller" =&gt; "index",
+        "action" =&gt; "about",
+        ));
+
+    $router-&gt;add("/sitemap", array(
+        'module' =&gt; 'www',
+        "controller" =&gt; "index",
+        "action" =&gt; "sitemap",
+        ));
+
+    $router-&gt;add("/bulletin", array(
+        'module' =&gt; 'www',
+        "controller" =&gt; "index",
+        "action" =&gt; "bulletin",
+        ));
+
+    $router-&gt;add("/calendar/{year:[0-9]+}/{month:[0-9]+}", array(
+        'module' =&gt; 'www',
+        "controller" =&gt; "calendar",
+        "action" =&gt; "index",
+        ));
+
+    $router-&gt;add("/calendar", array(
+        'module' =&gt; 'www',
+        "controller" =&gt; "calendar",
+        "action" =&gt; "index",
+        "year" =&gt; date('Y'),
+        "month" =&gt; date('m')
+        ));
+    $router-&gt;add("/calendar/", array(
+        'module' =&gt; 'www',
+        "controller" =&gt; "calendar",
+        "action" =&gt; "index",
+        "year" =&gt; date('Y'),
+        "month" =&gt; date('m')
+        ));
+
+    $router-&gt;add("/calendar/{year:[0-9]+}/{month:[0-9]+}/{day:[0-9]+}", array(
+        'module' =&gt; 'www',
+        "controller" =&gt; "calendar",
+        "action" =&gt; "event",
+        ));
+
+    return $router;
+});
+
+//Set the database service
+$di-&gt;set('db', function() {
+    return new \Phalcon\Db\Adapter\Pdo\Mysql(array(
+        "host" =&gt; "localhost",
+        "username" =&gt; "epi",
+        "password" =&gt; "secret",
+        "dbname" =&gt; "hp",
+        "options" =&gt; array(
+            PDO::MYSQL_ATTR_INIT_COMMAND =&gt; 'SET NAMES utf8'
+            )
+        ));
+});
+
+//Start the session the first time when some component request the session service
+$di-&gt;setShared('session', function() {
+    $session = new Phalcon\Session\Adapter\Files();
+    $session-&gt;start();
+    return $session;
+});
+
+//Set up the flash service
+$di-&gt;set('flashSession', function() {
+    return new \Phalcon\Flash\Session(array(
+        'error' =&gt; 'alert alert-danger',
+        'success' =&gt; 'alert alert-success',
+        'warning' =&gt; 'alert alert-warning',
+        'notice' =&gt; 'alert alert-info',
+        ));
+});
+
+//Set up a base URI so that all generated URIs include the "tutorial" folder
+$di-&gt;set('url', function() {
+    $url = new \Phalcon\Mvc\Url();
+    $url-&gt;setBaseUri('/');
+    return $url;
+});
+
+Phalcon\Tag::setDocType(Phalcon\Tag::HTML5);
+
+try {
+
+    //Create an application
+    $application = new Application($di);
+
+    // Register the installed modules
+    $application-&gt;registerModules(
+        array(
+            'www' =&gt; array(
+                'className' =&gt; 'Multiple\WWW\Module',
+                'path' =&gt; '../apps/www/Module.php',
+                ),
+            'admin' =&gt; array(
+                'className' =&gt; 'Multiple\Admin\Module',
+                'path' =&gt; '../apps/admin/Module.php',
+                )
+            )
+        );
+
+    //Handle the request
+    echo $application-&gt;handle()-&gt;getContent();
+} catch (\Exception $e) {
+    if ($environment == "development")
+        echo $e-&gt;getMessage();
+    else
+        header("Location: /");
+}
+</code></pre>
+<p>and my apps/www/Module.php (frontend)</p>
+<pre><code class="language-php">
+&lt;?php
+
+namespace Multiple\WWW;
+
+use Phalcon\Loader,
+    Phalcon\Mvc\Dispatcher,
+    Phalcon\Mvc\View,
+    Phalcon\Mvc\ModuleDefinitionInterface;
+
+class Module implements ModuleDefinitionInterface {
+
+    /**
+     * Register a specific autoloader for the module
+     */
+    public function registerAutoloaders() {
+
+        $loader = new Loader();
+
+        $loader-&gt;registerNamespaces(
+                array(
+                    'Multiple\WWW\Controllers' =&gt; '../apps/www/controllers/',
+                    'Multiple\WWW\Models' =&gt; '../apps/www/models/',
+                    'Multiple\WWW\Forms' =&gt; '../apps/www/forms/',
+                    'Multiple\WWW\Helpers' =&gt; '../apps/www/helpers/',
+                )
+        );
+
+        $loader-&gt;register();
+    }
+
+    /**
+     * Register specific services for the module
+     */
+    public function registerServices($di) {
+
+        //Registering a dispatcher
+        $di-&gt;set('dispatcher', function() {
+            $dispatcher = new Dispatcher();
+            $dispatcher-&gt;setDefaultNamespace("Multiple\WWW\Controllers");
+            return $dispatcher;
+        });
+
+        //Registering the view component
+        $di-&gt;set('view', function() {
+            $view = new View();
+            $view-&gt;setViewsDir('../apps/www/views/');
+            return $view;
+        });
+    }
+
+}</code></pre>
+<p>my apps/admin/Module.php is similar</p>
+<p>thanks in advance for considering my request and thanks for give us this excellent framework!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-a0008646b2a2f9db46f0afe9-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-a0008646b2a2f9db46f0afe9-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fcae2565ce4d1ed7240231932dec115a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/659/oleg578" class="user-moderator-N"><span itemprop="name">Oleg</span></a>        </span>
+        <br>
+
+        <span class="karma">8.1k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="11446" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '14</span>
+              </span><br/><a name="C11446" href="#C11446">
+                <time itemprop="dateCreated" datetime="2014-09-19T01:12:07-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><ol>
+<li>If you use Annotations router, why you setup router's paths (router-&gt;add)?  It does not matter</li>
+<li>If you use URI_SOURCE_SERVER_REQUEST_URI, why you use rewrite rule in nginx config?
+You can try this config :</li>
+</ol>
+<p>nginx.conf : </p>
+<pre><code class="language-bash">user  nginx;
+worker_processes  1;
+worker_rlimit_nofile 16384;
+timer_resolution 100ms;
+
+#error_log  /var/log/nginx/error.log debug;
+pid        /var/run/nginx.pid;
+
+events {
+    worker_connections 16384; 
+}
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log  /var/log/nginx/access.log  main;
+
+    sendfile        on;
+    tcp_nopush     on;
+    tcp_nodelay on;
+      types_hash_max_size 2048;
+    server_tokens off;
+    charset utf-8;
+
+    keepalive_timeout  echo $e-&gt;getMessage()5;
+
+      gzip on;
+      gzip_comp_level 1;
+      gzip_buffers 4 8k;
+    gzip_min_length 1400;
+    gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript image/jpeg image/x-icon;
+
+    include /etc/nginx/sites-enabled/*;
+}</code></pre>
+<p>nginx/site-enabled/your_server :</p>
+<pre><code class="language-bash">
+server {
+    listen   80; 
+  server_name your_server;
+  autoindex off;
+  set $root_path  '/your_root_path';
+  root $root_path;
+  index index.php;
+
+  location ~ assets/(css|js|img|img\/icons|video|photo|fonts|artimage)/ {
+
+    access_log off;
+    expires 360d;
+  }
+
+location ~ favicon.ico$ {
+    access_log off;
+    expires 360d;
+  }
+  location /  {
+    try_files $uri  $uri/  /index.php;
+  }
+
+ location ~* \.php$ {
+   default_type  application/octet-stream;
+   try_files $uri =404;
+   fastcgi_pass 127.0.0.1:9000;
+   include /etc/nginx/fastcgi_params;
+   fastcgi_split_path_info  ^(.+\.php)(/.+)$;
+   fastcgi_index index.php;
+   fastcgi_param  SCRIPT_FILENAME /full_path_for_your_public_folder/index.php;
+   fastcgi_param  SCRIPT_NAME     /index.php;
+   fastcgi_param  QUERY_STRING    $uri$args;
+   fastcgi_param  REQUEST_METHOD  $request_method;
+   fastcgi_param  CONTENT_TYPE    $content_type;
+   fastcgi_param  CONTENT_LENGTH  $content_length;
+   fastcgi_param  REQUEST_BODY    $request_body;
+ }
+} ## server config end</code></pre>
+<p>Try to use \Phalcon\Exception in your handle. And try it without redirect to /</p>
+<pre><code class="language-php">catch (\Phalcon\Exception $e) {
+    //if ($environment == "development")
+    //    echo $e-&gt;getMessage();
+    //else
+    //    header("Location: /");
+    echo $e-&gt;getMessage()
+</code></pre>
+<p>P.S. I recommended to use nginx repository for stable nginx</p>
+<p><a href="http://nginx.org/en/linux_packages.html#distributions">http://nginx.org/en/linux_packages.html#distributions</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11446" data-cf-modified-a0008646b2a2f9db46f0afe9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11446" data-cf-modified-a0008646b2a2f9db46f0afe9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d85790378be0a0c209e2b11cac99fe45?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2315/nathanbgn" class="user-moderator-N"><span itemprop="name">nathanbgn</span></a>        </span>
+        <br>
+
+        <span class="karma">1.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11470" href="#C11470">
+                <time itemprop="dateCreated" datetime="2014-09-21T07:26:17-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yeah its works !
+It was a problem with my Phalcon\Exception the redirection to /
+Thanks a lot Oleg &lt;3</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11470" data-cf-modified-a0008646b2a2f9db46f0afe9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11470" data-cf-modified-a0008646b2a2f9db46f0afe9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3474" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

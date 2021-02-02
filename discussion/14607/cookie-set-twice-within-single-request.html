@@ -1,0 +1,135 @@
+---
+layout: default
+title: 'Cookie set twice within single request - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/26/http-environment">HTTP Environment</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Cookie set twice within single request</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-10-26T06:46:47-07:00">Oct '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-10-26T06:46:47-07:00">Oct '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>935</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a></span>
+                <span class="karma">77.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C14607" href="#C14607">
+        <time class="action-date">Oct '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello, I've found qute a few posts about similiar issues, but in my case the same cookie gets set twice in the same request.</p>
+<pre><code class="language-php">// services.php
+$dispatcher-&gt;getEventsManager()-&gt;attach('dispatch:beforeDispatch', new Auth);</code></pre>
+<pre><code class="language-php">class Auth extends Plugin {
+    static $_count = 0;
+    public function beforeDispatch(Event $event, Dispatcher $dispatcher) {
+            self::$_count++;
+            if(self::$_count&gt;1) {
+                // check if by any chance the event gets called twice (never reaches this branch)
+                die('auth event called twice!');
+            }
+            $userCookie = $this-&gt;cookies-&gt;get(self::USER_COOKIE)-&gt;getValue('string');
+            if(!$userCookie) {
+                // whatever token generation
+                $userCookie = sha1(microtime(true) . $this-&gt;security-&gt;getSaltBytes(6));
+                // save this token token db for later reference
+                $userSession-&gt;setToken($userCookie);
+                // push token to client as cookie
+                $this-&gt;cookies-&gt;set(self::USER_COOKIE, $userCookie, time() + (60 * 60 * 24 * 365));
+            }
+    }
+}</code></pre>
+<p>If I then check the response with curl, i get these headers:</p>
+<pre><code>Server: nginx/1.10.0
+Date: Wed, 26 Oct 2016 13:41:27 GMT
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
+Set-Cookie: PHPSESSID=&lt;whatever&gt;; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Set-Cookie: travelhood_user=i%2FCTdf5f66LVdFdirWHUlyycquVT8bTNa5tbuMFjHRUHqabdQYNq310BpCuhcMP33%2B0IhnpBuWwJmFAxsDYiJ8vrxRgZdA2KXagWV%2FDPME8Lu2hsf10w%2FQGc%2FkQtzsUn; expires=Sat, 24-Oct-2026 13:41:26 GMT; Max-Age=315359999; path=/; domain=my.domain.com
+Set-Cookie: travelhood_user=JB%2F%2BcpIO3h0PfjBrqLoURQyxcHSF0siff9XqsWpOVbB6V8epb0Zv3LBNaOV9%2Bw3Rlb6%2FQASOlQqjdqt1RQIwS2814d3T0c31erQbiV56vsvEQskH5YGORDghx4jG%2FU4w; expires=Sat, 24-Oct-2026 13:41:26 GMT; Max-Age=315359999; path=/; domain=my.domain.com</code></pre>
+<p>As you can see there's an if statement with a static counter to check if the event itself is called twice, but it never enters that branch...
+I've been trying to debug this for nigh a day, any idea is most welcome at this point :D</p>
+<ul>
+<li>ubuntu xenial</li>
+<li>php 5.6</li>
+<li>phalcon 2.0.13</li>
+<li>chrome @ win7</li>
+</ul>
+<p>EDIT:
+I also use encryption for cookies, although I dont think it has anything to do with this issue...</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-68d662e366e2b8332cd6dc77-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-68d662e366e2b8332cd6dc77-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="42259" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '16</span>
+              </span><br/><a name="C42259" href="#C42259">
+                <time itemprop="dateCreated" datetime="2016-10-26T11:25:11-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>What exactly is userSession ? Maybe you are just doing somewhere further like in action or anywhere <code>-&gt;sendCookies</code> ? Or send ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="42259" data-cf-modified-68d662e366e2b8332cd6dc77-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="42259" data-cf-modified-68d662e366e2b8332cd6dc77-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="14607" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,153 @@
+---
+layout: default
+title: '[BUG?] Multi-module app don&#039;t work replacing $application-&gt;handle()-&gt;getContent(); with verbose code - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">[BUG?] Multi-module app don&#039;t work replacing $application-&gt;handle()-&gt;getContent(); with verbose code</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/864/aledelgo" class="user-moderator-N"><span itemprop="name">Alessandro Del Gobbo</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-01-02T11:46:16-07:00">Jan '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-01-02T11:46:16-07:00">Jan '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1177</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/034f62d4d9c606bf48823edfd1ce187b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/864/aledelgo" class="user-moderator-N"><span itemprop="name">Alessandro Del Gobbo</span></a></span>
+                <span class="karma">17.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1384" href="#C1384">
+        <time class="action-date">Jan '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi guys!
+I'm having a big problem with Phalcon Multimodule app.
+I've read in docs and tutorial that it is possible to replace the </p>
+<pre><code class="language-php">echo $application-&gt;handle()-&gt;getContent();</code></pre>
+<p>with a bunch of lines that do the same things in a more splitted way so the developer could have more control on what is executed and at debug time too.</p>
+<p>This works good with single App, but don't work at alla with multiple modules apps as the Module registration code is completely skipped... i mean that the registration add the modules to the internal array (infact $applicaton-&gt;getModules(); return a correct full array) but the single Modules class code are never instantiated (and so neither the internal interface method to register Autoloader and Services)...
+This makes any url requested return that nice error &quot;IndexController handler cannot be found&quot;.</p>
+<p>I discovered the registered moduler are not instantiated debugging with XDEBUG... it never entered the Modules initialization code and infact this is verified also by the error... he can't find the controller because the controllers are registered in the registerAutoloaders() function of modules that are not yet initialized (and also the error give the wrong message as it is missing the namespace of the controller it should really load).</p>
+<p>Here is the code i'm using after the modules registration to perform the request.</p>
+<pre><code class="language-php">// Get the 'router' service
+    $router = $application-&gt;router;
+
+    $router-&gt;handle();
+
+    $dispatcher = $application-&gt;dispatcher;
+
+// Pass the processed router parameters to the dispatcher
+    $dispatcher-&gt;setControllerName($router-&gt;getControllerName());
+    $dispatcher-&gt;setActionName($router-&gt;getActionName());
+    $dispatcher-&gt;setParams($router-&gt;getParams());
+
+// Dispatch the request
+    $dispatcher-&gt;dispatch();
+
+//Get the returned value by the lastest executed action
+    $response = $dispatcher-&gt;getReturnedValue();
+
+//Check if the action returned is a 'response' object
+    if ($response instanceof Phalcon\Http\ResponseInterface) {
+
+        //Send the request
+        $response-&gt;send();
+    }
+</code></pre>
+<p>My suspect are that this is a bug because in various topics over internet i've read that modules are instantiated during module registration... or maybe that <em>$application-&gt;handle()-&gt;getContent();</em> do something more than what documentation suggest to replace with... so if this is not a bug,  i  think i'm skipping some line in my code to raise the module instantiation... and if i'm skipping some line it is missing in the documentation so please post it here.</p>
+<p>PS. yes, using <em>echo $application-&gt;handle()-&gt;getContent();</em> my multimodule app works great.</p>
+<p>thanks in advance for support.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-49ee27a6af64cc00b1337b6b-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-49ee27a6af64cc00b1337b6b-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4813" href="#C4813">
+                <time itemprop="dateCreated" datetime="2014-01-02T11:52:59-07:00" class="action-date">Jan '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi, modules are initialized by Phalcon\Mvc\Application, if you implement a custom application handler you have to implement this part too. Check how it's implemented in Zephir/Phalcon 2.0: <a href="https://github.com/phalcon/cphalcon/blob/2.0.0/phalcon/mvc/application.zep#L181">https://github.com/phalcon/cphalcon/blob/2.0.0/phalcon/mvc/application.zep#L181</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4813" data-cf-modified-49ee27a6af64cc00b1337b6b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4813" data-cf-modified-49ee27a6af64cc00b1337b6b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/034f62d4d9c606bf48823edfd1ce187b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/864/aledelgo" class="user-moderator-N"><span itemprop="name">Alessandro Del Gobbo</span></a>        </span>
+        <br>
+
+        <span class="karma">17.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4817" href="#C4817">
+                <time itemprop="dateCreated" datetime="2014-01-02T12:19:47-07:00" class="action-date">Jan '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Great, so i was missing something...
+I'm not yet expert about the zephir language, anyway i'll try to translate what i need from that lines.</p>
+<p>If anyone have something ready please post, we could use it to update the documentation.</p>
+<p>thanks much!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4817" data-cf-modified-49ee27a6af64cc00b1337b6b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4817" data-cf-modified-49ee27a6af64cc00b1337b6b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1384" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

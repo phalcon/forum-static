@@ -1,0 +1,330 @@
+---
+layout: default
+title: 'PHP5-FPM on Nginx crash Zend/zend_language_scanner.c: no such file or directory - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">PHP5-FPM on Nginx crash Zend/zend_language_scanner.c: no such file or directory</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/5159/tobispace" class="user-moderator-N"><span itemprop="name">tobispace</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-11-23T06:34:20-07:00">Nov '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-11-23T06:34:20-07:00">Nov '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1086</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/6c5a7ed70304818cf1753f148f442737?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/5159/tobispace" class="user-moderator-N"><span itemprop="name">tobispace</span></a></span>
+                <span class="karma">12.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C14869" href="#C14869">
+        <time class="action-date">Nov '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I try to post this question here, maybe the problem is caused by Phalcon itself, even though I don't think that.</p>
+<p>Our current configuration:</p>
+<ul>
+<li>Debian 8.6</li>
+<li>Nginx web server</li>
+<li>PHP5-FPM v5.6.27-0+deb8u1</li>
+<li>Zend Engine v2.6.0 with Zend OPcache v7.0.6-dev</li>
+</ul>
+<p>We use <strong>Phalcon framework v2.0.11</strong> (and v2.0.13 on test environment, where we experience the same errors). In order to work, Phalcon needs to be compiled and then it becomes a PHP pre-loaded module (phalcon.so). During compilation, it invokes Zend libraries among the others.</p>
+<p>We also use <strong>Memcached</strong> (as service and as PHP module).</p>
+<p>The application runs normally except that Nginx randomly throws:</p>
+<pre><code>502 Bad Gateway</code></pre>
+<p>errors during navigation. Reloading the page (F5) or pressing &quot;Back&quot; browser button, the page gets loaded without any error.</p>
+<p>Sometimes, 502 errors are more frequent than other moments, apparently regardless of the load or traffic on the server.</p>
+<p>The only errors we can read from the logs are not eloquent at all:</p>
+<p><strong>php5-fpm.log:</strong></p>
+<pre><code>WARNING: [pool www] child 2183 exited on signal 7 (SIGBUS) after 0.120012 seconds from start
+WARNING: [pool www] child 1391 exited on signal 7 (SIGBUS) after 59.871442 seconds from start
+WARNING: [pool www] child 12836 exited on signal 7 (SIGBUS - core dumped) after 560.364868 seconds from start
+WARNING: [pool www] child 10874 exited on signal 7 (SIGBUS - core dumped) after 38.964131 seconds from start
+...
+...</code></pre>
+<p><strong>nginx/error.log:</strong></p>
+<pre><code>[error] 8428#0: *368771 recv() failed (104: Connection reset by peer) while reading response header from upstream, client: xxx.xxx.xxx.xxx, server: xxxxxx.xxxxxxxxx.xxx, request: "POST /abc/def_ghi HTTP/1.1", upstream: "fastcgi://unix:/var/run/php5-fpm.sock:", host: "xxxxxx.xxxxxxxxx.xxx", referrer: "https://xxxxxx.xxxxxxxxx.xxx/abc"
+...
+...</code></pre>
+<p>After days of reasearch, we tried applying all the suggestions we found on internet. The parameters we modified, tested and checked on Nginx and php-fpm are, among the others:</p>
+<pre><code>(on php.ini)
+output_buffering
+max_execution_time
+memory_limit
+
+(on www.conf)
+listen = /var/run/php5-fpm.sock or listen = 127.0.0.1:9000
+pm = ondemand/static/etc.....
+pm.max_children 500/30/1/100/etc....
+pm.start_servers = 30/50/1/etc......
+pm.min_spare_servers
+pm.max_spare_servers
+pm.max_requests
+
+(on nginx virtual server conf file)
+fastcgi_pass
+fastcgi_buffers
+fastcgi_buffer_size
+fastcgi_connect_timeout
+fastcgi_send_timeout
+fastcgi_read_timeout</code></pre>
+<p>Every combination with any value on the above parameters didn't change anything on the &quot;502&quot; errors behaviour. They keep appearing sometimes.</p>
+<p>So, we tried dumping the core of PHP on process crash with GDB. We found out that every time a 502 error is thrown, we receive always the same identical dump (I mean, with the same error). This is an example of a dump:</p>
+<pre><code>GNU gdb (Debian 7.7.1+dfsg-5) 7.7.1
+Copyright (C) 2014 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later &lt;http://gnu.org/licenses/gpl.html&gt;
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+and "show warranty" for details.
+This GDB was configured as "x86_64-linux-gnu".
+Type "show configuration" for configuration details.
+For bug reporting instructions, please see:
+&lt;http://www.gnu.org/software/gdb/bugs/&gt;.
+Find the GDB manual and other documentation resources online at:
+&lt;http://www.gnu.org/software/gdb/documentation/&gt;.
+For help, type "help".
+Type "apropos word" to search for commands related to "word"...
+Reading symbols from /usr/sbin/php5-fpm...Reading symbols from /usr/lib/debug/.build-id/d4/62618919aec6e5b126ad219b9d08046ef6b875.debug...done.
+done.
+[New LWP 17814]
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+Core was generated by `php-fpm: pool www                                                       '.
+Program terminated with signal SIGBUS, Bus error.
+#0  lex_scan (<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="750f101b1119031419480f101b111903141935101b01070c">[email&#160;protected]</a>=0x7fff14a7b0b8) at Zend/zend_language_scanner.c:1082
+1082    Zend/zend_language_scanner.c: no such file or directory.</code></pre>
+<p><strong>The error is this one:</strong></p>
+<pre><code>#0  lex_scan (<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="3b415e555f574d5a5706415e555f574d5a577b5e554f4942">[email&#160;protected]</a>=0x7fff14a7b0b8) at Zend/zend_language_scanner.c:1082
+1082    Zend/zend_language_scanner.c: no such file or directory.</code></pre>
+<p>If we search this error on the internet, we find little or nothing.</p>
+<p>We tried recompiling Phalcon, after an upgrade of PHP (from PHP 5.6.24 to 5.6.27), but the error keeps appearing.</p>
+<p>We honestly can't understand what else we should do to have an explanation on this error and understand how to solve it definitively.</p>
+<p>Thank you for your help.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-f87cc85b4a1715e4dc6ba9b5-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-f87cc85b4a1715e4dc6ba9b5-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C43223" href="#C43223">
+                <time itemprop="dateCreated" datetime="2016-11-23T07:02:45-07:00" class="action-date">Nov '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Post result from gdb. It looks like you are missing some package from PHP. Like you don't have full php or something.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="43223" data-cf-modified-f87cc85b4a1715e4dc6ba9b5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="43223" data-cf-modified-f87cc85b4a1715e4dc6ba9b5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6c5a7ed70304818cf1753f148f442737?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5159/tobispace" class="user-moderator-N"><span itemprop="name">tobispace</span></a>        </span>
+        <br>
+
+        <span class="karma">12.9k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C43223"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C43225" href="#C43225">
+                <time itemprop="dateCreated" datetime="2016-11-23T08:38:24-07:00" class="action-date">Nov '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Post result from gdb. It looks like you are missing some package from PHP. Like you don't have full php or something.</p>
+</blockquote>
+<p>You can see results from gdb in my post. I understand that I could have some PHP packages missing or something like that, but even upgrading to PHP 5.6.27 didn't solve the problem.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="43225" data-cf-modified-f87cc85b4a1715e4dc6ba9b5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="43225" data-cf-modified-f87cc85b4a1715e4dc6ba9b5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="43227" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '16</span>
+              </span><br/><a name="C43227" href="#C43227">
+                <time itemprop="dateCreated" datetime="2016-11-23T08:59:48-07:00" class="action-date">Nov '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I mean backtrace. Post result from bt command in gdb.</p>
+<p>You are using socket or tcp/ip ? Try to switch to tcp/ip maybe.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="43227" data-cf-modified-f87cc85b4a1715e4dc6ba9b5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="43227" data-cf-modified-f87cc85b4a1715e4dc6ba9b5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/877a54304e07c8cb38c47b43e1d6b6b3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2828/sergeyklay" class="user-moderator-Y"><span itemprop="name">Serghei Iakovlev</span></a>        </span>
+        <br>
+
+        <span class="karma">39.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C43233" href="#C43233">
+                <time itemprop="dateCreated" datetime="2016-11-23T10:48:01-07:00" class="action-date">Nov '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Provide please steps to reproduce. What exactly I should to do on <em>new</em> machine to reproduce</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="43233" data-cf-modified-f87cc85b4a1715e4dc6ba9b5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="43233" data-cf-modified-f87cc85b4a1715e4dc6ba9b5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C43227"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="43259" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '16</span>
+              </span><br/><a name="C43259" href="#C43259">
+                <time itemprop="dateCreated" datetime="2016-11-24T05:36:12-07:00" class="action-date">Nov '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>I mean backtrace. Post result from bt command in gdb.</p>
+<p>You are using socket or tcp/ip ? Try to switch to tcp/ip maybe.</p>
+</blockquote>
+<p>That's very less likely to be the issue here.</p>
+<p>Random segfaults have deeper meaning. Actually potential issues with default kernel <code>/proc/sys/net/core/somaxconn</code> parameter would report different errors in FPM/nginx log, and not SEGFAULTs.</p>
+<p>I'm using Phalcon v2.0.13 as well with manually compiled PHP 5.6.28 w/o any issue. So, in this case of OP it must be something buggy in the app itself.</p>
+<p>It could also be that Memcached has gone away at some point during app execution. </p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="43259" data-cf-modified-f87cc85b4a1715e4dc6ba9b5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="43259" data-cf-modified-f87cc85b4a1715e4dc6ba9b5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6c5a7ed70304818cf1753f148f442737?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5159/tobispace" class="user-moderator-N"><span itemprop="name">tobispace</span></a>        </span>
+        <br>
+
+        <span class="karma">12.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C44287" href="#C44287">
+                <time itemprop="dateCreated" datetime="2016-12-25T04:34:58-07:00" class="action-date">Dec '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>After all the tests we conducted, we found out that the problem is related to Volt with option compileAlways set to true.</p>
+<p><a href="https://github.com/phalcon/cphalcon/issues/1949">https://github.com/phalcon/cphalcon/issues/1949</a></p>
+<p><a href="https://github.com/phalcon/cphalcon/issues/11507">https://github.com/phalcon/cphalcon/issues/11507</a></p>
+<p>We noticed that configuring PHP-FPM with option <code>pm.max_children</code> <strong>more than 1</strong> (which means that PHP-FPM can satisfy more requests at the same time), the &quot;502&quot;s (<code>Zend/zend_language_scanner.c</code> error) are verifying.
+But, setting the option <code>pm.max_children = 1</code> (so the PHP-FPM is serving at most 1 request at a time) apparently prevents the 502 from veryfing.</p>
+<p>After some more research on the internet, we discovered the two bugs linked above. And setting Volt with <code>compileAlways=false</code> (with <code>pm.max_children &gt; 1</code>) actually solved the problem.</p>
+<p>So it seems that Volt can't compile the same template on concurrent requests.</p>
+<p>Keeping <code>compileAlways</code> to true in production environment was of course a   carelessness mistake. The option is false now and everything works well.</p>
+<p>But that doesn't count.</p>
+<p>The point is:</p>
+<ul>
+<li>Why did we have to get to the core dumps to discover the problem?</li>
+<li>Why isn't Volt throwing an Exception when it can't compile a template?</li>
+<li>It obviously is a bug: why those two bugs were ignored?</li>
+</ul>
+<p>Thank you</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="44287" data-cf-modified-f87cc85b4a1715e4dc6ba9b5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="44287" data-cf-modified-f87cc85b4a1715e4dc6ba9b5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6c5a7ed70304818cf1753f148f442737?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5159/tobispace" class="user-moderator-N"><span itemprop="name">tobispace</span></a>        </span>
+        <br>
+
+        <span class="karma">12.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C44289" href="#C44289">
+                <time itemprop="dateCreated" datetime="2016-12-25T04:56:58-07:00" class="action-date">Dec '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I opened a new issue:</p>
+<p><a href="https://github.com/phalcon/cphalcon/issues/12506">#12506</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="44289" data-cf-modified-f87cc85b4a1715e4dc6ba9b5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="44289" data-cf-modified-f87cc85b4a1715e4dc6ba9b5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="14869" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

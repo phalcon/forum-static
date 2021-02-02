@@ -1,0 +1,334 @@
+---
+layout: default
+title: 'Save array to PHP file with Phalcon Cache - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/8/cache">Cache</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Save array to PHP file with Phalcon Cache</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/4789/xerron" class="user-moderator-N"><span itemprop="name">Edwin Manuel Cerrón Angeles</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-09-17T14:42:37-07:00">Sep '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-09-17T14:42:37-07:00">Sep '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>796</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/bcb86a03b78026a223f83ca3162cf7eb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/4789/xerron" class="user-moderator-N"><span itemprop="name">Edwin Manuel Cerrón Angeles</span></a></span>
+                <span class="karma">40.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C13703" href="#C13703">
+        <time class="action-date">Sep '16</time>
+    </a>
+</div>
+<div class="post-content"><div><pre><code class="language-php">  $arr = array (
+    "A" =&gt; "juan",
+    "B" =&gt; "jose",
+    "C" =&gt; "luis"
+  );</code></pre>
+<p>Result:</p>
+<pre><code class="language-php">&lt;?php
+  $arr = array (
+    "A" =&gt; "new value",
+    "B" =&gt; "other new value",
+    "C" =&gt; "third new value"
+  );
+?&gt;</code></pre>
+<p>for use <strong>include()</strong></p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-541a444747082e24c685432c-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-541a444747082e24c685432c-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb86a03b78026a223f83ca3162cf7eb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4789/xerron" class="user-moderator-N"><span itemprop="name">Edwin Manuel Cerrón Angeles</span></a>        </span>
+        <br>
+
+        <span class="karma">40.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C40335" href="#C40335">
+                <time itemprop="dateCreated" datetime="2016-09-17T19:47:30-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I create a Backend Cache</p>
+<pre><code class="language-php">&lt;?php
+
+namespace Druphal\Core\Cache\Backend;
+
+use Phalcon\Cache\Backend\File;
+
+class FilePHP extends File
+{
+    private $fileExtension = '.php';
+
+    /**
+     * @inheritDoc
+     */
+    public function __construct($frontend, array $options)
+    {
+        if (isset($options['fileExtension'])) {
+            $this-&gt;fileExtension = $options['fileExtension'];
+        }
+
+        parent::__construct($frontend, $options);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function get($keyName, $lifetime = null)
+    {
+        $prefixedKey = $this-&gt;_prefix . $this-&gt;getKey($keyName) . $this-&gt;fileExtension;
+        $this-&gt;_lastKey = $prefixedKey;
+
+        $cacheDir = $this-&gt;_options["cacheDir"];
+
+        if (!is_dir($cacheDir)) {
+            throw new \Exception("Unexpected inconsistency in options");
+        }
+
+        $cacheFile = $cacheDir . $prefixedKey;
+
+        if (file_exists($cacheFile) === true) {
+            $frontend = $this-&gt;_frontend;
+
+            /**
+             * Take the lifetime from the frontend or read it from the set in start()
+             */
+            if (!$lifetime) {
+                $lastLifetime = $this-&gt;_lastLifetime;
+                if (!$lastLifetime) {
+                    $ttl = (int)$frontend-&gt;getLifeTime();
+                } else {
+                    $ttl = (int)$lastLifetime;
+                }
+            } else {
+                $ttl = (int)$lifetime;
+            }
+
+            clearstatcache(true, $cacheFile);
+            $modifiedTime = (int)filemtime($cacheFile);
+
+            /**
+             * Check if the file has expired
+             * The content is only retrieved if the content has not expired
+             */
+            if ($modifiedTime + $ttl &gt; time()) {
+                /**
+                 * Use file-get-contents to control that the openbase_dir can't be skipped
+                 */
+                $cachedContent = include $cacheFile;
+                if ($cachedContent === false) {
+                    throw new \Exception("Cache file " . $cacheFile . " could not be opened");
+                }
+
+                if (is_array($cachedContent)) {
+                    return $cachedContent;
+                } else {
+                    /**
+                     * Use the frontend to process the content of the cache
+                     */
+                    $ret = $frontend-&gt;afterRetrieve($cachedContent);
+                    return $ret;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function save($keyName = null, $content = null, $lifetime = null, $stopBuffer = true)
+    {
+        if ($keyName === null) {
+            $lastKey = $this-&gt;_lastKey;
+        } else {
+            $lastKey = $this-&gt;_prefix . $this-&gt;getKey($keyName);
+            $this-&gt;_lastKey = $lastKey;
+        }
+
+        if (!$lastKey) {
+            throw new \Exception("Cache must be started first");
+        }
+
+        $frontend = $this-&gt;_frontend;
+
+        $cacheDir = $this-&gt;_options["cacheDir"];
+
+        if (!is_dir($cacheDir)) {
+            throw new \Exception("Unexpected inconsistency in options");
+        }
+
+        $cacheFile = $cacheDir . $lastKey . $this-&gt;fileExtension;
+
+        if ($content === null) {
+            $cachedContent = $frontend-&gt;getContent();
+        } else {
+            $cachedContent = $content;
+        }
+
+        if (!is_array($cachedContent)) {
+            $preparedContent = $frontend-&gt;beforeStore($cachedContent);
+        } else {
+            $preparedContent = $cachedContent;
+        }
+
+        /**
+         * We use file_put_contents to respect open-base-dir directive
+         */
+        $status = file_put_contents($cacheFile, '&lt;?php return ' . var_export($preparedContent, true) . ';');
+
+        if ($status === false) {
+            throw new \Exception("Cache file " . $cacheFile . " could not be written");
+        }
+
+        $isBuffering = $frontend-&gt;isBuffering();
+
+        if ($stopBuffer === true) {
+            $frontend-&gt;stop();
+        }
+
+        if ($isBuffering === true) {
+            echo $cachedContent;
+        }
+
+        $this-&gt;_started = false;
+
+        return $status;
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="40335" data-cf-modified-541a444747082e24c685432c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="40335" data-cf-modified-541a444747082e24c685432c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb86a03b78026a223f83ca3162cf7eb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4789/xerron" class="user-moderator-N"><span itemprop="name">Edwin Manuel Cerrón Angeles</span></a>        </span>
+        <br>
+
+        <span class="karma">40.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="40341" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '16</span>
+              </span><br/><a name="C40341" href="#C40341">
+                <time itemprop="dateCreated" datetime="2016-09-18T04:50:06-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Only for save Array.</p>
+<pre><code class="language-php">
+    $frontCache = new \Phalcon\Cache\Frontend\None([
+        "filetime" =&gt; 172800
+    ]);
+
+    $cache = new Druphal\Core\Cache\Backend\FilePHP(
+        $frontCache,
+        [
+            "cacheDir" =&gt; APP_PATH . "/var/cache/default/config/"
+        ]
+    );
+
+    $phpFile = $cache-&gt;get('my.key');
+
+    if ($phpFile === null) {
+        $phpFile = [
+            'test' =&gt; [1,2,3],
+            'other' =&gt; ' a string',
+            'boolean' =&gt; true,
+            'Null' =&gt; null
+        ];
+        $cache-&gt;save('my.key', $phpFile);
+    }
+
+    d($phpFile); // kint() function
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="40341" data-cf-modified-541a444747082e24c685432c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="40341" data-cf-modified-541a444747082e24c685432c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb86a03b78026a223f83ca3162cf7eb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4789/xerron" class="user-moderator-N"><span itemprop="name">Edwin Manuel Cerrón Angeles</span></a>        </span>
+        <br>
+
+        <span class="karma">40.1k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C40343" href="#C40343">
+                <time itemprop="dateCreated" datetime="2016-09-18T04:54:28-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Result:</p>
+<pre><code class="language-php">&lt;?php return array (
+  'test' =&gt; 
+  array (
+    0 =&gt; 1,
+    1 =&gt; 2,
+    2 =&gt; 3,
+  ),
+  'other' =&gt; ' a string',
+  'boolean' =&gt; true,
+  'Null' =&gt; NULL,
+);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="40343" data-cf-modified-541a444747082e24c685432c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="40343" data-cf-modified-541a444747082e24c685432c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="13703" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,218 @@
+---
+layout: default
+title: 'Transactions within ORM context - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Transactions within ORM context</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/808/akayami" class="user-moderator-N"><span itemprop="name">Tomasz Rakowski</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-12-08T18:39:12-07:00">Dec '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-12-08T18:39:12-07:00">Dec '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '13</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1045</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/86ee6387bc0f52bb4c7b1f7ec944aaec?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/808/akayami" class="user-moderator-N"><span itemprop="name">Tomasz Rakowski</span></a></span>
+                <span class="karma">985</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1308" href="#C1308">
+        <time class="action-date">Dec '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi</p>
+<p>I'm trying to understand your transaction model within ORM context.
+Let's assume the following pseudo-code example:</p>
+<pre><code class="language-php">$trx = new Phalcon\Mvc\Model\Transaction\Manager();
+$handle = $trx-&gt;get();
+try {
+    $model1 = new Model1();
+    $model1-&gt;email = $email;
+    if($model1-&gt;save()===false) {
+        // HOW DO I DETECT DUPLICATE KEY ?
+        if($reason == 'dupe') {
+           $handle-&gt;rollback();
+           throw new DupeException();
+        } else {
+           throw new DBException();
+        }           
+
+    }
+
+} catch(DupeException $e) {
+    // FALLBACK 
+    $model1::findFirst(array('email' =&gt; $email));
+}
+
+$model2 = new Model2();
+$model2-&gt;model1_id = $model1-&gt;id;
+$model2-&gt;save(); 
+
+$handle-&gt;commit();</code></pre>
+<ol>
+<li>
+<p>How do I specifically extract the &quot;save&quot; failure reason ? </p>
+</li>
+<li>
+<p>Is there a way to execute $model1::findFirst within the same trasaction ?</p>
+</li>
+<li>Why have not you used the standard patter of:</li>
+</ol>
+<pre><code class="language-php">begin
+try 
+   query1
+   query2
+   queryn
+   commit
+catch Exception
+    rollback</code></pre>
+<p>I find it so much more elegant and flexible than the if($model1-&gt;save() === false) </p>
+<p>Thanks in advance....</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-fcf723ba5686703d86e791d8-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-fcf723ba5686703d86e791d8-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e6eab522d6e6527b6cd608f340154240?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/546/cylessia" class="user-moderator-N"><span itemprop="name">cylessia</span></a>        </span>
+        <br>
+
+        <span class="karma">5.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="4666" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '14</span>
+              </span><br/><a name="C4666" href="#C4666">
+                <time itemprop="dateCreated" datetime="2013-12-13T06:47:03-07:00" class="action-date">Dec '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I went through the same issue and I agree with your 3rd point.
+Here is how I did to catch duplicate entries :</p>
+<pre><code class="language-php">$this-&gt;db-&gt;begin();
+try {
+    if($account-&gt;create()){
+        // Continue
+        $th-&gt;db-&gt;commit();
+    } else {
+        foreach($account-&gt;getMessages() as $msg){
+        // Store messages
+        }
+    }
+} catch(PdoException $e){
+    $this-&gt;db-&gt;rollback();
+    switch($e-&gt;getCode()){
+        case 23505: // Duplicate entry code for PostGreSql
+        break;
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4666" data-cf-modified-fcf723ba5686703d86e791d8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4666" data-cf-modified-fcf723ba5686703d86e791d8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/86ee6387bc0f52bb4c7b1f7ec944aaec?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/808/akayami" class="user-moderator-N"><span itemprop="name">Tomasz Rakowski</span></a>        </span>
+        <br>
+
+        <span class="karma">985</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4694" href="#C4694">
+                <time itemprop="dateCreated" datetime="2013-12-15T08:35:32-07:00" class="action-date">Dec '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi, </p>
+<p>I see that you're bypassing the Transaction Manager all together. I would want to avoid that, but if it's the only way I have few questions:</p>
+<ol>
+<li>Where do you get $this-&gt;db ? I assume you're using &quot;$model-&gt;getWriteConnection()&quot; which in turn uses DI to get the appropriate connection. However there is no way to insure that this connection does not have another transaction already open on it ? Could you elaborate ?</li>
+<li>By using the driver level objects you're forced to deal with PdoExceptions, and specific PDO error code (23505) which in turn makes the code non functional on other RDBs. </li>
+</ol>
+<p>I'm evaluating if this is a show stopper or not for my project.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4694" data-cf-modified-fcf723ba5686703d86e791d8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4694" data-cf-modified-fcf723ba5686703d86e791d8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/86ee6387bc0f52bb4c7b1f7ec944aaec?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/808/akayami" class="user-moderator-N"><span itemprop="name">Tomasz Rakowski</span></a>        </span>
+        <br>
+
+        <span class="karma">985</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="4695" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '14</span>
+              </span><br/><a name="C4695" href="#C4695">
+                <time itemprop="dateCreated" datetime="2013-12-15T08:42:43-07:00" class="action-date">Dec '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Also in the documentation,
+<a href="http://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model_Transaction_Manager.html">http://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model_Transaction_Manager.html</a></p>
+<p>I see the following: </p>
+<pre><code class="language-php">$transaction-&gt;rollback("Can't save robot");</code></pre>
+<p>This is inconsistent with how rollback is defined:</p>
+<pre><code>        /**
+         * Rollbacks active transactions within the manager
+         * Collect will remove transaction from the manager
+         *
+         * @param boolean $collect
+         */
+        public function rollback($collect=null){ }</code></pre>
+<p>And what &quot;collect&quot; means anyways ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4695" data-cf-modified-fcf723ba5686703d86e791d8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4695" data-cf-modified-fcf723ba5686703d86e791d8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1308" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

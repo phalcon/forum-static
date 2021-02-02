@@ -1,0 +1,239 @@
+---
+layout: default
+title: 'Getting AJAX to work with security-&gt;checkToken() - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/16/security">Security</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Getting AJAX to work with security-&gt;checkToken()</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2156/andykillen" class="user-moderator-N"><span itemprop="name">Andy Killen</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-08-21T14:06:03-07:00">Aug '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-08-21T14:06:03-07:00">Aug '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Apr '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>4456</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/d68533bc23310fc7c709d294e11797dc?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2156/andykillen" class="user-moderator-N"><span itemprop="name">Andy Killen</span></a></span>
+                <span class="karma">4.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3196" href="#C3196">
+        <time class="action-date">Aug '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Here is where I am at:  I have created a working AJAX call and reply, but when calling security-&gt;checkToken() it fails all the time.</p>
+<p>I've created a route that is a specific endpoint for ajax </p>
+<pre><code class="language-php">$router-&gt;add("/ajax/{action:[a-zA-Z0-9\-]+}", array(
+    'controller' =&gt; 'ajax',  
+    'action'=&gt;1
+));</code></pre>
+<p>And I have created a form class with a CSRF token in it like this</p>
+<pre><code class="language-php">public function initialize($entity = null, $options = null)
+    {
+        $this-&gt;setEntity($this);
+        $this-&gt;add(new Hidden("csrf"));
+
+}</code></pre>
+<p>And I have setup a controller called AjaxController.php which loads just fine, </p>
+<pre><code class="language-php">class AjaxController extends ControllerBase
+{
+
+    public function initialize()
+    {
+        $this-&gt;view-&gt;disable();
+    }
+
+    public function submitcontactAction()
+    {
+        // use the request to check for post
+        if ($this-&gt;request-&gt;isPost() == true) {
+            // disable view so that no HTML is sent
+
+            // Check whether the request was made with Ajax
+            if ($this-&gt;request-&gt;isAjax() == true) {
+                // set right header
+                $this-&gt;response-&gt;setContentType('application/json', 'UTF-8');
+                // will add CSRF later!  annoying
+                if($this-&gt;security-&gt;checkToken()){                    
+                    $array = array("status"=&gt;"success", "data"=&gt;"something");                                        
+                  }else {
+                    $array = array("status"=&gt;"failed", "data"=&gt; $this-&gt;security-&gt;checkToken(), "session" =&gt; $_SESSION , 'token'=&gt;$this-&gt;security-&gt;getToken() );
+                }
+                // set content
+                $this-&gt;response-&gt;setContent(json_encode($array));
+                // send content
+                return $this-&gt;response;
+            }
+
+        }else{
+            // choose to die as that makes it cleaner
+            die();
+        }
+    }
+
+}</code></pre>
+<p>I've got  a working form that shows both the csrf hidden field andal also tried one that does specific token and tokenkey generation</p>
+<pre><code class="language-html">&lt;form method="post" action="" class="contact-form labels-side" &gt;
+    &lt;input type="hidden" value="&lt;?php echo $token ?&gt;" name="&lt;?php echo $tokenKey ?&gt;" /&gt;
+    &lt;?php  echo $form-&gt;render("csrf"); ?&gt;
+    &lt;/form&gt;</code></pre>
+<p>and a working ajax call using jQuery</p>
+<pre><code class="language-javascript">jQuery(document).ready(function($){
+
+    function sendAjaxRequest(action, data, dataType){
+        $.ajax({
+            type: "POST",
+            url: "/ajax/"+action,
+            data: data,
+            success:function(results){
+                        console.log(results);
+                    if(results.status === "success"){
+                       console.log("WOOHOO");
+                    }else{
+                        // did not work
+
+                    {% raw %}}}{% endraw %},
+            error: function(jqXHR, textStatus, errorThrown) {
+                    console.log(JSON.stringify(jqXHR));
+                    console.log("AJAX error: " + textStatus + ' : ' + errorThrown);
+             },    
+            dataType: dataType
+         });
+    }
+
+    function success(results){
+        console.log(results);
+    }
+
+    $("form").submit(function(e){
+       e.preventDefault();
+       data = $(this).serialize(); 
+       dataType = 'json';
+       action = $(".ajaxaction", this).val();
+       sendAjaxRequest(action, data, dataType);
+
+    });
+
+});</code></pre>
+<p>BUT  when I try to use the security token check, it responds with a different token than the one that is in the session.  I have come down to the dea that it must be somethign to do with routing that is stopping or setting up a new SESSION token. </p>
+<p>Please help as Iwant omake my AJAX as safe as possible.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-7d410a5e09fc4988ce9dfdc8-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-7d410a5e09fc4988ce9dfdc8-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d68533bc23310fc7c709d294e11797dc?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2156/andykillen" class="user-moderator-N"><span itemprop="name">Andy Killen</span></a>        </span>
+        <br>
+
+        <span class="karma">4.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11495" href="#C11495">
+                <time itemprop="dateCreated" datetime="2014-09-22T01:03:38-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>any chance anyone has an answer for this??</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11495" data-cf-modified-7d410a5e09fc4988ce9dfdc8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11495" data-cf-modified-7d410a5e09fc4988ce9dfdc8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/91fe4bf402e0b7586a4884ddff338268?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2572/ikenni" class="user-moderator-N"><span itemprop="name">Chernyavsky Andrew</span></a>        </span>
+        <br>
+
+        <span class="karma">3.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C13198" href="#C13198">
+                <time itemprop="dateCreated" datetime="2014-11-14T16:02:48-07:00" class="action-date">Nov '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>First try this, and you will see how getToken() works</p>
+<pre><code class="language-php">    $tokens = array();
+    for (int $n = 0; $n &lt; 20; $n++) {
+        $tokens[] = $this-&gt;security-&gt;getToken();
+    }
+    var_dump($tokens);
+    exit;
+</code></pre>
+<p>$this-&gt;security-&gt;checkToken([key], [value]) can accept key &amp; value as parameters. All you have to do, is set those values some where in order to retrieve them with javascript. Like this:</p>
+<pre><code class="language-php">
+    &lt;form data-key="&lt;? echo $this-&gt;security-&gt;getToken(); ?&gt;" data-value="&lt;? echo $this-&gt;security-&gt;getTokenKey(); ?&gt;"&gt;
+
+    &lt;script&gt;
+
+        $('form').submit(function(event) {
+            event.preventDefault();
+
+            values = {
+                key: $('form').attr('data-key'),
+                value: $('form').attr('data-value')
+            };
+
+            // Send ajax with those values
+        })
+
+    &lt;/script&gt;
+</code></pre>
+<p>And in php check like this</p>
+<pre><code class="language-php">
+    // If you sending with POST-method!
+    if ($this-&gt;security-&gt;checkToken($this-&gt;request-&gt;getPost('key'), $this-&gt;request-&gt;getPost('value'))) {
+        // okay
+    }
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13198" data-cf-modified-7d410a5e09fc4988ce9dfdc8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13198" data-cf-modified-7d410a5e09fc4988ce9dfdc8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3196" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

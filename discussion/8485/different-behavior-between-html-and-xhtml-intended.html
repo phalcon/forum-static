@@ -1,0 +1,231 @@
+---
+layout: default
+title: 'Different behavior between HTML and XHTML intended? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Different behavior between HTML and XHTML intended?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/4941/TrogloGeek" class="user-moderator-N"><span itemprop="name">Damien VERON</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-09-12T12:35:24-07:00">Sep '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-09-12T12:35:24-07:00">Sep '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>373</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/a98e8a64914ec418b6de946f4dec56b6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/4941/TrogloGeek" class="user-moderator-N"><span itemprop="name">Damien VERON</span></a></span>
+                <span class="karma">623</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C8485" href="#C8485">
+        <time class="action-date">Sep '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>A difference in behavior of <code>Tag::tagHtml()</code> bugged me:</p>
+<pre><code class="language-php">$this-&gt;tag-&gt;setDocType(Phalcon\Tag::XHTML5);
+echo $this-&gt;tag-&gt;tagHtml('div'); // yields &lt;div&gt;
+$this-&gt;tag-&gt;setDocType(Phalcon\Tag::HTML5);
+echo $this-&gt;tag-&gt;tagHtml('div'); // yields &lt;div&gt;&lt;/div&gt;</code></pre>
+<p>then I spotted what I thought to be the problem:</p>
+<pre><code class="language-zephir">    public static function tagHtml(string tagName, var parameters = null, boolean selfClose = false,
+        boolean onlyStart = false, boolean useEol = false) -&gt; string
+    {
+        // [...]
+
+        /**
+         * Check if Doctype is XHTML
+         */
+        if self::_documentType &gt; self::HTML5 {
+            if selfClose {
+                let localCode .= " /&gt;";
+            } else {
+                let localCode .= "&gt;";
+            }
+        } else {
+            if onlyStart {
+                let localCode .= "&gt;";
+            } else {
+                let localCode .= "&gt;&lt;/" . tagName . "&gt;";
+            }
+        }</code></pre>
+<p>So I patched it:</p>
+<pre><code class="language-zephir">        /**
+         * Check if Doctype is XHTML
+         */
+        if self::_documentType &gt; self::HTML5 {
+            if selfClose {
+                let localCode .= " /&gt;";
+            } elseif onlyStart {
+                let localCode .= "&gt;";
+            } else {
+                let localCode .= "&gt;&lt;/" . tagName . "&gt;";
+            }
+        } else {
+            if onlyStart {
+                let localCode .= "&gt;";
+            } else {
+                let localCode .= "&gt;&lt;/" . tagName . "&gt;";
+            }
+        }</code></pre>
+<p>recompiled the whole thing, ran <code>./run-tests.sh</code> and then:</p>
+<pre><code>There were 3 failures:
+
+---------
+1) Phalcon\Tests\unit\Phalcon\Tag\TagTagHtmlTest::testTagHtmlName | tagHtml with name parameter returns invalid HTML Strict
+Failed asserting that two strings are equal.
+--- Expected
++++ Actual
+@@ @@
+-'&lt;aside&gt;'
++'&lt;aside&gt;&lt;/aside&gt;'
+
+#1  /vagrant/webroot/vendor/phalcon/cphalcon/tests/_support/Verify.php:25
+#2  /vagrant/webroot/vendor/phalcon/cphalcon/tests/unit/Phalcon/Tag/TagTagHtmlTest.php:48
+#3  /vagrant/webroot/vendor/phalcon/cphalcon/tests/unit/Phalcon/Tag/TagTagHtmlTest.php:50
+#4  /vagrant/webroot/vendor/phalcon/cphalcon/codecept.phar:7
+
+---------
+2) Phalcon\Tests\unit\Phalcon\Tag\TagTagHtmlTest::testTagHtmlNameEol | tagHtml with name parameter and EOL returns invalid HTML Strict
+Failed asserting that two strings are equal.
+--- Expected
++++ Actual
+@@ @@
+-'&lt;aside&gt;
++'&lt;aside&gt;&lt;/aside&gt;
+ '
+
+#1  /vagrant/webroot/vendor/phalcon/cphalcon/tests/_support/Verify.php:25
+#2  /vagrant/webroot/vendor/phalcon/cphalcon/tests/unit/Phalcon/Tag/TagTagHtmlTest.php:165
+#3  /vagrant/webroot/vendor/phalcon/cphalcon/tests/unit/Phalcon/Tag/TagTagHtmlTest.php:167
+#4  /vagrant/webroot/vendor/phalcon/cphalcon/codecept.phar:7
+
+---------
+3) Phalcon\Tests\unit\Phalcon\Tag\TagTagHtmlTest::testTagHtmlWithArray | tagHtml with array parameter returns invalid HTML Strict
+Failed asserting that two strings are equal.
+--- Expected
++++ Actual
+@@ @@
+-'&lt;canvas id="canvas1" width="300" height="300"&gt;'
++'&lt;canvas id="canvas1" width="300" height="300"&gt;&lt;/canvas&gt;'
+
+#1  /vagrant/webroot/vendor/phalcon/cphalcon/tests/_support/Verify.php:25
+#2  /vagrant/webroot/vendor/phalcon/cphalcon/tests/unit/Phalcon/Tag/TagTagHtmlTest.php:209
+#3  /vagrant/webroot/vendor/phalcon/cphalcon/tests/unit/Phalcon/Tag/TagTagHtmlTest.php:211
+#4  /vagrant/webroot/vendor/phalcon/cphalcon/codecept.phar:7</code></pre>
+<p>so, is this difference in behavior intended?
+If so, why?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-6ae118b9964c26d73a6ff0fb-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-6ae118b9964c26d73a6ff0fb-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e00a6fdd3e722135512e013b7f1e9693?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a>        </span>
+        <br>
+
+        <span class="karma">17.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C23283" href="#C23283">
+                <time itemprop="dateCreated" datetime="2015-09-13T19:16:14-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Another reason why I don't let PHP build my UI.  Separation of concerns.  I know I didn't answer your question, but it's been a gripe of mine for years.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23283" data-cf-modified-6ae118b9964c26d73a6ff0fb-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23283" data-cf-modified-6ae118b9964c26d73a6ff0fb-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a98e8a64914ec418b6de946f4dec56b6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4941/TrogloGeek" class="user-moderator-N"><span itemprop="name">Damien VERON</span></a>        </span>
+        <br>
+
+        <span class="karma">623</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="23289" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '15</span>
+              </span><br/><a name="C23289" href="#C23289">
+                <time itemprop="dateCreated" datetime="2015-09-14T04:15:25-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I like to use optionnal automated rendering to keep my views simple as possible.
+For example to render a form:</p>
+<pre><code class="language-php">/* @var $this \Phalcon\Mvc\View\Engine\Php */
+$formDecorator = new \SomeProjectName\Core\Forms\Decorator\Bootstrap();
+$formDecorator-&gt;render($this, $form);</code></pre>
+<p>If I need somewhere something more specific, I won't use automated rendering.
+When thing are done the <em>right way</em> (understand: my way, not saying that everyone should do as I do) I can for example easily switch Doctype with really few hassles.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23289" data-cf-modified-6ae118b9964c26d73a6ff0fb-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23289" data-cf-modified-6ae118b9964c26d73a6ff0fb-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a98e8a64914ec418b6de946f4dec56b6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4941/TrogloGeek" class="user-moderator-N"><span itemprop="name">Damien VERON</span></a>        </span>
+        <br>
+
+        <span class="karma">623</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C23291" href="#C23291">
+                <time itemprop="dateCreated" datetime="2015-09-14T04:19:43-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>What I really need to know is if this is really a bug that I can patch locally and future versions of Phalcon will behave the same way as my local patch, or is this behavior really intended, if so I must do it anotherway.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23291" data-cf-modified-6ae118b9964c26d73a6ff0fb-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23291" data-cf-modified-6ae118b9964c26d73a6ff0fb-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="8485" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

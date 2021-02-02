@@ -1,0 +1,452 @@
+---
+layout: default
+title: 'ManyToMany CRUD example - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">ManyToMany CRUD example</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2025/michaelberkhahn" class="user-moderator-N"><span itemprop="name">michaelberkhahn</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-12-26T06:29:23-07:00">Dec '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-12-26T06:29:23-07:00">Dec '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>909</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/5dcabf2e7383a4027d5092ee3fb01271?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2025/michaelberkhahn" class="user-moderator-N"><span itemprop="name">michaelberkhahn</span></a></span>
+                <span class="karma">1.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C9997" href="#C9997">
+        <time class="action-date">Dec '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi<a href="https://forum.phalcon.io/user/0/all"> @all</a>,</p>
+<p>I am working on a ManyToMany relationship with models, controllers, forms and form elements. So what I want to archive is the following:</p>
+<ol>
+<li>Configure a ManyToMany relationship =&gt; DONE (I guess, see example below)</li>
+<li>CRUD model operations for ManyToMany relationships including validation =&gt; PROGRESS (Need help on this)</li>
+<li>Form handling for ManyToMany relationships with creating a form element which handles the relationship in a visual way including displaying error messages =&gt; PROGRESS (Need help on this)</li>
+</ol>
+<p>I guess I've done the first step already. Here is the code I've written so far:</p>
+<h3>MySQL Tables</h3>
+<p><strong>Competitions</strong></p>
+<pre><code class="language-sql">CREATE TABLE `competitions` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `title` varchar(255) COLLATE utf8_bin NOT NULL DEFAULT '',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin;</code></pre>
+<p><strong>Teams</strong></p>
+<pre><code class="language-sql">CREATE TABLE `teams` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `title` varchar(255) COLLATE utf8_bin NOT NULL DEFAULT '',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin;</code></pre>
+<p><strong>CompetitionsTeams</strong></p>
+<pre><code class="language-sql">CREATE TABLE `competitions_teams` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `competition_id` int(11) unsigned NOT NULL,
+  `team_id` int(11) unsigned NOT NULL,
+  `weight` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `competition_id` (`competition_id`),
+  KEY `team_id` (`team_id`),
+  CONSTRAINT `competitions_teams_fk_1` FOREIGN KEY (`competition_id`) REFERENCES `competitions` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `competitions_teams_fk_2` FOREIGN KEY (`team_id`) REFERENCES `teams` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;</code></pre>
+<h3>Phalcon Models</h3>
+<p><strong>Competition</strong></p>
+<pre><code class="language-php">
+namespace test\Models;
+
+use Phalcon\Mvc\Model\Validator\PresenceOf,
+    Phalcon\Mvc\Model\Validator\StringLength;
+
+class Competition extends Model {
+
+  public function getSource() {
+    return "competitions";
+  }
+
+  public function initialize() {
+    $this-&gt;hasManyToMany(
+      "id", 
+      "test\\Models\\CompetitionTeam", 
+      "competition_id", 
+      "team_id",
+      "test\\Models\\Team",
+      "id", 
+      array('alias' =&gt; 'CompetitionTeam')
+    );
+  }
+
+  public function validation() {
+    $this-&gt;validate(new PresenceOf(array(
+      "field"   =&gt; "title",
+      'message' =&gt; 'The title is required.'
+    )));
+    $this-&gt;validate(new StringLength(array(
+      "field"   =&gt; "title",
+      'min'     =&gt; 2,
+      'messageMinimum' =&gt; 'The title is too short.'
+    )));
+
+    return !$this-&gt;validationHasFailed();
+  }
+}</code></pre>
+<p><strong>Team</strong></p>
+<pre><code class="language-php">
+namespace test\Models;
+
+use Phalcon\Mvc\Model\Validator\PresenceOf,
+    Phalcon\Mvc\Model\Validator\StringLength;
+
+class Team extends Model {
+
+  public function getSource() {
+    return "teams";
+  }
+
+  public function initialize() {
+    $this-&gt;hasManyToMany(
+      "id", 
+      "test\\Models\\CompetitionTeam", 
+      "team_id", 
+      "competition_id",
+      "test\\Models\\Competition",
+      "id", 
+      array('alias' =&gt; 'CompetitionTeam')
+    );
+  }
+
+  public function validation() {
+    $this-&gt;validate(new PresenceOf(array(
+      "field"   =&gt; "title",
+      'message' =&gt; 'The title is required.'
+    )));
+    $this-&gt;validate(new StringLength(array(
+      "field"   =&gt; "title",
+      'min'     =&gt; 2,
+      'messageMinimum' =&gt; 'The title is too short.'
+    )));
+
+    return !$this-&gt;validationHasFailed();
+  }
+}</code></pre>
+<p><strong>CompetitionTeam</strong></p>
+<pre><code class="language-php">
+namespace test\Models;
+
+class CompetitionTeam extends Model {
+
+  public function getSource() {
+    return "competitions_teams";
+  }
+
+  public function initialize() {
+    $this-&gt;belongsTo("competition_id", "test\\Models\\Competition", "id", array('alias' =&gt; 'Competition'));
+    $this-&gt;belongsTo("team_id", "test\\Models\\Team", "id", array('alias' =&gt; 'Team'));
+  }
+
+  public function validation() {
+      $this-&gt;validate(new PresenceOf(array(
+        "field"   =&gt; "competition_id",
+        'message' =&gt; 'The competition is required.'
+      )));
+
+      $this-&gt;validate(new PresenceOf(array(
+        "field"   =&gt; "team_id",
+        'message' =&gt; 'The team is required.'
+      )));
+
+      $this-&gt;validate(new PresenceOf(array(
+        "field"   =&gt; "weight",
+        'message' =&gt; 'The weight is required.'
+      )));
+
+    return !$this-&gt;validationHasFailed();
+  }
+}</code></pre>
+<h3>Competition Controller</h3>
+<pre><code class="language-php">namespace test\Controller;
+
+use test\Models\Competition as Competition,
+    test\Models\CompetitionTeam as CompetitionTeam;
+
+class CompetitionsController extends Controller {
+
+  public function testAction() {
+
+    $testCompetition = new Competition();
+    $testCompetition-&gt;title = 'HAS MANY TO MANY TEST';
+
+    $CompetitionTeams = array();
+
+    $testCompetitionTeam1 = new CompetitionTeam();
+    $testCompetitionTeam1-&gt;team_id = 1; // There is already a team with the id 1 in the database
+    $CompetitionTeams[] = $testCompetitionTeam1;
+
+    $testCompetition-&gt;CompetitionTeam = $CompetitionTeams;
+
+    if(!$testCompetition-&gt;save()) {
+      foreach($testCompetition-&gt;getMessages() as $message) {
+        $this-&gt;log($message-&gt;getMessage());
+      }
+    }
+}</code></pre>
+<p>The CompetitionController is currently just for testing and does not have included the CRUD actions. In the database is currently only one team added which has the id 1. No relationships and competitions are sored.</p>
+<h3>Current Test Result</h3>
+<ol>
+<li>
+<p>Currently the competitions and competition teams relationship is not stored cause I got the following error: &quot;competition_id is required&quot;. This is right cause the competition is not created right now. But this should be handled by phalcon itself, correct? If not what is the best way to integrate this behavior?</p>
+</li>
+<li>Secondly the validation function of the relationship is not running. Cause I need to store extra fields in this relationship a validation should be done as well. How to handle this?</li>
+</ol>
+<p>If you have further questions please feel free to ask.</p>
+<p>Thanks for your help!</p>
+<p>Michael</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-90bd0ff4524f6536f89634e5-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-90bd0ff4524f6536f89634e5-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/37aa8b18ff5b5da54bd3072474ae90da?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4849/Zaszczyk" class="user-moderator-N"><span itemprop="name">Mateusz Błaszczyk</span></a>        </span>
+        <br>
+
+        <span class="karma">14.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C28289" href="#C28289">
+                <time itemprop="dateCreated" datetime="2015-12-26T07:29:23-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You can't store extra information in manyToMany relation. If You need to store weight, just change Competition manyToMany to:</p>
+<pre><code>public function initialize() {
+    $this-&gt;hasMany(
+      "id", 
+      "test\\Models\\CompetitionTeam", 
+      "competition_id", 
+      array('alias' =&gt; 'CompetitionTeam') // I would change to competitionTeams, because it is array, not one object
+    );
+  }</code></pre>
+<p>And You have new model which store that: team A take part in competition B with weight C.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28289" data-cf-modified-90bd0ff4524f6536f89634e5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28289" data-cf-modified-90bd0ff4524f6536f89634e5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5dcabf2e7383a4027d5092ee3fb01271?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2025/michaelberkhahn" class="user-moderator-N"><span itemprop="name">michaelberkhahn</span></a>        </span>
+        <br>
+
+        <span class="karma">1.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C28301" href="#C28301">
+                <time itemprop="dateCreated" datetime="2015-12-26T16:11:45-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi Mateusz,</p>
+<p>thanks for your reply. I've modified the code like you said and it is working mostly. Now I am at the validation of the HasMany-Items. But first here is the current code base (The MySQL structure is the same):</p>
+<h3>Phalcon Models</h3>
+<p><strong>Competition</strong></p>
+<pre><code class="language-php">namespace test\Models;
+
+use Phalcon\Mvc\Model\Validator\PresenceOf,
+    Phalcon\Mvc\Model\Validator\StringLength;
+
+class Competition extends Model {
+
+  public function getSource() {
+    return "competitions";
+  }
+
+  public function initialize() {
+    $this-&gt;hasMany(
+      "id", 
+      "test\\Models\\CompetitionTeam", 
+      "competition_id", 
+      array('alias' =&gt; 'teams') // I changed to "teams" cause I already not that this is related to a competition
+    );
+  }
+
+  public function validation() {
+    $this-&gt;validate(new PresenceOf(array(
+      "field"   =&gt; "co_title",
+      'message' =&gt; 'The title is required.'
+    )));
+    $this-&gt;validate(new StringLength(array(
+      "field"   =&gt; "co_title",
+      'min'     =&gt; 2,
+      'messageMinimum' =&gt; 'The title is too short.'
+    )));
+    $this-&gt;validate(new PresenceOf(array(
+        "field"   =&gt; "co_weight",
+        'message' =&gt; 'The weight is required.'
+      )));
+
+    return !$this-&gt;validationHasFailed();
+  }
+}</code></pre>
+<p><strong>Team</strong></p>
+<pre><code class="language-php">namespace test\Models;
+
+use Phalcon\Mvc\Model\Validator\PresenceOf,
+    Phalcon\Mvc\Model\Validator\StringLength;
+
+class Team extends Model {
+
+  public function getSource() {
+    return "teams";
+  }
+
+  public function initialize() {
+    $this-&gt;hasMany(
+      "id", 
+      "test\\Models\\CompetitionTeam", 
+      "team_id", 
+      array('alias' =&gt; 'competitions')
+    );
+  }
+
+  public function validation() {
+    $this-&gt;validate(new PresenceOf(array(
+      "field"   =&gt; "te_title",
+      'message' =&gt; 'The title is required.'
+    )));
+    $this-&gt;validate(new StringLength(array(
+      "field"   =&gt; "te_title",
+      'min'     =&gt; 2,
+      'messageMinimum' =&gt; 'The title is too short.'
+    )));
+    $this-&gt;validate(new PresenceOf(array(
+        "field"   =&gt; "te_weight",
+        'message' =&gt; 'The weight is required.'
+      )));
+
+    return !$this-&gt;validationHasFailed();
+  }
+}</code></pre>
+<p><strong>CompetitionTeam (Hasn't changed)</strong></p>
+<pre><code class="language-php">namespace test\Models;
+
+class CompetitionTeam extends Model {
+
+  public function getSource() {
+    return "competitions_teams";
+  }
+
+  public function initialize() {
+    $this-&gt;belongsTo("competition_id", "test\\Models\\Competition", "id", array('alias' =&gt; 'Competition'));
+    $this-&gt;belongsTo("team_id", "test\\Models\\Team", "id", array('alias' =&gt; 'Team'));
+  }
+
+  public function validation() {
+      $this-&gt;validate(new PresenceOf(array(
+        "field"   =&gt; "competition_id",
+        'message' =&gt; 'The competition is required.'
+      )));
+
+      $this-&gt;validate(new PresenceOf(array(
+        "field"   =&gt; "team_id",
+        'message' =&gt; 'The team is required.'
+      )));
+
+      $this-&gt;validate(new PresenceOf(array(
+        "field"   =&gt; "cote_weight",
+        'message' =&gt; 'The weight is required.'
+      )));
+
+    return !$this-&gt;validationHasFailed();
+  }
+}</code></pre>
+<h3>Competition Controller</h3>
+<pre><code class="language-php">namespace test\Controller;
+
+use test\Models\Competition as Competition,
+    test\Models\CompetitionTeam as CompetitionTeam;
+
+class CompetitionsController extends Controller {
+
+  public function testAction() {
+
+    $testCompetition = new Competition();
+    $testCompetition-&gt;title = 'HAS MANY TEST';
+
+    $teams = array();
+
+    $team1 = new CompetitionTeam();
+    $team1-&gt;team_id = 1; // There is already a team with the id 1 in the database
+    $team1-&gt;cote_weight = 1;
+    $teams[] = $team1;
+
+    $team2 = new CompetitionTeam();
+    $team2-&gt;team_id = 2; // There is already a team with the id 2 in the database
+    $teams[] = $team2;
+
+    $testCompetition-&gt;teams = $teams;
+
+    if(!$testCompetition-&gt;save()) {
+      foreach($testCompetition-&gt;getMessages() as $message) {
+        $this-&gt;log($message-&gt;getMessage());
+      }
+    }
+}</code></pre>
+<h3>Current Test Result</h3>
+<p>Actually the validation of the HasMany-Items is working and given me an error. The competition is not saved as expected cause one related item has a validation error (team2). When I have a look into the messages of the competition I see this error. But I am not able to detect which of the items has thrown the error. I need to know the item &quot;index&quot; cause I want to highlight the item in the rendered form. Any idea how to handle the validation of hasMany-related items correctly?</p>
+<p>Thanks you,
+Michael</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28301" data-cf-modified-90bd0ff4524f6536f89634e5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28301" data-cf-modified-90bd0ff4524f6536f89634e5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="9997" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

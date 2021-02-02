@@ -1,0 +1,140 @@
+---
+layout: default
+title: '[SOLVED] Dynamically add Variables to Loop - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">[SOLVED] Dynamically add Variables to Loop</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/647/EikeKre" class="user-moderator-N"><span itemprop="name">Eike</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-11-06T09:48:43-07:00">Nov '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-11-06T09:48:43-07:00">Nov '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>865</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9bdeeeeee5300afd5cd1316db0750d2a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/647/EikeKre" class="user-moderator-N"><span itemprop="name">Eike</span></a></span>
+                <span class="karma">12.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1135" href="#C1135">
+        <time class="action-date">Nov '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi community!</p>
+<p>I want to dynamically add metddata in the HTML-header. There are tags that have to be on every site. These are added in a default-parent-controller. But what about the child controllers?
+Currently I have a loop in the view an add the tags in the parent-controller in the initialize action via</p>
+<pre><code class="language-php">$this-&gt;view-&gt;myMetaTags = $myMetaTags;</code></pre>
+<p>But when I want to add some tags in the child-controller the loop is already filled with the parent tags.</p>
+<p>I thought about an eventsmanager on the view with the method beforeRender. I that an acceptable way and how is this done?</p>
+<p>greetings
+Eike</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-414e57435dc42017305d2221-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-414e57435dc42017305d2221-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9bdeeeeee5300afd5cd1316db0750d2a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/647/EikeKre" class="user-moderator-N"><span itemprop="name">Eike</span></a>        </span>
+        <br>
+
+        <span class="karma">12.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4132" href="#C4132">
+                <time itemprop="dateCreated" datetime="2013-11-06T09:59:10-07:00" class="action-date">Nov '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Finally a solved this problem with an event manager.
+To the &quot;view&quot; in the DependencyInjector a added the following:</p>
+<pre><code class="language-php">$di-&gt;set('view', function() use ($config) {
+    $view = new \Phalcon\Mvc\View();
+    $eventsManager = new Phalcon\Events\Manager();
+
+    $eventsManager-&gt;attach("view:beforeRender", MyMetaData::getInstance());
+
+    $view-&gt;setEventsManager($eventsManager);
+return $view;
+}, true);</code></pre>
+<p>The MyMetaData collects all the metainformations:</p>
+<pre><code class="language-php">class MyMetaData {
+    public $metaData = array();
+    public static $instance = null;
+
+    /**
+     * @return MyMetaData
+     */
+    public static function getInstance() {
+        if (null === self::$instance) {
+            self::$instance = new MyMetaData();
+        }
+        return self::$instance;
+    }
+
+    public function __construct() {}
+
+    /**
+     * @param array $metaData
+     */
+    public function appendMetaData(array $metaData) {
+        if (true === isset($metaData['name']) &amp;&amp; true === isset($metaData['content'])) {
+            $this-&gt;metaData[] = $metaData;
+        }
+    }
+
+    public function beforeRender($event, $view) {
+        $view-&gt;myMetaData = $this-&gt;metaData;
+    }
+}</code></pre>
+<p>Then in the code I do the following:</p>
+<pre><code class="language-php">MyMetaData::getInstance()-&gt;appendMetaData(array("name" =&gt; "fb:admins", "content" =&gt; "<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="a1d5c4d2d5e1c4d9c0ccd1cdc48fc2cecc">[email&#160;protected]</a>"));</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4132" data-cf-modified-414e57435dc42017305d2221-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4132" data-cf-modified-414e57435dc42017305d2221-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1135" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,478 @@
+---
+layout: default
+title: 'How to check the CSRF token? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/16/security">Security</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How to check the CSRF token?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/12769/s-ohnishi" class="user-moderator-N"><span itemprop="name">s-ohnishi</span></a></span>
+            <time itemprop="dateCreated" datetime="2020-06-16T06:18:16-07:00">Jun '20</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2020-06-16T06:18:16-07:00">Jun '20</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>236</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/fb176191a7a770b41147882f0100a4e9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/12769/s-ohnishi" class="user-moderator-N"><span itemprop="name">s-ohnishi</span></a></span>
+                <span class="karma">4.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C20701" href="#C20701">
+        <time class="action-date">Jun '20</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I want to implement fields and validations for CSRF using Forms.
+For example, it looks like this.</p>
+<pre><code class="language-php">// myForm
+//$csrf = new Hidden($this-&gt;security-&gt;getTokenKey());
+$csrf = new Hidden('csrf');
+$csrf-&gt;addValidator(
+  new Identical([
+    //'value' =&gt; $this-&gt;security-&gt;getToken(),
+    'value' =&gt; $this-&gt;security-&gt;getSessionToken(),
+    'message'  =&gt; 'CSRF detect'
+    ])
+  );
+$this-&gt;add($csrf);
+
+// volt
+{# {% raw %}{{{% endraw %} form.render('csrf') {% raw %}}}{% endraw %} #}
+&lt;!--
+&lt;input type="hidden" name="csrf" value="{% raw %}{{{% endraw %} security.getSessionToken() {% raw %}}}{% endraw %}" /&gt;
+--&gt;
+&lt;input type="hidden" name="csrf" value="{% raw %}{{{% endraw %} security.getToken() {% raw %}}}{% endraw %}" /&gt;
+
+// controller
+if (!$this-&gt;security-&gt;checkToken('csrf')) {
+  // abort
+} else
+if ($this-&gt;request-&gt;isPost()) {
+  $form = new myForm();
+  $data = $this-&gt;request-&gt;getPost();
+  if ($form-&gt;isValid($data)) {
+    // valid data
+  } else {
+    // invalid
+  }
+}
+//$this-&gt;security-&gt;getToken();
+$form = new myForm($foo);
+$this-&gt;view-&gt;setVar('form', $form);</code></pre>
+<p>But it doesn't quite work.
+For example, if I use getTokenKey() in myForm, it will become a new key name when I do new myForm() for validation, so isValid() will always return false.
+Similarly, if I use getToken(), the token value will also change, so isValid() never return true.
+I tried &quot;'accepted' =&gt; $this-&gt;security-&gt;checkToken()&quot;, but I couldn't pass it because maybe my something wrong.</p>
+<p>I can't proceed further with this, so I thought about another way.</p>
+<p>The value changes each time getTokenKey() is called, so the key value is fixed and the token value uses the session.
+However, it is necessary to call getToken() somewhere, so I have no choice but to call it at the end and set it.</p>
+<p>Also, if I create an element using render() in the view, the contents of $form will have a new token value at the time of setVar(), but the old token value will be displayed.
+However, this hasn't been fully validated and may be due to my environment (eg using firefox or something else).
+If you write it in HTML without using render(), it seems to work.</p>
+<p>In this case, it doesn't seem to make sense to define CSRF fields in myForm.
+And, instead of isValid(), if I check CSRF using checkToken() by myself in the controller, it will be better without fixing the key name and reducing the security strength.</p>
+<p>When I searched, I found that I made a base class of form and prepared a property of key name so that it would not be changed carelessly, but I feel that &quot;the framework should prepare&quot; But what do you guys think?
+I would like to have getSessionTokenKey() as well as getSessionToken().
+Alternatively, checkToken() may accept a flag that uses the session value, or checkSessionToken() may be present.</p>
+<p>If possible, I would like to define the validation in myForm (without fixing the key name, of course), and just use isValid(), and in view, I would like to use form.render('csrf').</p>
+<p>Could anyone please tell me the best practices?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-b48e452622ba220c27d31341-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-b48e452622ba220c27d31341-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C63495" href="#C63495">
+                <time itemprop="dateCreated" datetime="2020-06-17T10:55:24-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I'm not a huge fan of Phalcon's built-in CSRF component for the same reasons - a token is only valid once per session.  Multiple page loads invalidate the first token generated.</p>
+<p>For that reason, I built my own that only generates the token and key once per session and re-uses it.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63495" data-cf-modified-b48e452622ba220c27d31341-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63495" data-cf-modified-b48e452622ba220c27d31341-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fb176191a7a770b41147882f0100a4e9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/12769/s-ohnishi" class="user-moderator-N"><span itemprop="name">s-ohnishi</span></a>        </span>
+        <br>
+
+        <span class="karma">4.2k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C63495"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Dylan Anderson                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C63499" href="#C63499">
+                <time itemprop="dateCreated" datetime="2020-06-17T19:27:18-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I also think that the current built-in CSRF component of Phalcon can only be used in limited situations.</p>
+<p>Today, it can be said that CSRF measures should be implemented on all input forms.
+I think site-wide tokens are one good solution, but I would love tokens tied to individual pages (or controllers or actions).
+(I don't feel the need to post form data from multiple same action pages in the same browser, and I think that if you really need it, you should remove CSRF.)</p>
+<p>Similarly, I would like you to improve the cooperation with validation which does not work well in Forms at present.</p>
+<p>By the way, when I query the server with AJAX in a certain form, I have succeeded in checking the token value of the form without changing the token value.</p>
+<pre><code class="language-php">$this-&gt;security-&gt;checkToken(null, null, false)</code></pre>
+<p>So I want you to keep like this.</p>
+<blockquote>
+<p>I'm not a huge fan of Phalcon's built-in CSRF component for the same reasons - a token is only valid once per session.  Multiple page loads invalidate the first token generated.</p>
+<p>For that reason, I built my own that only generates the token and key once per session and re-uses it.</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63499" data-cf-modified-b48e452622ba220c27d31341-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63499" data-cf-modified-b48e452622ba220c27d31341-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/747be74e038e35ba2207da09388e3a0d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8217/talal424" class="user-moderator-N"><span itemprop="name">talal424</span></a>        </span>
+        <br>
+
+        <span class="karma">8.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C63519" href="#C63519">
+                <time itemprop="dateCreated" datetime="2020-06-20T13:32:38-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>for me i created a class extends <code>Phalcon\Security</code> and replaced the security service with it </p>
+<p>i remember getting the idea from here somewhere but couldn't find the thread anyway you can try this</p>
+<h2>TokenManager.php</h2>
+<pre><code class="language-php">class TokenManager extends \Phalcon\Security
+{
+    public function getToken()
+    {
+        $token = $this-&gt;getSessionToken();
+
+        if (!$token) {
+            return parent::getToken();
+        }
+
+        return $token;
+    }
+
+    public function getTokenKey()
+    {
+        $container = $this-&gt;getDI();
+
+        $session = $container-&gt;getShared("session");
+
+        $tokenKey = $session-&gt;get($this-&gt;_tokenKeySessionID);
+
+        if (!$tokenKey) {
+            return parent::getTokenKey();
+        }
+
+        return $tokenKey;
+    }
+}</code></pre>
+<h2>services.php</h2>
+<pre><code class="language-php">$di-&gt;setShared('security', function () {
+    return new TokenManager;
+});</code></pre>
+<h3>if i'm using html forms:</h3>
+<pre><code class="language-html">&lt;input type="hidden" name="&lt;?= $this-&gt;security-&gt;getTokenKey() ?&gt;" value="&lt;?= $this-&gt;security-&gt;getToken() ?&gt;"/&gt;</code></pre>
+<p>then in controller</p>
+<pre><code class="language-php">// html form
+$this-&gt;security-&gt;checkToken(null, null, false);
+
+// javascript ( fetch, axios, etc... )
+$this-&gt;security-&gt;checkToken($this-&gt;request-&gt;getPost('tokenKey'), $this-&gt;request-&gt;getPost('token'), false);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63519" data-cf-modified-b48e452622ba220c27d31341-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63519" data-cf-modified-b48e452622ba220c27d31341-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fb176191a7a770b41147882f0100a4e9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/12769/s-ohnishi" class="user-moderator-N"><span itemprop="name">s-ohnishi</span></a>        </span>
+        <br>
+
+        <span class="karma">4.2k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C63519"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/747be74e038e35ba2207da09388e3a0d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        talal424                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C63531" href="#C63531">
+                <time itemprop="dateCreated" datetime="2020-06-22T01:26:36-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>hi
+Thanks for the reply.
+Since MVC increases the number of files even if it is free, I do not want to increase the number of files if possible, so I would like to avoid the suggested method or the method of creating a base class of form. I will.
+(If it is unavoidable, I will use it.)</p>
+<p>I'm sorry to the people who make it, but I still can not wipe the impression that the implementation of Forms and Security class is incomplete.</p>
+<blockquote>
+<p>for me i created a class extends <code>Phalcon\Security</code> and replaced the security service with it </p>
+<p>i remember getting the idea from here somewhere but couldn't find the thread anyway you can try this</p>
+<h2>TokenManager.php</h2>
+<pre><code class="language-php">class TokenManager extends \Phalcon\Security
+{
+   public function getToken()
+   {
+       $token = $this-&gt;getSessionToken();
+
+       if (!$token) {
+           return parent::getToken();
+       }
+
+       return $token;
+   }
+
+   public function getTokenKey()
+   {
+       $container = $this-&gt;getDI();
+
+       $session = $container-&gt;getShared("session");
+
+       $tokenKey = $session-&gt;get($this-&gt;_tokenKeySessionID);
+
+       if (!$tokenKey) {
+           return parent::getTokenKey();
+       }
+
+       return $tokenKey;
+   }
+}</code></pre>
+<h2>services.php</h2>
+<pre><code class="language-php">$di-&gt;setShared('security', function () {
+   return new TokenManager;
+});</code></pre>
+<h3>if i'm using html forms:</h3>
+<pre><code class="language-html">&lt;input type="hidden" name="&lt;?= $this-&gt;security-&gt;getTokenKey() ?&gt;" value="&lt;?= $this-&gt;security-&gt;getToken() ?&gt;"/&gt;</code></pre>
+<p>then in controller</p>
+<pre><code class="language-php">// html form
+$this-&gt;security-&gt;checkToken(null, null, false);
+
+// javascript ( fetch, axios, etc... )
+$this-&gt;security-&gt;checkToken($this-&gt;request-&gt;getPost('tokenKey'), $this-&gt;request-&gt;getPost('token'), false);</code></pre>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63531" data-cf-modified-b48e452622ba220c27d31341-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63531" data-cf-modified-b48e452622ba220c27d31341-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C63537" href="#C63537">
+                <time itemprop="dateCreated" datetime="2020-06-22T09:09:30-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Reducing the number of files is what I would call a &quot;micro-optimization&quot;.  Sure, it might cause your site to load a few nanoseconds slower, but the actual effect won't be noticable.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63537" data-cf-modified-b48e452622ba220c27d31341-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63537" data-cf-modified-b48e452622ba220c27d31341-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/981e5650b6360ab1e681d0a47916a32e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3498/HudsonNicoletti" class="user-moderator-N"><span itemprop="name">Hudson Nicoletti</span></a>        </span>
+        <br>
+
+        <span class="karma">37.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="63545" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '20</span>
+              </span><br/><a name="C63545" href="#C63545">
+                <time itemprop="dateCreated" datetime="2020-06-22T17:51:14-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>well Phalcon's CSFR implementation is that you can assign a new form within the controller and pass it to the view , so when the form is submitted the action on the controller that was assigned by the post url you will need to verify that token and only once per page rerquest since it changes every load.</p>
+<p>'Controller'</p>
+<pre><code class="language-php">&lt;?php
+
+namespace Website\Controllers;
+
+use Phalcon\Forms\Form,
+    Phalcon\Forms\Element\Hidden;
+
+class IndexController extends ControllerBase
+{
+  public function IndexAction()
+  {
+    $form = new Form;
+
+    $element['security'] = new Hidden( "security" ,[
+      'name'  =&gt; $this-&gt;security-&gt;getTokenKey(),
+      'value' =&gt; $this-&gt;security-&gt;getToken()
+    ]);
+    foreach ($element as $e)
+    {
+      $form-&gt;add($e);
+    }
+    $this-&gt;view-&gt;form    = $form;
+  }
+}
+</code></pre>
+<p>and then the action to check it :</p>
+<pre><code class="language-php">
+$this-&gt;security-&gt;checkToken()  # returns Boolean</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63545" data-cf-modified-b48e452622ba220c27d31341-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63545" data-cf-modified-b48e452622ba220c27d31341-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fb176191a7a770b41147882f0100a4e9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/12769/s-ohnishi" class="user-moderator-N"><span itemprop="name">s-ohnishi</span></a>        </span>
+        <br>
+
+        <span class="karma">4.2k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C63537"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Dylan Anderson                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C63547" href="#C63547">
+                <time itemprop="dateCreated" datetime="2020-06-22T18:31:40-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I understand your opinion very well.
+Increasing a few read files will not add much delay.
+But I think that's because of the difference in thinking.
+It's the same as thinking that a cup with half water is &quot;half full&quot; or &quot;half empty&quot;.</p>
+<p>And I think the overall speedup is the accumulation of &quot;micro-optimization&quot;.
+Other frameworks need to read themselves, but Phalcon is not needed, right?
+I feel that the advantage is getting smaller and smaller as the number of adjustment files increases.
+Maybe I care too much.</p>
+<p>There is another point to worry about.
+You have shown that the time required to read a file is nanoseconds, but the storage devices in the world have not yet been accelerated (not all disks have been replaced by hard disks with SSDs), so reading physical files I think it will take a little more time (at least about microseconds).
+Of course, depending on the adjustment of op-cache, I think it will be short enough to be ignored as you show.</p>
+<blockquote>
+<p>Reducing the number of files is what I would call a &quot;micro-optimization&quot;.  Sure, it might cause your site to load a few nanoseconds slower, but the actual effect won't be noticable.</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63547" data-cf-modified-b48e452622ba220c27d31341-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63547" data-cf-modified-b48e452622ba220c27d31341-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fb176191a7a770b41147882f0100a4e9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/12769/s-ohnishi" class="user-moderator-N"><span itemprop="name">s-ohnishi</span></a>        </span>
+        <br>
+
+        <span class="karma">4.2k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C63545"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/981e5650b6360ab1e681d0a47916a32e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Hudson Nicoletti                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C63549" href="#C63549">
+                <time itemprop="dateCreated" datetime="2020-06-22T18:54:04-07:00" class="action-date">Jun '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks for the reply.</p>
+<p>I agree.
+I understand that CSRF check should not be included in isValid() and should be done independently in the controller.
+It seems that it is not possible to check it in batch with isValid() by adding validation when defining the element.</p>
+<blockquote>
+<p>well Phalcon's CSFR implementation is that you can assign a new form within the controller and pass it to the view , so when the form is submitted the action on the controller that was assigned by the post url you will need to verify that token and only once per page rerquest since it changes every load.</p>
+<p>'Controller'</p>
+<pre><code class="language-php">&lt;?php
+
+namespace Website\Controllers;
+
+use Phalcon\Forms\Form,
+   Phalcon\Forms\Element\Hidden;
+
+class IndexController extends ControllerBase
+{
+ public function IndexAction()
+ {
+   $form = new Form;
+
+   $element['security'] = new Hidden( "security" ,[
+     'name'  =&gt; $this-&gt;security-&gt;getTokenKey(),
+     'value' =&gt; $this-&gt;security-&gt;getToken()
+   ]);
+   foreach ($element as $e)
+   {
+     $form-&gt;add($e);
+   }
+   $this-&gt;view-&gt;form    = $form;
+ }
+}
+</code></pre>
+<p>and then the action to check it :</p>
+<pre><code class="language-php">
+$this-&gt;security-&gt;checkToken()  # returns Boolean</code></pre>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63549" data-cf-modified-b48e452622ba220c27d31341-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63549" data-cf-modified-b48e452622ba220c27d31341-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="20701" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,142 @@
+---
+layout: default
+title: 'Volt template not refreshing CSRF token on validation errors - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/16/security">Security</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Volt template not refreshing CSRF token on validation errors</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/8847/sdragnev" class="user-moderator-N"><span itemprop="name">Stan</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-12-25T17:00:41-07:00">Dec '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-12-25T17:00:41-07:00">Dec '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>688</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/09ad3e138c7f9a313d38eea4ea79bfc1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/8847/sdragnev" class="user-moderator-N"><span itemprop="name">Stan</span></a></span>
+                <span class="karma">2.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C15131" href="#C15131">
+        <time class="action-date">Dec '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi all,</p>
+<p>I'm having some issues with csrf validation when updating existing entities.</p>
+<p>I'm adding the field to the form with:</p>
+<pre><code class="language-php">     $csrf = new Hidden('csrf');
+     $csrf-&gt;addValidator(new Identical([
+          'value' =&gt; $this-&gt;security-&gt;getSessionToken(),
+          'message' =&gt; 'CSRF validation failed'
+    ]));
+    $csrf-&gt;clear();</code></pre>
+<p>And then in the volt template:</p>
+<blockquote>
+<p>{% raw %}{{{% endraw %} form.render('csrf', ['value': security.getToken()]) {% raw %}}}{% endraw %}</p>
+</blockquote>
+<p>The problem occurs when I submit the form with a validation error (say missing a required field).
+The correct error message appears, but when I hit the submit button again, the CSRF now fails.</p>
+<p>Checking the page source confirms that the CSRF on the form never changes which explains the error.</p>
+<p>Strangely enough, this doesn't occur when using the same form but not passing it an existing entity (ie I'm creating a new one).</p>
+<blockquote>
+<p>$form = new AccountForm();</p>
+</blockquote>
+<p>vs</p>
+<blockquote>
+<p>$form = new AccountForm($account, ['edit' =&gt; 1]);</p>
+</blockquote>
+<p>The first one gets a fresh csrf when validation fails and the latter does not.</p>
+<p>This is the check in the controller:</p>
+<blockquote>
+<p>if ($this-&gt;request-&gt;isPost() &amp;&amp; $form-&gt;isValid($this-&gt;request-&gt;getPost())) {</p>
+</blockquote>
+<p>I'm at my wits' end at this point! I must be missing something but I don't get it.
+Why would the page csrf refresh in one case and not the other?</p>
+<p>Any thoughts?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-c626a2a8a9a74c69b64fa417-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-c626a2a8a9a74c69b64fa417-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/09ad3e138c7f9a313d38eea4ea79bfc1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8847/sdragnev" class="user-moderator-N"><span itemprop="name">Stan</span></a>        </span>
+        <br>
+
+        <span class="karma">2.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C44757" href="#C44757">
+                <time itemprop="dateCreated" datetime="2017-01-09T13:14:16-07:00" class="action-date">Jan '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Vokuro's editing of an existing model (User) doesn't check the form validity. UsersController:107 only checks if the request is a post and never whether $form-&gt;isValid() which is what I do.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="44757" data-cf-modified-c626a2a8a9a74c69b64fa417-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="44757" data-cf-modified-c626a2a8a9a74c69b64fa417-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9400c6b5e832be01c30ddc992af83259?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8647/skunkius" class="user-moderator-N"><span itemprop="name">skunkius</span></a>        </span>
+        <br>
+
+        <span class="karma">1.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C46441" href="#C46441">
+                <time itemprop="dateCreated" datetime="2017-03-08T03:18:48-07:00" class="action-date">Mar '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Have you found any solution for CSRF refresh?? I have exacly the same problem with form entity.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="46441" data-cf-modified-c626a2a8a9a74c69b64fa417-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="46441" data-cf-modified-c626a2a8a9a74c69b64fa417-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="15131" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

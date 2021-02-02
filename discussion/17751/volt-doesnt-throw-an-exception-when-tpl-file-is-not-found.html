@@ -1,0 +1,132 @@
+---
+layout: default
+title: 'Volt doesn&#039;t throw an exception when tpl file is not found - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/3/volt">Volt</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Volt doesn&#039;t throw an exception when tpl file is not found</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10669/Pilsenerek" class="user-moderator-N"><span itemprop="name">Michał</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-02-04T10:26:20-07:00">Feb '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-02-04T10:26:20-07:00">Feb '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Feb '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>332</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/d10ecfc9a7c21a30f760c726759e57a8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10669/Pilsenerek" class="user-moderator-N"><span itemprop="name">Michał</span></a></span>
+                <span class="karma">8.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17751" href="#C17751">
+        <time class="action-date">Feb '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Good evening Phalconists,</p>
+<p>When I have a standard controller/action and I don't have any template like {controller}/{action}.volt (or there is a typo) I see blank page. The same when I use setMainView or setLayout, on the contrary setTemplate(After|Before) seems to throw an proper exception.
+I try to use events manager to solve it manually:</p>
+<pre><code class="language-php">    $eventsManager-&gt;attach(
+        'view',
+        function (Phalcon\Events\Event $event, $view) {
+            if($event-&gt;getType() == 'notFoundView'){
+                    //it always apear!!!
+            }
+        }
+        );
+     $view-&gt;setEventsManager($eventsManager);</code></pre>
+<p>But to my frustration it always performs so it's useless.
+I have to do this by this way:</p>
+<pre><code class="language-php">    $eventsManager-&gt;attach(
+        'view',
+        function (Phalcon\Events\Event $event, $view) {
+            if($event-&gt;getType() == 'beforeRender'){
+                $tplExists = false;
+                foreach(array_keys($view-&gt;getRegisteredEngines()) as $engineExt){
+                    $path = $view-&gt;getViewsDir().DIRECTORY_SEPARATOR;
+                    $path .= $view-&gt;getControllerName().DIRECTORY_SEPARATOR;
+                    $path .= $view-&gt;getActionName().$engineExt;
+                    if(file_exists($path)){
+                        $tplExists = true;
+
+                        break;
+                    }
+                }
+                if(!$tplExists){
+
+                    throw new \Exception('Template '.$path.' not found');
+                }
+            }
+        }
+        );
+     $view-&gt;setEventsManager($eventsManager);</code></pre>
+<p>And it works, but I'm not convinced in 100% that in the future any error won't apear.
+But maybe I do sth wrong?
+If not, is there a better way to achieve this?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-a2e85debb85b85f831d70572-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-a2e85debb85b85f831d70572-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C53829" href="#C53829">
+                <time itemprop="dateCreated" datetime="2018-02-05T13:34:43-07:00" class="action-date">Feb '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi<a href="https://forum.phalcon.io/user/0/Michal"> @Michal</a> the <code>notFoundView</code> event works ok and can't stop the operation <a href="https://docs.phalcon.io/en/3.2/views#eventes">more info in docs</a></p>
+<p>The second solutions I think is good</p>
+<p>Good luck</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="53829" data-cf-modified-a2e85debb85b85f831d70572-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="53829" data-cf-modified-a2e85debb85b85f831d70572-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17751" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,171 @@
+---
+layout: default
+title: 'Many-to-Many relation issues with aliasing - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Many-to-Many relation issues with aliasing</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1960/Michal-sk" class="user-moderator-N"><span itemprop="name">Michal-sk</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-07-17T12:22:07-07:00">Jul '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-07-17T12:22:07-07:00">Jul '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>806</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/1bfa9662d8810e7a6b9a3a7a1c0ba206?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1960/Michal-sk" class="user-moderator-N"><span itemprop="name">Michal-sk</span></a></span>
+                <span class="karma">1.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2859" href="#C2859">
+        <time class="action-date">Jul '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have 3 models, <code>Product</code>, <code>ProductAttribute</code>, and <code>Attribute</code>. When I try to do:</p>
+<pre><code class="language-php">&lt;?php
+    public function getLockedAttributes(Model $product)
+    {
+        return $product-&gt;getAttributes([
+            'locked = :lock:',
+            'bind' =&gt; ['lock' =&gt; Attribute::LOCKED]
+        ]);
+    }</code></pre>
+<p>I get the error that <code>locked</code> does not belong to any models. But it belongs to the <code>Attribute</code> model.</p>
+<blockquote>
+<p>Column 'locked' doesn't belong to any of the selected models (2), when preparing: SELECT [\Greatmedia\Models\V1\Attribute].* FROM [\Greatmedia\Models\V1\Attribute] INNER JOIN [\Greatmedia\Models\V1\ProductAttribute] ON [\Greatmedia\Models\V1\ProductAttribute].[attribute_id] = [\Greatmedia\Models\V1\Attribute].[id] WHERE [\Greatmedia\Models\V1\ProductAttribute].[product_id] = ?0 AND locked = :lock:</p>
+</blockquote>
+<h4>Attribute model</h4>
+<pre><code class="language-php">&lt;?php
+namespace Greatmedia\Models\V1;
+
+class Attribute extends \Phalcon\Mvc\Model
+{
+    const LOCKED = 1;
+
+    public $id;
+
+    public $value;
+
+    public $label;
+
+    public $attribute_code;
+
+    public $locked;
+
+    public function getSource()
+    {
+        return 'attribute';
+    }
+
+    public function initialize()
+    {
+        $this-&gt;hasMany('id', '\Greatmedia\Models\V1\ProductAttribute', 'attribute_id', [
+          'alias' =&gt; 'product_attribute'
+        ]);
+    }
+}</code></pre>
+<h4>Product model</h4>
+<pre><code class="language-php">&lt;?php
+namespace Greatmedia\Models\V1;
+
+class Product extends \Phalcon\Mvc\Model
+{
+    public $id;
+
+    public $name;
+
+    public $price;
+
+    public function getSource()
+    {
+        return 'product';
+    }
+
+    public function initialize()
+    {
+//         $this-&gt;hasMany('id', '\Greatmedia\Models\V1\ProductAttribute', 'product_id', [
+//             'alias' =&gt; 'attributes'
+//         ]);
+
+        $this-&gt;hasManyToMany(
+            'id',
+            '\Greatmedia\Models\V1\ProductAttribute',
+            'product_id',
+            'attribute_id',
+            '\Greatmedia\Models\V1\Attribute',
+            'id',
+            ['alias' =&gt; 'attributes']
+        );
+    }
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-9dd275d1746f5d2967e78391-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-9dd275d1746f5d2967e78391-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9554" href="#C9554">
+                <time itemprop="dateCreated" datetime="2014-07-17T13:56:44-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The meaning of that error is:</p>
+<ul>
+<li>There's no column in the mapped table called 'locked'</li>
+<li>The meta-data adapter is not the memory one and it's not reloading recently added columns to the mapped table</li>
+</ul></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9554" data-cf-modified-9dd275d1746f5d2967e78391-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9554" data-cf-modified-9dd275d1746f5d2967e78391-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2859" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

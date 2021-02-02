@@ -1,0 +1,198 @@
+---
+layout: default
+title: 'How can I use phalcon model to implement optimistic locking? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How can I use phalcon model to implement optimistic locking?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2123/zhounew" class="user-moderator-N"><span itemprop="name">zhounew</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-08-16T08:35:56-07:00">Aug '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-08-16T08:35:56-07:00">Aug '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1184</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/413bcf0632aa2903c2b9890f3334bdb5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2123/zhounew" class="user-moderator-N"><span itemprop="name">zhounew</span></a></span>
+                <span class="karma">1.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3148" href="#C3148">
+        <time class="action-date">Aug '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>For example, we have &quot;wallet&quot; table. </p>
+<pre><code class="language-php">function cost() {
+    $wallet = Wallet::findFirstById(123);
+    if ($wallet-&gt;balance &gt;= 10) {
+        $wallet-&gt;balance -= 10;
+    } else {
+        return -1;
+    }
+    $wallet-&gt;save();
+}</code></pre>
+<p>Let's assume wallet &quot;123&quot; has its balance  for $10. If we have two parallal requests to invoke &quot;cost()&quot;, we might get &quot;-10&quot; as balance result. To avoid  it, we have to use &quot;locking&quot; magic. I saw the phalcon doc that there is &quot;for update &quot; option for &quot;findFirst&quot; function which will lock the row. But I doubt this is the pessimistic locking which will cost a lot in the long-time transaction.</p>
+<p><strong>so... How can we implement &quot;optimistic&quot; locking by using &quot;version&quot; in the phalcon model? </strong></p>
+<p>I am doing the search in  &quot;save()&quot; function in the model, but it is unfortunately not supporting &quot;conditional update&quot;....</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-a62e2e37fd7303a0612cd35f-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-a62e2e37fd7303a0612cd35f-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39065" href="#C39065">
+                <time itemprop="dateCreated" datetime="2016-08-24T09:39:14-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>AFAIK there is no ready-to-use mechanic in Phalcon for this. Your only options are <code>for_update</code> and <code>shared_lock</code>...</p>
+<p>Locking may delay a response, but it's still the most robust solution for concurrency.
+Otherwise, you'll have to implement your own logic for this.</p>
+<p>I was missing the <code>ON DUPLICATE KEY UPDATE</code> mechanism, so I've overridden it in the base mysql adapter:</p>
+<pre><code class="language-php">namespace MyProject;
+
+use Phalcon\Db\Adapter\Pdo\Mysql as PhalconMysql;
+use Phalcon\Db\Exception;
+
+class Mysql extends PhalconMysql
+{
+    public function checkConnection() {
+        try {
+            $this-&gt;fetchOne('SELECT 1');
+        } catch (\PDOException $e) {
+            if (strpos($e-&gt;getMessage(), 'MySQL server has gone away') !== false) {
+                $this-&gt;connect();
+            }
+        }
+    }
+
+    public function ping() {
+        $this-&gt;checkConnection();
+        return $this;
+    }
+
+    public function insert($table, array $values, $fields = null, $dataTypes = null) {
+        if(count($values)&lt;1) {
+            throw new Exception("Unable to insert into " . $table . " without data");
+        }
+        $placeHolders = [];
+        $insertValues = [];
+        $bindDataTypes = [];
+
+        foreach($values as $position =&gt; $value) {
+            if(is_object($value)) {
+                $placeHolders[] = (string)$value;
+            }
+            else {
+                if(is_null($value)) {
+                    $placeHolders[] = "NULL";
+                }
+                else {
+                    $placeHolders[] = "?";
+                    $insertValues[] = $value;
+                    if(is_array($dataTypes)) {
+                        if(!array_key_exists($position, $dataTypes)) {
+                            throw new Exception("Incomplete number of bind types");
+                        }
+                        $bindDataTypes[] = $dataTypes[$position];
+                    }
+                }
+            }
+        }
+
+        $escapedTable = $this-&gt;escapeIdentifier($table);
+
+        $joinedValues = join(', ', $placeHolders);
+        if(is_array($fields)) {
+            $onDuplicate = "ON DUPLICATE KEY UPDATE";
+            foreach($this-&gt;describeColumns($table) as $col) {
+                if($col-&gt;isPrimary()) {
+                    $f = $this-&gt;escapeIdentifier($col-&gt;getName());
+                    $onDuplicate .= " " . $f . " = LAST_INSERT_ID(" . $f . "),";
+                    break;
+                }
+            }
+            $escapedFields = [];
+            foreach($fields as $field) {
+                $f = $this-&gt;escapeIdentifier($field);
+                $escapedFields[] = $f;
+                $onDuplicate.= " ".$f." = VALUES(".$f."),";
+            }
+            $onDuplicate = substr($onDuplicate,0,-1);
+            $insertSql = "INSERT INTO ".$escapedTable." (".join(", ",$escapedFields).") VALUES (".$joinedValues.") ".$onDuplicate;
+        }
+        else {
+            $onDuplicate = "ON DUPLICATE KEY UPDATE";
+            foreach($this-&gt;describeColumns($table) as $col) {
+                $f = $this-&gt;escapeIdentifier($col-&gt;getName());
+                if($col-&gt;isPrimary()) {
+                    $onDuplicate .= " " . $f . " = LAST_INSERT_ID(" . $f . "),";
+                }
+                else {
+                    $onDuplicate .= " " . $f . " = VALUES(" . $f . "),";
+                }
+            }
+            $onDuplicate = substr($onDuplicate,0,-1);
+            $insertSql = "INSERT INTO ".$escapedTable." VALUES(".$joinedValues.") ".$onDuplicate;
+        }
+        if(count($bindDataTypes)&lt;1) {
+            return $this-&gt;execute($insertSql, $insertValues);
+        }
+        return $this-&gt;execute($insertSql, $insertValues, $bindDataTypes);
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39065" data-cf-modified-a62e2e37fd7303a0612cd35f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39065" data-cf-modified-a62e2e37fd7303a0612cd35f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3148" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

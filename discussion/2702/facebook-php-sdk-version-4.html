@@ -1,0 +1,314 @@
+---
+layout: default
+title: 'Facebook php sdk version 4 - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/10/di-ioc">DI/IoC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Facebook php sdk version 4</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/718/TommyBs" class="user-moderator-N"><span itemprop="name">TommyBs</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-07-01T12:58:09-07:00">Jul '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-07-01T12:58:09-07:00">Jul '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>2579</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/63dc1fa1adc218aa2e8b1e30d17d2d0a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/718/TommyBs" class="user-moderator-N"><span itemprop="name">TommyBs</span></a></span>
+                <span class="karma">12.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2702" href="#C2702">
+        <time class="action-date">Jul '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,
+I'm currently trying to integrate the lastest Facebook php sdk into a Phalcon project but I'm not having much luck. I can get the SDK to work in a standalone project but the exact same code fails when integrated into a Phalcon project (either as a service or directly in a Controller). This issue seems to be that the facebook redirect helper creates a &quot;state&quot; property which is appended to a loginUrl and then stored in a session. When a user is redirected back to my site after signing in, it checks this property against a querystring value. The state property is only generated and stored whenever you display the login url. Somehow, when I integrate this in Phalcon the session variable and the $_GET parameter never seem to match up. The simple example which works is as follows</p>
+<pre><code class="language-php">         // lots of requires
+         Facebook\FacebookSession::setDefaultApplication($appId,$secret);
+         $helper = new Facebook\FacebookRedirectLoginHelper('http://'.$_SERVER['HTTP_HOST'] .'/');
+         // see if a existing session exists
+         if ( isset( $_SESSION ) &amp;&amp; isset( $_SESSION['fb_token'] ) ) {
+          // create new session from saved access_token
+              $session = new FacebookSession( $_SESSION['fb_token'] );
+
+          // validate the access_token to make sure it's still valid
+          try {
+                 if ( !$session-&gt;validate() ) {
+                 $session = null;
+           }
+          } catch ( Exception $e ) {
+            // catch any exceptions
+                $session = null;
+            }
+           }  // end if isset($_SESSION)
+
+         if ( !isset( $session ) || $session === null ) {
+          // no session exists
+
+          try {
+                  $session = $helper-&gt;getSessionFromRedirect();
+           } catch( FacebookRequestException $ex ) {
+            // When Facebook returns an error
+             // handle this better in production code
+              print_r( $ex );
+            } catch( Exception $ex ) {
+            // When validation fails or other local issues
+             // handle this better in production code
+               print_r( $ex );
+                  }
+               }
+
+           // see if we have a session
+           if ( isset( $session ) ) {
+
+            // save the session
+             $_SESSION['fb_token'] = $session-&gt;getToken();
+             // create a session using saved token or the new one we generated at login
+               $session = new FacebookSession( $session-&gt;getToken() );
+
+                // graph api request for user data
+                $request = new FacebookRequest( $session, 'GET', '/me' );
+                 $response = $request-&gt;execute();
+                  // get response
+                $graphObject = $response-&gt;getGraphObject()-&gt;asArray();
+
+                 // print profile data
+                    echo '&lt;pre&gt;' . print_r( $graphObject, 1 ) . '&lt;/pre&gt;';
+
+                      // print logout url using session and redirect_uri (logout.php page should destroy the session)
+                       echo '&lt;a href="' . $helper-&gt;getLogoutUrl( $session, 'http://yourwebsite.com/app/logout.php' ) . '"&gt;Logout&lt;/a&gt;';
+              } else {
+            // show login url
+              echo '&lt;a href="' . $helper-&gt;getLoginUrl( array( 'email', 'user_friends' ) ) . '"&gt;Login&lt;/a&gt;'; // this line would generate a new state
+             }</code></pre>
+<p>When I try using this exact same code in a controller in a phalcon project, the state check always fails even though I'm not generateing a new login url. The only other difference is that in the simple project I require all the facebook files using require_once but in the Phalcon project I use </p>
+<pre><code class="language-php">      $loader-&gt;registerNamespaces(
+    array(
+       "Facebook"    =&gt; __DIR__ . '/../../vendor/facebook/php-sdk-v4/src/Facebook/'
+
+    )
+   );</code></pre>
+<p>Anyone got any clues? </p>
+<p>P.S on a side note, do you think the &quot;Help&quot; link on these create post pages could be made to open a new window. It's frustrating typing out a message, tapping help to get some formatting hints and then lose all you've written. I know I can r-click and open in a new tab, but I can't be the 1st one to make this mistake first time round</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-cc5af23d61cc698346fc2d19-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-cc5af23d61cc698346fc2d19-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9089" href="#C9089">
+                <time itemprop="dateCreated" datetime="2014-07-02T09:28:00-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You can add a events manager to the loader to see what files are checked:</p>
+<p><a href="http://docs.phalcon.io/en/latest/reference/loader.html#autoloading-events">http://docs.phalcon.io/en/latest/reference/loader.html#autoloading-events</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9089" data-cf-modified-cc5af23d61cc698346fc2d19-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9089" data-cf-modified-cc5af23d61cc698346fc2d19-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/63dc1fa1adc218aa2e8b1e30d17d2d0a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/718/TommyBs" class="user-moderator-N"><span itemprop="name">TommyBs</span></a>        </span>
+        <br>
+
+        <span class="karma">12.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="9094" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '14</span>
+              </span><br/><a name="C9094" href="#C9094">
+                <time itemprop="dateCreated" datetime="2014-07-02T11:54:35-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The loader doesn't seem to list any of the Facebook files in it in the eventManager, but they do actually work, e.g if I call a method on one of Facebook objects it is fired correctly, which implies it is finding the classes. The issue seems to be around sessions. It's almost like they're &quot;resetting&quot; every time and this is what is causing the issue</p>
+<p>edit saying that the loader does list the Facebook objects when I move it back into my services.php file rather than trying to access it in the controller. The fact remains though that it's something to do with the facebook &quot;state&quot; property and sessions. </p>
+<p>Specifically the more I add debug_print_backtrace() etc. throughout my code, I can indeed confirm that the Facebook SDK only saves the session once, when it is meant to. Whenever I try to sign in however, the session seems to have changed. And this only happens when I integrate the SDK into a Phalcon project. The exact same code works fine without Phalcon. I'm assuming Phalcon wouldn't be doing some hashin/encryption of sessions objects? These sessions are added via $_SESSION rather than $di-&gt;session-&gt;set(); but I assume this shouldn't be an issue?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9094" data-cf-modified-cc5af23d61cc698346fc2d19-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9094" data-cf-modified-cc5af23d61cc698346fc2d19-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/63dc1fa1adc218aa2e8b1e30d17d2d0a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/718/TommyBs" class="user-moderator-N"><span itemprop="name">TommyBs</span></a>        </span>
+        <br>
+
+        <span class="karma">12.2k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9185" href="#C9185">
+                <time itemprop="dateCreated" datetime="2014-07-04T12:22:53-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I've worked this one out. The issue was that the browser was automatically making a request to /favicon.ico as well,as I didn't have a favicon.ico this then rendered the default indexAction again and as such this was causing the getLoginUrl() method to fire again generating a new state. The simple fix is to just create a favicon, or define the error handling route for files not there (I was just using the boilerplate from the phalcon dev tools initially)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9185" data-cf-modified-cc5af23d61cc698346fc2d19-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9185" data-cf-modified-cc5af23d61cc698346fc2d19-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/92236541a9065b11aec5fc49aaa3af58?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5747/sunnykasera3107" class="user-moderator-N"><span itemprop="name">Sunny Kasera</span></a>        </span>
+        <br>
+
+        <span class="karma">60</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C27773" href="#C27773">
+                <time itemprop="dateCreated" datetime="2015-12-16T02:36:10-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi<a href="https://forum.phalcon.io/user/0/TommyBs"> @TommyBs</a>
+The solution is not working for me. I have added a favicon too but it is still with same status.</p>
+<p>Fatal error: Uncaught exception 'Facebook\Exceptions\FacebookSDKException' with message 'Cross-site request forgery validation failed. Required param &quot;state&quot; missing.' in /var/www/html/fb_test/src/Facebook/Helpers/FacebookRedirectLoginHelper.php:241 Stack trace: #0 /var/www/html/fb_test/src/Facebook/Helpers/FacebookRedirectLoginHelper.php(221): Facebook\Helpers\FacebookRedirectLoginHelper-&gt;validateCsrf() #1 /var/www/html/fb_test/login.php(12): Facebook\Helpers\FacebookRedirectLoginHelper-&gt;getAccessToken() #2 {main} thrown in /var/www/html/fb_test/src/Facebook/Helpers/FacebookRedirectLoginHelper.php on line 241</p>
+<p>Can you please help me to out this?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27773" data-cf-modified-cc5af23d61cc698346fc2d19-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27773" data-cf-modified-cc5af23d61cc698346fc2d19-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/63dc1fa1adc218aa2e8b1e30d17d2d0a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/718/TommyBs" class="user-moderator-N"><span itemprop="name">TommyBs</span></a>        </span>
+        <br>
+
+        <span class="karma">12.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="28673" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '16</span>
+              </span><br/><a name="C28673" href="#C28673">
+                <time itemprop="dateCreated" datetime="2016-01-07T04:48:20-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi,</p>
+<p>Apologies for the late reply, I've just updated a test app to the latest version of the php-sdk and I've had to play around to get this working. Below is the code I use, but you obviously might need to tweak it to your needs:</p>
+<pre><code class="language-php">
+    //Start the session the first time some component request the session service
+    $di-&gt;set('session', function () {
+    $session = new SessionAdapter();
+    $session-&gt;start();
+
+    return $session;
+    },true);
+
+    $di-&gt;get('session'); // This is important, you need to get the session
+
+    /** 
+    *   Setup the Facebook authentication
+    */
+    $di-&gt;set('fb', function() use($config){
+    return new Facebook\Facebook([
+     'app_id' =&gt; $config-&gt;facebook-&gt;app_id,
+    'app_secret' =&gt; $config-&gt;facebook-&gt;app_secret,
+    'default_graph_version' =&gt; $config-&gt;facebook-&gt;default_graph_version
+     ]);
+    });
+
+    /**
+    * Check for the session before generating a loginURL as the generation will reset the CSRF state
+    */
+    $di-&gt;set('FacebookSession', function() use($di){
+    $helper = $di-&gt;get('fb')-&gt;getRedirectLoginHelper();
+    try {
+     $accessToken = $helper-&gt;getAccessToken();
+    } catch(Facebook\Exceptions\FacebookResponseException $e) {
+    // When Graph returns an error
+     echo 'Graph returned an error: ' . $e-&gt;getMessage();
+     // exit;
+    } catch(Facebook\Exceptions\FacebookSDKException $e) {
+     // When validation fails or other local issues
+    echo 'Facebook SDK returned an error: ' . $e-&gt;getMessage();
+    //exit;
+    }
+    if (isset($accessToken)) {
+     // Logged in!
+    $_SESSION['facebook_access_token'] = (string) $accessToken;
+
+     // Now you can redirect to another page and use the
+     // access token from $_SESSION['facebook_access_token']
+    }
+    echo $accessToken;
+    });
+
+    $di-&gt;get('FacebookSession'); // again it's important to call this 
+
+    $di-&gt;set('loginUrl', function() use ($di){
+    $helper = $di-&gt;get('fb')-&gt;getRedirectLoginHelper(); 
+    try {
+        $accessToken = $helper-&gt;getAccessToken();
+    } catch (Exception $e){ // I only show the login url if their isn't a valid access token
+
+        $permissions = ['user_likes']; // optional
+        $loginUrl = $helper-&gt;getLoginUrl('http://'.$_SERVER['HTTP_HOST']. strtok($_SERVER['REQUEST_URI'],'?'), $permissions);
+        return $loginUrl;
+    }
+    });</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28673" data-cf-modified-cc5af23d61cc698346fc2d19-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28673" data-cf-modified-cc5af23d61cc698346fc2d19-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2702" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

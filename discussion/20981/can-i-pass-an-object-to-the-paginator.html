@@ -1,0 +1,751 @@
+---
+layout: default
+title: 'Can I pass an Object to the Paginator? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/9/paginator">Paginator</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Can I pass an Object to the Paginator?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3021/xaero7" class="user-moderator-N"><span itemprop="name">xaero</span></a></span>
+            <time itemprop="dateCreated" datetime="2020-11-15T06:42:43-07:00">Nov '20</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2020-11-15T06:42:43-07:00">Nov '20</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">9</span>
+                </td>
+                <td>
+                    <label>Views</label><br>128</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/f3183e109ec4c5c93d7deab887f7b8e1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3021/xaero7" class="user-moderator-N"><span itemprop="name">xaero</span></a></span>
+                <span class="karma">31.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C20981" href="#C20981">
+        <time class="action-date">Nov '20</time>
+    </a>
+</div>
+<div class="post-content"><div><p>In <code>models</code>:</p>
+<pre><code class="language-php">class Topics extends Model
+{
+    public $id;
+    public $title;
+    public $content;
+    public $lastreply_id;
+
+    ....
+
+    public function getLastReplyInfo() {
+        if ($this-&gt;lastreply_id) {
+            $last_reply = Replys::findFirst($this-&gt;lastreply_id);
+            $lr_user = Users::findFirst($last_reply-&gt;users_id);
+            return array(
+                "user_id" =&gt; $last_reply-&gt;users_id,
+                "user_name" =&gt; $lr_user-&gt;name,
+                "reply_time" =&gt; $last_reply-&gt;datetimes);
+        } else {
+            return null;
+        }
+    }
+    ...</code></pre>
+<p><code>controllers</code>:</p>
+<pre><code class="language-php">use \Phalcon\Paginator\Adapter\Model as Paginator;
+use Phalcon\Paginator\Adapter\NativeArray;
+
+class TopicsController extends ControllerBase
+{
+    public function listAction($flag = null)
+    {
+        $flag = $this-&gt;filter-&gt;sanitize($flag, 'alnum');
+
+        $numberPage = $this-&gt;request-&gt;getQuery("page", "int", 1);
+        $problemId = $this-&gt;request-&gt;getQuery("pid");
+
+        $topics = Topics::findAllTopicsBySql($flag, $problemId);
+
+        $paginator = new Paginator(array(
+            'data' =&gt; $topics,
+            'limit' =&gt; 12,
+            'page' =&gt; $numberPage
+        ));
+        $this-&gt;view-&gt;page = $paginator-&gt;getPaginator();
+        $this-&gt;view-&gt;form = new TopicForm();
+        $this-&gt;view-&gt;parser = new Parser();
+    }
+}</code></pre>
+<p>In <code>volt</code>:</p>
+<pre><code class="language-php">{% raw %}{%{% endraw %} for topic in page.items {% raw %}%}{% endraw %}
+
+$last_reply_info = $topic-&gt;getLastReplyInfo();</code></pre>
+<p>It can work properly(in Phalcon 3.x)</p>
+<p>But in Phalcon4.x, I've to change the data of paginator to NativeArray, and an array item can't visit the <code>getLastReplyInfo()</code> method!</p>
+<p>How to visited the <code>getLastReplyInfo()</code> in <code>volt</code>?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C64827" href="#C64827">
+                <time itemprop="dateCreated" datetime="2020-11-16T08:43:50-07:00" class="action-date">Nov '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I don't see where you've changed to NativeArray?</p>
+<p>Are you not using Model because of the large number of records?  How many do you have?</p>
+<p>You may want to consider using the QueryBuilder adapter, as that will let you paginate Model records.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64827" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64827" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f3183e109ec4c5c93d7deab887f7b8e1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3021/xaero7" class="user-moderator-N"><span itemprop="name">xaero</span></a>        </span>
+        <br>
+
+        <span class="karma">31.3k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C64827"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Dylan Anderson                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="64841" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '20</span>
+              </span><br/><a name="C64841" href="#C64841">
+                <time itemprop="dateCreated" datetime="2020-11-17T01:48:44-07:00" class="action-date">Nov '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>I don't see where you've changed to NativeArray?</p>
+<p>Are you not using Model because of the large number of records?  How many do you have?</p>
+</blockquote>
+<pre><code class="language-php">use \Phalcon\Paginator\Adapter\Model as Paginator;
+use Phalcon\Paginator\Adapter\NativeArray;
+
+class TopicsController extends ControllerBase
+{
+    public function listAction($flag = null)
+    {
+        $flag = $this-&gt;filter-&gt;sanitize($flag, 'alnum');
+
+        $numberPage = $this-&gt;request-&gt;getQuery("page", "int", 1);
+        $problemId = $this-&gt;request-&gt;getQuery("pid");
+
+        $topics = Topics::findAllTopicsBySql($flag, $problemId);
+
+        $paginator = new Paginator(array(
+            'data' =&gt; $topics,       &lt;------------------------------------- $topics is an object
+            'limit' =&gt; 12,
+            'page' =&gt; $numberPage
+        ));
+        $this-&gt;view-&gt;page = $paginator-&gt;getPaginator();
+        $this-&gt;view-&gt;form = new TopicForm();
+        $this-&gt;view-&gt;parser = new Parser();
+    }
+}</code></pre>
+<p>As I marked above, I want to use Model, and I want to pass an object to the paginator</p>
+<p>But in the <code>volt</code>, I dump out the object, it says <code>NULL</code></p>
+<pre><code class="language-php">{% raw %}{%{% endraw %} for topic in page.items {% raw %}%}{% endraw %}
+
+$last_reply_info = $topic-&gt;getLastReplyInfo();   &lt;----------- I can't use the method getLastReplyInfo(), because $topic is an array.
+
+var_dump($topic-&gt;id)  &lt;----------------- result is "NULL", That is because $topic is an array not an object
+
+{% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64841" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64841" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C64849" href="#C64849">
+                <time itemprop="dateCreated" datetime="2020-11-17T08:33:38-07:00" class="action-date">Nov '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Switch <code>data</code> for <code>model</code>. In v4, there are different arguments depending on whether you're using the <code>Model</code>, <code>NativeArray</code>, or <code>QueryBuilder</code> adapters.</p>
+<p><a href="https://docs.phalcon.io/4.0/en/pagination#methods">https://docs.phalcon.io/4.0/en/pagination#methods</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64849" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64849" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f3183e109ec4c5c93d7deab887f7b8e1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3021/xaero7" class="user-moderator-N"><span itemprop="name">xaero</span></a>        </span>
+        <br>
+
+        <span class="karma">31.3k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C64849"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Dylan Anderson                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="64855" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '20</span>
+              </span><br/><a name="C64855" href="#C64855">
+                <time itemprop="dateCreated" datetime="2020-11-18T00:42:23-07:00" class="action-date">Nov '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Switch <code>data</code> for <code>model</code>. In v4, there are different arguments depending on whether you're using the <code>Model</code>, <code>NativeArray</code>, or <code>QueryBuilder</code> adapters.</p>
+<p><a href="https://docs.phalcon.io/4.0/en/pagination#methods">https://docs.phalcon.io/4.0/en/pagination#methods</a></p>
+</blockquote>
+<p>I‘ve changed  <code>'data' =&gt; $topics,</code> to <code>'model' =&gt; $topics,</code>, But it says:</p>
+<pre><code>Trying to call method toarray on a non-object
+#0 /.../app/controllers/TopicsController.php(65): Phalcon\Paginator\Adapter\Model-&gt;paginate()</code></pre>
+<p>and it has a <code>warning</code>:</p>
+<pre><code>FastCGI sent in stderr: "PHP message: PHP Warning:  call_user_func() expects parameter 1 to be a valid callback, class 'Phalcon\Mvc\Model\Resultset\Simple' does not have a method 'find' in ....</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64855" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64855" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/747be74e038e35ba2207da09388e3a0d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8217/talal424" class="user-moderator-N"><span itemprop="name">talal424</span></a>        </span>
+        <br>
+
+        <span class="karma">8.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C64861" href="#C64861">
+                <time itemprop="dateCreated" datetime="2020-11-18T05:47:33-07:00" class="action-date">Nov '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>its been discussed here <a href="https://forum.phalcon.io/discussion/20975/phalcon4-how-to-do-model-pagination">https://forum.phalcon.io/discussion/20975/phalcon4-how-to-do-model-pagination</a></p>
+<p><code>Phalcon\Paginator\Adapter\Model</code> expects a class / object in <code>model</code> option but it has to be an instance of <code>Phalcon\Mvc\ModelInterface</code> </p>
+<p>if you check the source code you will see that it will call <code>count()</code> with the <code>parameters</code> option and then call <code>find()</code> with the <code>parameters</code> option and then converts the results set to an array</p>
+<p>check the other adapters you may find another way around this</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64861" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64861" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C64855"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/f3183e109ec4c5c93d7deab887f7b8e1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        xaero                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C64863" href="#C64863">
+                <time itemprop="dateCreated" datetime="2020-11-18T08:32:53-07:00" class="action-date">Nov '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>I‘ve changed  <code>'data' =&gt; $topics,</code> to <code>'model' =&gt; $topics,</code></p>
+</blockquote>
+<p>Can you post your updated code?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64863" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64863" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f3183e109ec4c5c93d7deab887f7b8e1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3021/xaero7" class="user-moderator-N"><span itemprop="name">xaero</span></a>        </span>
+        <br>
+
+        <span class="karma">31.3k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C64863"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Dylan Anderson                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="64869" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '20</span>
+              </span><br/><a name="C64869" href="#C64869">
+                <time itemprop="dateCreated" datetime="2020-11-18T23:01:43-07:00" class="action-date">Nov '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Can you post your updated code?</p>
+</blockquote>
+<p>In the <code>controller</code></p>
+<pre><code class="language-php">use Phalcon\Paginator\Adapter\Model as Paginator;
+use Phalcon\Paginator\Adapter\NativeArray;
+
+class TopicsController extends ControllerBase
+{
+    public function initialize()
+    {
+        parent::initialize(); // TODO: Change the autogenerated stub
+    }
+
+    public function indexAction()
+    {
+        $this-&gt;dispatcher-&gt;forward(array(
+            'action' =&gt; 'list'
+        ));
+    }
+
+    public function listAction($flag = null)
+    {
+        $flag = $this-&gt;filter-&gt;sanitize($flag, 'alnum');
+
+        $numberPage = $this-&gt;request-&gt;getQuery("page", "int", 1);
+        $problemId = $this-&gt;request-&gt;getQuery("pid");
+
+        $topics = Topics::findAllTopicsBySql($flag, $problemId);   &lt;------------------- $topics
+
+        $paginator = new Paginator(array(
+            'model' =&gt; $topics,    &lt;-------------------- model
+            'limit' =&gt; 12,
+            'page' =&gt; $numberPage
+        ));
+
+        $this-&gt;view-&gt;page = $paginator-&gt;paginate();    &lt;------------------ this is line 65
+    }
+    ....</code></pre>
+<p>In the <code>Model</code></p>
+<pre><code class="language-php">class Topics extends Model
+{
+    const FRONT_PER_PAGE = 30; 
+
+    public $id;
+
+    public $flag;
+
+    public $problems_id;
+
+    public $users_id;
+
+    public $title;
+
+    public $content;
+
+    public $reply_count;
+
+    public $view_count;
+
+    public $favorite_count;
+
+    public $vote_count;
+
+    public $orders;
+
+    public $lastreply_id;
+
+    public function getLastReplyInfo() {
+        if ($this-&gt;lastreply_id) {
+            $last_reply = Replys::findFirst($this-&gt;lastreply_id);
+            $lr_user = Users::findFirst($last_reply-&gt;users_id);
+            return array(
+                "user_id" =&gt; $last_reply-&gt;users_id,
+                "user_name" =&gt; $lr_user-&gt;name,
+                "reply_time" =&gt; $last_reply-&gt;datetimes);
+        } else {
+            return null;
+        }
+    }
+
+    public static function findAllTopicsBySql($flag = null, $pid = null, $limit = 0)
+    {
+        $sql = "SELECT
+                    t.*,
+                    u.name,
+                    u.avatar,
+                    p.title as problems_title
+                FROM
+                    `topics` t
+                INNER JOIN users u ON u.id = t.users_id
+                LEFT JOIN problems p ON p.id = t.problems_id
+                WHERE t.id IS NOT NULL ";
+        if ($flag) {
+            $sql .= " AND `t`.`flag` = '$flag' ";
+        }
+        if ($pid) {
+            $sql .= " AND `t`.`problems_id` = '$pid' ";
+        }
+        $sql .= " ORDER BY t.orders DESC, t.datetimes DESC ";
+        if ($limit &gt; 0)
+            $sql .= " LIMIT $limit";
+
+        $topics = new Topics();
+
+        return new Resultset(null, $topics, $topics-&gt;getReadConnection()-&gt;query($sql));
+    }
+
+    ....</code></pre>
+<p>and the <code>warrning &amp; error log</code></p>
+<pre><code>FastCGI sent in stderr: "PHP message: PHP Warning:  call_user_func() expects parameter 1 to be a valid callback, class 'Phalcon\Mvc\Model\Resultset\Simple' does not have a method 'find' in /.../app/controllers/TopicsController.php on line 65" while reading response header from upstream
+
+Trying to call method toarray on a non-object
+#0 /.../app/controllers/TopicsController.php(65): Phalcon\Paginator\Adapter\Model-&gt;paginate()</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64869" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64869" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C64879" href="#C64879">
+                <time itemprop="dateCreated" datetime="2020-11-19T08:51:39-07:00" class="action-date">Nov '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hmmm.  Like<a href="https://forum.phalcon.io/user/0/talal424"> @talal424</a> mentioned, <code>model</code> is only if you're wanting to query a particular model.  I was wrong before to suggest using <code>model</code>.  But I was right to suggest using QueryBuilder.  That allows you to create a complex query like you have, while still using the paginator.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64879" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64879" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f3183e109ec4c5c93d7deab887f7b8e1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3021/xaero7" class="user-moderator-N"><span itemprop="name">xaero</span></a>        </span>
+        <br>
+
+        <span class="karma">31.3k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C64879"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Dylan Anderson                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="64883" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '20</span>
+              </span><br/><a name="C64883" href="#C64883">
+                <time itemprop="dateCreated" datetime="2020-11-20T00:28:35-07:00" class="action-date">Nov '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Hmmm.  Like<a href="https://forum.phalcon.io/user/0/talal424"> @talal424</a> mentioned, <code>model</code> is only if you're wanting to query a particular model.  I was wrong before to suggest using <code>model</code>.  But I was right to suggest using QueryBuilder.  That allows you to create a complex query like you have, while still using the paginator.</p>
+</blockquote>
+<p>Thanks!</p>
+<p>Does that mean I have to use QueryBuilder to transfer an object to the VOLT? I can't use the original method(for example <code>findAllTopicsBySql()</code> that's coding in Phalcon 3.x, there are many Controllers use this way)? </p>
+<p>And more question, I have no idea how to builder a query like the <code>sql</code> statement in the method <code>findAllTopicsBySql()</code>, could you please help me giving an example of that?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64883" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64883" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C64887" href="#C64887">
+                <time itemprop="dateCreated" datetime="2020-11-20T08:51:15-07:00" class="action-date">Nov '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>QueryBuilder should return you an iterable object you can iterate like you would a <code>Resultset</code>.  Your Volt template might not need to change at all.  You'll need to write a new method and update your controllers to use it instead of <code>findAllTopicsBySql()</code>.</p>
+<p>QueryBuilder is set up to mimic the structure of queries as closely as possible.  I suggest you look through the documentation - it's pretty straightforward.  An example might be something like:</p>
+<pre><code class="language-php">$Topics = $this-&gt;modelsManager-&gt;createBuilder()
+            -&gt;columns(['t.*','u.name','u.avatar','p.title'=&gt;'problems_title'])
+            -&gt;from('topics','t')
+            -&gt;innerJoin('users','u','u.id = t.users_id')
+            -&gt;leftJoin('problems','p','p.id = t.problems_id')
+            -&gt;where('t.id IS NOT NULL')
+            -&gt;getQuery()
+            -&gt;execute();</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64887" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64887" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f3183e109ec4c5c93d7deab887f7b8e1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3021/xaero7" class="user-moderator-N"><span itemprop="name">xaero</span></a>        </span>
+        <br>
+
+        <span class="karma">31.3k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C64887"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Dylan Anderson                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="64895" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '20</span>
+              </span><br/><a name="C64895" href="#C64895">
+                <time itemprop="dateCreated" datetime="2020-11-21T04:03:18-07:00" class="action-date">Nov '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>QueryBuilder should return you an iterable object you can iterate like you would a <code>Resultset</code>.  Your Volt template might not need to change at all.  You'll need to write a new method and update your controllers to use it instead of <code>findAllTopicsBySql()</code>.</p>
+<p>QueryBuilder is set up to mimic the structure of queries as closely as possible.  I suggest you look through the documentation - it's pretty straightforward.  An example might be something like:</p>
+</blockquote>
+<p>Thanks a lot !</p>
+<p>I've formed the QueryBuilder like below, and it maybe can work:</p>
+<pre><code class="language-php">$builder = $this
+            -&gt;modelsManager
+            -&gt;createBuilder()
+            -&gt;columns(['t.*','u.name','u.avatar','problems_title'=&gt;'p.title'])
+            -&gt;from(['t' =&gt; Topics::class])
+            -&gt;innerJoin(Users::class,'u.id = t.users_id', 'u')
+            -&gt;leftJoin(Problems::class,'p.id = t.problems_id', 'p')
+            -&gt;where('t.id IS NOT NULL');
+
+        $paginator = new QueryBuilder(
+            [
+                "builder" =&gt; $builder,
+                "limit"   =&gt; 12,
+                'page' =&gt; $numberPage
+            ]
+        );
+
+        $this-&gt;view-&gt;page = $paginator-&gt;paginate();</code></pre>
+<p>In the VOLT page, I output the result like this <code>{% raw %}{%{% endraw %} for topic in page.getItems() {% raw %}%}{% endraw %}</code> , and I got a strange problem: I can visit <code>$topic-&gt;avatar</code> ,  <code>$topic-&gt;name</code> and <code>$topic-&gt;problems_title</code>, but I CAN'T visit <code>$topic-&gt;users_id</code> or other fields of topics.</p>
+<p>The way <code>$topic-&gt;avatar</code> can output correctly, but <code>$topic-&gt;users_id</code> says <code>FastCGI sent in stderr: "PHP message: PHP Notice:  Undefined property: Phalcon\Mvc\Model\Row::$users_id</code>.</p>
+<p>I think maybe it is the problem of QueryBuilder. Below is some parts of results of the <code>var_dump($topic)</code>:</p>
+<pre><code class="language-php">object(PDOStatement)#106 (1) {
+      ["queryString"]=&gt;
+      string(702) "SELECT `t`.`id` AS `_t_id`, `t`.`flag` AS `_t_flag`, `t`.`problems_id` AS `_t_problems_id`, `t`.`users_id` AS `_t_users_id`, `t`.`title` AS `_t_title`, `t`.`content` AS `_t_content`, `t`.`reply_count` AS `_t_reply_count`, `t`.`view_count` AS `_t_view_count`, `t`.`favorite_count` AS `_t_favorite_count`, `t`.`vote_count` AS `_t_vote_count`, `t`.`orders` AS `_t_orders`, `t`.`datetimes` AS `_t_datetimes`, `t`.`lastreply_id` AS `_t_lastreply_id`, `u`.`name` AS `name`, `u`.`avatar` AS `avatar`, `p`.`title` AS `problems_title` FROM `topics` AS `t`  INNER JOIN `users` AS `u` ON `u`.`id` = `t`.`users_id` LEFT JOIN `problems` AS `p` ON `p`.`id` = `t`.`problems_id` WHERE `t`.`id`  IS NOT NULL LIMIT :APL0"
+    }
+    ["result":protected]=&gt;
+    NULL
+    ["rowCount":protected]=&gt;
+    int(12)
+    ["sqlStatement":protected]=&gt;
+    string(702) "SELECT `t`.`id` AS `_t_id`, `t`.`flag` AS `_t_flag`, `t`.`problems_id` AS `_t_problems_id`, `t`.`users_id` AS `_t_users_id`, `t`.`title` AS `_t_title`, `t`.`content` AS `_t_content`, `t`.`reply_count` AS `_t_reply_count`, `t`.`view_count` AS `_t_view_count`, `t`.`favorite_count` AS `_t_favorite_count`, `t`.`vote_count` AS `_t_vote_count`, `t`.`orders` AS `_t_orders`, `t`.`datetimes` AS `_t_datetimes`, `t`.`lastreply_id` AS `_t_lastreply_id`, `u`.`name` AS `name`, `u`.`avatar` AS `avatar`, `p`.`title` AS `problems_title` FROM `topics` AS `t`  INNER JOIN `users` AS `u` ON `u`.`id` = `t`.`users_id` LEFT JOIN `problems` AS `p` ON `p`.`id` = `t`.`problems_id` WHERE `t`.`id`  IS NOT NULL LIMIT :APL0"
+  }
+  ["columnTypes":protected]=&gt;
+  array(4) {
+    ["t"]=&gt;
+    array(7) {
+      ["type"]=&gt;
+      string(6) "object"
+      ["model"]=&gt;
+      string(18) "YZOI\Models\Topics"
+      ["column"]=&gt;
+      string(1) "t"
+      ["balias"]=&gt;
+      string(1) "t"
+      ["instance"]=&gt;
+      object(YZOI\Models\Topics)#90 (27) {
+        ["id"]=&gt;
+        NULL
+        ["flag"]=&gt;
+        NULL
+        ["problems_id"]=&gt;
+        NULL
+        ["users_id"]=&gt;
+        NULL
+        ["title"]=&gt;
+        NULL
+        ["content"]=&gt;
+        NULL
+        ["reply_count"]=&gt;
+        NULL
+        ["view_count"]=&gt;
+        NULL
+        ["favorite_count"]=&gt;
+        NULL
+        ["vote_count"]=&gt;
+        NULL
+        ["orders"]=&gt;
+        NULL
+        ["lastreply_id"]=&gt;
+        NULL
+        ["container":protected]=&gt;
+        object(Phalcon\Di\FactoryDefault)#8 (3) {
+          ["services":protected]=&gt;
+          array(26) {</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64895" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64895" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C64909" href="#C64909">
+                <time itemprop="dateCreated" datetime="2020-11-23T09:08:02-07:00" class="action-date">Nov '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think the problem may be that you're combining a <code>*</code> with named fields.  If you were just asking for <code>t.*</code>, then the QueryBuilder would return a Topic instance.  Since you have named columns in there as well, QueryBuilder needs to combine. You can see in the <code>sqlStatement</code> section that the column you're looking for gets named <code>_t_users_id</code>.  My guess is it does that to avoid column name conflicts (like 2 tables with an <code>id</code> column).</p>
+<p>I'm not certain that's a bug - that may be expected behaviour in this situation.  However, I'm not certain it <em>isn't</em> a bug.  On this page: <a href="https://docs.phalcon.io/4.0/en/db-phql#results">https://docs.phalcon.io/4.0/en/db-phql#results</a> if you scroll down almost to the end of that section it says </p>
+<blockquote>
+<p>If you mix * selections from one model with columns from another, you will end up with both scalars as well as objects.</p>
+</blockquote>
+<p>It doesn't say anything about renaming columns.  It might be worthwhile mentioning this problem in Github.</p>
+<p>For now I think you have 2 options:</p>
+<ol>
+<li>Explicitly name each column it <code>topics</code> that you want to reference.</li>
+<li>Update your Volt code to refer to the renamed fields (ie: <code>_t_users_id</code></li>
+</ol></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64909" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64909" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f3183e109ec4c5c93d7deab887f7b8e1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3021/xaero7" class="user-moderator-N"><span itemprop="name">xaero</span></a>        </span>
+        <br>
+
+        <span class="karma">31.3k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C64909"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Dylan Anderson                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C64913" href="#C64913">
+                <time itemprop="dateCreated" datetime="2020-11-23T23:19:46-07:00" class="action-date">Nov '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>For now I think you have 2 options:</p>
+<ol>
+<li>Explicitly name each column it <code>topics</code> that you want to reference.</li>
+<li>Update your Volt code to refer to the renamed fields (ie: <code>_t_users_id</code></li>
+</ol>
+</blockquote>
+<p>Thanks, I use the explicitly fields name, and it works!</p>
+<p>But the pagination <code>{% raw %}{%{% endraw %} for topic in page.getItems() {% raw %}%}{% endraw %}</code> makes  the object <code>$topic</code> to be the instance of <code>Phalcon\Mvc\Model\Row</code>, I want to keep it to be the instance of its original <code>Topics::class</code>, because I want to call the member function of <code>Topics::class</code>. How to?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64913" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64913" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C64917" href="#C64917">
+                <time itemprop="dateCreated" datetime="2020-11-24T08:53:23-07:00" class="action-date">Nov '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You can't.  Since you're mixing named columns (or even when you were mixing <code>*</code> and named columns) from different tables, the result returned can't be an instance of a model - it's just an object.</p>
+<p>If you absolutely need to execute <code>Topic</code> functions, then I think you're going to need to fall back on the ORM.  Using model relationships, you can just do a <code>Topics::find()</code>, then in your Volt code, reference <code>$topic-&gt;user-&gt;name</code>, <code>$topic-&gt;user-&gt;avatar</code>, and <code>$topic-&gt;problem-&gt;title</code>.  This will add 2 more queries per topic, but since your page size is only 12, not too bad.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64917" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64917" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/747be74e038e35ba2207da09388e3a0d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8217/talal424" class="user-moderator-N"><span itemprop="name">talal424</span></a>        </span>
+        <br>
+
+        <span class="karma">8.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C64919" href="#C64919">
+                <time itemprop="dateCreated" datetime="2020-11-24T09:36:37-07:00" class="action-date">Nov '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>when selecting <code>Model.*</code> there should be a property in the result object and the value would be an instance of that model
+other direct selected columns like <code>u.name</code> there should be a property in the result object and the value should would be the coulmn's value</p>
+<pre><code class="language-php">$builder = $this
+    -&gt;modelsManager
+    -&gt;createBuilder()
+    -&gt;columns(['t.*','u.name','u.avatar','problems_title'=&gt;'p.title'])
+    -&gt;from(['t' =&gt; Topics::class])
+    -&gt;innerJoin(Users::class,'u.id = t.users_id', 'u')
+    -&gt;leftJoin(Problems::class,'p.id = t.problems_id', 'p')
+    -&gt;where('t.id IS NOT NULL');
+
+$results = $builder-&gt;getQuery()-&gt;execute(); // Phalcon\Mvc\Model\Resultset\Complex
+
+$firstRow = $results-&gt;getFirst(); // Phalcon\Mvc\Model\Row 
+
+$firstRow-&gt;t; // this should be an instance of Topics
+
+$firstRow-&gt;name; // this should be the value of the selected column</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64919" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64919" data-cf-modified-dc3da8776048a6ad58f13bee-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="20981" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

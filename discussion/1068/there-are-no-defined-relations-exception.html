@@ -1,0 +1,320 @@
+---
+layout: default
+title: 'There are no defined relations exception - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">There are no defined relations exception</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/480/integry" class="user-moderator-N"><span itemprop="name">Rinalds Uzkalns</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-10-22T15:57:23-07:00">Oct '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-10-22T15:57:23-07:00">Oct '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1593</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/d1fd38675d277973f78615a6b0680ef5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/480/integry" class="user-moderator-N"><span itemprop="name">Rinalds Uzkalns</span></a></span>
+                <span class="karma">18.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1068" href="#C1068">
+        <time class="action-date">Oct '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have been trying to figure out this issue for hours. For some reason I'm getting the following exception:</p>
+<p>Phalcon\Mvc\Model\Exception: There are no defined relations for the model &quot;eav\EavObjectValue&quot; using alias &quot;field&quot; </p>
+<p>There are 3 models involved - EavField (record already created before), EavObject (record created before within the same request) and EavObjectValue (has foreign key references to the other 2 tables, INSERT fails). </p>
+<p>Here's the code excerpt with the non-relevant pieces removed:</p>
+<pre><code class="language-php">class EavObjectValue extends Model
+{
+    public $ID;
+    public $objectID;
+    public $fieldID;
+    public $numValue;
+    public $stringValue;
+    public $textValue;
+    public $dateValue;
+
+    public function initialize()
+    {
+        $this-&gt;belongsTo('objectID', 'eav\EavObject', 'ID', array('alias' =&gt; 'EavObject'));
+        $this-&gt;belongsTo('fieldID', 'eav\EavField', 'ID', array('alias' =&gt; 'EavField'));
+    }
+
+    public function beforeCreate()
+    {
+        // checking that the referenced records exist in database
+        var_dump($this-&gt;getEavObject());
+        var_dump($this-&gt;getEavField());
+    }
+...
+
+class EavObject extends Model
+{
+    public $ID;
+
+    public function initialize()
+    {
+        $this-&gt;hasMany('ID', 'eav\EavObjectValue', 'objectID', array(
+            'alias' =&gt; 'EavObjectValue',
+            'foreignKey' =&gt; array(
+                'action' =&gt; \Phalcon\Mvc\Model\Relation::ACTION_CASCADE
+            )
+        ));
+    }
+...
+
+class EavField extends Model
+{
+    public $ID;
+
+    public function initialize()
+    {
+        $this-&gt;hasMany('ID', 'eav\EavObjectValue', 'fieldID', array(
+            'alias' =&gt; 'EavObjectValue',
+            'foreignKey' =&gt; array(
+                'action' =&gt; \Phalcon\Mvc\Model\Relation::ACTION_CASCADE
+            )
+        ));
+    }</code></pre>
+<p>Here's the generated INSERT query:</p>
+<pre><code>         2250 Query DESCRIBE `EavObjectValue`
+         2250 Query INSERT INTO `EavObjectValue` (`objectID`, `fieldID`, `numValue`, `stringValue`, `textValue`, `dateValue`) VALUES ('119', '26', null, null, null, '2013-10-25T21:00:00.000Z')
+         2250 Query rollback</code></pre>
+<p>I'm certain that the EavObject exists because it's also referenced in other models for which the records are created within the same operation. When I try to execute the SQL manually, it works if I replace the objectID value with one already existing in the database, so it shouldn't be a foreign key related error coming from the database.</p>
+<p>I don't really see what am I doing wrong. And the error message is strange, because there's no alias &quot;field&quot; defined, so I'm not sure where that comes from (fieldID column?). I would appreciate any suggestions.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-d3f9db48d6cc4cb402957830-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-d3f9db48d6cc4cb402957830-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d1fd38675d277973f78615a6b0680ef5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/480/integry" class="user-moderator-N"><span itemprop="name">Rinalds Uzkalns</span></a>        </span>
+        <br>
+
+        <span class="karma">18.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3974" href="#C3974">
+                <time itemprop="dateCreated" datetime="2013-10-23T04:38:15-07:00" class="action-date">Oct '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I did some more testing and apparently simply creating a new instance that is referenced to previously created related records works fine:</p>
+<pre><code class="language-php">$o = \eav\EavObject::getInstanceByID(72);
+$f = \eav\EavField::getInstanceByID(26);
+$val = new \eav\EavObjectValue();
+$val-&gt;objectID = $o-&gt;getID();
+$val-&gt;fieldID = $f-&gt;getID();
+$val-&gt;numValue = 1;
+$val-&gt;save();</code></pre>
+<p>When I change the fieldID value to something that does not exist in the database, I get an exception as I would expect, but a different one:</p>
+<p>PDOException ERROR: SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails (<code>hey</code>.<code>EavObjectValue</code>, CONSTRAINT <code>EavField_EavObjectValue</code> FOREIGN KEY (<code>fieldID</code>) REFERENCES <code>EavField</code> (<code>ID</code>) ON DELETE CASCADE ON UPDATE CASCADE)</p>
+<p>So the original question still stands - where might this exception come from?</p>
+<pre><code class="language-php">Phalcon\Mvc\Model\Exception: There are no defined relations for the model "eav\EavObjectValue" using alias "field" </code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3974" data-cf-modified-d3f9db48d6cc4cb402957830-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3974" data-cf-modified-d3f9db48d6cc4cb402957830-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d1fd38675d277973f78615a6b0680ef5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/480/integry" class="user-moderator-N"><span itemprop="name">Rinalds Uzkalns</span></a>        </span>
+        <br>
+
+        <span class="karma">18.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3976" href="#C3976">
+                <time itemprop="dateCreated" datetime="2013-10-23T06:51:10-07:00" class="action-date">Oct '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>After lots of trial&amp;error I was able to get rid of that exception by adding this to EavObjectValue class:</p>
+<pre><code class="language-php">protected function _postSaveRelatedRecords()
+{
+    return false;
+}</code></pre>
+<p>However it still was not working properly, because of multiple issues:</p>
+<ul>
+<li>For some reason Phalcon bundles the INSERT queries in a transaction</li>
+<li>$eavObjectValue-&gt;save() still returns false, however getMessages() return an empty array - so it just &quot;errors&quot; without any specific messages</li>
+<li>at the end of the request it rolls back the transaction instead of committing, even though there are no errors produced!</li>
+</ul>
+<p>But! If I add this code at the end of the controller action, it will work just fine and all the records are there saved in the database!</p>
+<pre><code class="language-php">$this-&gt;db-&gt;execute('commit');</code></pre>
+<p>As another notice, while exploring the var_dumped EavObjectValue instance i noticed that it has a &quot;_related&quot; property and it's value is array('field' =&gt; instanceof EavField). That explains how the &quot;field&quot; may have appeared in the exception, but not how it got there in the first place as the configured alias is EavField.</p>
+<p>Apologies for the long posts, but apparently there are some bugs and hopefully this might be helpful to someone googling for this error.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3976" data-cf-modified-d3f9db48d6cc4cb402957830-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3976" data-cf-modified-d3f9db48d6cc4cb402957830-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d1fd38675d277973f78615a6b0680ef5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/480/integry" class="user-moderator-N"><span itemprop="name">Rinalds Uzkalns</span></a>        </span>
+        <br>
+
+        <span class="karma">18.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3977" href="#C3977">
+                <time itemprop="dateCreated" datetime="2013-10-23T06:56:13-07:00" class="action-date">Oct '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>There is another class called EavItem that references EavField as Field, however the EavItem class has no relation to EavObjectValue, other than that they both have a belongsTo relationship to EavField. Could this be a clue of the wrong alias name?</p>
+<pre><code class="language-php">class EavItem extends Model
+{
+    public $valueID;
+    public $objectID;
+    public $fieldID;
+
+    public function initialize()
+    {
+        $this-&gt;belongsTo('valueID', 'eav\EavValue', 'ID', array('alias' =&gt; 'Value'));
+        $this-&gt;belongsTo('objectID', 'eav\EavObject', 'ID', array('alias' =&gt; 'Object'));
+        $this-&gt;belongsTo('fieldID', 'eav\EavField', 'ID', array('alias' =&gt; 'Field'));
+    }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3977" data-cf-modified-d3f9db48d6cc4cb402957830-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3977" data-cf-modified-d3f9db48d6cc4cb402957830-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3983" href="#C3983">
+                <time itemprop="dateCreated" datetime="2013-10-23T08:14:03-07:00" class="action-date">Oct '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If there are errors saving the master record or one of its related records, you can get them as an array using $m-&gt;getMessages()</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3983" data-cf-modified-d3f9db48d6cc4cb402957830-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3983" data-cf-modified-d3f9db48d6cc4cb402957830-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d1fd38675d277973f78615a6b0680ef5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/480/integry" class="user-moderator-N"><span itemprop="name">Rinalds Uzkalns</span></a>        </span>
+        <br>
+
+        <span class="karma">18.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3984" href="#C3984">
+                <time itemprop="dateCreated" datetime="2013-10-23T08:34:20-07:00" class="action-date">Oct '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes, but the funny thing is that the array returned by getMessages() is empty even though save() returns false. Also, there are no actual database-level errors. As described above - if I force the commit, everything gets saved in the database correctly.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3984" data-cf-modified-d3f9db48d6cc4cb402957830-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3984" data-cf-modified-d3f9db48d6cc4cb402957830-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3985" href="#C3985">
+                <time itemprop="dateCreated" datetime="2013-10-23T08:41:17-07:00" class="action-date">Oct '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Are you using 1.2.4?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3985" data-cf-modified-d3f9db48d6cc4cb402957830-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3985" data-cf-modified-d3f9db48d6cc4cb402957830-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6549777fa33638d0674db65d9111d400?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2145/DestinyMKas" class="user-moderator-N"><span itemprop="name">Karolis Mačiulskis</span></a>        </span>
+        <br>
+
+        <span class="karma">26.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C14265" href="#C14265">
+                <time itemprop="dateCreated" datetime="2014-12-18T02:29:52-07:00" class="action-date">Dec '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I got same error. The problem was:</p>
+<pre><code class="language-php">    public function afterFetch()
+    {
+        $this-&gt;router = Router::findFirst([
+            'module = ?0 AND controller = ?1 AND action = ?2 AND actionId = ?3',
+            'bind' =&gt; ['page', 'index', 'index', $this-&gt;id]
+        ]);
+        parent::afterFetch();
+    }</code></pre>
+<p>I assigned router model to page model, but I hadn't registered a variable. So I got Phalcon\Mvc\Model\Exception: There are no defined relations for the model &quot;modules\page\model\Page&quot; using alias &quot;router&quot; exception.</p>
+<p>I fixed it by declaring variable:</p>
+<pre><code class="language-php">public $router;</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14265" data-cf-modified-d3f9db48d6cc4cb402957830-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14265" data-cf-modified-d3f9db48d6cc4cb402957830-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1068" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,178 @@
+---
+layout: default
+title: '404 public not found inside userdir on CentOS 7 - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/26/http-environment">HTTP Environment</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">404 public not found inside userdir on CentOS 7</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/12521/gwijnja" class="user-moderator-N"><span itemprop="name">Gerben Wijnja</span></a></span>
+            <time itemprop="dateCreated" datetime="2019-06-16T19:11:47-07:00">Jun '19</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2019-06-16T19:11:47-07:00">Jun '19</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>661</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/529d24c4191be2037fab30929495cc63?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/12521/gwijnja" class="user-moderator-N"><span itemprop="name">Gerben Wijnja</span></a></span>
+                <span class="karma">1.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C19759" href="#C19759">
+        <time class="action-date">Jun '19</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I've used Phalcon for a while under Debian/Ubuntu and it has always worked great. Now I'm trying to get it running under CentOS 7 and I can't get it to work inside userdirs (public_html), even though mod_rewrite seems to work correctly.</p>
+<p>Versions:</p>
+<ul>
+<li>CentOS 7 with SELinux disabled</li>
+<li>Apache 2.4</li>
+<li>PHP 7.3</li>
+<li>Phalcon 3.4</li>
+</ul>
+<p>Starting with a fresh clean CentOS 7 installation in VirtualBox, this is what I do. First update and install httpd:</p>
+<pre><code># yum check-update
+# yum update
+# setenforce 0 // Disable SELinux, so that we are sure this doesn't cause my problem.
+# yum install httpd
+# firewall-cmd --add-service=http
+# yum install https://rpms.remirepo.net/enterprise/remi-release-7.rpm
+# yum install yum-utils
+# yum-config-manager --enable remi-php73
+# yum install php
+# vi /etc/httpd/conf.d/userdir.conf // Enable userdirs, see contents below
+# systemctl restart httpd</code></pre>
+<p>The userdir.conf now contains (without all the comment lines):</p>
+<pre><code>&lt;IfModule mod_userdir.c&gt;
+    UserDir public_html
+&lt;/IfModule&gt;
+
+&lt;Directory "/home/*/public_html"&gt;
+    AllowOverride FileInfo AuthConfig Limit Indexes
+    Options MultiViews Indexes SymLinksIfOwnerMatch IncludesNoExec
+    Require method GET POST OPTIONS
+&lt;/Directory&gt;</code></pre>
+<p>Now put something in my userdir and check if it works:</p>
+<pre><code>$ mkdir ~/public_html
+$ echo Hello &gt; ~/public_html/index.html
+$ sudo chmod go+rx ~</code></pre>
+<p>This works, I can see 'Hello' when I visit <a href="http://192.168.178.28/~gerben/">http://192.168.178.28/~gerben/</a></p>
+<p>Now I add Phalcon:</p>
+<pre><code>$ curl -s https://packagecloud.io/install/repositories/phalcon/stable/script.rpm.sh | sudo bash
+# yum install pcre-devel php-gd php-mbstring php-phalcon3
+# systemctl restart httpd</code></pre>
+<p>Also add the webtools:</p>
+<pre><code># yum install git
+# git clone https://github.com/phalcon/phalcon-devtools.git /usr/local/lib/phalcon-devtools
+# ln -s /usr/local/lib/phalcon-devtools/phalcon.php /usr/local/bin/phalcon
+# ln -s /usr/local/lib/phalcon-devtools/phalcon.php /usr/local/sbin/phalcon
+# chmod +x /usr/local/bin/phalcon
+# chmod +x /usr/local/sbin/phalcon</code></pre>
+<p>Now create a project in /var/www/html:</p>
+<pre><code># cd /var/www/html
+# phalcon project foo</code></pre>
+<p>And I add 'AllowOverride FileInfo' to the Directory config of /var/www/html in /etc/httpd/conf/httpd.conf to enable the rewrite module. This works, I see the Congratulations!-page when I visit <a href="http://192.168.178.28/foo">http://192.168.178.28/foo</a></p>
+<p>Now do the same in my userdir:</p>
+<pre><code>$ cd ~/public_html
+$ phalcon project foo</code></pre>
+<p>This doesn't work. When I visit <a href="http://192.168.178.28/~gerben/foo">http://192.168.178.28/~gerben/foo</a>, I see:</p>
+<blockquote>
+<p>The requested URL /home/gerben/public_html/foo/public/ was not found on this server.</p>
+</blockquote>
+<p>Note that the error references foo/public! The rewrite module works; when I open .htaccess and replace 'public' with 'public1234', the error changes accordingly:</p>
+<blockquote>
+<p>The requested URL /home/gerben/public_html/foo/public1234/ was not found on this server.</p>
+</blockquote>
+<p>It's the default htaccess that phalcon-webtools installs:</p>
+<pre><code>&lt;IfModule mod_rewrite.c&gt;
+        RewriteEngine on
+        RewriteRule  ^$ public/    [L]
+        RewriteRule  (.*) public/$1 [L]
+&lt;/IfModule&gt;</code></pre>
+<p>The apache access_log shows:</p>
+<blockquote>
+<p>192.168.178.17 - - [16/Jun/2019:21:57:51 -0400] &quot;GET /~gerben/foo/ HTTP/1.1&quot; 404 233 &quot;-&quot; &quot;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.90 Safari/537.36&quot;</p>
+</blockquote>
+<p>Disabling MultiViews (and restarting httpd) didn't help. Setting AllowOverride and Options to 'All' doesn't help. I don't get it, why does it work in /var/www/html but not in public_html? Why can Apache not find the public dir when mod_rewrite forwards the request? The directory permissions are sufficient; when I visit <a href="http://192.168.178.28/~gerben/foo/public">http://192.168.178.28/~gerben/foo/public</a> I do see the Congratulations-page! But it should also work without 'public'.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-8ca885258d7dc50744def357-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-8ca885258d7dc50744def357-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/529d24c4191be2037fab30929495cc63?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/12521/gwijnja" class="user-moderator-N"><span itemprop="name">Gerben Wijnja</span></a>        </span>
+        <br>
+
+        <span class="karma">1.7k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="60069" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '19</span>
+              </span><br/><a name="C60069" href="#C60069">
+                <time itemprop="dateCreated" datetime="2019-06-17T09:10:44-07:00" class="action-date">Jun '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I found the solution. I need to add a RewriteBase directive. This was not necessary on Ubuntu server.</p>
+<p>CentOS 7 ships with Apache 2.4.6. The <a href="http://httpd.apache.org/docs/current/mod/mod_rewrite.html#rewritebase">Apache documentation</a> says about RewriteBase:</p>
+<blockquote>
+<p>In Apache HTTP Server 2.4.16 and later, this directive may be omitted when the request is mapped via Alias or mod_userdir.</p>
+</blockquote>
+<p>So because CentOS ships with an Apache version older than 2.4.16 it is necessary to include a RewriteBase directive when using mod_userdir:</p>
+<pre><code>&lt;IfModule mod_rewrite.c&gt;
+        RewriteEngine on
+        RewriteBase /~username/foo/
+        RewriteRule  ^$   public/   [L]
+        RewriteRule  (.*) public/$1 [L]
+&lt;/IfModule&gt;</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60069" data-cf-modified-8ca885258d7dc50744def357-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60069" data-cf-modified-8ca885258d7dc50744def357-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="19759" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

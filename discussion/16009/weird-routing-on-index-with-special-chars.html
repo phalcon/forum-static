@@ -1,0 +1,179 @@
+---
+layout: default
+title: 'Weird routing on index with special chars - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Weird routing on index with special chars</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/4529/tkroll" class="user-moderator-N"><span itemprop="name">Ty Kroll</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-04-23T20:28:19-07:00">Apr '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-04-23T20:28:19-07:00">Apr '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Apr '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>390</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/e05a71a3c55b7800771353f025c8fd03?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/4529/tkroll" class="user-moderator-N"><span itemprop="name">Ty Kroll</span></a></span>
+                <span class="karma">8.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C16009" href="#C16009">
+        <time class="action-date">Apr '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,</p>
+<p>Just found a weird case with routing on my site.</p>
+<p>If I visit the base url:</p>
+<p><a href="https://site.com">https://site.com</a></p>
+<p>All works fine.</p>
+<p>If I try an undefined controller or anything with / that is not defined, it 404s properly:</p>
+<p><a href="https://site.com/fdsfds/dfdsfds">https://site.com/fdsfds/dfdsfds</a></p>
+<p><a href="https://site.com/bhdfds/sdsd">https://site.com/bhdfds/sdsd</a></p>
+<p>Defined routes work fine:</p>
+<p><a href="https://site.com/this-exists">https://site.com/this-exists</a></p>
+<p>However, any request to something undefined with a special char doesn't 404 but shows the index page:</p>
+<p><a href="https://site.com/fdsfds.com">https://site.com/fdsfds.com</a></p>
+<p><a href="https://site.com/a@f">https://site.com/<span class="__cf_email__" data-cfemail="0b6a4b6d">[email&#160;protected]</span></a></p>
+<p><a href="https://site.com/sdfds.dc/sdfdsf">https://site.com/sdfds.dc/sdfdsf</a></p>
+<p><a href="https://site.com/fdsfds">https://site.com/fdsfds</a>.</p>
+<p>These types all display the homepage. I want them to 404.</p>
+<p>I'm using FactoryDefault.</p>
+<p>My router:</p>
+<pre><code class="language-php">
+$di-&gt;set('router', function(){
+
+    $router = new \Phalcon\Mvc\Router();
+
+    // camelize
+    $router-&gt;add('/([a-zA-Z\-]+)/([a-zA-Z\-]+)/:params', [
+        'controller' =&gt; 1,
+        'action' =&gt; 2,
+        'params' =&gt; 3
+    ])-&gt;convert('action', function($action) {
+        return Phalcon\Text::lower(Phalcon\Text::camelize($action));
+    });
+
+    return $router;
+
+}, true);</code></pre>
+<p>Dispatcher:</p>
+<pre><code class="language-php">
+$di-&gt;set('dispatcher', function () {
+
+    // Create an EventsManager
+    $eventsManager = new Phalcon\Events\Manager();
+
+    $eventsManager-&gt;attach('dispatch:beforeException', function($event, $dispatcher, $exception) {
+
+        switch($exception-&gt;getCode()) {
+            case Phalcon\Mvc\Dispatcher::EXCEPTION_HANDLER_NOT_FOUND:
+            case Phalcon\Mvc\Dispatcher::EXCEPTION_ACTION_NOT_FOUND:
+                $dispatcher-&gt;forward([
+                    'controller' =&gt; 'error404',
+                    'action' =&gt; 'index'
+                ]);
+                return false;
+        }
+    });
+
+    $dispatcher = new Phalcon\Mvc\Dispatcher();
+
+    // Bind the EventsManager to the dispatcher
+    $dispatcher-&gt;setEventsManager($eventsManager);
+
+    return $dispatcher;
+
+}, true);</code></pre>
+<p>Any ideas?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-d6f338f1ad15eb37f5a94141-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-d6f338f1ad15eb37f5a94141-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C47783" href="#C47783">
+                <time itemprop="dateCreated" datetime="2017-04-24T14:37:28-07:00" class="action-date">Apr '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>hi ty you must register <a href="https://docs.phalcon.io/en/latest/reference/routing.html#not-found-paths">$route-&gt;notFound()</a></p>
+<p>Good luck</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="47783" data-cf-modified-d6f338f1ad15eb37f5a94141-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="47783" data-cf-modified-d6f338f1ad15eb37f5a94141-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e05a71a3c55b7800771353f025c8fd03?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4529/tkroll" class="user-moderator-N"><span itemprop="name">Ty Kroll</span></a>        </span>
+        <br>
+
+        <span class="karma">8.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C47785" href="#C47785">
+                <time itemprop="dateCreated" datetime="2017-04-24T20:47:08-07:00" class="action-date">Apr '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well once again, Phalcon has the solution built right in. Not sure how I missed that. </p>
+<p>Thank you</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="47785" data-cf-modified-d6f338f1ad15eb37f5a94141-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="47785" data-cf-modified-d6f338f1ad15eb37f5a94141-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="16009" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

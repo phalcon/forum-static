@@ -1,0 +1,223 @@
+---
+layout: default
+title: 'index.phtml view is being loaded for all routes - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">index.phtml view is being loaded for all routes</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3913/UndergroundLabs" class="user-moderator-N"><span itemprop="name">UndergroundLabs</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-07-23T11:02:19-07:00">Jul '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-07-23T11:02:19-07:00">Jul '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>390</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9ffe49fd76290e9c6b685f28817d604d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3913/UndergroundLabs" class="user-moderator-N"><span itemprop="name">UndergroundLabs</span></a></span>
+                <span class="karma">7.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C7755" href="#C7755">
+        <time class="action-date">Jul '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>For the life of me I can't get my views to work correctly. Any route I access will result in the <code>index.phtml</code> route to load.</p>
+<p>My routes appear to work because if I do <code>die()</code> inside the <code>Track::single</code> route it will halt the script.</p>
+<h1>router.php</h1>
+<pre><code>use Phalcon\Mvc\Router;
+
+$router = new Router();
+
+$router-&gt;add("/track/{slug: [0-9a-zA-Z-]+}", "Track::single");
+$router-&gt;add("/download/{key: [0-9a-zA-Z-]+}", "Track::download");
+
+$router-&gt;handle();</code></pre>
+<h1>index.php</h1>
+<pre><code>....
+
+// Setup the view
+$di-&gt;set('view', function() use ($config){
+
+    // Create an events manager
+    $eventsManager = new EventsManager();
+    $eventsManager-&gt;attach('view:afterRender', new BanWordsPlugin());
+
+    $view = new View();
+    $view-&gt;setViewsDir($config-&gt;phalcon-&gt;viewsDir);
+
+    $view-&gt;setVars(array(
+        'title' =&gt; $config-&gt;site-&gt;title
+    ));
+
+    $view-&gt;setEventsManager($eventsManager);
+
+    return $view;
+});
+
+require '../app/router.php';
+$di-&gt;set('router', $router);
+
+...</code></pre>
+<h1>TrackController</h1>
+<pre><code>/*
+ * Selects a single track based on it's slug value
+ */
+public function singleAction()
+{
+    $slug = $this-&gt;dispatcher-&gt;getParam('slug');
+    $ip = $this-&gt;request-&gt;getClientAddress();
+    $timestamp = time();
+
+    /*
+     *  Fetch the track from the database
+     */
+    $track = Tracks::findFirstBySlug($slug);
+
+    /*
+     *  Check if track exists, redirect to 404 if not
+     */
+
+    /*
+     *  Encrypt the slug, IP address and timestamp
+     */
+    $crypt = new Crypt();
+
+    $downloadHash = $crypt-&gt;encryptBase64(
+        sprintf("%s{% raw %}{%{% endraw %}s{% raw %}{%{% endraw %}s", $track-&gt;id, $ip, $timestamp),
+        $this-&gt;config-&gt;security-&gt;key);
+
+    /*
+     *  Set the view paramaters
+     */
+    $this-&gt;view-&gt;downloadHash = $downloadHash;
+}</code></pre>
+<p>My view is located in <code>app/views/track/single.phtml</code></p>
+<p>If I load <code>/track/single/fetty-wap-trap-queen-98391</code> the right controller and action is used, but it's still loading the view from <code>/app/views/index.phtml</code></p>
+<p>Any ideas what I'm doing wrong?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-82ff1713694bc008d3af4121-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-82ff1713694bc008d3af4121-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d13fbfe44ba667e08060bc76bd53108d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4165/butamuh4o" class="user-moderator-N"><span itemprop="name">Boris Delev</span></a>        </span>
+        <br>
+
+        <span class="karma">4.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C21001" href="#C21001">
+                <time itemprop="dateCreated" datetime="2015-07-23T12:07:49-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Remove that file :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21001" data-cf-modified-82ff1713694bc008d3af4121-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21001" data-cf-modified-82ff1713694bc008d3af4121-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9ffe49fd76290e9c6b685f28817d604d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3913/UndergroundLabs" class="user-moderator-N"><span itemprop="name">UndergroundLabs</span></a>        </span>
+        <br>
+
+        <span class="karma">7.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C21003" href="#C21003">
+                <time itemprop="dateCreated" datetime="2015-07-23T12:24:01-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Removing index.phtml works. But I'm still having the issue with the routes not working at all.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21003" data-cf-modified-82ff1713694bc008d3af4121-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21003" data-cf-modified-82ff1713694bc008d3af4121-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d13fbfe44ba667e08060bc76bd53108d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4165/butamuh4o" class="user-moderator-N"><span itemprop="name">Boris Delev</span></a>        </span>
+        <br>
+
+        <span class="karma">4.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C21013" href="#C21013">
+                <time itemprop="dateCreated" datetime="2015-07-23T12:55:51-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>... What about routes? Can u provide more details.... and how u make your links and what u get from them?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21013" data-cf-modified-82ff1713694bc008d3af4121-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21013" data-cf-modified-82ff1713694bc008d3af4121-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e00a6fdd3e722135512e013b7f1e9693?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a>        </span>
+        <br>
+
+        <span class="karma">17.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C21135" href="#C21135">
+                <time itemprop="dateCreated" datetime="2015-07-26T10:08:26-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This was happening to me because I did not have mod-rewrite enabled in apache.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21135" data-cf-modified-82ff1713694bc008d3af4121-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21135" data-cf-modified-82ff1713694bc008d3af4121-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="7755" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,378 @@
+---
+layout: default
+title: 'Transaction models with other connection failed - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Transaction models with other connection failed</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3381/julianmolina" class="user-moderator-N"><span itemprop="name">Julián Arturo Molina Castiblanco</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-04-01T03:11:09-07:00">Apr '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-04-01T03:11:09-07:00">Apr '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Apr '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1244</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/07cb69abb466c60cf054e078b44df774?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3381/julianmolina" class="user-moderator-N"><span itemprop="name">Julián Arturo Molina Castiblanco</span></a></span>
+                <span class="karma">3.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6289" href="#C6289">
+        <time class="action-date">Apr '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi guys,
+I have a project with 2 connections (mysql, and postgresql), postgresql is default connection in DI as $di-&gt;set(&quot;db&quot;, func....)  and Mysql is $di-&gt;set(&quot;db-cms&quot;, func...), When I try to do a transaction with phalcon transaction manager in mysql models its not working I get an error because it takes the postgresql connection &quot;&quot;i guess&quot;&quot; because not recognize table from transaction.</p>
+<p>Look error: </p>
+<pre><code>#0 [internal function]: PDOStatement-&gt;execute() 
+#1 [internal function]: Phalcon\Db\Adapter\Pdo-&gt;executePrepared(Object(PDOStatement), Array, Array) 
+#2 [internal function]: Phalcon\Db\Adapter\Pdo-&gt;execute('INSERT INTO "me...', Array, Array) 
+#3 [internal function]: Phalcon\Db\Adapter-&gt;insert('menu', Array, Array, Array) #4 [internal function]: Phalcon\Mvc\Model-&gt;_doLowInsert(Object(Phalcon\Mvc\Model\MetaData\Memory), Object(Phalcon\Db\Adapter\Pdo\Postgresql), 'menu', 'id_menu') 
+#5 /Users/julianmolina/Documents/htdocs/base/app/admin/controllers/MenuController.php(68): Phalcon\Mvc\Model-&gt;save() 
+#6 [internal function]: Logisticapp\Admin\Controllers\MenuController-&gt;newAction() 
+#7 [internal function]: Phalcon\Dispatcher-&gt;dispatch() #8 /Users/julianmolina/Documents/htdocs/base/public/index.php(30): Phalcon\Mvc\Application-&gt;handle() 
+#9 {main}</code></pre>
+<pre><code class="language-php">
+//Bootstrap.file
+
+/**
+ * Database connection is created based in the parameters defined in the configuration file
+ */
+$di-&gt;set('db', function () use ($config) {
+
+    $config = array(
+        "schema" =&gt; $config-&gt;database-&gt;schema,
+        "host" =&gt; $config-&gt;database-&gt;host,
+        "dbname" =&gt; $config-&gt;database-&gt;dbname,
+        "username" =&gt; $config-&gt;database-&gt;username,
+        "password" =&gt; $config-&gt;database-&gt;password,
+    );
+
+    return new \Phalcon\Db\Adapter\Pdo\Postgresql($config);
+
+});
+
+/**
+ * Database connection is created based in the parameters defined in the configuration file
+ */
+$di-&gt;set('db-cms', function () use ($config) {
+
+    $config = array(
+        "host" =&gt; $config-&gt;database_cms-&gt;host,
+        "dbname" =&gt; $config-&gt;database_cms-&gt;dbname,
+        "username" =&gt; $config-&gt;database_cms-&gt;username,
+        "password" =&gt; $config-&gt;database_cms-&gt;password,
+        "options" =&gt; array(
+            PDO::MYSQL_ATTR_INIT_COMMAND =&gt; 'SET NAMES utf8'
+        )
+    );
+
+    return new \Phalcon\Db\Adapter\Pdo\Mysql($config);
+
+});</code></pre>
+<pre><code class="language-php">
+//controller
+
+   /**
+     *
+     */
+    public function newAction()
+    {
+
+        $form = new MenuForm(null, array("edit" =&gt; false));
+
+        if ($this-&gt;request-&gt;isPost()) {
+
+            try {
+
+                $request = $this-&gt;request;
+                $manager = new TransactionManager();
+                $transaction = $manager-&gt;get();
+
+                $menu = new Menu();
+                $menu-&gt;setTransaction($transaction);
+                $menu-&gt;id_menu = null;
+                $menu-&gt;id_type_menu = $request-&gt;getPost("id_type_menu", "int");
+                $menu-&gt;id_language = $request-&gt;getPost("id_language", "int");
+                $menu-&gt;menu_name = $request-&gt;getPost("menu_name", "striptags");
+                $menu-&gt;paragraph = $request-&gt;getPost("paragraph", "striptags");
+                $menu-&gt;address = $request-&gt;getPost("address", "striptags");
+                $menu-&gt;logo = $request-&gt;getPost("logo", "string");
+                $menu-&gt;status = 1;
+
+                if ($menu-&gt;save() == false) {
+                    $this-&gt;_printMessages($menu-&gt;getMessages());
+                    $transaction-&gt;rollback();
+                } else {
+                    $roleHasMenu = new RoleHasMenu();
+                    $roleHasMenu-&gt;setTransaction($transaction);
+                    $roleHasMenu-&gt;id_menu = $menu-&gt;id_menu;
+                    $roleHasMenu-&gt;id_role = $this-&gt;session-&gt;get("auth")-&gt;id_role;
+                    if ($roleHasMenu-&gt;save() == false) {
+
+                    } else {
+                        $transaction-&gt;commit();
+                        $this-&gt;flash-&gt;success("Registro completado.");
+                    }
+                }
+            } catch(\Phalcon\Mvc\Model\Transaction\Failed $e){
+                $this-&gt;flash-&gt;error('Failed, reason: '. $e-&gt;getMessage());
+            } catch(\PDOException $e){
+                $this-&gt;flash-&gt;error($e-&gt;getTraceAsString());
+            }
+        }
+
+        $this-&gt;view-&gt;form = $form;
+    }</code></pre>
+<pre><code class="language-php">
+//Model
+
+/**
+ *
+ */
+class Menu extends \Phalcon\Mvc\Model
+{
+
+    /**
+     * Primary Key
+     * @var Integer
+     */
+    public $id_menu;
+
+    /**
+     * @var Integer
+     */
+    public $id_language;
+
+    /**
+     *
+     */
+    public $id_type_menu;
+
+    /**
+     * @var String
+     */
+    public $menu_name;
+
+    /**
+     * @var String
+     */
+    public $address;
+
+    /**
+     * @var String
+     */
+    public $logo;
+
+    /**
+     * @var Integer
+     */
+    public $status;
+
+    /**
+     *
+     */
+    public function initialize()
+    {
+        $this-&gt;setConnectionService("db-cms");
+        $this-&gt;setReadConnectionService("db-cms");
+        $this-&gt;setWriteConnectionService("db-cms");
+    }
+
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-022c9a821177de8c945c6ad7-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-022c9a821177de8c945c6ad7-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C17028" href="#C17028">
+                <time itemprop="dateCreated" datetime="2015-04-01T14:39:58-07:00" class="action-date">Apr '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Can you please the error message you're getting, only the backtrace was posted</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17028" data-cf-modified-022c9a821177de8c945c6ad7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17028" data-cf-modified-022c9a821177de8c945c6ad7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/07cb69abb466c60cf054e078b44df774?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3381/julianmolina" class="user-moderator-N"><span itemprop="name">Julián Arturo Molina Castiblanco</span></a>        </span>
+        <br>
+
+        <span class="karma">3.5k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C17028"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Phalcon                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C17029" href="#C17029">
+                <time itemprop="dateCreated" datetime="2015-04-01T14:45:49-07:00" class="action-date">Apr '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Can you please the error message you're getting, only the backtrace was posted
+Hi, this error:</p>
+</blockquote>
+<p>SQLSTATE[42P01]: Undefined table: 7 ERROR: relation &quot;menu&quot; does not exist LINE 1: INSERT INTO &quot;menu&quot; (&quot;id_type_menu&quot;, &quot;id_language&quot;, &quot;menu_nam... ^</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17029" data-cf-modified-022c9a821177de8c945c6ad7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17029" data-cf-modified-022c9a821177de8c945c6ad7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C17030" href="#C17030">
+                <time itemprop="dateCreated" datetime="2015-04-01T14:48:53-07:00" class="action-date">Apr '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Which version of Phalcon are you using?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17030" data-cf-modified-022c9a821177de8c945c6ad7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17030" data-cf-modified-022c9a821177de8c945c6ad7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/07cb69abb466c60cf054e078b44df774?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3381/julianmolina" class="user-moderator-N"><span itemprop="name">Julián Arturo Molina Castiblanco</span></a>        </span>
+        <br>
+
+        <span class="karma">3.5k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C17030"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Phalcon                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="17031" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '15</span>
+              </span><br/><a name="C17031" href="#C17031">
+                <time itemprop="dateCreated" datetime="2015-04-01T14:50:17-07:00" class="action-date">Apr '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>1.3.4
+and id  =&gt;1030441</p>
+<blockquote>
+<p>Which version of Phalcon are you using?</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17031" data-cf-modified-022c9a821177de8c945c6ad7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17031" data-cf-modified-022c9a821177de8c945c6ad7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/07cb69abb466c60cf054e078b44df774?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3381/julianmolina" class="user-moderator-N"><span itemprop="name">Julián Arturo Molina Castiblanco</span></a>        </span>
+        <br>
+
+        <span class="karma">3.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C17033" href="#C17033">
+                <time itemprop="dateCreated" datetime="2015-04-01T21:51:42-07:00" class="action-date">Apr '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>:(</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17033" data-cf-modified-022c9a821177de8c945c6ad7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17033" data-cf-modified-022c9a821177de8c945c6ad7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/210/andresgutierrez" class="user-moderator-Y"><span itemprop="name">Andres Gutierrez</span></a>        </span>
+        <br>
+
+        <span class="karma">34.6k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C17039" href="#C17039">
+                <time itemprop="dateCreated" datetime="2015-04-02T08:36:36-07:00" class="action-date">Apr '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Try returning the connection directly:</p>
+<pre><code class="language-php">class Menu extends \Phalcon\Mvc\Model
+{
+   public function getWriteConnection()
+   {
+       return \Phalcon\DI::getDefault()-&gt;get('db_cms');
+   }
+   public function getReadConnection()
+   {
+       return \Phalcon\DI::getDefault()-&gt;get('db_cms');
+   }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17039" data-cf-modified-022c9a821177de8c945c6ad7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17039" data-cf-modified-022c9a821177de8c945c6ad7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6289" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

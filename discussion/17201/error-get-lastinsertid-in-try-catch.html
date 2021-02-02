@@ -1,0 +1,254 @@
+---
+layout: default
+title: 'Error get lastInsertId in Try catch - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Error get lastInsertId in Try catch</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3754/adolfoamaris" class="user-moderator-N"><span itemprop="name">adolfoamaris</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-10-30T20:53:30-07:00">Oct '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-10-30T20:53:30-07:00">Oct '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>364</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9400866eeb9527adae2c48fd76757d91?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3754/adolfoamaris" class="user-moderator-N"><span itemprop="name">adolfoamaris</span></a></span>
+                <span class="karma">1.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17201" href="#C17201">
+        <time class="action-date">Oct '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi, I have a problem getting the last id of a related table. if I use $ variation-&gt; id; it brings me null and if I use $ variation-&gt; theInsertId (); I get an error with foreign key problems</p>
+<p>Can you get the last id after a save in a try catch?</p>
+<p>&lt;?php
+try{ ///////Iniciar bloque de transacción///////////////////////// $this-&gt;db-&gt;begin();
+if (count($prev_month_balance) &gt; 0) {</p>
+<pre><code>                $variation =  new VariationsLastMonth();
+
+                $variation-&gt;setMonthPrev($prev_month_balance[0]-&gt;getRate());
+                $variation-&gt;setMonthCurrent($rate_);
+                $variation-&gt;setYear(date("Y"));
+                $variation-&gt;setState(1);
+
+                if ($variation-&gt;save()){
+                    $lastId = $variation-&gt;id(); 
+                }else{
+                    throw new Exception("¡ERROR: al inserta en la bd!", 1);
+                }
+
+            }
+
+            $month_current = date("m");
+            $year_current = date("Y");
+            $detailBalance = DetailsBalance::query()
+                -&gt;where("id_bank = :id_bank:")
+                -&gt;andWhere("id_sub_product = :id_sub_product:")
+                -&gt;andWhere("id_concept = :id_concept:")
+                -&gt;andWhere("year = :year:")
+                -&gt;andWhere("id_month = :month:")
+                -&gt;bind(["id_bank" =&gt; $id_bank, "id_sub_product" =&gt; $id_sub_product, "id_concept" =&gt; $id_concept, "month" =&gt; $month_current, "year" =&gt; $year_current])
+                -&gt;execute();
+
+            if (count($detailBalance) &gt; 0) {
+                // Validamos si existe el sub producto + banco + registrado
+                $this-&gt;response-&gt;setJsonContent(array(
+                    "subProduct_repeat" =&gt; true
+                ));
+                return $this-&gt;response-&gt;send(); // aqui se envia la respuesta ajax de nuevo a la vista
+            }
+
+            $rate =  new DetailsBalance();
+
+            $rate-&gt;setIdBank(intval($id_bank));
+            $rate-&gt;setIdSubProduct(intval($id_sub_product));
+            $rate-&gt;setIdConcept(intval($id_concept));
+            $rate-&gt;setRate($rate_);
+            $rate-&gt;setYear(intval(date("Y")));
+            $rate-&gt;setIdMonth(intval(date("m")));
+            $rate-&gt;setIdVariationLastMonth($lastId);
+            $rate-&gt;setState(1);
+
+            //mostrando mensajes de error de insercion en bd
+            if (!$rate-&gt;save()){
+                throw new Exception("¡ERROR: al inserta en la bd!", 2);
+            }
+
+            ///////Finalizar bloque de transacción y guardar/////////////
+            $this-&gt;db-&gt;commit();
+        }catch(\Exception $e){
+
+            ///////Deshacer cambios hechos en el/////////
+            ///////bloque de transaccion respestivo//////
+            $this-&gt;db-&gt;rollback();
+            $this-&gt;response-&gt;setJsonContent(array(
+                "error_registro" =&gt; $e-&gt;getMessage()
+            ));
+
+            $this-&gt;response-&gt;setStatusCode(200, "OK"); //la peticion ha sido realizada con exito
+            return $this-&gt;response-&gt;send(); // aqui se envia la respuesta ajax de nuevo a la vista
+
+        }</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-ad385e97836941a6af53fa79-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-ad385e97836941a6af53fa79-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C51941" href="#C51941">
+                <time itemprop="dateCreated" datetime="2017-10-30T23:35:42-07:00" class="action-date">Oct '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You have method <code>id()</code> here. It should just property. Also you should in your database have column id with PRIMARY key?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51941" data-cf-modified-ad385e97836941a6af53fa79-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51941" data-cf-modified-ad385e97836941a6af53fa79-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9400866eeb9527adae2c48fd76757d91?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3754/adolfoamaris" class="user-moderator-N"><span itemprop="name">adolfoamaris</span></a>        </span>
+        <br>
+
+        <span class="karma">1.1k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C51941"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C51961" href="#C51961">
+                <time itemprop="dateCreated" datetime="2017-10-31T16:06:15-07:00" class="action-date">Oct '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If Mr. the table has an id as a primary key, it is called id_variation_last_month.
+this is the model</p>
+<p>&lt;?php</p>
+<p>class VariationsLastMonth extends \Phalcon\Mvc\Model
+{</p>
+<pre><code>/**
+ *
+ * @var integer
+ * @Primary
+ * @Identity
+ * @Column(type="integer", length=11, nullable=false)
+ */
+protected $id_variation_last_month;
+
+/**
+ * Method to set the value of field id_variation_last_month
+ *
+ * @param integer $id_variation_last_month
+ * @return $this
+ */
+public function setIdVariationLastMonth($id_variation_last_month)
+{
+    $this-&gt;id_variation_last_month = $id_variation_last_month;
+
+    return $this;
+}
+
+/**
+ * Returns the value of field id_variation_last_month
+ *
+ * @return integer
+ */
+public function getIdVariationLastMonth()
+{
+    return $this-&gt;id_variation_last_month;
+}
+
+/**
+ * Initialize method for model.
+ */
+public function initialize()
+{
+    $this-&gt;setSchema("sieg");
+    $this-&gt;setSource("variations_last_month");
+    $this-&gt;hasMany('id_variation_last_month', 'DetailsBalance', 'id_variation_last_month', ['alias' =&gt; 'DetailsBalance']);
+}</code></pre>
+<blockquote>
+<p>You have method <code>id()</code> here. It should just property. Also you should in your database have column id with PRIMARY key?</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51961" data-cf-modified-ad385e97836941a6af53fa79-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51961" data-cf-modified-ad385e97836941a6af53fa79-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52001" href="#C52001">
+                <time itemprop="dateCreated" datetime="2017-11-01T11:48:23-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Then you need to use <code>getIdVariationLastMonth()</code> method.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52001" data-cf-modified-ad385e97836941a6af53fa79-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52001" data-cf-modified-ad385e97836941a6af53fa79-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17201" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

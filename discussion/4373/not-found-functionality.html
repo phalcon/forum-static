@@ -1,0 +1,204 @@
+---
+layout: default
+title: 'Not Found Functionality - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Not Found Functionality</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2595/ameypethe" class="user-moderator-N"><span itemprop="name">ameypethe</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-01-02T03:20:52-07:00">Jan '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-01-02T03:20:52-07:00">Jan '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>905</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/8d5a4bb232d43866df4f26e5993cc1c0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2595/ameypethe" class="user-moderator-N"><span itemprop="name">ameypethe</span></a></span>
+                <span class="karma">1.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4373" href="#C4373">
+        <time class="action-date">Jan '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>In my app I need to implement a functionality where in if the controller name and/or action name in the URL are wrong (i.e. misspelled and hence not found) or missing altogether then I should be able to show a custom 404 page.</p>
+<p>For ex: </p>
+<p>CORRECT: <a href="http://my-app/correct-controller-name/correct-action-name">http://my-app/correct-controller-name/correct-action-name</a></p>
+<p>WRONG: <a href="http://my-app/wrong-controller-name/wrong-action-name">http://my-app/wrong-controller-name/wrong-action-name</a> : I should be able to show custom 404 page.</p>
+<p>WRONG: <a href="http://my-app/correct-controller-name/">http://my-app/correct-controller-name/</a> : Here action name is missing altogether and I should be able to show a custom 404 page.</p>
+<p>I have tried various permutations and combinations in my code based on the solutions I found on the Web but I am getting an <em>&quot;Phalcon\DI\Exception: Service 'view' was not found in the dependency injection container&quot;</em> error everytime and 404 page is not showing up.</p>
+<p>Any help would be greatly appreciated. Thank you.</p>
+<p>Code below:</p>
+<pre><code class="language-php">class ControllerBase extends \Phalcon\Mvc\Controller
+{
+
+    public $breadcrumb;
+    public $show_breadcrumb = 1;
+
+    public function indexAction()
+    {
+        $id = (int)$this-&gt;getId($param);
+        if ($id &gt; 0) {
+
+           // do you stuff
+        } else {
+           $this-&gt;dispatcher-&gt;forward(array(
+               'controller' =&gt; 'error', 'action' =&gt;   'show404')
+           );
+        }
+    }
+}
+
+---------------------------------------
+//Set 404 paths
+$router-&gt;notFound(array(
+    "controller" =&gt; "error",
+    "action" =&gt; "show404"
+));
+
+/**
+ * Backend routes
+ */
+//echo "&lt;pre&gt;";print_r($router);
+return $router;
+---------------------------------------
+class ErrorController extends \Phalcon\Mvc\Controller
+{
+     public function initialize()
+        {
+           global $config;  
+           $this-&gt;config = $config;
+         }
+
+    public function indexAction()
+    {
+            echo 'Sorry';exit;
+    }
+
+        public function show404Action()
+    {
+
+            $this-&gt;view-&gt;setLayout("forms");
+            Tag::setTitle('404');
+            $this-&gt;view-&gt;setVar("config", $this-&gt;config);
+    }
+}
+------------------------------------------
+$di-&gt;set(
+    'dispatcher',
+    function() use ($di) {
+        $eventsManager = $di-&gt;getShared('eventsManager');
+        $eventsManager-&gt;attach(
+            'dispatch:beforeException',
+            function($event, $dispatcher, $exception) {
+                switch ($exception-&gt;getCode()) {
+                    case Dispatcher::EXCEPTION_HANDLER_NOT_FOUND:
+                    case Dispatcher::EXCEPTION_ACTION_NOT_FOUND:
+                        $dispatcher-&gt;forward(
+                            array(
+                                'controller' =&gt; 'error',
+                                'action' =&gt; 'show404',
+                            )
+                        );
+
+                        return false;
+                        break; // for checkstyle
+                    default:
+                        $dispatcher-&gt;forward(
+                            array(
+                                'controller' =&gt; 'error',
+                                'action' =&gt; 'uncaughtException',
+                            )
+                        );
+                        return false;
+                        break; // for checkstyle
+                }
+
+                //if ($exception instanceof \Phalcon\Mvc\Dispatcher\Exception) {
+                /*if ($exception) {
+                    $dispatcher-&gt;forward(
+                        array(
+                            'controller' =&gt; 'error',
+                            'action' =&gt; 'show404',
+                        )
+                    );
+
+                    return false;                    
+                }*/
+            }
+        );
+        $dispatcher = new Dispatcher();
+        $dispatcher-&gt;setEventsManager($eventsManager);
+        return $dispatcher;
+    },
+    true
+);</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-2dbc241a30cd3cf5e004776a-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-2dbc241a30cd3cf5e004776a-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e420241bec32f3d97b60f82e17550c2e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2801/kenjis" class="user-moderator-N"><span itemprop="name">kenjis</span></a>        </span>
+        <br>
+
+        <span class="karma">2.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C14499" href="#C14499">
+                <time itemprop="dateCreated" datetime="2015-01-02T14:57:19-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Does this simpler sample work?</p>
+<p><a href="http://stackoverflow.com/questions/14071261/how-to-setup-a-404-page-in-phalcon">http://stackoverflow.com/questions/14071261/how-to-setup-a-404-page-in-phalcon</a></p>
+<p>And do you have service <code>view</code> in your DI at error line?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14499" data-cf-modified-2dbc241a30cd3cf5e004776a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14499" data-cf-modified-2dbc241a30cd3cf5e004776a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4373" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

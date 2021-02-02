@@ -1,0 +1,137 @@
+---
+layout: default
+title: 'Dynamic converting types in router - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Dynamic converting types in router</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/11083/MrMaxie" class="user-moderator-N"><span itemprop="name">Maxie</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-05-26T06:53:14-07:00">May '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-05-26T06:53:14-07:00">May '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>May '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>277</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/2236f3c9d21f3d0e0fd3a72e8e160b66?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/11083/MrMaxie" class="user-moderator-N"><span itemprop="name">Maxie</span></a></span>
+                <span class="karma">959</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C18313" href="#C18313">
+        <time class="action-date">May '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,
+I found method called &quot;convert&quot; and idea with converting parameters before using it is awesome, but I have little problem with doing it more &quot;dynamically&quot;.</p>
+<p>First I tried use it as it is:</p>
+<pre><code class="language-php">$router-&gt;convert('user', function($x) {
+  return Users::findFirstByUrl($x);
+});</code></pre>
+<p>But I fast recognized that I will get &quot;false&quot; if user that does not exists. It'll be great if falsy values will tell that route is not possible and router simply will go ahead with searching next possible route (or just will show notFound if needed). I tried to do it on dispatcher level in this way:</p>
+<pre><code class="language-php">$manager-&gt;attach('dispatch:beforeExecuteRoute',
+    function(Event $event, Dispatcher $dispatcher) {
+
+        // Converters
+        $params = [
+            'user' =&gt; function($x) {
+                if($x instanceof Users)
+                    return $x;
+                return Users::findFirstByUrl($x);
+            }
+        ];
+
+        foreach($dispatcher-&gt;getParams() as $paramName =&gt; $param) {
+            if(!array_key_exists($paramName, $params))
+                continue;
+
+            $x = $params[$paramName]($param);
+
+            if($x) {
+                $dispatcher-&gt;setParam($paramName, $x);
+            } else {
+                // Throw that route isn't possible... go to next
+                return false; //?
+            }
+        }
+    }
+);</code></pre>
+<p>In that way I'll (if I thinks correct) block also notFound route? So I need to check only for parameters needed and described in url pattern. Maybe I thinks incorrect but still: returning false show empty page. How to test/convert only needed parameters and/or force to tell for router to search next possible route (including notFound)?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-42224080e498e72242880f6c-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-42224080e498e72242880f6c-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C55765" href="#C55765">
+                <time itemprop="dateCreated" datetime="2018-05-27T04:19:14-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>There is no need to do this, from phalcon 3.1.x you can use:</p>
+<pre><code class="language-php">$di-&gt;set('dispatcher', function() {
+    $dispatcher = new Phalcon\Mvc\Dispatcher();
+    $dispatcher-&gt;setModelBinder(new Phalcon\Mvc\Model\Binder());
+
+    return $dispatcher;
+})</code></pre>
+<p>And that's it, just put your argument in action of controller like:</p>
+<pre><code class="language-php">showAction(User $user)</code></pre>
+<p>And you will have here user instance. More about this - <a href="https://docs.phalcon.io/en/3.2/dispatcher#preparing-actions-inject-model-instances">https://docs.phalcon.io/en/3.2/dispatcher#preparing-actions-inject-model-instances</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55765" data-cf-modified-42224080e498e72242880f6c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55765" data-cf-modified-42224080e498e72242880f6c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="18313" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

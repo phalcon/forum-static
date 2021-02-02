@@ -1,0 +1,138 @@
+---
+layout: default
+title: 'Problem with FULLTEXT indexes - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/12/developer-tools">Developer Tools</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Problem with FULLTEXT indexes</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/5159/tobispace" class="user-moderator-N"><span itemprop="name">tobispace</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-01-02T04:47:17-07:00">Jan '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-01-02T04:47:17-07:00">Jan '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>480</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/6c5a7ed70304818cf1753f148f442737?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/5159/tobispace" class="user-moderator-N"><span itemprop="name">tobispace</span></a></span>
+                <span class="karma">12.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C10043" href="#C10043">
+        <time class="action-date">Jan '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Using Phalcon Devtools 2.0.7 with MySql adapter. MySql Server version: 5.7.9.</p>
+<p>I have a table with this definition:</p>
+<pre><code>+-----------------+------------------+------+----------+---------+----------------+
+| Field           | Type             | Null | Key      | Default | Extra          |
++-----------------+------------------+------+----------+---------+----------------+
+| search_index_id | int(10) unsigned | NO   | PRI      | NULL    | auto_increment |
+| origin_table    | varchar(255)     | NO   | MUL      | NULL    |                |
+| origin_id       | int(11)          | NO   | MUL      | NULL    |                |
+| search_text     | text             | NO   | FULLTEXT | NULL    |                |
++-----------------+------------------+------+----------+---------+----------------+</code></pre>
+<p>search_text has a FULLTEXT index.</p>
+<p>Running:</p>
+<blockquote>
+<p>phalcon migration generate --config='.phalcon/config.ini' --migrations='migrations'</p>
+</blockquote>
+<p>generates this migration Class:</p>
+<pre><code class="language-php">/* ... */
+
+new Column(
+    'search_text',
+    array(
+        'type' =&gt; Column::TYPE_TEXT,
+        'notNull' =&gt; true,
+        'size' =&gt; 1,
+        'after' =&gt; 'origin_id'
+    )
+)
+
+/* ... */
+
+'indexes' =&gt; array(
+    new Index('PRIMARY', array('search_index_id'), null),
+    new Index('origin_id', array('origin_id'), null),
+    new Index('origin_table', array('origin_table'), null),
+    new Index('search_text', array('search_text'), null)
+),
+
+/* ... */</code></pre>
+<p>The Index for search_text must be a <code>FULLTEXT</code> type index, not a default one (the code says <code>null</code> as the third parameter of <code>new Index()</code>).
+This causes an error when running the migration on other working copies:</p>
+<blockquote>
+<p>BLOB/TEXT column 'search_text' used in key specification without a key length</p>
+</blockquote>
+<p>I fixed this by altering the migration Class definition replacing <code>null</code> with <code>FULLTEXT</code>, but actually this is definitely a bug.</p>
+<p>I created an issue on GitHub:
+<a href="https://github.com/phalcon/phalcon-devtools/issues/585">https://github.com/phalcon/phalcon-devtools/issues/585</a></p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-57614277cc9582ad3d4349c2-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-57614277cc9582ad3d4349c2-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6c5a7ed70304818cf1753f148f442737?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5159/tobispace" class="user-moderator-N"><span itemprop="name">tobispace</span></a>        </span>
+        <br>
+
+        <span class="karma">12.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="28495" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '16</span>
+              </span><br/><a name="C28495" href="#C28495">
+                <time itemprop="dateCreated" datetime="2016-01-02T16:49:30-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Phalcon 2.0.9 fails as well, as it generates a migration with null instead of FULLTEXT as index type for FULLTEXT columns.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28495" data-cf-modified-57614277cc9582ad3d4349c2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28495" data-cf-modified-57614277cc9582ad3d4349c2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="10043" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

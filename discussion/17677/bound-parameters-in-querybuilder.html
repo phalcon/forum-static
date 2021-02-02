@@ -1,0 +1,186 @@
+---
+layout: default
+title: 'Bound parameters in QueryBuilder - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Bound parameters in QueryBuilder</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10581/omnispex" class="user-moderator-N"><span itemprop="name">Omnispex</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-01-25T14:15:39-07:00">Jan '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-01-25T14:15:39-07:00">Jan '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>430</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/2c7699223a33664be1b3b9a0d5e52e7c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10581/omnispex" class="user-moderator-N"><span itemprop="name">Omnispex</span></a></span>
+                <span class="karma">1.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17677" href="#C17677">
+        <time class="action-date">Jan '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,</p>
+<p>Consider something like this:</p>
+<pre><code>            $query=$this-&gt;modelsManager-&gt;createBuilder()
+                -&gt;from('Articles')
+                -&gt;innerJoin('Categoryarticles','Articles.id=Categoryarticles.articleid')
+                -&gt;innerJoin('Categories','Categoryarticles.categoryid=Categories.id')
+                -&gt;where('Articles.languagekey=:languagekey:')
+                 -&gt;where('Categories.languagekey=:languagekey:')
+                -&gt;andWhere('Categories.id&gt;:id:',array('id' =&gt; $id));           
+
+            $totals=$query             
+                -&gt;columns(array('COUNT(DISTINCT Articles.id) AS totals'))
+                -&gt;getQuery()
+                -&gt;setUniqueRow(true)
+                -&gt;execute(array('languagekey' =&gt; $this-&gt;languagekey(), 'id' =&gt; $id);</code></pre>
+<p>In here I use parameter languagekey twice, adding it in execute I have to bound a value only one time.
+It's for me much easier than passing the same parameter &amp; value agan and again in the query construction</p>
+<p>Now I use a Paginator using the QueryBuilder, something like</p>
+<pre><code>            $paginator=new QueryBuilder(
+                array(
+                    "builder" =&gt; $builder,
+                    "limit" =&gt; 10,
+                    "page" =&gt; $page
+                )
+            ); </code></pre>
+<p>My question:
+How can I passing parameters in query execution in QueryBuilder?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-79bc95d17349a6c4a9bb09b2-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-79bc95d17349a6c4a9bb09b2-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C53661" href="#C53661">
+                <time itemprop="dateCreated" datetime="2018-01-25T14:31:23-07:00" class="action-date">Jan '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi<a href="https://forum.phalcon.io/user/0/omnispex"> @omnispex</a> you can't do that but you can <a href="https://docs.phalcon.io/en/3.2/db-pagination#custom">make your own paginator</a> adapter when you can set parameters like this</p>
+<pre><code class="language-php">class MyPaginator extends \Phalcon\Paginator\Adapter\QueryBuilder {
+
+    private $params = [];
+    public function __construct(array $config) {
+        private $params = $config['params'] ?? [];
+
+        parent::__construct($config);
+    }
+
+    public function getPaginate() {
+        if ($this-&gt;params) {
+            $this-&gt;_builder-&gt;setBindParams($this-&gt;params);
+        }
+
+        return parent::getPaginate();
+    }
+}</code></pre>
+<p>Good luck</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="53661" data-cf-modified-79bc95d17349a6c4a9bb09b2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="53661" data-cf-modified-79bc95d17349a6c4a9bb09b2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C53669" href="#C53669">
+                <time itemprop="dateCreated" datetime="2018-01-26T03:11:08-07:00" class="action-date">Jan '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>PDO extension and db engines when not emulating prepares requries diffrent names and doesn't allow tu use same parameter in binding more than once. To enable it use:</p>
+<pre><code class="language-php">PDO::ATTR_EMULATE_PREPARES =&gt; true</code></pre>
+<p>In options of db adapter. Keep in mind it's not a good idea and this should be defintely false, beacause it's faster when database engine is doing binding.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="53669" data-cf-modified-79bc95d17349a6c4a9bb09b2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="53669" data-cf-modified-79bc95d17349a6c4a9bb09b2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2c7699223a33664be1b3b9a0d5e52e7c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10581/omnispex" class="user-moderator-N"><span itemprop="name">Omnispex</span></a>        </span>
+        <br>
+
+        <span class="karma">1.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C53681" href="#C53681">
+                <time itemprop="dateCreated" datetime="2018-01-26T10:38:19-07:00" class="action-date">Jan '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you for your reply,
+In short you would recommend something like?</p>
+<pre><code>        $query=$this-&gt;modelsManager-&gt;createBuilder()
+            -&gt;from('Articles')
+            -&gt;innerJoin('Categoryarticles','Articles.id=Categoryarticles.articleid')
+            -&gt;innerJoin('Categories','Categoryarticles.categoryid=Categories.id')
+            -&gt;where('Articles.languagekey=:languagekey:',array('languagekey' =&gt; $this-&gt;languagekey()))
+            -&gt;andWhere('Categories.languagekey=:languagekey:',array('languagekey' =&gt; $this-&gt;languagekey()))
+            -&gt;andWhere('Categories.trash=:trash:',array('trash' =&gt;$this-&gt;trash()));</code></pre>
+<p>This is what I have in an older app and it works fine with paginator, but less easier to maintain with many duplicate parameters.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="53681" data-cf-modified-79bc95d17349a6c4a9bb09b2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="53681" data-cf-modified-79bc95d17349a6c4a9bb09b2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17677" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

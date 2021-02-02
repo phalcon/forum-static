@@ -1,0 +1,185 @@
+---
+layout: default
+title: 'Correct way to edit a database service after first initiation - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/10/di-ioc">DI/IoC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Correct way to edit a database service after first initiation</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/790/fl0pp" class="user-moderator-N"><span itemprop="name">Marius S. Eriksrud</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-10-09T03:55:27-07:00">Oct '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-10-09T03:55:27-07:00">Oct '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>460</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/c90c0fc66e39f8fa0fb28505ff1eddc1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/790/fl0pp" class="user-moderator-N"><span itemprop="name">Marius S. Eriksrud</span></a></span>
+                <span class="karma">13.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17069" href="#C17069">
+        <time class="action-date">Oct '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I use two different database services in my Phalcon application.</p>
+<ul>
+<li>db: Global database with system-wide data, including accounts and users</li>
+<li>db_data: This database hosts customer-specific data. The database-name is different for each customer/account. This is determined when the customer sign in.</li>
+</ul>
+<p>This works in the web application, when I have one account active.
+Now I have a cronjob, that is going to loop through a table in the global &quot;db&quot; database. And after it is going to connect to the specific &quot;db_data&quot; database.</p>
+<p>This works for the first account, but after this it will not connect to the new database.
+It still use the first initiated database.</p>
+<p>The db_data service is a shared service in the services.php:</p>
+<pre><code>$di-&gt;set('db_data', function () use ($config, $di) {
+        if(!$di-&gt;getCore()-&gt;getAccount()) {
+                throw new \MyNamespace\Exception(_('Account is not set. Can not load account database.'));
+        }
+        $eventsManager = $di-&gt;getShared('eventsManager');
+        $dbListener = new \MyNamespace\Module\Core\Helper\Model\DatabaseListener();
+        $eventsManager-&gt;attach('db_data', $dbListener);
+    $connection = new \Phalcon\Db\Adapter\Pdo\Mysql(array(
+        'host' =&gt; $config-&gt;database-&gt;host,
+        'username' =&gt; $config-&gt;database-&gt;username,
+        'password' =&gt; $config-&gt;database-&gt;password,
+        'dbname' =&gt; $config-&gt;database-&gt;data_dbname_prefix.$di-&gt;getCore()-&gt;getAccount()-&gt;id,
+        'name' =&gt; 'data',
+    ));
+        $connection-&gt;setEventsManager($eventsManager);
+        return $connection;
+}, true);</code></pre>
+<p>In the first model in &quot;db&quot; i have the following in the initialize() function:</p>
+<pre><code>$this-&gt;setConnectionService('db');</code></pre>
+<p>In the second model in &quot;db_data&quot; i have the following in the initialize() function:</p>
+<pre><code>$this-&gt;setConnectionService('db_data');</code></pre>
+<p>Here is an example of the cron PHP-file:</p>
+<pre><code>$screens = \MyNamespace\Module\DigitalSignage\Model\Screen::find(array(
+    'conditions' =&gt; 'deleted_at IS NULL',
+));
+
+foreach($screens as $screen) {
+    $console-&gt;getDi()-&gt;getCore()-&gt;setAccount(\MyNamespace\Module\Core\Model\Account::findFirst('id='.$screen-&gt;account_id));
+    $campaign = \MyNamespace\Module\DigitalSignage\Model\Campaign::findFirst(array(
+            'conditions' =&gt; 'id = :id: AND account_id = :account_id: AND deleted_at IS NULL',
+            'bind' =&gt; array(
+                'id' =&gt; $screen-&gt;digitalsignage_campaign_id,
+                'account_id' =&gt; $console-&gt;getDi()-&gt;getCore()-&gt;getAccount()-&gt;id,
+            ),
+        ));
+
+    var_dump($campaign);
+}</code></pre>
+<p>What is the correct way to change the database service parameteres after first initiation?</p>
+<p>Phalcon version: 3.2.2
+PHP version: 7.0.22</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-de18cb8e80f04119fb00ad46-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-de18cb8e80f04119fb00ad46-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e1731ca2cc82170fb565554fd13b9f7c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1017/baychae" class="user-moderator-N"><span itemprop="name">baychae</span></a>        </span>
+        <br>
+
+        <span class="karma">47.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C51437" href="#C51437">
+                <time itemprop="dateCreated" datetime="2017-10-10T06:19:28-07:00" class="action-date">Oct '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I only have a suggestion/question.</p>
+<p>Have you double checked your bootstrap?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51437" data-cf-modified-de18cb8e80f04119fb00ad46-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51437" data-cf-modified-de18cb8e80f04119fb00ad46-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c90c0fc66e39f8fa0fb28505ff1eddc1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/790/fl0pp" class="user-moderator-N"><span itemprop="name">Marius S. Eriksrud</span></a>        </span>
+        <br>
+
+        <span class="karma">13.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C51449" href="#C51449">
+                <time itemprop="dateCreated" datetime="2017-10-11T04:49:29-07:00" class="action-date">Oct '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>What should I check for?</p>
+<p>I think I will go for a PHP cronjob that spawn separate processes for each &quot;account&quot;/database. It is a bit more time- and resource consuming, but that will do the trick for me.</p>
+<p>I have a colleague that checked the Zepire source code. And it seems there is a problem with PDO that can not change connection settings after first setup. Can someone confirm that this is correct?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51449" data-cf-modified-de18cb8e80f04119fb00ad46-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51449" data-cf-modified-de18cb8e80f04119fb00ad46-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/7ade94a414f534feaa0b6129b9a48585?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/366/Delifisek" class="user-moderator-N"><span itemprop="name">Delifisek</span></a>        </span>
+        <br>
+
+        <span class="karma">11.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C51537" href="#C51537">
+                <time itemprop="dateCreated" datetime="2017-10-13T13:28:22-07:00" class="action-date">Oct '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Did you try close the connection and recreate with new user account ?</p>
+<p>I'm no so sure to renint old database connection with new account.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51537" data-cf-modified-de18cb8e80f04119fb00ad46-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51537" data-cf-modified-de18cb8e80f04119fb00ad46-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17069" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

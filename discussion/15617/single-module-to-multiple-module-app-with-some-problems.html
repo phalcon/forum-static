@@ -1,0 +1,200 @@
+---
+layout: default
+title: 'Single Module to Multiple Module App with some problems - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Single Module to Multiple Module App with some problems</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/9179/JohnJonnyJohn" class="user-moderator-N"><span itemprop="name">JohnJonnyJohn</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-02-28T10:19:32-07:00">Feb '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-02-28T10:19:32-07:00">Feb '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>676</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/bd9ebfdf1ed18d6d38cae7525cd293f5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/9179/JohnJonnyJohn" class="user-moderator-N"><span itemprop="name">JohnJonnyJohn</span></a></span>
+                <span class="karma">1.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C15617" href="#C15617">
+        <time class="action-date">Feb '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello everybody, I would like to refactor my project from a single module application to a multiple module app.</p>
+<p>My structure looks like:</p>
+<pre><code>/apps
+  /moduleA
+      /controllers
+      /views
+      /Module.php
+  /moduleB
+      /controllers
+      /views
+      /Module.php
+  ...</code></pre>
+<p>Every Module has a Module.php which looks like:</p>
+<pre><code>public function registerAutoloaders(DiInterface $di = null)
+{
+    $loader = new Loader();
+    $loader-&gt;registerNamespaces(
+        [
+            "Mod\\GeneralController" =&gt; "../app/general/controllers/",
+        ]
+    );
+    $loader-&gt;register();
+}
+
+public function registerServices(DiInterface $di)
+{
+    // Registering a dispatcher
+    $di-&gt;set(
+        "dispatcher",
+        function () {
+            $dispatcher = new Dispatcher();
+            $dispatcher-&gt;setDefaultNamespace("Mod\\GeneralController");
+            return $dispatcher;
+        }
+    );
+    $di-&gt;set(
+        "view",
+        function () {
+            $view = new View();
+            $view-&gt;setViewsDir("../app/general/views/");
+            return $view;
+        }
+    );
+}</code></pre>
+<p>Somewhere I'm adding my routes like:</p>
+<pre><code>$di-&gt;setShared('router', function() {
+  $router = new \Phalcon\Mvc\Router\Annotations(false);
+
+  $router-&gt;setDefaultModule('general');
+  ...
+  $router-&gt;addResource('Mod\OtherController\Something', '/something');
+  ...
+
+  $router-&gt;add('/:controller', [
+      'controller' =&gt; 1,
+      'action'     =&gt; 'index',
+  ]);
+
+  $router-&gt;add('/:controller/:action', [
+      'controller' =&gt; 1,
+      'action'     =&gt; 2,
+  ]);
+
+  $router-&gt;add('/:controller/:action/:int', [
+      'controller' =&gt; 1,
+      'action'     =&gt; 2,
+      'id'         =&gt; 3,
+  ]);
+
+  return $router;
+});</code></pre>
+<p>And my Index.php I'm registering my modules, it looks like these:</p>
+<pre><code>$application-&gt;registerModules(
+    [
+        'other_managment' =&gt; [
+            'className' =&gt; 'Easy\OtherController\Module',
+            'path' =&gt; '../app/other_managment/Module.php'
+        ],
+        'general' =&gt; [
+            'className' =&gt; 'Easy\GeneralController\Module',
+            'path' =&gt; '../app/general/Module.php'
+        ],
+    ]
+);
+
+echo $application-&gt;handle()-&gt;getContent();</code></pre>
+<p>My problem is, that I'm not sure, that this strucure is the right way? And I got some strange problems that im not able to figure out. My biggest problem for now is, that I get these error:</p>
+<pre><code>Mod\GeneralController\IndexController handler class cannot be loaded</code></pre>
+<p>The problem is, that IndexController is a part of some other Module not part of GeneralController, but it extends a Baseclass which is part of GeneralController.</p>
+<p>Do someone have some clues how I can get this working or where I have to set my focus?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-567c8ee19851d9f9c08ed725-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-567c8ee19851d9f9c08ed725-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e6f3e4bab0da88ca16fe1e50078ec864?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9069/Meint-Willem" class="user-moderator-N"><span itemprop="name">Meint-Willem</span></a>        </span>
+        <br>
+
+        <span class="karma">891</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C46261" href="#C46261">
+                <time itemprop="dateCreated" datetime="2017-03-02T02:24:25-07:00" class="action-date">Mar '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Theres another Topic about it, that seems to be solved: <a href="https://forum.phalcon.io/discussion/4624/multiple-module">https://forum.phalcon.io/discussion/4624/multiple-module</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="46261" data-cf-modified-567c8ee19851d9f9c08ed725-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="46261" data-cf-modified-567c8ee19851d9f9c08ed725-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bd9ebfdf1ed18d6d38cae7525cd293f5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9179/JohnJonnyJohn" class="user-moderator-N"><span itemprop="name">JohnJonnyJohn</span></a>        </span>
+        <br>
+
+        <span class="karma">1.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C46267" href="#C46267">
+                <time itemprop="dateCreated" datetime="2017-03-02T08:05:50-07:00" class="action-date">Mar '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>There were several diffrent problems, I found a solution by this: <a href="https://github.com/phalcon/mvc">https://github.com/phalcon/mvc</a> and other examples</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="46267" data-cf-modified-567c8ee19851d9f9c08ed725-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="46267" data-cf-modified-567c8ee19851d9f9c08ed725-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="15617" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

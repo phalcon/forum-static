@@ -1,0 +1,202 @@
+---
+layout: default
+title: 'MVC Model Binder default return type - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">MVC Model Binder default return type</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/12369/401e" class="user-moderator-N"><span itemprop="name">401e</span></a></span>
+            <time itemprop="dateCreated" datetime="2019-05-01T10:55:30-07:00">May '19</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2019-05-01T10:55:30-07:00">May '19</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '19</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>245</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/f58c50e6fbdd38ff9d44871185432113?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/12369/401e" class="user-moderator-N"><span itemprop="name">401e</span></a></span>
+                <span class="karma">325</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C19629" href="#C19629">
+        <time class="action-date">May '19</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>is there a way to tell the <a href="https://docs.phalcon.io/4.0/en/api/Phalcon_Mvc_Model_Binder">model binder</a> / dispatcher to inject a default return value in case no model is found.
+Otherwise it returns false and only null is allowed as default in PHP.</p>
+<p>Did I missed something <a href="https://docs.phalcon.io/4.0/en/dispatcher#inject-model-instances">in the docs</a> ?</p>
+<p>Thanks in advance</p>
+<p>401</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-f5388d99366684b483359446-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-f5388d99366684b483359446-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C59719" href="#C59719">
+                <time itemprop="dateCreated" datetime="2019-05-02T07:20:46-07:00" class="action-date">May '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>you can change it very simple</p>
+<pre><code class="language-php">&lt;?php
+
+use \Exception;
+use Phalcon\Mvc\Model;
+use Phalcon\Mvc\Dispatcher as MvcDispatcher;
+use Phalcon\Events\Event;
+use Phalcon\Events\Manager as EventsManager;
+use \ReflectionMethod;
+
+$di-&gt;set(
+    'dispatcher',
+    function () {
+        // Create an EventsManager
+        $eventsManager = new EventsManager();
+
+        $eventsManager-&gt;attach(
+            'dispatch:beforeDispatchLoop',
+            function (Event $event, $dispatcher) {
+                // Possible controller class name
+                $controllerName = $dispatcher-&gt;getControllerClass();
+
+                // Possible method name
+                $actionName = $dispatcher-&gt;getActiveMethod();
+
+                try {
+                    // Get the reflection for the method to be executed
+                    $reflection = new ReflectionMethod($controllerName, $actionName);
+
+                    $parameters = $reflection-&gt;getParameters();
+
+                    // Check parameters
+                    foreach ($parameters as $parameter) {
+                        // Get the expected model name
+                        $className = $parameter-&gt;getClass()-&gt;name;
+
+                        // Check if the parameter expects a model instance
+                        if (is_subclass_of($className, Model::class)) {
+                            $model = $className::findFirstById($dispatcher-&gt;getParams()[0]) ?: null; // &lt;&lt;&lt; HERE YOU HAVE TO CHANGE
+
+                            // OTHER EXAMPLE If the parameter is a slug you would do something like this
+                            if (!is_numeric($dispatcher-&gt;getParams()[0])) {
+                                $model = $className::findFirstBySlug($dispatcher-&gt;getParams()[0]) ?: null;
+                            }
+
+                            // Override the parameters by the model instance
+                            $dispatcher-&gt;setParams([$model]);
+                        }
+                    }
+                } catch (Exception $e) {
+                    // An exception has occurred, maybe the class or action does not exist?
+                }
+            }
+        );
+
+        $dispatcher = new MvcDispatcher();
+
+        $dispatcher-&gt;setEventsManager($eventsManager);
+
+        return $dispatcher;
+    }
+);</code></pre>
+<p>I've wrote 2 examples into the above code</p>
+<p>Good luck</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="59719" data-cf-modified-f5388d99366684b483359446-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="59719" data-cf-modified-f5388d99366684b483359446-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C59755" href="#C59755">
+                <time itemprop="dateCreated" datetime="2019-05-07T07:54:27-07:00" class="action-date">May '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>That's actually a good catch with this, i guess we should check if it's false and return null.</p>
+<p>For now you can just extend Binder class and override <code>findBoundModel</code> method to return null.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="59755" data-cf-modified-f5388d99366684b483359446-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="59755" data-cf-modified-f5388d99366684b483359446-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d14a46e7808d4f47c85f525248845924?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/12485/besey3oi" class="user-moderator-N"><span itemprop="name">besey3oi</span></a>        </span>
+        <br>
+
+        <span class="karma">71</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C59943" href="#C59943">
+                <time itemprop="dateCreated" datetime="2019-06-04T03:43:22-07:00" class="action-date">Jun '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>HI buddy, does the above code with the loop works well for you? While I tried showing &quot;;&quot; error. Can you help me out please?</p>
+<p>Regards,
+SixTad</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="59943" data-cf-modified-f5388d99366684b483359446-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="59943" data-cf-modified-f5388d99366684b483359446-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="19629" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

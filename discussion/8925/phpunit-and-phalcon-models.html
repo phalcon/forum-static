@@ -1,0 +1,260 @@
+---
+layout: default
+title: 'PhpUnit and Phalcon Models - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">PhpUnit and Phalcon Models</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/5153/patrickascher" class="user-moderator-N"><span itemprop="name">Patrick Ascher</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-10-11T14:34:27-07:00">Oct '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-10-11T14:34:27-07:00">Oct '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1046</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/64937fb03590ecec8fe9b55cd7b307cc?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/5153/patrickascher" class="user-moderator-N"><span itemprop="name">Patrick Ascher</span></a></span>
+                <span class="karma">8.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C8925" href="#C8925">
+        <time class="action-date">Oct '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello to everyone, i just started to work with phalcon this weekend.
+I wanted to set a simple Authentication Script. I started to create some Models and there relations. After that worked, i startet to write tests for it.</p>
+<p>i followed the tutorial here <a href="http://"><a href="https://docs.phalcon.io/en/latest/reference/unit-testing.html">https://docs.phalcon.io/en/latest/reference/unit-testing.html</a></a>. Worked so far but then i had a problem that i only could call the model in the first test method. I did a little bit of research and found this solution for it. <a href="http://"><a href="https://forum.phalcon.io/discussion/6538/phpunit-di-only-available-in-first-testcase">https://forum.phalcon.io/discussion/6538/phpunit-di-only-available-in-first-testcase</a></a>
+So i put the DB config in the Bootstrap </p>
+<pre><code class="language-php">&lt;?php
+
+use Phalcon\DI;
+use Phalcon\DI\FactoryDefault;
+
+ini_set('display_errors',1);
+error_reporting(E_ALL);
+date_default_timezone_set('Europe/Vienna');
+
+define('ROOT_PATH', __DIR__);
+define('PATH_LIBRARY', __DIR__ . '/../src/library/');
+define('PATH_SERVICES', __DIR__ . '/../src/services/');
+define('PATH_RESOURCES', __DIR__ . '/../src/resources/');
+define('PATH_ENTITIES', __DIR__ . '/../src/entities/');
+
+set_include_path(
+    ROOT_PATH . PATH_SEPARATOR . get_include_path()
+);
+
+// Required for phalcon/incubator
+include __DIR__ . "/../vendor/autoload.php";
+
+// Use the application autoloader to autoload the classes
+// Autoload the dependencies found in composer
+$loader = new \Phalcon\Loader();
+
+$loader-&gt;registerNamespaces(array(
+    'PaPhalconAuth\Entities' =&gt; PATH_ENTITIES,
+));
+$loader-&gt;registerDirs(
+    array(
+        ROOT_PATH,
+    )
+);
+
+$loader-&gt;register();
+
+$di = new FactoryDefault();
+DI::reset();
+
+$config = array(
+    'adapter'     =&gt; 'Mysql',
+    'host'        =&gt; 'localhost',
+    'username'    =&gt; 'root',
+    'password'    =&gt; 'root',
+    'dbname'      =&gt; 'auth',
+    'charset'     =&gt; 'utf8',
+);
+
+// Add any needed services to the DI here
+$di-&gt;set('db', function () use ($config) {
+    $adapter = $config['adapter'];
+    unset($config['adapter']);
+
+    $class = 'Phalcon\Db\Adapter\Pdo\\' . $adapter;
+
+    return new $class($config);
+});
+
+DI::setDefault($di);</code></pre>
+<p>worked in almost all cases but in some cases it didn´t and i received again the message
+&quot;Service 'db' wasn't found in the dependency injection container&quot;.
+That happens when i am for e.g calling findFirst. the find() function is working fine but not findFirst()</p>
+<blockquote>
+<pre><code>/**</code></pre>
+<ul>
+<li><a href="https://forum.phalcon.io/user/0/covers">@covers</a> PaPhalconAuth\Entities\AuthUserRoles::find</li>
+<li><a href="https://forum.phalcon.io/user/0/covers">@covers</a> PaPhalconAuth\Entities\AuthUserRoles::findFirst
+*/
+public function testAuthUserRolesFindFirst()
+{
+$userRoles = new AuthUserRoles();
+$this-&gt;assertEquals($userRoles-&gt;find()-&gt;getFirst(), $userRoles-&gt;findFirst());
+$this-&gt;assertEquals(4,$userRoles-&gt;find()-&gt;count());
+}</li>
+</ul>
+</blockquote>
+<p>I could solve this problem, when i am also putting the DB DI config in the &quot;UnitTestCase.php&quot; file. </p>
+<pre><code class="language-php">&lt;?php
+use Phalcon\DI;
+use Phalcon\Test\UnitTestCase as PhalconTestCase;
+
+abstract class UnitTestCase extends PhalconTestCase
+{
+    /**
+     * @var \Voice\Cache
+     */
+    protected $_cache;
+
+    /**
+     * @var \Phalcon\Config
+     */
+    protected $_config;
+
+    /**
+     * @var bool
+     */
+    private $_loaded = false;
+
+    public function setUp(Phalcon\DiInterface $di = NULL, Phalcon\Config $config = NULL)
+    {
+        // Load any additional services that might be required during testing
+        $di = new \Phalcon\Di\FactoryDefault;
+
+        // Get any DI components here. If you have a config, be sure to pass it to the parent
+        $config= include '../src/config/config.php';
+        $di-&gt;setShared('db', function () use ($config) {
+            $dbConfig = $config-&gt;database-&gt;toArray();
+            $adapter = $dbConfig['adapter'];
+            unset($dbConfig['adapter']);
+
+            $class = 'Phalcon\Db\Adapter\Pdo\\' . $adapter;
+
+            return new $class($dbConfig);
+        });
+
+        parent::setUp($di);
+
+        $this-&gt;_loaded = true;
+    }
+
+    /**
+     * Check if the test case is setup properly
+     *
+     * @throws \PHPUnit_Framework_IncompleteTestError;
+     */
+    public function __destruct()
+    {
+        if (!$this-&gt;_loaded) {
+            throw new \PHPUnit_Framework_IncompleteTestError('Please run parent::setUp().');
+        }
+    }
+}</code></pre>
+<p>So i have it now in the bootstrap and in the unitTestCase file. When i am deleting the code out of one, then it is not working anymore. I think i have a major issue with the Test setup because of the tearDown with DI.</p>
+<p>Also when i am just creating a second Test file now with a simple equal test 0=0, the whole first file with the Models is not working anymore and i get the message:</p>
+<blockquote>
+<p>Phalcon\Mvc\Model\Exception : A dependency injector container is required to obtain the services related to the ORM</p>
+</blockquote>
+<p>So i hope someone has the time to help me. i would be really thankful.
+The whole source code is on gitHub <a href="http://"><a href="https://github.com/patrickascher/PaPhalconAuth/tree/master/tests">https://github.com/patrickascher/PaPhalconAuth/tree/master/tests</a></a></p>
+<p>Thanks
+Pat</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-fff1e3ca7235efe14fa4878b-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-fff1e3ca7235efe14fa4878b-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e1731ca2cc82170fb565554fd13b9f7c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1017/baychae" class="user-moderator-N"><span itemprop="name">baychae</span></a>        </span>
+        <br>
+
+        <span class="karma">47.7k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C24459" href="#C24459">
+                <time itemprop="dateCreated" datetime="2015-10-13T05:26:37-07:00" class="action-date">Oct '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Does this help?</p>
+<p><a href="https://forum.phalcon.io/discussion/2089/phpunit-phalcon-di-exception-service-db-was-not-found-in-the-dep"><a href="https://forum.phalcon.io/discussion/2089/phpunit-phalcon-di-exception-service-db-was-not-found-in-the-dep">https://forum.phalcon.io/discussion/2089/phpunit-phalcon-di-exception-service-db-was-not-found-in-the-dep</a></a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="24459" data-cf-modified-fff1e3ca7235efe14fa4878b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="24459" data-cf-modified-fff1e3ca7235efe14fa4878b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/64937fb03590ecec8fe9b55cd7b307cc?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5153/patrickascher" class="user-moderator-N"><span itemprop="name">Patrick Ascher</span></a>        </span>
+        <br>
+
+        <span class="karma">8.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C24463" href="#C24463">
+                <time itemprop="dateCreated" datetime="2015-10-13T06:53:41-07:00" class="action-date">Oct '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>thanks, that really helped me</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="24463" data-cf-modified-fff1e3ca7235efe14fa4878b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="24463" data-cf-modified-fff1e3ca7235efe14fa4878b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="8925" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

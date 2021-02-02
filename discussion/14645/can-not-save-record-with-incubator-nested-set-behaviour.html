@@ -1,0 +1,403 @@
+---
+layout: default
+title: 'Can not save record with incubator nested set behaviour - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Can not save record with incubator nested set behaviour</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2849/esoftcard" class="user-moderator-N"><span itemprop="name">esoftcard</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-10-30T09:36:44-07:00">Oct '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-10-30T09:36:44-07:00">Oct '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>484</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/bf4ebce50563f92ce8cb58ea29d248be?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2849/esoftcard" class="user-moderator-N"><span itemprop="name">esoftcard</span></a></span>
+                <span class="karma">6.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C14645" href="#C14645">
+        <time class="action-date">Oct '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I use incubator nested set behaviour to create a category </p>
+<p>I have setup nestedset.php:</p>
+<pre><code class="language-php">private $hasManyRoots = true;</code></pre>
+<p>and create category.php model like this: </p>
+<pre><code class="language-php">class Category extends Model
+{
+    public $id;
+    public $root;
+    public $slug;
+    public $level;
+    public $lft;
+    public $rgt;
+    public $title;
+
+    public function getSource()
+    {
+        return "category";
+    }
+
+    public function initialize()
+    {
+        $this-&gt;addBehavior(new NestedSetBehavior([
+            'rootAttribute'  =&gt; 'root',
+            'leftAttribute'  =&gt; 'lft',
+            'rightAttribute' =&gt; 'rgt',
+            'levelAttribute' =&gt; 'level',
+        ]));
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getId()
+    {
+        return $this-&gt;id;
+    }
+
+    /**
+     * @param mixed $id
+     */
+    public function setId($id)
+    {
+        $this-&gt;id = $id;
+    }
+
+    /**
+     * @return string
+     */
+    public static function getRoots()
+    {
+        return self::find('lft = 1');
+    }
+
+    public static function getDescendants()
+    {
+        $category = Categories::findFirst(lft);
+        $descendants = $category-&gt;descendants();
+        return $this-&gt;descendants;
+    }
+
+    public static function getChildren()
+    {
+        $category = Categories::findFirst(lft);
+        $children = $category-&gt;children();
+        return $this-&gt;children;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getLevel()
+    {
+        return $this-&gt;level;
+    }
+
+    /**
+     * @param mixed $depth
+     */
+    public function setLevel($level)
+    {
+        $this-&gt;level = $level;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getLft()
+    {
+        return $this-&gt;lft;
+    }
+
+    /**
+     * @param mixed $left_key
+     */
+    public function setLft($lft)
+    {
+        $this-&gt;lft = $lft;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getRgt()
+    {
+        return $this-&gt;rgt;
+    }
+
+    /**
+     * @param mixed $right_key
+     */
+    public function setRgt($rgt)
+    {
+        $this-&gt;rgt = $rgt;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getSlug()
+    {
+        return $this-&gt;slug;
+    }
+
+    /**
+     * @param mixed $slug
+     */
+    public function setSlug($slug)
+    {
+        $this-&gt;slug = $slug;
+    }
+
+}</code></pre>
+<p>and CategoryController like this: </p>
+<pre><code class="language-php">public function addAction()
+    { 
+         if ($this-&gt;request-&gt;isPost()) {
+                $category = new Category([
+                    'title' =&gt; $this-&gt;request-&gt;getPost('title'),
+                    'position' =&gt; $this-&gt;request-&gt;getPost('position', 'int'),
+                     'parent_id' =&gt; $this-&gt;request-&gt;getPost('parentid', 'int'),
+                     'slug' =&gt; PhSlug::generate($this-&gt;request-&gt;getPost('title'), "-"),
+                ]);
+
+             //Save data
+            if (empty($data-&gt;parent_id)){
+                $category-&gt;saveNode();
+            } else {
+                $node = Category::findOne($data-&gt;parent_id);
+             $category-&gt;appendTo($node);
+          }
+
+         $this-&gt;dispatcher-&gt;forward([
+            'Controller' =&gt; 'category',
+            'action' =&gt; 'index'
+            ]);
+    }
+</code></pre>
+<p>But the record isn't created. Can anybody help me please</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-775ca9d66089ec41d650c2ab-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-775ca9d66089ec41d650c2ab-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c0ce8f5e133750a4dfea4712e533a178?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/15/le51" class="user-moderator-N"><span itemprop="name">le51</span></a>        </span>
+        <br>
+
+        <span class="karma">43.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C42365" href="#C42365">
+                <time itemprop="dateCreated" datetime="2016-10-31T10:54:50-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi,</p>
+<p>I haven't used the nested set behavior since phalcon 3 is out there. Maybe it is related to that, because with version 2 of phalcon, it was working great.</p>
+<p>Can you provide some debugging info (webserver logs,  database logs - see here for that: <a href="https://docs.phalcon.io/en/latest/reference/db.html#logging-sql-statements">https://docs.phalcon.io/en/latest/reference/db.html#logging-sql-statements</a>) ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="42365" data-cf-modified-775ca9d66089ec41d650c2ab-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="42365" data-cf-modified-775ca9d66089ec41d650c2ab-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c0ce8f5e133750a4dfea4712e533a178?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/15/le51" class="user-moderator-N"><span itemprop="name">le51</span></a>        </span>
+        <br>
+
+        <span class="karma">43.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C42963" href="#C42963">
+                <time itemprop="dateCreated" datetime="2016-11-15T16:13:35-07:00" class="action-date">Nov '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi again,</p>
+<p>I've found a couple of minutes to spend on that problem. And this work:</p>
+<pre><code class="language-php">
+// Category Model
+
+&lt;?php 
+use Phalcon\Mvc\Model\Behavior\NestedSet as NestedSetBehavior; // don't you forget that ???
+
+class Category extends Phalcon\Mvc\Model
+{
+
+    public $id;
+    public $root;
+    public $level;
+    public $lft;
+    public $rgt;
+    public $title;
+
+    public function getSource()
+    {
+        return "category";
+    }
+
+    public function initialize()
+    {
+        $this-&gt;addBehavior(new NestedSetBehavior([
+            'rootAttribute'  =&gt; 'root',
+            'leftAttribute'  =&gt; 'lft',
+            'rightAttribute' =&gt; 'rgt',
+            'levelAttribute' =&gt; 'level',
+        ]));
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getId()
+    {
+        return $this-&gt;id;
+    }
+
+    /**
+     * @param mixed $id
+     */
+    public function setId($id)
+    {
+        $this-&gt;id = $id;
+    }
+
+    /**
+     * @return string
+     */
+    public static function getRoots()
+    {
+        return self::find('lft = 1');
+    }
+
+    public static function getDescendants()
+    {
+        $category = Categories::findFirst(lft);
+        $descendants = $category-&gt;descendants();
+        return $this-&gt;descendants;
+    }
+
+    public static function getChildren()
+    {
+        $category = Categories::findFirst(lft);
+        $children = $category-&gt;children();
+        return $this-&gt;children;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getLevel()
+    {
+        return $this-&gt;level;
+    }
+
+    /**
+     * @param mixed $depth
+     */
+    public function setLevel($level)
+    {
+        $this-&gt;level = $level;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getLft()
+    {
+        return $this-&gt;lft;
+    }
+
+    /**
+     * @param mixed $left_key
+     */
+    public function setLft($lft)
+    {
+        $this-&gt;lft = $lft;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getRgt()
+    {
+        return $this-&gt;rgt;
+    }
+
+    /**
+     * @param mixed $right_key
+     */
+    public function setRgt($rgt)
+    {
+        $this-&gt;rgt = $rgt;
+    }
+}
+?&gt;
+
+// controller action
+
+        $category1 = new Category([
+            'title' =&gt; 'category 1',
+        ]);
+        $category1-&gt;saveNode();
+
+        $node = Category::findFirst();
+        $category = new Category([
+            'title' =&gt; 'category 2',
+        ]);
+        $category-&gt;appendTo($node);
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="42963" data-cf-modified-775ca9d66089ec41d650c2ab-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="42963" data-cf-modified-775ca9d66089ec41d650c2ab-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="14645" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

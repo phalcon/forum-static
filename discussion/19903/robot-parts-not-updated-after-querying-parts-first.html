@@ -1,0 +1,290 @@
+---
+layout: default
+title: 'Robot parts not updated after querying parts first - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Robot parts not updated after querying parts first</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/12521/gwijnja" class="user-moderator-N"><span itemprop="name">Gerben Wijnja</span></a></span>
+            <time itemprop="dateCreated" datetime="2019-07-31T03:30:33-07:00">Jul '19</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2019-07-31T03:30:33-07:00">Jul '19</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '19</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>235</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/529d24c4191be2037fab30929495cc63?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/12521/gwijnja" class="user-moderator-N"><span itemprop="name">Gerben Wijnja</span></a></span>
+                <span class="karma">1.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C19903" href="#C19903">
+        <time class="action-date">Jul '19</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm confused. Please have a look at the code below. It's the default robots/parts setup, with a hasManyToMany from robots to parts. I can add parts to a robot just fine. But if I query the parts just before adding new parts, nothing happens. I commented the code to illustrate what goes wrong. I'm not sure if this is expected behaviour or a bug related to i.e. the Model's dirtyState.</p>
+<p>The models are stored in MySQL tables with cascading foreign keys. Here are the 3 model classes:</p>
+<p>These are the model classes and my test code:</p>
+<pre><code class="language-php">&lt;?php
+
+class Robot extends \Phalcon\Mvc\Model
+{
+    public $id;
+    public $name;
+
+    public function initialize()
+    {
+        $this-&gt;setSource('robots');
+        $this-&gt;hasManyToMany('id', RobotsParts::class, 'robot_id', 'part_id', Part::class, 'id', ['alias' =&gt; 'parts']);
+    }
+}</code></pre>
+<pre><code class="language-php">&lt;?php
+
+class RobotsParts extends \Phalcon\Mvc\Model
+{
+    public $id;
+    public $robot_id;
+    public $part_id;
+}</code></pre>
+<pre><code class="language-php">&lt;?php
+
+class Part extends \Phalcon\Mvc\Model
+{
+    public $id;
+    public $name;
+
+    public function initialize()
+    {
+        $this-&gt;setSource('parts');
+    }
+}</code></pre>
+<pre><code class="language-php">&lt;?php
+
+use Phalcon\Cli\Task;
+
+class MainTask extends Task
+{
+    public function initAction()
+    {
+        Robot::find()-&gt;delete();
+        Part::find()-&gt;delete();
+        // RobotsParts has cascading foreign keys,
+        // so they will be deleted by MySQL.
+
+        $part1 = new Part;
+        $part1-&gt;name = "arm";
+
+        $part2 = new Part;
+        $part2-&gt;name = "leg";
+
+        $robot = new Robot;
+        $robot-&gt;name = "bob";
+        $robot-&gt;parts = [$part1, $part2];
+        $robot-&gt;save(); // Works as expected
+    }
+
+    public function addAction()
+    {
+        $part3 = new Part;
+        $part3-&gt;name = "hand";
+
+        $part4 = new Part;
+        $part4-&gt;name = "foot";
+
+        $robot = Robot::findFirstByName("bob");
+        $robot-&gt;parts = [$part3, $part4];
+        $robot-&gt;save(); // Works as expected, Bob now has 4 parts.
+    }
+
+    // Basically the same as addAction()
+    public function bugAction()
+    {
+        $part5 = new Part;
+        $part5-&gt;name = "finger";
+
+        $part6 = new Part;
+        $part6-&gt;name = "toe";
+
+        $robot = Robot::findFirstByName("bob");
+        $temp = $robot-&gt;parts; // Query the parts, for some reason. Not used here.
+
+        $robot-&gt;parts = [$part5, $part6];
+        var_dump($robot-&gt;save()); // Returns true, but nothing is added to the db.
+
+        foreach ($robot-&gt;getMessages() as $message) {
+            printf("%s\n", $message); // No messages either...
+        }
+    }
+
+    public function testAction()
+    {
+        $this-&gt;initAction();
+        $this-&gt;addAction();
+        $this-&gt;bugAction();
+
+        $robot = Robot::findFirstByName("bob");
+        foreach ($robot-&gt;parts as $part) {
+            printf("%s (id %d)\n", $part-&gt;name, $part-&gt;id);
+        }
+    }
+}</code></pre>
+<pre><code class="language-bash">$ php app/cli.php test
+/home/gerben/public_html/link/app/tasks/MainTask.php:52:
+bool(true)
+arm (id 68)
+leg (id 69)
+hand (id 70)
+foot (id 71)</code></pre>
+<p>Why are the $part5 and $part6 ignored? Is this a bug or expected behavior?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-262a1a8fee7591783a3a2454-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-262a1a8fee7591783a3a2454-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d01ce04a6be1a8b86c3546969d241bd2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1632/ruudboon" class="user-moderator-N"><span itemprop="name">Ruud Boon</span></a>        </span>
+        <br>
+
+        <span class="karma">10.1k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C60561" href="#C60561">
+                <time itemprop="dateCreated" datetime="2019-07-31T04:54:12-07:00" class="action-date">Jul '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think I saw this behaviour before maybe this indeed a bug with the magic settters. Could you try getting the relations with getRelated(‘parts’) ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60561" data-cf-modified-262a1a8fee7591783a3a2454-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60561" data-cf-modified-262a1a8fee7591783a3a2454-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/529d24c4191be2037fab30929495cc63?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/12521/gwijnja" class="user-moderator-N"><span itemprop="name">Gerben Wijnja</span></a>        </span>
+        <br>
+
+        <span class="karma">1.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C60563" href="#C60563">
+                <time itemprop="dateCreated" datetime="2019-07-31T05:29:47-07:00" class="action-date">Jul '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks, that works indeed, so at least I can continue with my project now. But it feels a bit like a workaround...</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60563" data-cf-modified-262a1a8fee7591783a3a2454-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60563" data-cf-modified-262a1a8fee7591783a3a2454-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d01ce04a6be1a8b86c3546969d241bd2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1632/ruudboon" class="user-moderator-N"><span itemprop="name">Ruud Boon</span></a>        </span>
+        <br>
+
+        <span class="karma">10.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C60565" href="#C60565">
+                <time itemprop="dateCreated" datetime="2019-07-31T05:38:54-07:00" class="action-date">Jul '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes, this should be adresssed. Would you mind opening an issue in <a href="https://github.com/phalcon/cphalcon/issues">github</a> with these examples?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60565" data-cf-modified-262a1a8fee7591783a3a2454-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60565" data-cf-modified-262a1a8fee7591783a3a2454-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/529d24c4191be2037fab30929495cc63?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/12521/gwijnja" class="user-moderator-N"><span itemprop="name">Gerben Wijnja</span></a>        </span>
+        <br>
+
+        <span class="karma">1.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="60567" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '19</span>
+              </span><br/><a name="C60567" href="#C60567">
+                <time itemprop="dateCreated" datetime="2019-07-31T05:51:07-07:00" class="action-date">Jul '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Done: <a href="https://github.com/phalcon/cphalcon/issues/14270">https://github.com/phalcon/cphalcon/issues/14270</a></p>
+<p>Thanks for helping out Ruud.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60567" data-cf-modified-262a1a8fee7591783a3a2454-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60567" data-cf-modified-262a1a8fee7591783a3a2454-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d01ce04a6be1a8b86c3546969d241bd2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1632/ruudboon" class="user-moderator-N"><span itemprop="name">Ruud Boon</span></a>        </span>
+        <br>
+
+        <span class="karma">10.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C60571" href="#C60571">
+                <time itemprop="dateCreated" datetime="2019-07-31T12:38:47-07:00" class="action-date">Jul '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>anytime and thnx for reporting</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60571" data-cf-modified-262a1a8fee7591783a3a2454-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60571" data-cf-modified-262a1a8fee7591783a3a2454-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="19903" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

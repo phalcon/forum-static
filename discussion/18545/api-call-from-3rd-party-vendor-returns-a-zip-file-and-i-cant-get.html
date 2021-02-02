@@ -1,0 +1,311 @@
+---
+layout: default
+title: 'API call from 3rd party vendor returns a ZIP file, and I can&#039;t get it to unzip and parse in Phalcon - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">API call from 3rd party vendor returns a ZIP file, and I can&#039;t get it to unzip and parse in Phalcon</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/6439/driscojs" class="user-moderator-N"><span itemprop="name">driscojs</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-07-10T06:15:18-07:00">Jul '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-07-10T06:15:18-07:00">Jul '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>567</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/a5b43087f87fb8c04b5da94d30c489f2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/6439/driscojs" class="user-moderator-N"><span itemprop="name">driscojs</span></a></span>
+                <span class="karma">6.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C18545" href="#C18545">
+        <time class="action-date">Jul '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm connecting to an API to grab a ZIP, which contains JSON files. The vendor provides PHP code to connect, grab the ZIP, open it, and parse the JSON within. But I can't get it to work in Phalcon.  Below is the code I'm using. It gets the ZIP, and Postman confirms things like my token, etc.I'm setting $token, etc, just left them out here. I suspect, but I'm not sure, that the issue might be the path to save the json, &quot;files/myfolder&quot;?</p>
+<pre><code class="language-php">&lt;?php
+
+use Phalcon\Mvc\View;
+
+class ReportController extends ControllerBase
+{
+
+    public function indexAction()
+    {
+
+      $projectName = "project+name";
+      $token = "myAPItoken";
+
+      $url = "https://api.awrcloud.com/v2/get.php?action=get_dates&amp;token=" . $token . "&amp;project=" . $projectName;
+
+      $response = json_decode(file_get_contents($url), true);
+
+      $dates = $response["details"]["dates"]; // date and search depth arrays
+
+      foreach ($dates as $dateAndDepth)
+      {
+          $date = $dateAndDepth["date"];
+          $depth = $dateAndDepth["depth"];
+
+          $url = "https://api.awrcloud.com/get.php?action=list&amp;project=" . $projectName . "&amp;date=" . $date . "&amp;token=" . $token . "&amp;compression=zip";
+          $rankingResultsResponse = file_get_contents($url);
+
+          $responseRows = explode("\n", $rankingResultsResponse);
+
+          if ($responseRows[0] != "OK")
+          {
+              echo "No results for date: " . $date;
+              continue;
+          }
+
+          $dateFilesCount = $responseRows[1];
+          if ($dateFilesCount == 0)
+          {
+              continue;
+          }
+
+          for ($i = 0; $i &lt; $dateFilesCount; $i++)
+          {
+              $urlRequest = $responseRows[2 + $i];
+              $urlHandle = fopen($urlRequest, 'r');
+
+              $tempZip = fopen("tempfile.zip", "w");
+
+              while (!feof($urlHandle))
+              {
+                  $readChunk = fread($urlHandle, 1024 * 8);
+                  fwrite($tempZip, $readChunk);
+              }
+              fclose($tempZip);
+              fclose($urlHandle);
+
+              $pathToExtractedJson = "files/myfolder";
+
+              $zip = new ZipArchive;
+              $res = $zip-&gt;open("tempfile.zip");
+
+              if ($res === FALSE)
+              {
+                  echo "Could not extract JSON files from the zip archive";
+                  continue;
+              }
+
+              $zip-&gt;extractTo($pathToExtractedJson);
+              $zip-&gt;close();
+
+              $dir_handle = opendir($pathToExtractedJson);
+
+              while (false !== ($entry = readdir($dir_handle)))
+              {
+                  if ($entry == ".." || $entry == ".")
+                  {
+                      continue;
+                  }
+
+                  $rankings = json_decode(file_get_contents($pathToExtractedJson . $entry), true); // the json file contains nested json objects, make sure you use associative arrays
+
+                  echo "";
+                  echo "Search Engine: " . $rankings["searchengine"];
+                  echo "Search Depth: " . $rankings["depth"];
+                  echo "Location: " . $rankings["location"];
+                  echo "Keyword: " . $rankings["keyword"];
+
+                  $rank_data_array = $rankings["rankdata"];
+                  foreach ($rank_data_array as $rank_data)
+                  {
+                      echo "&lt;br/&gt;" . $rank_data["position"] . ". " . $rank_data["url"] . " " . $rank_data["typedescription"] . " result on page " . $rank_data["page"];
+                  }
+              }
+          }
+      }
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-75012cf406bc79f0fec1c763-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-75012cf406bc79f0fec1c763-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C56593" href="#C56593">
+                <time itemprop="dateCreated" datetime="2018-07-10T07:14:09-07:00" class="action-date">Jul '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>hi<a href="https://forum.phalcon.io/user/0/driscojs"> @driscojs</a> what is the error that is showing? do you have a view file related with this action?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="56593" data-cf-modified-75012cf406bc79f0fec1c763-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="56593" data-cf-modified-75012cf406bc79f0fec1c763-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a5b43087f87fb8c04b5da94d30c489f2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6439/driscojs" class="user-moderator-N"><span itemprop="name">driscojs</span></a>        </span>
+        <br>
+
+        <span class="karma">6.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C56593"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Emilio Degiovanni                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C56595" href="#C56595">
+                <time itemprop="dateCreated" datetime="2018-07-10T07:25:15-07:00" class="action-date">Jul '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I can't get much to show. I disabled the view, and was trying to var_dump any kind of result. If I var_dump($res) right after I open the $zip, I get: int(9)</p>
+<p>If I var_dump($zip-&gt;extractTo($pathToExtractedJson));, I get: bool(false);</p>
+<p>I suspect, although I can't be sure, that the extractTo is failing ot create the extracted files. Permissions on the destination folder are 775. But I don't know if I'm setting the path correctly for Phalcon. I tried multiple permutations, like APP_PATH . &quot;/../public/files/myfolder&quot;, &quot;/files/myfolder&quot;, &quot;files/myfolder&quot;, etc.</p>
+<blockquote>
+<p>hi<a href="https://forum.phalcon.io/user/0/driscojs"> @driscojs</a> what is the error that is showing? do you have a view file related with this action?</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="56595" data-cf-modified-75012cf406bc79f0fec1c763-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="56595" data-cf-modified-75012cf406bc79f0fec1c763-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C56597" href="#C56597">
+                <time itemprop="dateCreated" datetime="2018-07-10T09:57:46-07:00" class="action-date">Jul '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>you get a <code>9</code>because the file doens't exists <code>ZipArchive::ER_NOENT</code>.  Check paths and permissions</p>
+<p>Good luck</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="56597" data-cf-modified-75012cf406bc79f0fec1c763-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="56597" data-cf-modified-75012cf406bc79f0fec1c763-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a5b43087f87fb8c04b5da94d30c489f2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6439/driscojs" class="user-moderator-N"><span itemprop="name">driscojs</span></a>        </span>
+        <br>
+
+        <span class="karma">6.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C56599" href="#C56599">
+                <time itemprop="dateCreated" datetime="2018-07-10T10:03:27-07:00" class="action-date">Jul '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It's something about the folder I'm targeting; I just got it to spit out the ZIP, then the JSOn files inside to the temp folder....both Files/myfolder and temp are 775, though....</p>
+<p>I had it send the ZIP to /html/myapp/public/temp, and it created it fine. I changed the destination for the extrated files to $pathToExtractedJson = &quot;temp&quot;;, and it extracted them there. I'd really like to put them in files/myfolder, any ideas?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="56599" data-cf-modified-75012cf406bc79f0fec1c763-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="56599" data-cf-modified-75012cf406bc79f0fec1c763-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a5b43087f87fb8c04b5da94d30c489f2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6439/driscojs" class="user-moderator-N"><span itemprop="name">driscojs</span></a>        </span>
+        <br>
+
+        <span class="karma">6.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C56597"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Emilio Degiovanni                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C56601" href="#C56601">
+                <time itemprop="dateCreated" datetime="2018-07-10T10:07:18-07:00" class="action-date">Jul '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I cross-posted an update that was not a reply to you, so please see that, but I did get them to extract to temp, instead of files/myfolder. Can't figure out how to get them into files yet. Confirmed the ZIP exists by putting into temp first, them attempting the extract from there (figured phalcon might have the &quot;source&quot; zip in a weird place, so &quot;saving&quot; it ot temp confirms it downloaded, etc ok)</p>
+<blockquote>
+<p>you get a <code>9</code>because the file doens't exists <code>ZipArchive::ER_NOENT</code>.  Check paths and permissions</p>
+<p>Good luck</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="56601" data-cf-modified-75012cf406bc79f0fec1c763-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="56601" data-cf-modified-75012cf406bc79f0fec1c763-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a5b43087f87fb8c04b5da94d30c489f2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6439/driscojs" class="user-moderator-N"><span itemprop="name">driscojs</span></a>        </span>
+        <br>
+
+        <span class="karma">6.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C56597"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Emilio Degiovanni                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C56603" href="#C56603">
+                <time itemprop="dateCreated" datetime="2018-07-10T10:30:19-07:00" class="action-date">Jul '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I &quot;kind of&quot; got it. I created another folder in the public folder, called myfolder (/public/myfolder). I can save the zip and it's extracted contents there. I think it was auto-removing files I saved to files/myfolder, but I can't figure out why. Thank you for the responses.</p>
+<blockquote>
+<p>you get a <code>9</code>because the file doens't exists <code>ZipArchive::ER_NOENT</code>.  Check paths and permissions</p>
+<p>Good luck</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="56603" data-cf-modified-75012cf406bc79f0fec1c763-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="56603" data-cf-modified-75012cf406bc79f0fec1c763-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="18545" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

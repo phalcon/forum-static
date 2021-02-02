@@ -1,0 +1,136 @@
+---
+layout: default
+title: 'Cherokee and Phalcon INVO tutorial - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Cherokee and Phalcon INVO tutorial</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1092/bzmac" class="user-moderator-N"><span itemprop="name">bzmac</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-02-17T13:28:48-07:00">Feb '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-02-17T13:28:48-07:00">Feb '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Feb '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>583</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/38927acd3fdde3b05bff87ce4705cf82?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1092/bzmac" class="user-moderator-N"><span itemprop="name">bzmac</span></a></span>
+                <span class="karma">562</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1627" href="#C1627">
+        <time class="action-date">Feb '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I just got the INVO tutorial to work with the Cherokee webserver on Linux Mint (Ubuntu), and figured I'd share my observations and tweaks.</p>
+<pre><code class="language-html">- My user is part of the www-data group on my system, so to mess with directories and files under www
+  I just pay attention to permissions.
+- My system has php5-fpm installed instead of php5-fastcgi
+- Installation of Cherokee proceeded per the Chero docs, no issues. Hit me up if you want info on how I did it.
+- I chose to install the INVO codebase from GitHub in my /var/www directory, in a sub called test.</code></pre>
+<p>In a terminal,</p>
+<pre><code class="language-bash">sudo mkdir -p /var/www/test
+sudo chown -R www-data:www-data /var/www/test
+sudo chmod -R 775 /var/www/test
+cd test
+git clone https://github.com/phalcon/invo.git
+cd /var/www/test/invo</code></pre>
+<p>In a browser using the cherokee-admin panel, set up a virtual server. Follow the phalcon docs (<a href="http://docs.phalcon.io/en/latest/reference/cherokee.html">http://docs.phalcon.io/en/latest/reference/cherokee.html</a>), but with a few changes. Without the changes, you'll serve only index.php for any page and no controllers will be properly invoked; further, you'll have trouble serving CSS, javascript, and other included files. at least, that's what happened to me. :)</p>
+<pre><code class="language-html">Server Name: test
+
+test-&gt;Basics-&gt;Document Root: /var/www/test/invo
+
+test-&gt;Behavior Rules (under Rule Management, top to bottom, the order is important):
+ --Extensions php (per the phalcon docs, no issues or changes), NON FINAL
+ --File exists (per the phalcon docs, no issues or changes), FINAL
+ --Default &lt;-- THIS IS WHERE THE CHANGES ARE
+
+test-&gt;Behavior Rules-&gt;Default-&gt;Handler (type is Redirection, per the docs)-&gt;Rule list
+  (top to bottom, the order is important)
+  Type           Regular Expression                                         Substitution                      
+-----------------------------------------------------------------------------------------------
+Internal         \/(.+)\/(css|img|js|flv|swf|download)\/(.+)$"         public$0
+Internal         ^(.*)$                                                public/index.php</code></pre>
+<p>Finally, in /var/www/test/invo.public/index.php make the following change, under the &quot;Register a user component&quot; section:</p>
+<pre><code class="language-php">$application = new \Phalcon\Mvc\Application();
+$application-&gt;setDI($di);
+echo $application-&gt;handle()-&gt;getContent();</code></pre>
+<p>becomes</p>
+<pre><code class="language-php">$application = new \Phalcon\Mvc\Application();
+$application-&gt;setDI($di);
+if (!empty($_SERVER['REQUEST_URI'])) {
+    $pathInfo = $_SERVER['REQUEST_URI'];
+} else {
+    $pathInfo = '/';
+}
+echo $application-&gt;handle($pathInfo)-&gt;getContent();</code></pre>
+<p>I found that last bit on Stack Overflow; I don't know why we need it, but I'll find out RSN.</p>
+<p>Of course, if I've done something idiotic (entirely probable) feel free to chime in and correct me!</p>
+<p>Now that I've got it working, I'm looking forward to delving deeper into this cool framework and more participation in the community.</p>
+<p>Cheers!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-38d467a3bfd3e3853f17bac2-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-38d467a3bfd3e3853f17bac2-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C5577" href="#C5577">
+                <time itemprop="dateCreated" datetime="2014-02-18T11:19:18-07:00" class="action-date">Feb '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks for contributing</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="5577" data-cf-modified-38d467a3bfd3e3853f17bac2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="5577" data-cf-modified-38d467a3bfd3e3853f17bac2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1627" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

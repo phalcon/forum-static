@@ -1,0 +1,133 @@
+---
+layout: default
+title: 'Creating a template for a Module class - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/25/configuration">Configuration</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Creating a template for a Module class</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2391/BadLuckBurt" class="user-moderator-N"><span itemprop="name">BadLuckBurt</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-09-30T07:02:47-07:00">Sep '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-09-30T07:02:47-07:00">Sep '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>605</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/92baeb391922c7aba36de5d65677e683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2391/BadLuckBurt" class="user-moderator-N"><span itemprop="name">BadLuckBurt</span></a></span>
+                <span class="karma">2.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3578" href="#C3578">
+        <time class="action-date">Sep '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi all,</p>
+<p>I'm currently building a new module-based CMS at work using the Phalcon framework. I've ran into a problem which I've managed to solve but I would like to know if I've done it the 'right' way, if there is any. I'll explain:</p>
+<p>I started out with</p>
+<pre><code>Class Module implements \Phalcon\Mvc\ModuleDefinitionInterface</code></pre>
+<p>but I soon discovered this led to code repetition in new modules when it came to registerServices since I'm using namespaces for my modules and it was impossible to pass the namespace as a parameter meaning I'd have to copy the registerServices function for every new module I create.</p>
+<p>looked at ModuleDefinitionInterface and noticed it only has two methods, registerAutoloader and registerServices so I've decided to create my own class, ModuleTemplate which implements it's own registerServices with two extra parameters. The reason for this is that the  code in registerServices won't change much at all, apart from the namespace so I wanted a template class that I can use to extend new modules with. </p>
+<p>I ended up with the code below:</p>
+<pre><code>namespace Core;
+class ModuleTemplate {
+        public function registerServices($oDi, $sNameSpace = '', $bCore = true)
+        {
+            //Registering a dispatcher
+            $oDispatcher = new \Phalcon\Mvc\Dispatcher();
+            //Check if the module's controller has been extended, if not, fall back to the default controller
+            if(class_exists('\App\\'.$sNameSpace.'\Controllers\\'.$sNameSpace.'Controller') === true) {
+                $oDispatcher-&gt;setDefaultNamespace('\App\\'.$sNameSpace.'\Controllers');
+            } else {
+                $oDispatcher-&gt;setDefaultNamespace('\App\\'.$sNameSpace.'\Controllers\\'.$this-&gt;sFallback);
+            }
+            $oDi-&gt;set('dispatcher', $oDispatcher);
+
+            //Registering the view component
+            $sNameSpaceLower = strtolower($sNameSpace);
+            if($bCore === true) {
+                $dir = __DIR__.'/views/';
+            } else {
+                $dir = MODULE_DIR.'/'.$sNameSpaceLower.'/views/';
+            }
+            $oView = new \Phalcon\Mvc\View\Simple();
+            $oView-&gt;setViewsDir($dir);
+            $oView-&gt;registerEngines(array(
+                ".volt" =&gt; 'Phalcon\Mvc\View\Engine\Volt'
+            ));
+            $oDi-&gt;set('view', $oView);
+        }
+}</code></pre>
+<p>The class above is part of the CMS core which is outside of the modules folder and any new module extends this through:</p>
+<pre><code>  class Module extends \Core\ModuleTemplate {
+      public function registerServices($oDi, $sNameSpace = '', $bCore = false) {
+          parent::registerServices($oDi,__NAMESPACE__,false);
+      }
+  }</code></pre>
+<p>I've tested the code and everything works but since I've only sparred with Phalcon for about two weeks I can't help but wonder if I went about this the right way?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-1e02a20b0c2cd44a455d0248-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-1e02a20b0c2cd44a455d0248-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/92baeb391922c7aba36de5d65677e683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2391/BadLuckBurt" class="user-moderator-N"><span itemprop="name">BadLuckBurt</span></a>        </span>
+        <br>
+
+        <span class="karma">2.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12681" href="#C12681">
+                <time itemprop="dateCreated" datetime="2014-10-30T08:06:01-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Not that I was really expecting an answer but in case anyone was wondering, I'm a bit further in my project now and the above solution doesn't seem to have any problems or drawbacks to it. I can instantiate the controllers that use the above code anywhere in my application and they will always use the correct Views-folder.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12681" data-cf-modified-1e02a20b0c2cd44a455d0248-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12681" data-cf-modified-1e02a20b0c2cd44a455d0248-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3578" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

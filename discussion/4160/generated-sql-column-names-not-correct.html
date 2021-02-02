@@ -1,0 +1,230 @@
+---
+layout: default
+title: 'Generated SQL column names not correct - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Generated SQL column names not correct</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2779/esunder" class="user-moderator-N"><span itemprop="name">Erik Sunderland</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-12-02T20:10:42-07:00">Dec '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-12-02T20:10:42-07:00">Dec '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>714</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/c4f97bf369712318c66cceda6944d023?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2779/esunder" class="user-moderator-N"><span itemprop="name">Erik Sunderland</span></a></span>
+                <span class="karma">748</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4160" href="#C4160">
+        <time class="action-date">Dec '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello, </p>
+<p>I am trying to set up a many-to-many relationship for two models in my project. However, I get an error that the column userId does not exist. I have not told it to userId for the column name anywhere. If I paste the raw sql from mysql log into a database tool and change the column names, it works fine. Why is Phalcon using camelcase instead of underscore_case?</p>
+<p>I have listed my three models with their defined relationships in initialize( ) below
+User Model</p>
+<pre><code>class User extends Model
+{
+public $id;
+public $uuid;
+public $signatureUuid;
+public $firstName;
+public $lastName;
+public $loginEmail;
+public $lastLogin;
+public $accountStatus;
+public $created;
+public $modified;
+
+public function columnMap()
+{
+    return array(
+        'id'                =&gt; 'id',
+        'uuid'              =&gt; 'uuid',
+        'signature_uuid'    =&gt; 'signatureUuid',
+        'login_email'       =&gt; 'loginEmail',
+        'first_name'        =&gt; 'firstName',
+        'last_name'         =&gt; 'lastName',
+        'last_login'        =&gt; 'lastLogin',
+        'account_status'    =&gt; 'accountStatus',
+        'created'           =&gt; 'created',
+        'modified'          =&gt; 'modified'
+    );
+}
+
+/**
+ * Initializes settings
+ */
+public function initialize()
+{
+    $this-&gt;hasManyToMany(
+        'id',
+        'Models\SaveForLaterItemModel',
+        'user_id', 'item_id',
+        'Models\ItemModel',
+        'id',
+        array('alias' =&gt; 'savedItems')
+    );
+
+    $this-&gt;skipAttributesOnUpdate(array(
+        'id',
+        'uuid',
+        'created'
+    ));
+}
+}</code></pre>
+<p>Item Model</p>
+<pre><code>class ItemModel extends Model
+{
+public $id;
+public $uuid;
+public $itemTypeId;
+public $name;
+public $description;
+public $created;
+public $modified;
+
+public function columnMap()
+{
+    return array(
+        'id'                        =&gt; 'id',
+        'uuid'                      =&gt; 'uuid',
+        'item_type_id'              =&gt; 'itemTypeId',
+        'name'                      =&gt; 'name',
+        'description'               =&gt; 'description',
+        'created'                   =&gt; 'created',
+        'modified'                  =&gt; 'modified'
+    );
+}
+
+/**
+ * Initializes settings
+ */
+public function initialize()
+{
+    $this-&gt;hasManyToMany(
+        'id',
+        'Models\SaveForLaterItemModel',
+        'item_id', 'user_id',
+        'Models\User',
+        'id',
+        array('alias' =&gt; 'users')
+    );
+}
+}</code></pre>
+<p>Third model, linking the other two together</p>
+<pre><code>class SaveForLaterItemModel extends Model
+{
+public $item_id;
+public $user_id;
+public $created;
+public $modified;
+
+public function columnMap()
+{
+    return array(
+        'item_id'                   =&gt; 'item_id',
+        'user_id'                   =&gt; 'user_id',
+        'created'                   =&gt; 'created',
+        'modified'                  =&gt; 'modified'
+    );
+}
+/**
+ * Initializes settings
+ */
+public function initialize()
+{
+    $this-&gt;belongsTo('item_id', 'Models\ItemModel', 'id');
+    $this-&gt;belongsTo('user_id', 'Models\User', 'id');
+
+    $this-&gt;skipAttributesOnUpdate(array(
+        'id',
+        'created'
+    ));
+}
+}</code></pre>
+<p>This is how I am using the relationship. I would like to find all items for a user:</p>
+<pre><code>$rows = User::findFirst()-&gt;getSavedItems();</code></pre>
+<p>Here is the resulting SQL from mysql.log:</p>
+<pre><code>40 Connect  <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="8bf9e4e4ffcbe7e4e8eae7e3e4f8ff">[email&#160;protected]</a> on foobar
+40 Query    SELECT `users`.`id`, `users`.`uuid`, `users`.`signature_uuid`, `users`.`first_name`, `users`.`last_name`, `users`.`login_email`, `users`.`account_status`, `users`.`last_login`, `users`.`created`, `users`.`modified` FROM `users` LIMIT 1
+40 Query    SELECT `items`.`id`, `items`.`uuid`, `items`.`item_type_id`, `items`.`name`, `items`.`description`, `items`.`created`, `items`.`modified` FROM `items` INNER JOIN `save_for_later_items` ON `save_for_later_items`.`itemId` = `items`.`id`  WHERE `save_for_later_items`.`userId` = '1'
+40 Quit</code></pre>
+<p>Here is the error that I am receiving:</p>
+<pre><code>"Server Error","_Debug":"SQLSTATE[42S22]: Column not found: 1054 Unknown column 'save_for_later_items.userId' in 'where clause'"</code></pre>
+<p>If I change the column names itemId and userId to be item_id and user_id (like I would expect because a) that is how the column map is setup and b) that is how the table is defined), and run the query through a sql db tool, it works fine...</p>
+<p>Why is Phalcon generating the incorrect column names?</p>
+<p>Thank you</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-bdbf7aef039c3cb663efb54a-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-bdbf7aef039c3cb663efb54a-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c4f97bf369712318c66cceda6944d023?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2779/esunder" class="user-moderator-N"><span itemprop="name">Erik Sunderland</span></a>        </span>
+        <br>
+
+        <span class="karma">748</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C13861" href="#C13861">
+                <time itemprop="dateCreated" datetime="2014-12-03T07:48:06-07:00" class="action-date">Dec '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Turns out we are using redis to cache the models metadata and that was causing the old names of the model properties to stick around.</p>
+<p>Solved with a redis cache flush.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13861" data-cf-modified-bdbf7aef039c3cb663efb54a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13861" data-cf-modified-bdbf7aef039c3cb663efb54a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4160" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

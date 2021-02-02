@@ -1,0 +1,337 @@
+---
+layout: default
+title: 'Model Composition - How to join when one model is part of another - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Model Composition - How to join when one model is part of another</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3576/rkeplin" class="user-moderator-N"><span itemprop="name">Rob</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-04-02T08:26:19-07:00">Apr '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-04-02T08:26:19-07:00">Apr '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Apr '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>710</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/05b196967e6d529da34c125a4567b641?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3576/rkeplin" class="user-moderator-N"><span itemprop="name">Rob</span></a></span>
+                <span class="karma">3.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6298" href="#C6298">
+        <time class="action-date">Apr '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have an Office model and an Address model.  The Office model <em>has an</em>  Address model.  Using a single query with a join, how can I retrieve the Office model that contains the Address information?</p>
+<p><strong>Address Model</strong></p>
+<pre><code class="language-php">&lt;?php
+namespace Domain\Model;
+
+use Library\Domain\AbstractModel; // extends Phalcon\Mvc\Model
+
+/**
+ * Address
+ *
+ * @package Domain\Model
+ */
+class Address extends AbstractModel
+{
+    /**
+     * @var integer
+     */
+    public $id;
+
+    /**
+     * @var integer
+     */
+    public $officeId;
+
+    /**
+     * @var string
+     */
+    public $streetAddress;
+
+    /**
+     * @var string
+     */
+    public $streetAddress2;
+
+    /**
+     * @var string
+     */
+    public $poBox;
+
+    /**
+     * @var string
+     */
+    public $city;
+
+    /**
+     * @var string
+     */
+    public $state;
+
+    /**
+     * @var integer
+     */
+    public $zip;
+
+    /**
+     * @var integer
+     */
+    public $zipPlus4;
+
+    /**
+     * Get the source table
+     *
+     * @return string
+     */
+    public function getSource()
+    {
+        return 'addresses';
+    }
+}</code></pre>
+<p><strong>Office Model</strong></p>
+<pre><code class="language-php">&lt;?php
+namespace Domain\Model;
+
+use Library\Domain\AbstractModel; // extends Phalcon\Mvc\Model
+
+/**
+ * Office
+ *
+ * @package Domain\Model
+ */
+class Office extends AbstractModel
+{
+    /**
+     * @var integer
+     */
+    public $id;
+
+    /**
+     * @var integer
+     */
+    public $companyId;
+
+    /**
+     * @var integer
+     */
+    public $regionId;
+
+    /**
+     * @var string
+     */
+    public $fax;
+
+    /**
+     * @var string
+     */
+    public $phone;
+
+    /**
+     * Setup once per application load
+     */
+    public function initialize()
+    {
+        $this-&gt;hasOne('id', '\Domain\Model\Address', 'officeId', array(
+            'alias' =&gt; 'address'
+        ));
+    }
+
+    /**
+     * Get the source table
+     *
+     * @return string
+     */
+    public function getSource()
+    {
+        return 'offices';
+    }
+}</code></pre>
+<p><strong>Office Mapper</strong></p>
+<pre><code class="language-php">&lt;?php
+namespace Domain\Mapper;
+
+use Library\Domain\AbstractMapper;
+use Library\Domain\Model\Collection;
+use Exception;
+
+/**
+ * OfficeMapper
+ *
+ * Retrieves and persists office models
+ *
+ * @package Domain\Mapper
+ */
+class OfficeMapper extends AbstractMapper
+{
+
+    /**
+     * Finds a office by ID
+     *
+     * @param id
+     * @return \Domain\Model\Office
+     */
+    public function findOneById($id)
+    {
+        $office = $this-&gt;getModelManager() // Returns instance of \Phalcon\Mvc\Model\Manager
+            -&gt;createBuilder()
+            -&gt;columns('[\Domain\Model\Office].*')
+            -&gt;from('\Domain\Model\Office')
+            -&gt;join('\Domain\Model\Address', '[\Domain\Model\Office].id = [\Domain\Model\Address].officeId')
+            -&gt;where('[\Domain\Model\Office].id = :id:', array('id' =&gt; $id))
+            -&gt;getQuery()
+            -&gt;getSingleResult();
+
+        var_dump($office); // I would like this to include $office-&gt;address information
+        var_dump($office-&gt;address-&gt;toArray()); // This displays the address information, but also creates another query
+        exit;
+
+        return $office;
+    }
+}</code></pre>
+<p>Ideally, I'd like the Office model to have address as a member field, and not just accessible via a magic getter.  Am I trying to force something that wasn't meant to be with the Phalcon ORM?  Below is what I would like my Office model to look like.</p>
+<pre><code class="language-php">class Office extends AbstractModel
+{
+    /**
+     * @var integer
+     */
+    public $id;
+
+    /**
+     * @var integer
+     */
+    public $companyId;
+
+    /**
+     * @var integer
+     */
+    public $regionId;
+
+    /**
+     * @var \Domain\Model\Address
+     */
+    public $address; // &lt;- I'd like this to be part of the model's definition
+
+    /**
+     * @var string
+     */
+    public $fax;
+
+    /**
+     * @var string
+     */
+    public $phone;
+
+     /**
+     * Setup once per application load
+     */
+    public function initialize()
+    {
+        $this-&gt;hasOne('id', '\Domain\Model\Address', 'officeId', array(
+            'alias' =&gt; 'address'
+        ));
+    }
+
+    /**
+     * Get the source table
+     *
+     * @return string
+     */
+    public function getSource()
+    {
+        return 'offices';
+    }
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-431ef9f66cac818856f53d6b-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-431ef9f66cac818856f53d6b-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/210/andresgutierrez" class="user-moderator-Y"><span itemprop="name">Andres Gutierrez</span></a>        </span>
+        <br>
+
+        <span class="karma">34.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C17036" href="#C17036">
+                <time itemprop="dateCreated" datetime="2015-04-02T08:28:47-07:00" class="action-date">Apr '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Just select the other model too:</p>
+<pre><code class="language-php">-&gt;columns('[Domain\Model\Office].*', '[Domain\Model\Address].*')
+-&gt;from('Domain\Model\Office')
+-&gt;join('Domain\Model\Address', '[\Domain\Model\Office].id = [\Domain\Model\Address].officeId')</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17036" data-cf-modified-431ef9f66cac818856f53d6b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17036" data-cf-modified-431ef9f66cac818856f53d6b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/05b196967e6d529da34c125a4567b641?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3576/rkeplin" class="user-moderator-N"><span itemprop="name">Rob</span></a>        </span>
+        <br>
+
+        <span class="karma">3.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C17040" href="#C17040">
+                <time itemprop="dateCreated" datetime="2015-04-02T08:42:10-07:00" class="action-date">Apr '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks for your reply.  This returns a Phalcon\Mvc\Model\Row composed of both a Domain\Model\Office and Domain\Model\Address as separate members of the Phalcon\Mvc\Model\Row.</p>
+<p>Although this does return the data for everything I need, I would like Domain\Model\Office to be returned with an Domain\Model\Address as a member field, since this object will be returned as a response to an API resource and needs to matchup with the API specs.</p>
+<p>It seems like the best way I can do this, is to create a business object for the Office which contains an Address as a member field, and can be populated from an Phalcon\Mvc\Model\Row object.  Any suggestions are welcome.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17040" data-cf-modified-431ef9f66cac818856f53d6b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17040" data-cf-modified-431ef9f66cac818856f53d6b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6298" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

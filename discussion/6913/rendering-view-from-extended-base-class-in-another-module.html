@@ -1,0 +1,284 @@
+---
+layout: default
+title: 'Rendering View from extended Base class in another module - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Rendering View from extended Base class in another module</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3685/mattvb91" class="user-moderator-N"><span itemprop="name">Matthias von Bargen</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-05-27T13:49:32-07:00">May '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-05-27T13:49:32-07:00">May '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>May '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>899</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/b52c43b0b233d4aac50998c0d2f13e9a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3685/mattvb91" class="user-moderator-N"><span itemprop="name">Matthias von Bargen</span></a></span>
+                <span class="karma">3.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6913" href="#C6913">
+        <time class="action-date">May '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi everyone,</p>
+<p>I have found some pieces of code that use a &quot;shared&quot; view but that is not exactly what I am after. Does anyone have piece of code that allows views to be rendered based on extended classes.</p>
+<p>For example:</p>
+<pre><code>    Modules/
+        - Base/
+            Views/
+                Index/
+                    - index.phtml
+
+        - Admin
+            Views/
+                Index/
+                    - </code></pre>
+<p>So in the example above if  I am currently running in an &quot;Admin&quot; controller which extends a Base controller and the view doesnt exist in the admin module that it will go one module down to check if the view exists there?</p>
+<p>So this could go multiple levels, Admin module extends Moderator module which extends base Module. </p>
+<p>Anyone have any suggestions as to how this would best be approached?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-1e9001716f290c7149a22d89-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-1e9001716f290c7149a22d89-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/47f389ac06cd3be6143a45057a9f8c05?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1533/pixiesky" class="user-moderator-N"><span itemprop="name">Andy Myers</span></a>        </span>
+        <br>
+
+        <span class="karma">10.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C18905" href="#C18905">
+                <time itemprop="dateCreated" datetime="2015-05-29T07:53:21-07:00" class="action-date">May '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Are you setting up a view component in your Module.php file?</p>
+<pre><code class="language-php">    /**
+     * Register specific services for the module
+     */
+    public function registerServices($di){
+
+        //Registering a dispatcher
+        $di-&gt;set('dispatcher', function() use (&amp;$di) {
+            # ... code here
+            return $dispatcher;
+        });
+
+        //Setting up the view component
+        $di-&gt;set('view', function() {
+
+            $view = new View();
+
+            $view-&gt;setViewsDir(MODULE_DIR . "admin" . DS . "views" . DS);
+
+            $view-&gt;registerEngines([
+                '.volt' =&gt; function($view, $di) {
+
+                    $volt = new VoltEngine($view, $di);
+
+                    $volt-&gt;setOptions([
+                        'compiledPath' =&gt; APP_DIR.'cache'.DS,
+                        'compiledSeparator' =&gt; '_'
+                    ]);
+
+                    return $volt;
+                },
+                '.phtml' =&gt; 'Phalcon\Mvc\View\Engine\Php'
+            ]);
+
+            return $view; 
+        }, true);
+    }
+</code></pre>
+<p>See also: <a href="http://docs.phalcon.io/en/latest/reference/applications.html#multi-module"><a href="http://docs.phalcon.io/en/latest/reference/applications.html#multi-module">http://docs.phalcon.io/en/latest/reference/applications.html#multi-module</a></a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="18905" data-cf-modified-1e9001716f290c7149a22d89-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="18905" data-cf-modified-1e9001716f290c7149a22d89-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b52c43b0b233d4aac50998c0d2f13e9a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3685/mattvb91" class="user-moderator-N"><span itemprop="name">Matthias von Bargen</span></a>        </span>
+        <br>
+
+        <span class="karma">3.0k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C18905"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/47f389ac06cd3be6143a45057a9f8c05?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Andy Myers                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C18931" href="#C18931">
+                <time itemprop="dateCreated" datetime="2015-05-30T06:57:13-07:00" class="action-date">May '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks for the reply Andy!</p>
+<p>Yes I am doing that. However at the moment that is restricting me to use the views that are ONLY within that module. If I have an admin controller that extends out of the Base module I would like to access the Base view if the admin view doesnt exist.</p>
+<blockquote>
+<p>Are you setting up a view component in your Module.php file?</p>
+<pre><code class="language-php">   /**
+    * Register specific services for the module
+    */
+   public function registerServices($di){
+
+       //Registering a dispatcher
+       $di-&gt;set('dispatcher', function() use (&amp;$di) {
+           # ... code here
+           return $dispatcher;
+       });
+
+       //Setting up the view component
+       $di-&gt;set('view', function() {
+
+           $view = new View();
+
+           $view-&gt;setViewsDir(MODULE_DIR . "admin" . DS . "views" . DS);
+
+           $view-&gt;registerEngines([
+               '.volt' =&gt; function($view, $di) {
+
+                   $volt = new VoltEngine($view, $di);
+
+                   $volt-&gt;setOptions([
+                       'compiledPath' =&gt; APP_DIR.'cache'.DS,
+                       'compiledSeparator' =&gt; '_'
+                   ]);
+
+                   return $volt;
+               },
+               '.phtml' =&gt; 'Phalcon\Mvc\View\Engine\Php'
+           ]);
+
+           return $view; 
+       }, true);
+   }
+</code></pre>
+<p>See also: <a href="http://docs.phalcon.io/en/latest/reference/applications.html#multi-module"><a href="http://docs.phalcon.io/en/latest/reference/applications.html#multi-module">http://docs.phalcon.io/en/latest/reference/applications.html#multi-module</a></a></p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="18931" data-cf-modified-1e9001716f290c7149a22d89-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="18931" data-cf-modified-1e9001716f290c7149a22d89-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/47f389ac06cd3be6143a45057a9f8c05?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1533/pixiesky" class="user-moderator-N"><span itemprop="name">Andy Myers</span></a>        </span>
+        <br>
+
+        <span class="karma">10.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C18944" href="#C18944">
+                <time itemprop="dateCreated" datetime="2015-05-30T16:29:51-07:00" class="action-date">May '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Oh right well I don't have code to do that but I have encountered a similar situation where I needed the view from a different module; so I have a method in some base controller which looks like this:</p>
+<pre><code class="language-php">        /**
+         * Use admin_view() to force the admin layout and templates.
+         */
+        protected function admin_view() {
+            $this-&gt;view-&gt;setViewsDir(MODULE_DIR . "other_module" . DS . "views" . DS);
+            $this-&gt;view-&gt;setTemplateAfter('admin');
+        }</code></pre>
+<p>Where I switch the location of my view directory using a <code>$this-&gt;admin_view()</code> within a controller. Maybe you could set up a component that manages such a system in which it falls back on to a 'base' location for a view.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="18944" data-cf-modified-1e9001716f290c7149a22d89-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="18944" data-cf-modified-1e9001716f290c7149a22d89-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/47f389ac06cd3be6143a45057a9f8c05?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1533/pixiesky" class="user-moderator-N"><span itemprop="name">Andy Myers</span></a>        </span>
+        <br>
+
+        <span class="karma">10.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="18945" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '15</span>
+              </span><br/><a name="C18945" href="#C18945">
+                <time itemprop="dateCreated" datetime="2015-05-30T16:32:23-07:00" class="action-date">May '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>All in all though you seem to be looking to acheive multiple shared views, see <a href="http://forum.phalcon.io/discussion/478/multi-module-shared-views-dual-location-"><a href="http://forum.phalcon.io/discussion/478/multi-module-shared-views-dual-location">http://forum.phalcon.io/discussion/478/multi-module-shared-views-dual-location</a>-</a> for a few examples on how to acheive this with the directory structure and / or the declaration of views.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="18945" data-cf-modified-1e9001716f290c7149a22d89-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="18945" data-cf-modified-1e9001716f290c7149a22d89-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b52c43b0b233d4aac50998c0d2f13e9a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3685/mattvb91" class="user-moderator-N"><span itemprop="name">Matthias von Bargen</span></a>        </span>
+        <br>
+
+        <span class="karma">3.0k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C18945"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/47f389ac06cd3be6143a45057a9f8c05?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Andy Myers                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C19723" href="#C19723">
+                <time itemprop="dateCreated" datetime="2015-06-19T14:46:18-07:00" class="action-date">Jun '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Just to follow up on this again I have managed to achieve somewhat the initial idea of what I was after:</p>
+<p><a href="https://github.com/phalcon/cphalcon/issues/10513#issuecomment-113649171">https://github.com/phalcon/cphalcon/issues/10513#issuecomment-113649171</a></p>
+<p>Thanks for the input!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="19723" data-cf-modified-1e9001716f290c7149a22d89-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="19723" data-cf-modified-1e9001716f290c7149a22d89-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6913" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,334 @@
+---
+layout: default
+title: 'Way to standardize results from \Phalcon\Mvc\Model\Manager? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Way to standardize results from \Phalcon\Mvc\Model\Manager?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3576/rkeplin" class="user-moderator-N"><span itemprop="name">Rob</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-03-10T09:24:25-07:00">Mar '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-03-10T09:24:25-07:00">Mar '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>573</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/05b196967e6d529da34c125a4567b641?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3576/rkeplin" class="user-moderator-N"><span itemprop="name">Rob</span></a></span>
+                <span class="karma">3.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C10741" href="#C10741">
+        <time class="action-date">Mar '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm working on an API, where consumers of the API are allowed to adjust which fields they would like returned in the response.  I'm finding that <code>\Phalcon\Mvc\Model\Manager::executeQuery()</code> will return something different, depending on the queried fields.  Is there any way to set <code>\Phalcon\Mvc\Model\Manager::executeQuery()</code> so that it always returns the same format for a response?</p>
+<p><strong>Reproducible Test</strong></p>
+<pre><code class="language-php">&lt;?php
+class Role extends \Phalcon\Mvc\Model
+{
+    /**
+     * @var integer
+     */
+    public $id;
+
+    /**
+     * @var string
+     */
+    public $name;
+
+    /**
+     * Set the table
+     */
+    public function initialize()
+    {
+        $this-&gt;setSource('roles');
+    }
+}
+
+class User extends \Phalcon\Mvc\Model
+{
+    /**
+     * @var integer
+     */
+    public $id;
+
+    /**
+     * @var integer
+     */
+    public $roleId;
+
+    /**
+     * @var string
+     */
+    public $email;
+
+    /**
+     * Set the table
+     */
+    public function initialize()
+    {
+        $this-&gt;setSource('users');
+    }
+}
+
+$di = new Phalcon\DI\FactoryDefault();
+
+$di-&gt;setShared('db', function () {
+    return new \Phalcon\Db\Adapter\PDO\Mysql(array(
+        'host' =&gt; '127.0.0.1',
+        'username' =&gt; 'root',
+        'password' =&gt; '',
+        'dbname'   =&gt; 'test',
+        'charset'  =&gt; 'utf8',
+    ));
+});
+
+$di-&gt;setShared('modelsManager', function() {
+    return new \Phalcon\Mvc\Model\Manager();
+});
+
+/* Setup a sample DB schema */
+$di['db']-&gt;execute('DROP TABLE IF EXISTS `roles`');
+$di['db']-&gt;execute('DROP TABLE IF EXISTS `users`');
+
+$di['db']-&gt;execute('CREATE TABLE `roles` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8');
+
+$di['db']-&gt;execute('CREATE TABLE `users` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `roleId` int(11) unsigned NOT NULL,
+  `email` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8');
+
+/* Insert some role fixtures */
+$di['db']-&gt;insert(
+    'roles',
+    array(1, 'Regular User'),
+    array('id', 'name')
+);
+
+$di['db']-&gt;insert(
+    'roles',
+    array(2, 'Admin'),
+    array('id', 'name')
+);
+
+/* Insert some user fixtures */
+$di['db']-&gt;insert(
+    'users',
+    array(1, 1, '<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="3a485f5d4f565b48174f495f487a5f425b574a565f14595557">[email&#160;protected]</a>'),
+    array('id', 'roleId', 'email')
+);
+
+$di['db']-&gt;insert(
+    'users',
+    array(2, 1, '<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="186a7d7f6d74796a356d6b7d6a2a587d60797568747d367b7775">[email&#160;protected]</a>'),
+    array('id', 'roleId', 'email')
+);
+
+$di['db']-&gt;insert(
+    'users',
+    array(3, 2, '<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="7011141d191e5d05031502301508111d001c155e131f1d">[email&#160;protected]</a>'),
+    array('id', 'roleId', 'email')
+);
+
+/* Select all from both objects */
+$rows = $di['modelsManager']-&gt;executeQuery('SELECT user.*, role.* FROM User user LEFT JOIN Role role ON role.id = user.roleId');
+
+echo "\r\n" . get_class($rows) . "\r\n";
+
+$data = array();
+foreach ($rows as $key =&gt; $value) {
+    $data[$key] = $value;
+}
+echo json_encode($data);
+
+echo "\r\n";
+
+/* Select some from one object, partial from another */
+$rows = $di['modelsManager']-&gt;executeQuery('SELECT user.*, role.id, role.name FROM User user LEFT JOIN Role role ON role.id = user.roleId');
+
+echo "\r\n" . get_class($rows) . "\r\n";
+
+$data = array();
+foreach ($rows as $key =&gt; $value) {
+    $data[$key] = $value;
+}
+echo json_encode($data);
+
+echo "\r\n";
+
+/* Select partial from both objects */
+$rows = $di['modelsManager']-&gt;executeQuery('SELECT user.id, user.email, role.id, role.name FROM User user LEFT JOIN Role role ON role.id = user.roleId');
+
+echo "\r\n" . get_class($rows) . "\r\n";
+
+$data = array();
+foreach ($rows as $key =&gt; $value) {
+    $data[$key] = $value;
+}
+echo json_encode($data);
+
+echo "\r\n\r\n";</code></pre>
+<p><strong>Observed Results</strong></p>
+<pre><code>Phalcon\Mvc\Model\Resultset\Complex
+[
+    {
+        "user": {
+            "id": "1",
+            "roleId": "1",
+            "email": "<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="33415654465f52411e4640564173564b525e435f561d505c5e">[email&#160;protected]</a>"
+        },
+        "role": {
+            "id": "1",
+            "name": "Regular User"
+        }
+    },
+    {
+        "user": {
+            "id": "2",
+            "roleId": "1",
+            "email": "<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="2f5d4a485a434e5d025a5c4a5d1d6f4a574e425f434a014c4042">[email&#160;protected]</a>"
+        },
+        "role": {
+            "id": "1",
+            "name": "Regular User"
+        }
+    },
+    {
+        "user": {
+            "id": "3",
+            "roleId": "2",
+            "email": "<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="3e5f5a535750134b4d5b4c7e5b465f534e525b105d5153">[email&#160;protected]</a>"
+        },
+        "role": {
+            "id": "2",
+            "name": "Admin"
+        }
+    }
+]</code></pre>
+<p>I would like everything returned in the same format as above.  Fields belonging to &quot;user&quot; are nested in &quot;user&quot; and fields belonging to &quot;role&quot; are nested in &quot;role&quot;.</p>
+<pre><code>Phalcon\Mvc\Model\Resultset\Complex
+[
+    {
+        "user": {
+            "id": "1",
+            "roleId": "1",
+            "email": "<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="780a1d1f0d14190a550d0b1d0a381d00191508141d561b1715">[email&#160;protected]</a>"
+        },
+        "id": "1",
+        "name": "Regular User"
+    },
+    {
+        "user": {
+            "id": "2",
+            "roleId": "1",
+            "email": "<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="17657270627b76653a626472652557726f767a677b723974787a">[email&#160;protected]</a>"
+        },
+        "id": "1",
+        "name": "Regular User"
+    },
+    {
+        "user": {
+            "id": "3",
+            "roleId": "2",
+            "email": "<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ff9e9b929691d28a8c9a8dbf9a879e928f939ad19c9092">[email&#160;protected]</a>"
+        },
+        "id": "2",
+        "name": "Admin"
+    }
+]</code></pre>
+<p>Above, I would like &quot;id&quot; and &quot;name&quot; to be nested in a &quot;role&quot; .</p>
+<pre><code>Phalcon\Mvc\Model\Resultset\Simple
+[
+    {
+        "id": "1",
+        "email": "<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="8dffe8eaf8e1ecffa0f8fee8ffcde8f5ece0fde1e8a3eee2e0">[email&#160;protected]</a>",
+        "name": "Regular User"
+    },
+    {
+        "id": "1",
+        "email": "<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="2e5c4b495b424f5c035b5d4b5c1c6e4b564f435e424b004d4143">[email&#160;protected]</a>",
+        "name": "Regular User"
+    },
+    {
+        "id": "2",
+        "email": "<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="a4c5c0c9cdca89d1d7c1d6e4c1dcc5c9d4c8c18ac7cbc9">[email&#160;protected]</a>",
+        "name": "Admin"
+    }
+]</code></pre>
+<p>Above, I would like &quot;id&quot; and &quot;name&quot; nested in &quot;role&quot;. I would also like &quot;id&quot; and &quot;email&quot; nested in &quot;user&quot;.  Note that I selected two id's in the query but one overrode the other.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-3de4fa18e962595d6554ddb8-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-3de4fa18e962595d6554ddb8-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="30801" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '16</span>
+              </span><br/><a name="C30801" href="#C30801">
+                <time itemprop="dateCreated" datetime="2016-03-10T11:55:44-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You have to name second id another, example userId or roleId or something like this. Also is you select full objects then resultset is returned as complex, if you select only columns, then as simple.</p>
+<p>Also nesting only works when you selecting full objects.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="30801" data-cf-modified-3de4fa18e962595d6554ddb8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="30801" data-cf-modified-3de4fa18e962595d6554ddb8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="10741" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

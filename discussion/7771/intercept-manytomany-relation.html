@@ -1,0 +1,218 @@
+---
+layout: default
+title: 'Intercept Many-to-Many relation - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Intercept Many-to-Many relation</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/4475/acohimself" class="user-moderator-N"><span itemprop="name">Andreas Christian Olsen</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-07-24T03:50:36-07:00">Jul '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-07-24T03:50:36-07:00">Jul '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>509</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/d0ea74657133caae15db132455c9ce1c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/4475/acohimself" class="user-moderator-N"><span itemprop="name">Andreas Christian Olsen</span></a></span>
+                <span class="karma">3.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C7771" href="#C7771">
+        <time class="action-date">Jul '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi</p>
+<p>We have an Archivable class that extends \Phalcon\Mvc\Model in which we have overwritten find() and count() in order to filter archived objects out when requesting objects that extends Archivable. This is inspired by <a href="https://forum.phalcon.io/discussion/3248/auto-ignore-soft-delete-rows">https://forum.phalcon.io/discussion/3248/auto-ignore-soft-delete-rows</a></p>
+<p>This works great when using ::find() directly or when indirectly using find trough an alias of a hasMany-relation. But when we get to the class via a many-to-many it ignores the filter that is inserted in find().</p>
+<p>Is there a another method that our Archivable class should overwrite in order to intercept many-to-many relations, or is there another way we accomplish what we want, which isn't to write filters into all getters on many-to-many relations?</p>
+<p>Thanks!</p>
+<p>edit: added Archivable class</p>
+<pre><code>  class Archivable extends \Phalcon\Mvc\Model
+  {
+
+      /**
+       *
+       * @var integer
+       */
+      public $archived;
+
+      /**
+       *
+       * @var string
+       */
+      public $archivedAt;
+
+      public function archive()
+      {
+          if ($this-&gt;archived == 1)
+              return true;
+
+          $this-&gt;archived = 1;
+          $this-&gt;archivedAt = date('Y-m-d H:i:s');
+          return $this-&gt;save();
+      }
+
+      public function unArchive()
+      {
+          if ($this-&gt;archived == 0)
+              return true;
+
+          $this-&gt;archived = 0;
+          return $this-&gt;save();
+      }
+
+      public function isArchived()
+      {
+          return (bool) $this-&gt;archived;
+      }
+
+      /**
+       * @inheritdoc
+       *
+       * @access public
+       * @static
+       * @param array|string $parameters Query parameters
+       * @return \Phalcon\Mvc\Model\ResultsetInterface
+       */
+      public static function find($parameters = null)
+      {
+          $parameters = self::unArchivedFetch($parameters);
+
+          return parent::find($parameters);
+      }
+
+      /**
+       * @inheritdoc
+       *
+       * @access public
+       * @static
+       * @param array|string $parameters Query parameters
+       * @return mixed
+       */
+      public static function count($parameters = null)
+      {
+          $parameters = self::unArchivedFetch($parameters);
+
+          return parent::count($parameters);
+      }
+
+      public static function unArchivedFetch($parameters)
+      {
+          if ($parameters === null) {
+              $parameters = 'archived = 0';
+          } elseif (
+              is_array($parameters) === false &amp;&amp;
+              strpos($parameters, 'archived') === false
+          ) {
+              $parameters .= ' AND ' . 'archived = 0';
+          } elseif (is_array($parameters) === true) {
+              if (
+                  isset($parameters[0]) === true &amp;&amp;
+                  strpos($parameters[0], 'archived') === false
+              ) {
+                  $parameters[0] .= ' AND ' . 'archived = 0';
+              } elseif (
+                  isset($parameters['conditions']) === true &amp;&amp;
+                  strpos($parameters['conditions'], 'archived') === false
+              ) {
+                  $parameters['conditions'] .= ' AND ' . 'archived = 0';
+              }
+          }
+
+          return $parameters;
+      }
+
+  }
+</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-a7a7e534261ec00f9aeb0577-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-a7a7e534261ec00f9aeb0577-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/210/andresgutierrez" class="user-moderator-Y"><span itemprop="name">Andres Gutierrez</span></a>        </span>
+        <br>
+
+        <span class="karma">34.6k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C21067" href="#C21067">
+                <time itemprop="dateCreated" datetime="2015-07-24T09:13:41-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Many to many are made using a query builder (also regular ones). Probably you can register the builder class in the di and use your own builder class.</p>
+<p><a href="https://github.com/phalcon/cphalcon/blob/2.0.x/phalcon/mvc/model/manager.zep#L1252-L1262">https://github.com/phalcon/cphalcon/blob/2.0.x/phalcon/mvc/model/manager.zep#L1252-L1262</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21067" data-cf-modified-a7a7e534261ec00f9aeb0577-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21067" data-cf-modified-a7a7e534261ec00f9aeb0577-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d0ea74657133caae15db132455c9ce1c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4475/acohimself" class="user-moderator-N"><span itemprop="name">Andreas Christian Olsen</span></a>        </span>
+        <br>
+
+        <span class="karma">3.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C21415" href="#C21415">
+                <time itemprop="dateCreated" datetime="2015-07-31T06:35:18-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks alot for your fast response, Andres!</p>
+<p>We ended up writing getters on all our many-to-many relations - which links to archivable models.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21415" data-cf-modified-a7a7e534261ec00f9aeb0577-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21415" data-cf-modified-a7a7e534261ec00f9aeb0577-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="7771" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

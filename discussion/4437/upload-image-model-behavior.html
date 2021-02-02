@@ -1,0 +1,303 @@
+---
+layout: default
+title: 'Upload Image. Model Behavior - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Upload Image. Model Behavior</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2828/sergeyklay" class="user-moderator-Y"><span itemprop="name">Serghei Iakovlev</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-01-10T13:39:34-07:00">Jan '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-01-10T13:39:34-07:00">Jan '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1752</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">3</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/877a54304e07c8cb38c47b43e1d6b6b3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2828/sergeyklay" class="user-moderator-Y"><span itemprop="name">Serghei Iakovlev</span></a></span>
+                <span class="karma">39.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4437" href="#C4437">
+        <time class="action-date">Jan '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p><strong>Upload Image via Model Behavior.</strong></p>
+<p>This is not a issue. I'm just sharing my solution. Maybe it will help beginners</p>
+<pre><code class="language-php">&lt;?php
+
+namespace YourVendorHere\Models\Behavior;
+
+use Phalcon\Mvc\Model\Behavior;
+use Phalcon\Mvc\Model\BehaviorInterface;
+use Phalcon\Mvc\ModelInterface;
+use Phalcon\Mvc\Model\Exception;
+use Phalcon\Logger;
+use Symfony\Component\Filesystem\Filesystem; // Not necessarily, just convenient
+
+class Imageable extends Behavior implements BehaviorInterface
+{
+    /**
+     * Upload image path
+     * @var string
+     */
+    protected $uploadPath = null;
+
+    /**
+     * Model field
+     * @var null
+     */
+    protected $imageField = null;
+
+    /**
+     * Old model image
+     * @var string
+     */
+    protected $oldFile = null;
+
+    /**
+     * Application logger
+     * @var \Phalcon\Logger\Adapter\File
+     */
+    protected $logger = null;
+
+    /**
+     * Filesystem Utils
+     * @var \Symfony\Component\Filesystem\Filesystem
+     */
+    protected $filesystem = null;
+
+    /**
+     * Allowed types
+     * @var array
+     */
+    protected $allowedFormats = ['image/jpeg', 'image/png', 'image/gif'];
+
+    public function notify($eventType, ModelInterface $model)
+    {
+        if (!is_string($eventType)) {
+            throw new Exception('Invalid parameter type.');
+        }
+
+        // Check if the developer decided to take action here
+        if (!$this-&gt;mustTakeAction($eventType)) {
+            return;
+        }
+
+        $options = $this-&gt;getOptions($eventType);
+
+        if (is_array($options)) {
+            $this-&gt;logger = $model-&gt;getDI()-&gt;get('logger');
+            $this-&gt;filesystem = new Filesystem;
+
+            $this-&gt;setImageField($options, $model)
+                 -&gt;setAllowedFormats($options)
+                 -&gt;setUploadPath($options)
+                 -&gt;processUpload($model);
+        }
+    }
+
+    protected function setImageField(array $options,  ModelInterface $model)
+    {
+        if (!isset($options['field']) || !is_string($options['field'])) {
+            throw new Exception("The option 'field' is required and it must be string.");
+        }
+
+        $this-&gt;imageField = $options['field'];
+        $this-&gt;oldFile = $model-&gt;{$this-&gt;imageField};
+
+        return $this;
+    }
+
+    protected function setAllowedFormats(array $options)
+    {
+        if (isset($options['allowedFormats']) &amp;&amp; is_array($options['allowedFormats'])) {
+            $this-&gt;allowedFormats = $options['allowedFormats'];
+        }
+
+        return $this;
+    }
+
+    // Symfony\Component\Filesystem\Filesystem uses here, you can do it otherwise
+    protected function setUploadPath(array $options)
+    {
+        if (!isset($options['uploadPath']) || !is_string($options['uploadPath'])) {
+            throw new Exception("The option 'uploadPath' is required and it must be string.");
+        }
+
+        $path = $options['uploadPath'];
+
+        if (!$this-&gt;filesystem-&gt;exists($path)) {
+            $this-&gt;filesystem-&gt;mkdir($path);
+        }
+
+        $this-&gt;uploadPath = $path;
+
+        return $this;
+    }
+
+    protected function processUpload(ModelInterface $model)
+    {
+        /** @var \Phalcon\Http\Request $request */
+        $request = $model-&gt;getDI()-&gt;getRequest();
+
+        if (true == $request-&gt;hasFiles(true)) {
+            foreach ($request-&gt;getUploadedFiles() as $file) {
+                // NOTE!!!
+                // Nothing was validated here! Any validations must be are made in a appropriate validator
+                if ($file-&gt;getKey() != $this-&gt;imageField || !in_array($file-&gt;getType(), $this-&gt;allowedFormats)) {
+                    continue;
+                }
+
+                $uniqueFileName = time() . '-' . uniqid() . '.' . strtolower($file-&gt;getExtension());
+
+                if ($file-&gt;moveTo(rtrim($this-&gt;uploadPath, '/\\') . DIRECTORY_SEPARATOR . $uniqueFileName)) {
+                    $model-&gt;writeAttribute($this-&gt;imageField, $uniqueFileName);
+                    $this-&gt;logger-&gt;log(Logger::INFO, sprintf(
+                        'Success upload file %s into %s', $uniqueFileName, $this-&gt;uploadPath
+                    ));
+
+                    // Delete old file
+                    $this-&gt;processDelete();
+                }
+            }
+        }
+
+        return $this;
+    }
+
+    // Symfony\Component\Filesystem\Filesystem uses here, you can do it otherwise
+    protected function processDelete()
+    {
+        if ($this-&gt;oldFile) {
+            $fullPath = rtrim($this-&gt;uploadPath, '/\\') . DIRECTORY_SEPARATOR . $this-&gt;oldFile;
+
+            try {
+                $this-&gt;filesystem-&gt;remove($fullPath);
+                $this-&gt;logger-&gt;log(Logger::INFO, sprintf('File %s deleted successful.', $fullPath));
+            } catch(\Exception $e) {
+                $this-&gt;logger-&gt;log(Logger::ALERT, sprintf(
+                    'An error occurred deleting file %s: %s', $fullPath, $e-&gt;getMessage()
+                ));
+            }
+        }
+    }
+}
+</code></pre>
+<p><strong>And just use in model:</strong></p>
+<pre><code class="language-php">namespace YourVendorHere\Models;
+
+use Phalcon\Mvc\Model;
+use YourVendorHere\Models\Behavior\Imageable;
+
+class Product extends Model
+{
+    protected $image;
+
+    public function initialize()
+    {
+        /** @var \Phalcon\Config $config */
+        $config = $this-&gt;getDI()-&gt;get('config');
+
+        if (!isset($config-&gt;media) || !isset($config-&gt;media-&gt;upload_path) || !is_string($config-&gt;media-&gt;upload_path)) {
+            throw new Exception("The config param '\$config-&gt;media-&gt;upload_path' is required and it must be string.");
+        }
+
+        $this-&gt;uploadPath = rtrim($config-&gt;media-&gt;upload_path, '/\\') . DIRECTORY_SEPARATOR .'product';
+
+        // NOTE: You need validate image (file size, file format, etc.)
+
+        $this-&gt;addBehavior(new Imageable([
+            'beforeCreate' =&gt; [
+                'field'      =&gt; 'image',
+                'uploadPath' =&gt; $this-&gt;uploadPath,
+            ],
+            'beforeUpdate' =&gt; [
+                'field'      =&gt; 'image',
+                'uploadPath' =&gt; $this-&gt;uploadPath,
+            ],
+        ]));
+    }
+
+    public function getImage()
+    {
+        return $this-&gt;image;
+    }
+
+    public function setImage($image)
+    {
+        $this-&gt;image = $image;
+
+        return $this;
+    }
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-6f36679779c37160bbd7f36b-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-6f36679779c37160bbd7f36b-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">3</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/97cfdb3586f82c3e1e4fe562bda688b8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/571/duythien" class="user-moderator-Y"><span itemprop="name">Thien Tran</span></a>        </span>
+        <br>
+
+        <span class="karma">58.4k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C14752" href="#C14752">
+                <time itemprop="dateCreated" datetime="2015-01-11T06:35:39-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hey<a href="https://forum.phalcon.io/user/0/sergeyklay"> @sergeyklay</a></p>
+<p>This is tip, if so share here <a href="http://phalcontip.com">http://phalcontip.com</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14752" data-cf-modified-6f36679779c37160bbd7f36b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14752" data-cf-modified-6f36679779c37160bbd7f36b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4437" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

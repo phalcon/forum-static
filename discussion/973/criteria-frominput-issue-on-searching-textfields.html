@@ -1,0 +1,172 @@
+---
+layout: default
+title: 'Criteria::fromInput issue on searching textfields - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Criteria::fromInput issue on searching textfields</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/605/mywebcontent" class="user-moderator-N"><span itemprop="name">mywebcontent</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-10-02T14:19:55-07:00">Oct '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-10-02T14:19:55-07:00">Oct '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Apr '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>2200</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">2</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/2c57e2dc89834feb92114a8c9985652c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/605/mywebcontent" class="user-moderator-N"><span itemprop="name">mywebcontent</span></a></span>
+                <span class="karma">17.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C973" href="#C973">
+        <time class="action-date">Oct '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,</p>
+<p>Criteria::fromInput is a cool feature for searching records in your db,
+When I try to search in a varchar field, it will return a LIKE statement (i.e. username LIKE :username:)
+When I try to search in a text field it will return a normal = statement (i.e. description = :description:)</p>
+<p>In the phalcon documentation (explaining INVO) on url: <a href="http://docs.phalcon.io/en/latest/reference/tutorial-invo.html">http://docs.phalcon.io/en/latest/reference/tutorial-invo.html</a>
+It says:</p>
+<p>If the field data type is text or similar (char, varchar, text, etc.) It uses an SQL “like” operator to filter the results.
+If the data type is not text or similar, it’ll use the operator “=”.</p>
+<p>My question:</p>
+<p>Is this a bug, or do I forgot something?</p>
+<pre><code class="language-php">$query = Criteria::fromInput($this-&gt;di,"Categories",$criteria);
+$extra = $this-&gt;modelsManager-&gt;createBuilder($query-&gt;getParams());
+$this-&gt;persistent-&gt;searchParams=$query-&gt;getParams();</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-c0ea728575778df285bac1f2-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-c0ea728575778df285bac1f2-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3705" href="#C3705">
+                <time itemprop="dateCreated" datetime="2013-10-02T21:25:02-07:00" class="action-date">Oct '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>No, this is not a bug, this is the expected behavior, if you want to implement a custom similar function you can take this as example:</p>
+<pre><code class="language-php">    public static function fromInput($dependencyInjector, $modelName, $data)
+    {
+
+        $conditions = array();
+        if (count($data)) {
+
+            $metaData = $dependencyInjector-&gt;getShared('modelsMetadata');
+
+            $model = new $modelName();
+            $dataTypes = $metaData-&gt;getDataTypes($model);
+            $columnMap = $metaData-&gt;getReverseColumnMap($model);
+
+            $bind = array();
+
+            foreach ($data as $fieldName =&gt; $value) {
+
+                if (isset($columnMap[$fieldName])) {
+                    $field = $columnMap[$fieldName];
+                } else {
+                    continue;
+                }
+
+                if (isset($dataTypes[$field])) {
+
+                    if (!is_null($value)) {
+                        if ($value != '') {                         
+                            if ($dataTypes[$field] == 2) {                              
+                                $condition = $fieldName . " LIKE :" . $fieldName . ":";                             
+                                $bind[$fieldName] = '%' . $value . '%';
+                            } else {                                
+                                $condition = $fieldName . ' = :' . $fieldName . ':';
+                                $bind[$fieldName] = $value;
+                            }
+                            $conditions[] = $condition;
+                        }
+                    }
+                }
+            }
+        }
+
+        $criteria = new Criteria();
+        if (count($conditions)) {           
+            $criteria-&gt;where(join(' AND ', $conditions));
+            $criteria-&gt;bind($bind);
+        }
+
+        return $criteria;
+
+    }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3705" data-cf-modified-c0ea728575778df285bac1f2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3705" data-cf-modified-c0ea728575778df285bac1f2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1269c9e6c784f32a3aac4707155757ae?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1442/nethox" class="user-moderator-N"><span itemprop="name">nethox</span></a>        </span>
+        <br>
+
+        <span class="karma">506</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7052" href="#C7052">
+                <time itemprop="dateCreated" datetime="2014-04-09T12:13:36-07:00" class="action-date">Apr '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I am getting the same issue, I am not sure why this would be expected behavior.. for text fields it is searching with an &quot;=&quot; instead of a &quot;LIKE&quot;.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7052" data-cf-modified-c0ea728575778df285bac1f2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7052" data-cf-modified-c0ea728575778df285bac1f2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="973" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

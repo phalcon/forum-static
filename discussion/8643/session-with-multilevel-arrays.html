@@ -1,0 +1,278 @@
+---
+layout: default
+title: 'Session with multi-level arrays - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/24/show-community">Show to Community</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Session with multi-level arrays</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-09-21T13:07:49-07:00">Sep '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-09-21T13:07:49-07:00">Sep '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Apr '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>874</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">3</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a></span>
+                <span class="karma">125.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C8643" href="#C8643">
+        <time class="action-date">Sep '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>My current project needs to be able to store, access, and modify multi-level arrays in $_SESSION.  Unfortunately, vanilla Phalcon only allows for single key-value pairs.</p>
+<p>I've therefore built a wrapper for <code>\Phalcon\Session\Adapter\Files</code> that allows you to pass an array to <code>get()</code>, <code>set()</code>, and <code>has()</code> instead of a string.  The array will contain the key at each level of the array.  So <code>["filter","organization","name"]</code> would reference the <code>name</code> element inside the <code>organization</code> array, which is inside the <code>filter</code> array.</p>
+<h3>Example set() usage</h3>
+<pre><code class="language-php">$this-&gt;session-&gt;set(['filter','organization','name'],'Widgets Inc.');</code></pre>
+<p>Contents of $_SESSION as a result:</p>
+<pre><code>Array
+(
+    [filter] =&gt; Array
+        (
+            [organization] =&gt; Array
+                (
+                    [name] =&gt; Widgets Inc.
+                )
+        )
+)</code></pre>
+<p>You can overwrite and modify as well:</p>
+<pre><code class="language-php">$this-&gt;session-&gt;set('filter',['organization'=&gt;['name'=&gt;'Humbug','city'=&gt;'Edmonton']]);
+$this-&gt;session-&gt;set(['filter','organization','city'],'Calgary');</code></pre>
+<pre><code>Array
+(
+    [filter] =&gt; Array
+        (
+            [organization] =&gt; Array
+                (
+                    [name] =&gt; Humbug
+                    [city] =&gt; Calgary
+                )
+        )
+)</code></pre>
+<p><em>Note the first line of code uses just a simple string key, rather than an array.  This is still supported.</em></p>
+<p>You can also &quot;deep-set&quot; an element multiple levels down without having to create each level.  So if you have an empty session &amp; have this code:</p>
+<pre><code class="language-php">$this-&gt;session-&gt;set(['filter','organization','city'],'Calgary');</code></pre>
+<p>this class will create <code>$_SESSION["filter"]</code> with one element, <code>organization</code>, that is itself an array with one element, <code>city</code>.</p>
+<h3>Example get() usage</h3>
+<p>Much less sexy, but it works the same.</p>
+<p>With <code>$_SESSION</code> populated like this:</p>
+<pre><code>Array
+(
+    [filter] =&gt; Array
+        (
+            [organization] =&gt; Array
+                (
+                    [name] =&gt; Humbug
+                    [city] =&gt; Calgary
+                )
+        )
+)</code></pre>
+<p>this code:</p>
+<pre><code class="language-php">$this-&gt;session-&gt;get(['filter','organization','name']);</code></pre>
+<p>would return <code>Humbug</code>.</p>
+<p>You can also retrieve not just end values, but arrays too:</p>
+<pre><code class="language-php">$this-&gt;session-&gt;get(['filter','organization']);</code></pre>
+<p>would return</p>
+<pre><code>Array
+(
+    [name] =&gt; Humbug
+    [city] =&gt; Calgary
+)</code></pre>
+<h3>Example has() usage</h3>
+<p><code>has()</code> works just like you'd expect.  With <code>$_SESSION</code> populated like this:</p>
+<pre><code>Array
+(
+    [filter] =&gt; Array
+        (
+            [organization] =&gt; Array
+                (
+                    [name] =&gt; Humbug
+                    [city] =&gt; Calgary
+                )
+        )
+)</code></pre>
+<p>these codes:</p>
+<pre><code class="language-php">$this-&gt;session-&gt;has(['filter','organization','name']);
+$this-&gt;session-&gt;has(['filter','organization']);
+$this-&gt;session-&gt;has('filter');</code></pre>
+<p>will all return <code>TRUE</code>, while this code</p>
+<pre><code class="language-php">$this-&gt;session-&gt;has(['filter','organization','phone_number']);</code></pre>
+<p>will return <code>FALSE</code>.</p>
+<h1>Actual class code</h1>
+<pre><code class="language-php">class Session extends \Phalcon\Session\Adapter\Files{
+
+    public function set($keys,$value = NULL){
+        if(is_scalar($keys)){
+            $_SESSION[$keys] = $value;
+        }
+        else if(is_array($keys)){
+            $target =&amp; $_SESSION;
+            $setting = end($keys);
+
+            foreach($keys as $key){
+                if($key != $setting){
+                    if(!isset($target[$key])){
+                        $target[$key] = [];
+                    }           
+                }
+                $target =&amp; $target[$key];
+            }
+
+            $target = $value;
+        }
+    }
+
+    public function get($keys,$defaultValue = NULL){
+        if(is_scalar($keys)){
+            return $_SESSION[$keys];
+        }
+        else if(is_array($keys)){
+            $target =&amp; $_SESSION;
+            $getting = end($keys);
+
+            foreach($keys as $key){
+                if(isset($target[$key])){
+                    if($key == $getting){
+                        return $target[$key];
+                    }
+                    else if(is_array($target[$key])){
+                        $target =&amp; $target[$key];
+                    }
+                }
+                else{
+                    return $defaultValue;
+                }
+            }
+        }
+    }
+
+    public function has($keys){
+        if(is_scalar($keys)){
+            return parent::has($keys);
+        }
+        else if(is_array($keys)){
+            $target =&amp; $_SESSION;
+
+            foreach($keys as $key){
+                if(isset($target[$key])){
+                    $target =&amp; $target[$key];
+                }
+                else{
+                    return FALSE;
+                }
+            }
+            return TRUE;
+        }
+    }
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-725d933e86c51c9e0eca9b34-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-725d933e86c51c9e0eca9b34-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">3</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="23647" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '15</span>
+              </span><br/><a name="C23647" href="#C23647">
+                <time itemprop="dateCreated" datetime="2015-09-21T13:13:11-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Neat! Have you tried it as a NFR on git? Or had Andres deemed it as too arbitrary? :]</p>
+<p>Personally, I'd also love to see this logic implemented on other objects using <code>set</code>/<code>has</code>/<code>get</code> out of the box</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23647" data-cf-modified-725d933e86c51c9e0eca9b34-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23647" data-cf-modified-725d933e86c51c9e0eca9b34-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C23649" href="#C23649">
+                <time itemprop="dateCreated" datetime="2015-09-21T14:09:17-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>No - I haven't submitted it.  Wanted to see what people thought first.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23649" data-cf-modified-725d933e86c51c9e0eca9b34-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23649" data-cf-modified-725d933e86c51c9e0eca9b34-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/468e3e0a4a2c6b4f6b01815a1c08575d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10815/abelokon" class="user-moderator-N"><span itemprop="name">abelokon</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C54627" href="#C54627">
+                <time itemprop="dateCreated" datetime="2018-04-01T14:34:17-07:00" class="action-date">Apr '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This is really helpful! Thank you!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="54627" data-cf-modified-725d933e86c51c9e0eca9b34-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="54627" data-cf-modified-725d933e86c51c9e0eca9b34-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="8643" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

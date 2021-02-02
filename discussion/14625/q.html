@@ -1,0 +1,572 @@
+---
+layout: default
+title: 'Creating a Beanstalk background worker - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Creating a Beanstalk background worker</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/6197/alexge233" class="user-moderator-N"><span itemprop="name">Alex Giokas</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-10-27T09:43:59-07:00">Oct '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-10-27T09:43:59-07:00">Oct '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">9</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1720</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9283fe81d1ae6ffe557d1015c11edb43?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/6197/alexge233" class="user-moderator-N"><span itemprop="name">Alex Giokas</span></a></span>
+                <span class="karma">3.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C14625" href="#C14625">
+        <time class="action-date">Oct '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,</p>
+<p>I've read the Beanstalk documentation, as well as a <a href="https://forum.phalcon.io/discussion/2482/phalcon-and-beanstalkd-how-to-use-it-">similar question</a>.
+My scenario is the following:</p>
+<ul>
+<li>an apache/Phalcon micro-app receives jobs from another server</li>
+<li>I run the jobs using PHP/libvirt/ssh</li>
+<li>I create some package and keep it locally for serving</li>
+</ul>
+<p>At no moment is there a view, HTML or CSS used. This is all for back-end processing.
+I've followed the guide to creating a Beanstalk queue and adding objects.
+Within the same class is also the <code>process_job</code> method.</p>
+<pre><code class="language-php">class master
+{
+    public static function make_jobs($kvms)
+    {
+        $queue = new Beanstalk(array('host' =&gt; 'localhost', 'port' =&gt; '11300'));
+        foreach ($kvms as $kvm) {
+            $job = new queue_job($kvm);
+            $queue-&gt;put(array('process_job' =&gt; $job));
+        }
+    }
+
+    public static function process_job($job)
+    {
+        print_r($job);
+    }</code></pre>
+<p>What is not clear from either the documentation or the forum questions, is where do I set the background worker? How can I dispatch either an event listener which will be alerted of new Beanstalk jobs, or a handler which will infinetely loop for beanstalk jobs, similar to the example from the documentation:</p>
+<pre><code class="language-php">while (($job = $queue-&gt;peekReady()) !== false) {
+    $jobBody = $job-&gt;getBody();
+    // ... do the actual job which will take some time
+    $job-&gt;delete();
+}</code></pre>
+<p>Any help is greatly appreciated.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="42287" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '16</span>
+              </span><br/><a name="C42287" href="#C42287">
+                <time itemprop="dateCreated" datetime="2016-10-27T11:17:24-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>There are two parts while working with background jobs i.e. message broker service. First, you should put your messages/payload into the message broker (normally). This usually happens at runtime, for instance, your page sends email after user registration, so instead of waiting for external SMTP service to process the mail 3-5 seconds, you put the job into background using Beanstalk. Then, some other app (usually CLI app running in the background as a daemon) will fetch this job and process it (i.e. it will contact external SMTP, do the TLS handshake, auth, send mail and recieve status).</p>
+<p>I'll post you an example from my app later, now I need to go.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="42287" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="42287" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C42289" href="#C42289">
+                <time itemprop="dateCreated" datetime="2016-10-27T12:22:11-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Best is to just use cli task.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="42289" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="42289" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9283fe81d1ae6ffe557d1015c11edb43?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6197/alexge233" class="user-moderator-N"><span itemprop="name">Alex Giokas</span></a>        </span>
+        <br>
+
+        <span class="karma">3.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C42309" href="#C42309">
+                <time itemprop="dateCreated" datetime="2016-10-28T03:21:08-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/Jonathan">@Jonathan</a> OK, that does make sense, so I'm looking at two separate applications, a web micro-app which receives the jobs, and then a background daemon which processes them?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="42309" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="42309" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="42313" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '16</span>
+              </span><br/><a name="C42313" href="#C42313">
+                <time itemprop="dateCreated" datetime="2016-10-28T04:18:52-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Not receive, which put them:</p>
+<p>Web micro-app is putting jobs to queue. Background cli daemon(or daemons) is receiving and processing them.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="42313" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="42313" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9283fe81d1ae6ffe557d1015c11edb43?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6197/alexge233" class="user-moderator-N"><span itemprop="name">Alex Giokas</span></a>        </span>
+        <br>
+
+        <span class="karma">3.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C42319" href="#C42319">
+                <time itemprop="dateCreated" datetime="2016-10-28T06:23:36-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>That is what I ended up doing, thanks :-)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="42319" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="42319" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9283fe81d1ae6ffe557d1015c11edb43?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6197/alexge233" class="user-moderator-N"><span itemprop="name">Alex Giokas</span></a>        </span>
+        <br>
+
+        <span class="karma">3.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="42325" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '16</span>
+              </span><br/><a name="C42325" href="#C42325">
+                <time itemprop="dateCreated" datetime="2016-10-28T09:25:04-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well, I've run into a logic issue.</p>
+<p>Whereas the first time I put jobs into the beanstalk queue, I can remove them,
+the second time I put jobs in it, the while loop appears to get stuck/frozen.</p>
+<p>Is this intended behaviour?
+I think my misconception is from the fact that the while loop appears to return the same job over and over again.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="42325" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="42325" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="42327" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '16</span>
+              </span><br/><a name="C42327" href="#C42327">
+                <time itemprop="dateCreated" datetime="2016-10-28T09:42:20-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>What you mean ? Here you have example of my cli task for handling queue tube:</p>
+<pre><code class="language-php">&lt;?php
+/**
+ * Created by PhpStorm.
+ * User: Wojtek
+ * Date: 2016-08-20
+ * Time: 13:54
+ */
+
+use Phalcon\Cli\Task;
+use Phalcon\Logger\Adapter\File;
+use Phalcon\Queue\Beanstalk;
+
+/**
+ * Class LogTask
+ *
+ * @package Suzuki\Cli\Task
+ */
+class LogTask extends Task
+{
+    /**
+     * @var Beanstalk
+     */
+    protected $queue;
+
+    /**
+     * @var File
+     */
+    protected $loggerBeforeDispatch;
+
+    /**
+     * @var File
+     */
+    protected $loggerBeforeException;
+
+    /**
+     * @var File
+     */
+    protected $loggerBeforeSendRequest;
+
+    /**
+     * @var File
+     */
+    protected $loggerSqlDebug;
+
+    /**
+     * @var File
+     */
+    protected $loggerPerformance;
+
+    /**
+     * @var File
+     */
+    protected $loggerModel;
+
+    /**
+     * @var File
+     */
+    protected $mailer;
+
+    /**
+     * Sets services
+     */
+    public function initialize()
+    {
+        $this-&gt;queue = $this-&gt;di-&gt;get('queue');
+        $this-&gt;loggerBeforeDispatch = $this-&gt;di-&gt;get('loggerBeforeDispatch');
+        $this-&gt;loggerBeforeException = $this-&gt;di-&gt;get('loggerBeforeException');
+        $this-&gt;loggerBeforeSendRequest = $this-&gt;di-&gt;get('loggerBeforeSendRequest');
+        $this-&gt;loggerSqlDebug = $this-&gt;di-&gt;get('loggerSqlDebug');
+        $this-&gt;loggerPerformance = $this-&gt;di-&gt;get('loggerPerformance');
+        $this-&gt;loggerModel = $this-&gt;di-&gt;get('loggerModel');
+        $this-&gt;mailer = $this-&gt;di-&gt;get('mailer');
+    }
+
+    /**
+     * Handle task
+     */
+    public function logAction()
+    {
+        $this-&gt;queue-&gt;watch('log');
+        while ($this-&gt;queue-&gt;statsTube('log')["current-jobs-ready"] &gt; 0 &amp;&amp; ($job = $this-&gt;queue-&gt;reserve())) {
+            $body = $job-&gt;getBody();
+            if (isset($body['type'])) {
+                switch ($body['type']) {
+                    case 'beforeException':
+                        $this-&gt;loggerBeforeException-&gt;error($body['message']);
+                        break;
+                    case 'beforeDispatch':
+                        $this-&gt;loggerBeforeDispatch-&gt;info($body['message']);
+                        break;
+                    case 'beforeSendRequest':
+                        $this-&gt;loggerBeforeSendRequest-&gt;info($body['message']);
+                        break;
+                    case 'beforeQuery':
+                        $this-&gt;loggerSqlDebug-&gt;info($body['message']);
+                        break;
+                    case 'performance':
+                        $this-&gt;loggerPerformance-&gt;info($body['message']);
+                        break;
+                    case 'modelException':
+                        $this-&gt;loggerModel-&gt;info($body['message']);
+                        break;
+                    default:
+                        break;
+                }
+            }
+            $job-&gt;delete();
+        }
+    }
+}</code></pre>
+<p>Don't have any problem with this. Are you sure you delete job after handling it ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="42327" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="42327" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C42325"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/9283fe81d1ae6ffe557d1015c11edb43?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Alex Giokas                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="42335" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '16</span>
+              </span><br/><a name="C42335" href="#C42335">
+                <time itemprop="dateCreated" datetime="2016-10-28T15:25:18-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yeah, that's common issue when you are starting to use Beanstalk.</p>
+<p>This is basic distinction you need to make:</p>
+<pre><code class="language-php">//this method reads only non-zero buffer from the stream
+            while (($job = $this-&gt;messageBroker-&gt;peekReady()) !== false)
+
+            //This method works in a loop by default and reads buffer on a persistent basis reserving jobs from queue
+                while (($job = $this-&gt;messageBroker-&gt;reserve()))</code></pre>
+<blockquote>
+<p>Well, I've run into a logic issue.</p>
+<p>Whereas the first time I put jobs into the beanstalk queue, I can remove them,
+the second time I put jobs in it, the while loop appears to get stuck/frozen.</p>
+<p>Is this intended behaviour?
+I think my misconception is from the fact that the while loop appears to return the same job over and over again.</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="42335" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="42335" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9283fe81d1ae6ffe557d1015c11edb43?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6197/alexge233" class="user-moderator-N"><span itemprop="name">Alex Giokas</span></a>        </span>
+        <br>
+
+        <span class="karma">3.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="42361" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '16</span>
+              </span><br/><a name="C42361" href="#C42361">
+                <time itemprop="dateCreated" datetime="2016-10-31T07:36:17-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you both for your help!</p>
+<p>I ended up consuming the queue, and creating processes (<a href="https://github.com/iFixit/forker">https://github.com/iFixit/forker</a>) to handle each job.
+My problem was that if I had no available slot for a job, I left it in the queue, and then the loop would &quot;freeze&quot;.</p>
+<pre><code class="language-php">while (($job = $this-&gt;messageBroker-&gt;peekReady()) !== false) {
+    if (can_execute($job)) {
+        // fork, exec 
+        $job-&gt;delete();
+    }
+}</code></pre>
+<p>So in the above case, if I couldn't execute I'd simply leave it there.
+When new jobs arrived in the queue (from the web interface) then I got a weird behaviour,
+where the same previous job was constantly looped over.</p>
+<p>I solved it by simply moving the every job as a suspended fork-exec, and let the semaphores deal with allocation issues.
+Not sure if it is an ideal solution, but since this is alpha version it will have to do for now.</p>
+<pre><code class="language-php">while (($job = $this-&gt;messageBroker-&gt;peekReady()) !== false) {
+    exec_suspend($job);
+    $job-&gt;delete();
+}</code></pre>
+<p>I am still however a bit confused as to the difference between <code>reserve()</code> and <code>peekReady()</code>.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="42361" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="42361" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C42363" href="#C42363">
+                <time itemprop="dateCreated" datetime="2016-10-31T10:09:43-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Why don't you try with <code>reserve()</code> method, as I posted difference here?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="42363" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="42363" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9283fe81d1ae6ffe557d1015c11edb43?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6197/alexge233" class="user-moderator-N"><span itemprop="name">Alex Giokas</span></a>        </span>
+        <br>
+
+        <span class="karma">3.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C42587" href="#C42587">
+                <time itemprop="dateCreated" datetime="2016-11-04T08:54:31-07:00" class="action-date">Nov '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/Jonathan">@Jonathan</a> I've tried it, many thanks!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="42587" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="42587" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9bb1633e127da4e326961b4cf6e9cb95?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8631/mehdichati" class="user-moderator-N"><span itemprop="name">mehdichati</span></a>        </span>
+        <br>
+
+        <span class="karma">612</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C46671" href="#C46671">
+                <time itemprop="dateCreated" datetime="2017-03-17T10:08:39-07:00" class="action-date">Mar '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/Jonathan">@Jonathan</a> , I used reserve()  in this way :</p>
+<blockquote>
+<pre><code>            $queue-&gt;watch("my_tube");
+            while (($job = $queue-&gt;reserve())) {
+
+              // job handling and after i deleted it
+                $job-&gt;delete();
+
+      }</code></pre>
+</blockquote>
+<p>It is done on cli task. So When I start my task, it works fine , and the process is putted in background.
+After few days, the process stopped to work.</p>
+<p>If you have any idea , why ?</p>
+<p>Do I need while(true) block to never stop my task ?</p>
+<p>thanks in advance for your help,</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="46671" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="46671" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="46683" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '17</span>
+              </span><br/><a name="C46683" href="#C46683">
+                <time itemprop="dateCreated" datetime="2017-03-17T13:12:30-07:00" class="action-date">Mar '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Because there are no jobs :) Add some cron to run your cli task.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="46683" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="46683" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="46699" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '17</span>
+              </span><br/><a name="C46699" href="#C46699">
+                <time itemprop="dateCreated" datetime="2017-03-18T09:59:37-07:00" class="action-date">Mar '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Even w/o any jobs it should not die like that. </p>
+<pre><code class="language-php">while ($this-&gt;messageBroker-&gt;reserve()) {
+// handle queue...
+}</code></pre>
+<p>You don't need to <code>watch()</code>. </p>
+<p>Bottom line: The sad fact is that beanstalkd has been abandoned and development stalled 3 yrs ago :/</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="46699" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="46699" data-cf-modified-9cfe56535c93376c2fd5a211-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="14625" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

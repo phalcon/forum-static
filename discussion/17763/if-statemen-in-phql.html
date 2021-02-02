@@ -1,0 +1,178 @@
+---
+layout: default
+title: 'IF statemen in PHQL - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">IF statemen in PHQL</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10717/maulanasatyaadi" class="user-moderator-N"><span itemprop="name">Maulana Satya Adi</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-02-08T19:52:00-07:00">Feb '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-02-08T19:52:00-07:00">Feb '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Feb '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>363</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/d9673022b1618507e1cba6050c714602?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10717/maulanasatyaadi" class="user-moderator-N"><span itemprop="name">Maulana Satya Adi</span></a></span>
+                <span class="karma">1.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17763" href="#C17763">
+        <time class="action-date">Feb '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I use syntax like</p>
+<blockquote>
+<p>$phql = 'SELECT * FROM Product WHERE is_deleted = &quot;no&quot; AND IF(20 &gt; 0, price &lt; 20, NULL)</p>
+</blockquote>
+<p>But result error. How can i use 'IF' statement like native MySQL query in PHQL?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-dd63740d29385c4f597588cc-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-dd63740d29385c4f597588cc-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c897fab3d4f3e07ca673337a1efa9cbf?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6133/corentin-begne" class="user-moderator-N"><span itemprop="name">corentin-begne</span></a>        </span>
+        <br>
+
+        <span class="karma">12.8k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="53885" data-toggle="modal" data-target="#historyModal">
+                edited <span>Feb '18</span>
+              </span><br/><a name="C53885" href="#C53885">
+                <time itemprop="dateCreated" datetime="2018-02-10T09:14:45-07:00" class="action-date">Feb '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You need to register custom function (should be added in doc or faq somewhere), example for IF(condition, value_if_true, value_if_false) :</p>
+<pre><code class="language-php">&lt;?php
+use Phalcon\Db\Dialect\MySQL as SqlDialect,
+Phalcon\Db\Adapter\Pdo\Mysql;
+
+$di-&gt;set('db', function () use ($config) {  
+    $dialect = new SqlDialect();
+    $dialect-&gt;registerCustomFunction('IF', function($dialect, $expression) {
+            return sprintf(
+                'IF('.$dialect-&gt;getSqlExpression($expression['arguments'][0]).', %d, %d)',
+                $dialect-&gt;getSqlExpression($expression['arguments'][1]),
+                $dialect-&gt;getSqlExpression($expression['arguments'][2])
+             );
+        }
+    );
+    return new Mysql([
+        'host' =&gt; $config[ENV]-&gt;database-&gt;host,
+        'username' =&gt; $config[ENV]-&gt;database-&gt;username,
+        'password' =&gt; $config[ENV]-&gt;database-&gt;password,
+        'dbname' =&gt; $config[ENV]-&gt;database-&gt;dbname,
+        'charset' =&gt; $config[ENV]-&gt;database-&gt;charset,
+        'dialectClass'=&gt;$dialect
+    ]);
+});</code></pre>
+<pre><code class="language-php">$robots = Robot::find([
+    'columns'=&gt;('*, IF(id &lt; 10, 1, 0) as isValid')
+]);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="53885" data-cf-modified-dd63740d29385c4f597588cc-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="53885" data-cf-modified-dd63740d29385c4f597588cc-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d9673022b1618507e1cba6050c714602?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10717/maulanasatyaadi" class="user-moderator-N"><span itemprop="name">Maulana Satya Adi</span></a>        </span>
+        <br>
+
+        <span class="karma">1.8k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C53885"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/c897fab3d4f3e07ca673337a1efa9cbf?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        corentin-begne                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C53893" href="#C53893">
+                <time itemprop="dateCreated" datetime="2018-02-11T08:06:19-07:00" class="action-date">Feb '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>You need to register custom function (should be added in doc or faq somewhere), example for IF(condition, value_if_true, value_if_false) :</p>
+<pre><code class="language-php">&lt;?php
+use Phalcon\Db\Dialect\MySQL as SqlDialect,
+Phalcon\Db\Adapter\Pdo\Mysql;
+
+$di-&gt;set('db', function () use ($config) {  
+   $dialect = new SqlDialect();
+   $dialect-&gt;registerCustomFunction('IF', function($dialect, $expression) {
+           return sprintf(
+               'IF('.$dialect-&gt;getSqlExpression($expression['arguments'][0]).', %d, %d)',
+               $dialect-&gt;getSqlExpression($expression['arguments'][1]),
+               $dialect-&gt;getSqlExpression($expression['arguments'][2])
+            );
+       }
+   );
+   return new Mysql([
+       'host' =&gt; $config[ENV]-&gt;database-&gt;host,
+       'username' =&gt; $config[ENV]-&gt;database-&gt;username,
+       'password' =&gt; $config[ENV]-&gt;database-&gt;password,
+       'dbname' =&gt; $config[ENV]-&gt;database-&gt;dbname,
+       'charset' =&gt; $config[ENV]-&gt;database-&gt;charset,
+       'dialectClass'=&gt;$dialect
+   ]);
+});</code></pre>
+<pre><code class="language-php">$robots = Robot::find([
+  'columns'=&gt;('*, IF(id &lt; 10, 1, 0) as isValid')
+]);</code></pre>
+</blockquote>
+<p>You make me loving more Phalcon :D</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="53893" data-cf-modified-dd63740d29385c4f597588cc-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="53893" data-cf-modified-dd63740d29385c4f597588cc-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17763" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

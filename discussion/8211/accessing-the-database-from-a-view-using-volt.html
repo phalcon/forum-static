@@ -1,0 +1,191 @@
+---
+layout: default
+title: 'Accessing the database from a view using Volt - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/3/volt">Volt</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Accessing the database from a view using Volt</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/4647/alec-w" class="user-moderator-N"><span itemprop="name">Alec Wilson</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-08-26T03:37:40-07:00">Aug '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-08-26T03:37:40-07:00">Aug '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>911</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">2</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/a245210673b1617af83d36b2935bf600?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/4647/alec-w" class="user-moderator-N"><span itemprop="name">Alec Wilson</span></a></span>
+                <span class="karma">3.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C8211" href="#C8211">
+        <time class="action-date">Aug '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have been told that <em>Volt</em> can request data from the database inside the view file but have not found any code demonstrating this. Could someone provide an example of a database request through <em>Volt</em>? Also, can Volt alter the data in the database, i.e. rather than just requesting data it can also send all other sorts of database requests (insert/update/delete...) too?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-c1cc655a8aeee84ee62794d8-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-c1cc655a8aeee84ee62794d8-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="22339" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '15</span>
+              </span><br/><a name="C22339" href="#C22339">
+                <time itemprop="dateCreated" datetime="2015-08-26T04:57:19-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The purpose of the MVC pattern is to separate models, views and controllers into easily manageable blocks. Accessing the database directly from a view seriously violates that idea.</p>
+<p>That being said, you may use the database connection service:</p>
+<pre><code class="language-volt">// some/view.volt
+{% raw %}{{{% endraw %} set rows = db.fetchAll("SELECT * FROM tbl") {% raw %}}}{% endraw %}
+
+{% raw %}{{{% endraw %} db.execute("INSERT INTO tbl (col) VALUES ('val')") {% raw %}}}{% endraw %}
+
+{% raw %}{{{% endraw %} set statement = db.prepare("UPDATE tbl SET col=?") {% raw %}}}{% endraw %}
+{% raw %}{{{% endraw %} statement.execute(['val']) {% raw %}}}{% endraw %}</code></pre>
+<p>Using Models in the view is more tricky, you could either embed a PHP block</p>
+<pre><code class="language-volt">// some/view.volt
+&lt;?php
+$mdl = SomeModel::findFirst();
+?&gt;
+
+{% raw %}{{{% endraw %} mdl.getName() {% raw %}}}{% endraw %}</code></pre>
+<p>or create a helper service:</p>
+<pre><code class="language-php">// ModelHelper.php
+class ModelHelper
+{
+    public function create($modelName, array $assign=[])
+    {
+        return new $modelName($assign);
+    }
+    public function findFirst($modelName, $parameters=null) {
+        $a = func_get_args();
+        $modelName = array_shift($a);
+        return forward_static_call_array([$modelName,'findFirst'], $a);
+    }
+}</code></pre>
+<pre><code class="language-php">// services.php
+$di-&gt;set('modelHelper', function() {
+    return new ModelHelper;
+});</code></pre>
+<pre><code class="language-volt">// some/view.volt
+{% raw %}{{{% endraw %} modelHelper.findFirst('SomeModel', ['conditions'=&gt;'id=2'])-&gt;getName() {% raw %}}}{% endraw %}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="22339" data-cf-modified-c1cc655a8aeee84ee62794d8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="22339" data-cf-modified-c1cc655a8aeee84ee62794d8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/97e3c74cec107116eaa0d4eb22e1531d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2081/mjankovskis" class="user-moderator-N"><span itemprop="name">mjankovskis</span></a>        </span>
+        <br>
+
+        <span class="karma">4.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C22341" href="#C22341">
+                <time itemprop="dateCreated" datetime="2015-08-26T04:58:20-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Sending request? It's only possible with some ajax-like things. Why you dont like passing data through controllers? I think this is not necessary</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="22341" data-cf-modified-c1cc655a8aeee84ee62794d8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span><span itemprop="downvoteCount">1</span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="22341" data-cf-modified-c1cc655a8aeee84ee62794d8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C22359" href="#C22359">
+                <time itemprop="dateCreated" datetime="2015-08-26T13:02:02-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I really don't see how there can be a good reason for accessing the database in a View.  The View should only contain code that is used to display data.  That paradigm helps keep things tidy.  If you want to retrieve data, you should use the Controller, then pass the retrieved data to the View.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="22359" data-cf-modified-c1cc655a8aeee84ee62794d8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="22359" data-cf-modified-c1cc655a8aeee84ee62794d8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a245210673b1617af83d36b2935bf600?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4647/alec-w" class="user-moderator-N"><span itemprop="name">Alec Wilson</span></a>        </span>
+        <br>
+
+        <span class="karma">3.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C22423" href="#C22423">
+                <time itemprop="dateCreated" datetime="2015-08-27T12:03:38-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks for the responses. I realise I should probably have made clear - I <em>don't</em> want to access the database from the view. The system we are making allows authenticated users to edit certain volt files (so that the client can change the title or whatever on their own website). However, I don't trust them with unrestricted access to make any request to the database and so I wanted to check that they wouldn't be able to do that if they could only edit the volt files - provided I sanitise the input and stop them submitting anything with php tags everything will be fine, thanks.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="22423" data-cf-modified-c1cc655a8aeee84ee62794d8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="22423" data-cf-modified-c1cc655a8aeee84ee62794d8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="8211" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

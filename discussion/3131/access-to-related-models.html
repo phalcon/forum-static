@@ -1,0 +1,339 @@
+---
+layout: default
+title: 'access to related models - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">access to related models</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1800/EquaI1ty" class="user-moderator-N"><span itemprop="name">Alexandr Vitruk</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-08-15T06:15:56-07:00">Aug '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-08-15T06:15:56-07:00">Aug '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>904</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/70452aeb2ebcfe5ab6fa38a4f9fb6915?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1800/EquaI1ty" class="user-moderator-N"><span itemprop="name">Alexandr Vitruk</span></a></span>
+                <span class="karma">6.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3131" href="#C3131">
+        <time class="action-date">Aug '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi! I have encountered a problem while working with the related models.
+There are 2 tables in the database.</p>
+<blockquote>
+<p>News (id, date, active)</p>
+<p>Newstranslations (id, news_id, lang_id, title, preview_content, full_content)</p>
+</blockquote>
+<p>And there are 2 models for them.</p>
+<pre><code>class News extends Model {
+   public $id;
+   public $date;
+   public $active;
+
+   public function initialize(){
+           $this-&gt;hasMany("id", "Modules\Modules\Models\Newstranslations", "news_id", array(
+           'alias' =&gt; 'Newstranslations',
+           'foreignKey' =&gt; array(
+               'action' =&gt; \Phalcon\Mvc\Model\Relation::ACTION_CASCADE
+           )));
+   }
+ }
+
+class Newstranslations extends Model {
+    public $id;
+    public $news_id;
+    public $lang_id;
+    public $title;
+    public $preview_content;
+    public $full_content;
+
+    public function initialize(){
+        $this-&gt;belongsTo('news_id', 'Modules\Modules\Models\News', 'id', array(
+            'alias' =&gt; 'News'));
+    }
+ }</code></pre>
+<p>Each table contains 1 entry.
+I want to get acess to the entries of the Newstranslations table from the News table, but I have encountered some errors. I use the following <a href="http://docs.phalcon.io/en/latest/reference/models.html#taking-advantage-of-relationships">documentation</a>.
+In the first case everything works fine. </p>
+<pre><code>    $test_news = News::findFirst(17);
+    foreach ($test_news-&gt;Newstranslations as $news_translations) {
+        $news_translations;
+    }
+    $this-&gt;view-&gt;setVar("test", $news_translations);*/
+    In my View: {% raw %}{{{% endraw %} test.title {% raw %}}}{% endraw %}</code></pre>
+<p>But it doesn't work when I don't use the foreach-cycle. </p>
+<pre><code>    $test_news = News::findFirst(17);
+    $test_news-&gt;Newstranslations;
+    $this-&gt;view-&gt;setVar("test", $test_news);
+    In my View: {% raw %}{{{% endraw %} test.title {% raw %}}}{% endraw %} 
+
+    $test_news = News::findFirst(17);
+    $test_news-&gt;getNewstranslations(array('lang_id= :id:', 'bind'=&gt; array('id'=&gt; 2)));
+    $this-&gt;view-&gt;setVar("test", $test_news);
+    In my View: {% raw %}{{{% endraw %} test.title {% raw %}}}{% endraw %} </code></pre>
+<p>These examples throw the following exception:</p>
+<p><img src="http://f6.s.qip.ru/17QY0OqbD.jpg" alt="" /></p>
+<p>And this example:</p>
+<pre><code>    $test_news = News::findFirst(17);
+    $test_news-&gt;getNewstranslations(array('lang_id= :id:', 'bind'=&gt; array('id'=&gt; 2)))-&gt;title;
+    $this-&gt;view-&gt;setVar("test", $test_news);
+    In my View:  {% raw %}{{{% endraw %} test {% raw %}}}{% endraw %}</code></pre>
+<p><img src="http://f5.s.qip.ru/17QY0OqbE.jpg" alt="" /></p>
+<p>Why don`t the examples from the documentation work? And how can I get acess to the entries of the Newstranslations table without using the foreach-cyycle? Could you please help me?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-54a1024fecd3f6bcc41f8dd3-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-54a1024fecd3f6bcc41f8dd3-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/70452aeb2ebcfe5ab6fa38a4f9fb6915?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1800/EquaI1ty" class="user-moderator-N"><span itemprop="name">Alexandr Vitruk</span></a>        </span>
+        <br>
+
+        <span class="karma">6.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C10382" href="#C10382">
+                <time itemprop="dateCreated" datetime="2014-08-15T09:43:02-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I tried to repeat the example from the documentation:</p>
+<p>DB:</p>
+<pre><code>CREATE TABLE IF NOT EXISTS `robots` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(70) NOT NULL,
+  `type` varchar(32) NOT NULL,
+  `year` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=2 ;
+
+INSERT INTO `robots` (`id`, `name`, `type`, `year`) VALUES
+(1, 'Robot1', 'test', 2014);
+
+CREATE TABLE IF NOT EXISTS `parts` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(70) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=2 ;
+
+INSERT INTO `parts` (`id`, `name`) VALUES
+(1, 'head');
+
+CREATE TABLE IF NOT EXISTS `robots_parts` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `robots_id` int(10) NOT NULL,
+  `parts_id` int(10) NOT NULL,
+  `created_at` date NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `robots_id` (`robots_id`),
+  KEY `parts_id` (`parts_id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=2 ;
+
+INSERT INTO `robots_parts` (`id`, `robots_id`, `parts_id`, `created_at`) VALUES
+(1, 1, 1, '2014-08-15');</code></pre>
+<p>Models:</p>
+<pre><code>class Robots extends Model {
+
+    public $id;
+
+    public $name;
+
+    public function initialize()
+    {
+        $this-&gt;hasMany("id", "Modules\Modules\Models\RobotsParts", "robots_id", array( "alias" =&gt; "RobotsParts"));
+    }
+
+    public static function find($parameters = array()){
+        return parent::find($parameters);
+    }
+
+    public static function findFirst($parameters = array()){
+        return parent::findFirst($parameters);
+    }
+
+    public function columnMap(){
+        return array(
+            'id' =&gt; 'id',
+            'name' =&gt; 'name',
+            'type' =&gt; 'type',
+            'year' =&gt; 'year'
+        );
+    }
+}
+
+class Parts extends Model {
+
+    public $id;
+
+    public $name;
+
+    public function initialize()
+    {
+        $this-&gt;hasMany("id", "Modules\Modules\Models\RobotsParts", "parts_id", array( "alias" =&gt; "RobotsParts"));
+    }
+
+    public static function find($parameters = array()){
+        return parent::find($parameters);
+    }
+
+    public static function findFirst($parameters = array()){
+        return parent::findFirst($parameters);
+    }
+
+    public function columnMap(){
+        return array(
+            'id' =&gt; 'id',
+            'name' =&gt; 'name',
+        );
+    }
+}
+
+class RobotsParts extends Model {
+
+    public $id;
+
+    public $robots_id;
+
+    public $parts_id;
+
+    public function initialize()
+    {
+        $this-&gt;belongsTo("robots_id", "Modules\Modules\Models\Robots", "id", array( "alias" =&gt; "Robots"));
+        $this-&gt;belongsTo("parts_id", "Modules\Modules\Models\Parts", "id", array( "alias" =&gt; "Parts"));
+    }
+
+    public static function find($parameters = array()){
+        return parent::find($parameters);
+    }
+
+    public static function findFirst($parameters = array()){
+        return parent::findFirst($parameters);
+    }
+
+    public function columnMap(){
+        return array(
+            'id' =&gt; 'id',
+            'robots_id' =&gt; 'robots_id',
+            'parts_id' =&gt; 'parts_id',
+            'created_at' =&gt; 'created_at'
+        );
+    }
+}</code></pre>
+<p>Controller:</p>
+<p>This code works perfect:</p>
+<pre><code>    $robot = Robots::findFirst();
+    foreach ($robot-&gt;robotsParts as $robotPart) {
+        echo $robotPart-&gt;parts-&gt;name, "\n";
+    }</code></pre>
+<p>And this: </p>
+<pre><code>    $robot = Robots::findFirst();
+    echo $robotsParts = $robot-&gt;robotsParts-&gt;parts-&gt;name;</code></pre>
+<p>Or this:</p>
+<pre><code>    $robot = Robots::findFirst();
+    $robotsParts = $robot-&gt;getRobotsParts("created_at = '2014-08-15'");
+    echo $robotsParts-&gt;name;</code></pre>
+<p>Throws the following exception: </p>
+<pre><code>Notice: Undefined property: Phalcon\Mvc\Model\Resultset\Simple::$name in S:\Server\www\game-serials\apps\modules\backend\controllers\DebugController.php on line 23</code></pre>
+<p>What is wrong?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10382" data-cf-modified-54a1024fecd3f6bcc41f8dd3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10382" data-cf-modified-54a1024fecd3f6bcc41f8dd3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="10383" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '14</span>
+              </span><br/><a name="C10383" href="#C10383">
+                <time itemprop="dateCreated" datetime="2014-08-15T09:45:25-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>$robotsParts is a resultset, which means it returns 0 or more records, so you have to do:</p>
+<pre><code class="language-php">$robot = Robots::findFirst();
+$robotsParts = $robot-&gt;getRobotsParts("created_at = '2014-08-15'");
+foreach ($robotsParts as $robotPart) {
+    echo $robotPart-&gt;name;
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10383" data-cf-modified-54a1024fecd3f6bcc41f8dd3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10383" data-cf-modified-54a1024fecd3f6bcc41f8dd3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/70452aeb2ebcfe5ab6fa38a4f9fb6915?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1800/EquaI1ty" class="user-moderator-N"><span itemprop="name">Alexandr Vitruk</span></a>        </span>
+        <br>
+
+        <span class="karma">6.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C10402" href="#C10402">
+                <time itemprop="dateCreated" datetime="2014-08-15T13:17:53-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you. Understood, now everything is clear.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10402" data-cf-modified-54a1024fecd3f6bcc41f8dd3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10402" data-cf-modified-54a1024fecd3f6bcc41f8dd3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3131" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

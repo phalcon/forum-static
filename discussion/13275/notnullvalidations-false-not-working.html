@@ -1,0 +1,238 @@
+---
+layout: default
+title: '`notNullValidations =&gt; false` not working?? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">`notNullValidations =&gt; false` not working??</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/8079/Keech" class="user-moderator-N"><span itemprop="name">keech</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-08-30T03:13:23-07:00">Aug '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-08-30T03:13:23-07:00">Aug '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>870</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/0e03dfa6c8bed36a16e1ceffd6f4bba3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/8079/Keech" class="user-moderator-N"><span itemprop="name">keech</span></a></span>
+                <span class="karma">2.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C13275" href="#C13275">
+        <time class="action-date">Aug '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>It seems that <code>notNullValidations =&gt; false</code> is not working on <code>model-&gt;save()</code>.</p>
+<p>Detail is below.</p>
+<pre><code class="language-php">class ModelBase extends \Phalcon\Mvc\Model
+{
+    public function initialize()
+    {
+        \Phalcon\Mvc\Model::setup([
+            'notNullValidations' =&gt; false
+        ]);
+    }
+}</code></pre>
+<pre><code class="language-php">use Phalcon\Validation\Validator\Email as EmailValidator;
+
+class User extends ModelBase
+{
+     public function handleSaveError()
+     {
+         $this-&gt;handleError('save');
+     }
+
+     public function handleError($type = 'save')
+     {
+        if ($this-&gt;getMessages()) {
+            $messages = '';
+            foreach ($this-&gt;getMessages() as $message) {
+                $msg = sprintf('(field: %s, message: %s)', $message-&gt;getField(), $message-&gt;getMessage());
+                $messages .= '    ' . $msg . "\n";
+            }
+            throw new \Exception("Model $type error:" . "\n" . $messages);
+        }
+     }
+
+     public function validation()
+    {
+        $validator = new Validation();
+
+        $validator-&gt;rules('email', [
+            new EmailValidator(array(
+            )),
+        ]);
+
+        return $this-&gt;validate($validator);
+    }
+}</code></pre>
+<pre><code class="language-php">$user = User::findFirstById($userId);
+$user-&gt;setEmail(null);
+$user-&gt;save() or $user-&gt;handleSaveError();</code></pre>
+<p>then I got </p>
+<pre><code>2016-08-30 18:57:04 [ERROR] Model save error:
+    (field: email, message: Field email must be an email address)</code></pre>
+<p>How do I solve this??</p>
+<p>Anyone help!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-22149e6b002f53f8aaa51bd3-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-22149e6b002f53f8aaa51bd3-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/566add3f1d27f706359c5d23f720d017?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5101/chipco" class="user-moderator-N"><span itemprop="name">Ciprian Coman</span></a>        </span>
+        <br>
+
+        <span class="karma">2.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39409" href="#C39409">
+                <time itemprop="dateCreated" datetime="2016-08-30T03:24:21-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Try</p>
+<pre><code class="language-php">$validator-&gt;rules('email', [
+    new EmailValidator(array[
+        'message' =&gt; 'The e-mail is not valid',
+        'allowEmpty' =&gt; true
+    ]),
+]);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39409" data-cf-modified-22149e6b002f53f8aaa51bd3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39409" data-cf-modified-22149e6b002f53f8aaa51bd3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/0e03dfa6c8bed36a16e1ceffd6f4bba3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8079/Keech" class="user-moderator-N"><span itemprop="name">keech</span></a>        </span>
+        <br>
+
+        <span class="karma">2.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="39411" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '16</span>
+              </span><br/><a name="C39411" href="#C39411">
+                <time itemprop="dateCreated" datetime="2016-08-30T03:27:21-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you.
+But why below dosn't work?</p>
+<pre><code class="language-php"> \Phalcon\Mvc\Model::setup([
+    'notNullValidations' =&gt; false 
+  ]);</code></pre>
+<p>'allowEmpty' =&gt; true  is only way to skip null validation??</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39411" data-cf-modified-22149e6b002f53f8aaa51bd3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39411" data-cf-modified-22149e6b002f53f8aaa51bd3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/566add3f1d27f706359c5d23f720d017?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5101/chipco" class="user-moderator-N"><span itemprop="name">Ciprian Coman</span></a>        </span>
+        <br>
+
+        <span class="karma">2.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39423" href="#C39423">
+                <time itemprop="dateCreated" datetime="2016-08-30T04:09:11-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Check out <a href="https://docs.phalcon.io/pl/latest/reference/models.html#disabling-enabling-features">https://docs.phalcon.io/pl/latest/reference/models.html#disabling-enabling-features</a></p>
+<p><code>notNullValidations =&gt; false</code> disables <code>not null</code> columns check with your database.</p>
+<p>If you want to tell the EmailValidator to accept empty values use the the code I posted above.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39423" data-cf-modified-22149e6b002f53f8aaa51bd3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39423" data-cf-modified-22149e6b002f53f8aaa51bd3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/0e03dfa6c8bed36a16e1ceffd6f4bba3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8079/Keech" class="user-moderator-N"><span itemprop="name">keech</span></a>        </span>
+        <br>
+
+        <span class="karma">2.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39425" href="#C39425">
+                <time itemprop="dateCreated" datetime="2016-08-30T04:14:05-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>OK, I got it!
+Thank you for your teaching.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39425" data-cf-modified-22149e6b002f53f8aaa51bd3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39425" data-cf-modified-22149e6b002f53f8aaa51bd3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39427" href="#C39427">
+                <time itemprop="dateCreated" datetime="2016-08-30T04:26:24-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><code>notNullValidations</code> is whole other thing, it's for preventing inserting null values into database, If you want validator to accept empty values you need to use <code>allowEmpty</code></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39427" data-cf-modified-22149e6b002f53f8aaa51bd3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39427" data-cf-modified-22149e6b002f53f8aaa51bd3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="13275" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

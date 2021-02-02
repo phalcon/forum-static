@@ -1,0 +1,461 @@
+---
+layout: default
+title: 'Forward action, send response and stop dispatching - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/11/events-manager">Events</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Forward action, send response and stop dispatching</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/325/DimazzzZ" class="user-moderator-N"><span itemprop="name">Dmitriy Zhavoronkov</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-07-10T03:25:38-07:00">Jul '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-07-10T03:25:38-07:00">Jul '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">6</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1470</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/52a2ed41db1d99283376532363b0200f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/325/DimazzzZ" class="user-moderator-N"><span itemprop="name">Dmitriy Zhavoronkov</span></a></span>
+                <span class="karma">5.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C16501" href="#C16501">
+        <time class="action-date">Jul '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi everyone. I saw a lot of topics with such titles but none of them solved my problem.</p>
+<p>Case. I have a controller with index action:</p>
+<pre><code class="language-php">class TrackController extends ControllerBase {
+    public function indexAction(){
+        $this-&gt;eventsManager-&gt;fire('track:beforeStart', $this);
+
+        // Some other logic
+    }
+}</code></pre>
+<p>Event &quot;track&quot; binded in dispatcher:</p>
+<pre><code class="language-php">// ...
+$evManager-&gt;attach('track', new Track);
+// ...</code></pre>
+<p>And the Track listener:</p>
+<pre><code class="language-php">class Track extends Generic
+{
+    /**
+     * @param Event $event
+     */
+    public function beforeStart(Event $event)
+    {
+        if($someCondition == true)
+        {
+            $this-&gt;dispatcher-&gt;forward(
+                [
+                    'controller' =&gt; 'forwardController',
+                    'action'     =&gt; 'forwardAction'
+                ]
+            );
+        }
+    }
+}</code></pre>
+<p>I want to dispatch <code>if($someCondition == true)</code> forward, send response and then stop dispatching. Now it doesn't work, after <code>forwardAction</code> it returns to <code>TrackController::indexAction</code> and continue work after <code>fire</code>.</p>
+<p>I've tried to remove all events manually via <code>$this-&gt;eventsManager-&gt;detachAll()</code>, tried to run <code>dispatch</code> and send response manually but I can't make it work as I wish. The only way is to call <code>exit</code>, but this is a bad way and it's really hard to test.</p>
+<p>Please help with advice. Is it possible to end dispatching within event or may be another (better) solution exists. I know I can do it this way:</p>
+<pre><code class="language-php">class TrackController extends ControllerBase
+{
+    public function beforeExecuteRoute()
+    {
+        if($someCondition == true)
+        {
+            $this-&gt;dispatcher-&gt;forward(
+                [
+                    'controller' =&gt; 'forwardController',
+                    'action'     =&gt; 'forwardAction'
+                ]
+            );
+        } else {
+            // run another method
+        }
+    }
+}</code></pre>
+<p>But don't want to copypaste it in some other controllers. I thought the event-listener model is the best option.</p>
+<p>Thanks in advance.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-85ecb4aa410d956559b86bb6-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-85ecb4aa410d956559b86bb6-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C49421" href="#C49421">
+                <time itemprop="dateCreated" datetime="2017-07-10T04:29:16-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><pre><code class="language-php">return  $this-&gt;dispatcher-&gt;forward(
+                [
+                    'controller' =&gt; 'forwardController',
+                    'action'     =&gt; 'forwardAction'
+                ]
+            );</code></pre>
+<p>?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49421" data-cf-modified-85ecb4aa410d956559b86bb6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49421" data-cf-modified-85ecb4aa410d956559b86bb6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/52a2ed41db1d99283376532363b0200f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/325/DimazzzZ" class="user-moderator-N"><span itemprop="name">Dmitriy Zhavoronkov</span></a>        </span>
+        <br>
+
+        <span class="karma">5.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="49423" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '17</span>
+              </span><br/><a name="C49423" href="#C49423">
+                <time itemprop="dateCreated" datetime="2017-07-10T04:34:56-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>First of all <code>forward</code> is a void function. Anyway this trick will not prevent <code>indexAction</code> to continue execute code after <code>-&gt;fire</code>.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49423" data-cf-modified-85ecb4aa410d956559b86bb6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49423" data-cf-modified-85ecb4aa410d956559b86bb6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="49425" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '17</span>
+              </span><br/><a name="C49425" href="#C49425">
+                <time itemprop="dateCreated" datetime="2017-07-10T05:19:55-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It doesn't matter it's void function, it will prevent indexAction to continue execute because you do return. Return in any method/function will stop execution. No matter if something is returned from executed scope or not. You can also just do:</p>
+<pre><code class="language-php">class Track extends Generic
+{
+    /**
+     * @param Event $event
+     */
+    public function beforeStart(Event $event)
+    {
+        if($someCondition == true)
+        {
+            $this-&gt;dispatcher-&gt;forward(
+                [
+                    'controller' =&gt; 'forwardController',
+                    'action'     =&gt; 'forwardAction'
+                ]
+            );
+            return false;
+        }
+    }
+}</code></pre>
+<p>Return false will stop execution as well.</p>
+<p>Well also just use builtin <code>beforeExecuteRoute</code> event.</p>
+<p>Return in indexAction will be just level-syntax stoping execution - like return in any method will stop further METHOD execution(but it will fire other events etc. Return false in <code>beforeExecuteRoute</code> will stop dispatch execution by design(it will go just to next action like your forwarded). <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/dispatcher.zep#L571">https://github.com/phalcon/cphalcon/blob/master/phalcon/dispatcher.zep#L571</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49425" data-cf-modified-85ecb4aa410d956559b86bb6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49425" data-cf-modified-85ecb4aa410d956559b86bb6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/52a2ed41db1d99283376532363b0200f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/325/DimazzzZ" class="user-moderator-N"><span itemprop="name">Dmitriy Zhavoronkov</span></a>        </span>
+        <br>
+
+        <span class="karma">5.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="49427" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '17</span>
+              </span><br/><a name="C49427" href="#C49427">
+                <time itemprop="dateCreated" datetime="2017-07-10T05:52:02-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>It doesn't matter it's void function, it will prevent indexAction to continue execute because you do return. </p>
+</blockquote>
+<p>No, its not, because we call <code>return</code> in the listener class, not controller's action. And I'm pretty sure that both of us know fundamental PHP rules, this is not topic related thing.</p>
+<blockquote>
+<p>Return false will stop execution as well.</p>
+</blockquote>
+<p>In your example <code>return false</code> only affects listener class, not <code>TrackController::indexAction</code>. I wrote in the end of my first message <em>I know I can do it this way</em> about <code>beforeExecuteRoute</code>, but this is not what I'm looking for. I don't want to check some <code>if..else...</code> statements in controller itself, I want to move this logic to the listener.</p>
+<p>Returning <code>false</code> from the <code>beforeStart</code> event will not prevent <code>indexAction</code> to stop, this is 100% information. You can use Xdebug to check this out very easy.</p>
+<p>P.S. PHP 7.1.7, Phalcon 3.2.0</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49427" data-cf-modified-85ecb4aa410d956559b86bb6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49427" data-cf-modified-85ecb4aa410d956559b86bb6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4bc65c6eab5e6a2344066da4598654cb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9611/phil67000" class="user-moderator-N"><span itemprop="name">phil67000</span></a>        </span>
+        <br>
+
+        <span class="karma">5.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C49429" href="#C49429">
+                <time itemprop="dateCreated" datetime="2017-07-10T06:38:31-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi</p>
+<blockquote>
+<p>But don't want to copypaste it in some other controllers. I thought the event-listener model is the best option.</p>
+</blockquote>
+<p>why do not do it in ControllerBase</p>
+<pre><code class="language-php">
+class TrackController extends ControllerBase
+{
+    public function beforeExecuteRoute()
+    {
+        if($someCondition == true)
+        {
+            $this-&gt;dispatcher-&gt;forward(
+                [
+                    'controller' =&gt; 'forwardController',
+                    'action'     =&gt; 'forwardAction'
+                ]
+            );
+        } else {
+            // run another method
+        }
+    }
+}
+</code></pre>
+<p>and all other controllers extends this class
+Your code is present only on time</p>
+<p>also you can use Traits</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49429" data-cf-modified-85ecb4aa410d956559b86bb6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49429" data-cf-modified-85ecb4aa410d956559b86bb6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/52a2ed41db1d99283376532363b0200f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/325/DimazzzZ" class="user-moderator-N"><span itemprop="name">Dmitriy Zhavoronkov</span></a>        </span>
+        <br>
+
+        <span class="karma">5.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C49431" href="#C49431">
+                <time itemprop="dateCreated" datetime="2017-07-10T06:56:22-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>why do not do it in ControllerBase</p>
+</blockquote>
+<p>Because I don't want to implement this feature in all classes. Trait is much better solution and may be I'll use it if no other ideas come, thanks.</p>
+<p>What is the main benefit for events: I should write just one line of code with <code>fire</code>, set independent listener for each controller and add more functionality in future just in listener class. I just need to keep in mind <em>&quot;okay, I want to do this before action start and I already have an event, just put additional code to the track:beforeStart event and that's it&quot;</em>.</p>
+<p>Thanks both of you, guys. If it's not possible to use events for this task I'll use traits or built-in events.</p>
+<p>P.S. - This is really uncool... I can forward to another action, send response and the only one way to do this immediately is <code>exit</code> code.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49431" data-cf-modified-85ecb4aa410d956559b86bb6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49431" data-cf-modified-85ecb4aa410d956559b86bb6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="49433" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '17</span>
+              </span><br/><a name="C49433" href="#C49433">
+                <time itemprop="dateCreated" datetime="2017-07-10T07:01:59-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><ol>
+<li>To stop method execution you need to make it return something(like anything), examples can be <code>return $this-&gt;dispatcher-&gt;forward()</code> or just <code>return;</code></li>
+<li>To stop dispatch execution you need to return false in the event which can stop execution, like return false in <code>beforeExecuteRoute</code></li>
+</ol>
+<p>No - this is how php and other languages works. To stop some function/method execution you need to return something, or call exit, this is a way too. It has nothing to do with framework.</p>
+<p>Forward doesn't stop execution of action - nothing fancy here.</p>
+<p>You can use trait, just your custom event <code>beforeStart</code> doesn't have ability to stop dispatch exectuion. You would need to extend Phalcon dispatcher and write your own custom logic.</p>
+<p>Also not sure - what's wrong with <code>beforeExecuteRoute</code>? It seems like you need exactly this event.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49433" data-cf-modified-85ecb4aa410d956559b86bb6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49433" data-cf-modified-85ecb4aa410d956559b86bb6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/52a2ed41db1d99283376532363b0200f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/325/DimazzzZ" class="user-moderator-N"><span itemprop="name">Dmitriy Zhavoronkov</span></a>        </span>
+        <br>
+
+        <span class="karma">5.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C49435" href="#C49435">
+                <time itemprop="dateCreated" datetime="2017-07-10T07:44:31-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Also not sure - what's wrong with beforeExecuteRoute? It seems like you need exactly this event.</p>
+</blockquote>
+<p>There is nothing wrong with <code>beforeExecuteRoute</code> event. I just wanted to move it from controller to separate file i.e. <code>trackController:beforeExecuteRoute</code>, but as I understand <code>beforeExecuteRoute</code> is a part of dispatch loop and I must declare it in each controller.</p>
+<p>Thank you for the reply. No questions now.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49435" data-cf-modified-85ecb4aa410d956559b86bb6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49435" data-cf-modified-85ecb4aa410d956559b86bb6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C49437" href="#C49437">
+                <time itemprop="dateCreated" datetime="2017-07-10T08:00:57-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>No you dont have to to declare it in each controller. You can move it to trait, you can move it to seperate listener and attach it using <code>$eventsManager-&gt;attach()</code>.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49437" data-cf-modified-85ecb4aa410d956559b86bb6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49437" data-cf-modified-85ecb4aa410d956559b86bb6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4bc65c6eab5e6a2344066da4598654cb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9611/phil67000" class="user-moderator-N"><span itemprop="name">phil67000</span></a>        </span>
+        <br>
+
+        <span class="karma">5.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="49445" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '17</span>
+              </span><br/><a name="C49445" href="#C49445">
+                <time itemprop="dateCreated" datetime="2017-07-10T09:30:55-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>A home, i see how i separate it</p>
+<p>in app/common/controllers/ControllerBase </p>
+<pre><code class="language-php">
+    public function beforeExecuteRoute()
+    {
+        // some code for all controllers
+    }
+</code></pre>
+<p>in app/modules/moduleA/controllers/ControllerModule </p>
+<pre><code class="language-php">
+class ControllerModule extends ControllerBase
+{
+    public function beforeExecuteRoute()
+    {
+        parent::beforeExecuteRoute();
+
+        // Conditions and access controls here
+        if($someCondition == true)
+        {
+            $this-&gt;dispatcher-&gt;forward(
+                [
+                    'controller' =&gt; 'forwardController',
+                    'action'     =&gt; 'forwardAction'
+                ]
+            );
+        } else {
+            // run another method
+        }
+    }
+}
+</code></pre>
+<p>Controllers in modules :</p>
+<pre><code class="language-php">
+class MyController extends ControllerModule
+{
+        // do ControllerModule beforeExecuteRoute (and ControllerBase )
+}
+</code></pre>
+<p>if i dont want execute module code  :</p>
+<pre><code class="language-php">
+class MyOtherController extends ControllerBase
+{
+        // do only ontrollerBase  beforeExecuteRoute
+}
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49445" data-cf-modified-85ecb4aa410d956559b86bb6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49445" data-cf-modified-85ecb4aa410d956559b86bb6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="16501" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

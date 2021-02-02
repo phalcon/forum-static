@@ -1,0 +1,131 @@
+---
+layout: default
+title: 'model-&gt;refresh() should return all defined columns #13781 - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">model-&gt;refresh() should return all defined columns #13781</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/11999/cnyyk" class="user-moderator-N"><span itemprop="name">YCH</span></a></span>
+            <time itemprop="dateCreated" datetime="2019-01-21T22:47:12-07:00">Jan '19</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2019-01-21T22:47:12-07:00">Jan '19</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>225</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/d7838e4f96f86c177c090873af3f7576?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/11999/cnyyk" class="user-moderator-N"><span itemprop="name">YCH</span></a></span>
+                <span class="karma">737</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C19267" href="#C19267">
+        <time class="action-date">Jan '19</time>
+    </a>
+</div>
+<div class="post-content"><div><h3>Expected and Actual Behavior</h3>
+<blockquote>
+<p>model-&gt;refresh() should return all defined columns(fields).</p>
+<p>Create a new model, set not null fields, and some fields not assignment any value(using db default value), then save it. and change value, then save it, will throw an exception <code>The record doesn't have a valid data snapshot</code>. Then model-&gt;refresh(), and save, PDO exception raised, some fields has default db value, but still notice to set null value: <code>Column 'display_order' cannot be null</code>.</p>
+</blockquote>
+<p>SQL schema</p>
+<pre><code class="language-sql">DROP TABLE IF EXISTS `demos`;
+CREATE TABLE `demos`
+(
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `flag` int(10) NOT NULL DEFAULT '1' COMMENT 'Flag',
+  `name` varchar(190) COLLATE utf8mb4_unicode_520_ci NOT NULL COMMENT 'Name',
+ PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_520_ci COMMENT ='Demos';</code></pre>
+<blockquote>
+<p>Provide minimal script to reproduce the issue</p>
+</blockquote>
+<pre><code class="language-php">class Demos extends \Phalcon\Mvc\Model {
+}</code></pre>
+<pre><code class="language-php">$demo = new Demos();
+$demo-&gt;name = 'test name';
+$result = $demo-&gt;save(); // $result === true, everything goes well, record saved into db.
+
+$demo-&gt;name = 'new test name';
+$result = $demo-&gt;save(); // Exception: The record doesn't have a valid data snapshot
+
+$demo-&gt;refresh();
+$demo-&gt;name = 'new test name';
+$result = $demo-&gt;save(); // Another Exception: SQLSTATE[23000]: Integrity constraint violation: 1048 Column 'flag' cannot be null
+
+var_dump($demo-&gt;toArray());
+// There still only has id and name field after a refresh(). flag field still missing(property does not existed).</code></pre>
+<p>MUST DOING THIS WAY TO AVOID EXCEPTION:</p>
+<pre><code class="language-php">$demo = new Demos();
+$demo-&gt;name = 'test name';
+$result = $demo-&gt;save(); // $result === true, everything goes well
+
+if ($result) {
+  $demo = Demos::findFirst($demo-&gt;id);
+
+  $demo-&gt;name = 'new test name';
+  $result = $demo-&gt;save(); // $result === true
+}</code></pre>
+<p>If some code defined in <code>afterSave()</code> in model, when created then save it:</p>
+<ol>
+<li>The record doesn't have a valid data snapshot, must be <code>refresh()</code> it.</li>
+<li>Even after <code>refresh()</code> it, when save it, will using null value to update not existed property, and avoided all default value.</li>
+</ol>
+<p>SO, IS THERE A WAY TO REAL REFRESH MODEL WAY?</p>
+<h3>Details</h3>
+<ul>
+<li>Phalcon version: 3.4.2</li>
+<li>PHP Version: 7.2.14</li>
+<li>Operating System: macOS 10.14.2</li>
+<li>Installation type: Compiling from source</li>
+<li>Zephir version (if any):</li>
+<li>Server: Apache</li>
+<li>Other related info (Database, table schema): </li>
+</ul></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-38a5822e66a8367702e2f0ce-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-38a5822e66a8367702e2f0ce-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="19267" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

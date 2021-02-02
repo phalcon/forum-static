@@ -1,0 +1,155 @@
+---
+layout: default
+title: 'mysterious join method&#039;s behavior - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">mysterious join method&#039;s behavior</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/14019/shucream0117" class="user-moderator-N"><span itemprop="name">Shuta.M</span></a></span>
+            <time itemprop="dateCreated" datetime="2020-08-03T01:34:45-07:00">Aug '20</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2020-08-03T01:34:45-07:00">Aug '20</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>120</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/40bf2ce1a98e97d5cc96d52b6ca73e04?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/14019/shucream0117" class="user-moderator-N"><span itemprop="name">Shuta.M</span></a></span>
+                <span class="karma">186</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C20789" href="#C20789">
+        <time class="action-date">Aug '20</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi, I have a question about join method.</p>
+<p>For example,</p>
+<pre><code>// relationship definition in  Article::initialize()
+$this-&gt;belongsTo(
+    'user_id',
+    User::class,
+    'id',
+    [
+        'alias' =&gt; 'a',
+        'reusable' =&gt; false,
+    ]
+);</code></pre>
+<pre><code>$userWithArticles = User::query()-&gt;innerJoin(
+    Article::class,
+    "User.id = a.user_id", // conditions
+    "a" // alias
+)-&gt;execute();</code></pre>
+<p>this code executes SQL just like below.</p>
+<pre><code>SELECT `users`.`id`, `users`.`name` # articles table's columns are not included!!
+FROM `users`
+INNER JOIN `articles` AS `a` ON `users`.`id` = `a`.`user_id`</code></pre>
+<p>I also would like to fetch from <code>articles</code> table.
+But, <code>articles</code> table's columns are not included in SELECT.</p>
+<p>What should I do to fetch <code>articles</code> table's columns?</p>
+<p>Or, please tell me how to solve N+1 problem.</p>
+<p>Thank you.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-3fa6cf407316215d63d3565a-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-3fa6cf407316215d63d3565a-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="63953" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '20</span>
+              </span><br/><a name="C63953" href="#C63953">
+                <time itemprop="dateCreated" datetime="2020-08-03T03:31:08-07:00" class="action-date">Aug '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If you need one article record:</p>
+<pre><code class="language-php">$userWithArticles = User::query()
+    -&gt;columns('users.* AS user, articles.* AS article')
+    -&gt;innerJoin(
+        Article::class,
+        "User.id = a.user_id", // conditions
+        "a" // alias
+    )-&gt;execute();
+
+$user = $userWithArticles-&gt;user;
+$article = $userWithArticles-&gt;article;</code></pre>
+<p>If you need related article records:</p>
+<pre><code class="language-php">$user = Users::findFirst();
+// you named this with the alias option in the belongsTo setup
+foreach($user-&gt;a as $article) {
+    // ...
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63953" data-cf-modified-3fa6cf407316215d63d3565a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63953" data-cf-modified-3fa6cf407316215d63d3565a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/40bf2ce1a98e97d5cc96d52b6ca73e04?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/14019/shucream0117" class="user-moderator-N"><span itemprop="name">Shuta.M</span></a>        </span>
+        <br>
+
+        <span class="karma">186</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C63965" href="#C63965">
+                <time itemprop="dateCreated" datetime="2020-08-04T11:58:09-07:00" class="action-date">Aug '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I solved by using <code>columns()</code>.
+Thank you!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63965" data-cf-modified-3fa6cf407316215d63d3565a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63965" data-cf-modified-3fa6cf407316215d63d3565a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="20789" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

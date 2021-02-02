@@ -1,0 +1,136 @@
+---
+layout: default
+title: 'Phalcon 3.2.2 - Session-&gt;setId($string) doesn&#039;t seem to work - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/28/session">Session</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Phalcon 3.2.2 - Session-&gt;setId($string) doesn&#039;t seem to work</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/9065/Vorta" class="user-moderator-N"><span itemprop="name">Vorta</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-09-16T15:32:52-07:00">Sep '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-09-16T15:32:52-07:00">Sep '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>442</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/2c8a155adfd514ca175d45f8b2dddf0a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/9065/Vorta" class="user-moderator-N"><span itemprop="name">Vorta</span></a></span>
+                <span class="karma">2.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C16935" href="#C16935">
+        <time class="action-date">Sep '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello!</p>
+<p>I've got a web app that runs on 2 domains. If user logs in on one of them, he also gets automatically logged in on the other.</p>
+<p>To achieve this I've setup a custom session table in the database and a custom session adapter that makes use of it.</p>
+<p>When user is logged in on domain A and then visits the domain B, the domain B receives a login token. By using this token the system has to change his current session ID on domain B to match the domain A.</p>
+<p>This function is supposed to achieve this:</p>
+<pre><code class="language-php">public function tokenLogin ($token = '') {
+
+    if ($token == '') return FALSE;
+
+    // Getting the user's logged-in session through token
+    $dbSession = DBSession::findFirstByToken($token);
+
+    if ($dbSession !== FALSE) {
+
+        if (!is_null($dbSession-&gt;userId) &amp;&amp; $dbSession-&gt;user !== FALSE) {
+
+            $session = $this-&gt;getDI()-&gt;getSession();
+            $session-&gt;login = TRUE;
+
+            session_write_close();
+
+            // Setting current session to match the logged in SSID
+            $session-&gt;setId($dbSession-&gt;ssid);
+            $session-&gt;start();
+
+            $session-&gt;set('auth', TRUE);
+            $session-&gt;set('userId', $dbSession-&gt;user-&gt;id);
+            if ($dbSession-&gt;user-&gt;isAdmin) $session-&gt;set('isAdmin', TRUE);
+
+            // Make a new token
+            $session-&gt;set('token', md5(\Phalcon\Text::random(\Phalcon\Text::RANDOM_ALNUM, 10) . $user-&gt;email . $_SERVER['REMOTE_ADDR'] . date('YmdHis')));
+
+            // Update login data.
+            $dbSession-&gt;user-&gt;lastLoginDate = date('Y-m-d H:i:s');
+            $dbSession-&gt;user-&gt;lastLoginIP = $_SERVER['REMOTE_ADDR'];
+
+            return $dbSession-&gt;user-&gt;save();
+        }
+    }
+
+    return FALSE;
+}</code></pre>
+<p>However, with the code above the new SSID is used only from line <code>$session-&gt;setId($dbSession-&gt;ssid);</code> and until the code execution ends. The previous SSID somehow pops up again in all further executions.</p>
+<p>I’ve also found out how to make it work. I have to replace <code>$session-&gt;setId($dbSession-&gt;ssid);</code> with <code>session_id($dbSession-&gt;ssid);</code> and <code>$session-&gt;start();</code> with <code>session_start();</code>.</p>
+<p>So my question is: What is wrong with the <code>$session-&gt;setId()</code> and <code>$session-&gt;start()</code> functions? Why won’t the SSID persist if I use them but will if I use native PHP functions?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-c4e31cd660a62a9c99d8c1a6-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-c4e31cd660a62a9c99d8c1a6-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/dabaee32fe49d05f6aeb6226af284252?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9887/JABirchall" class="user-moderator-N"><span itemprop="name">Jake Birchall</span></a>        </span>
+        <br>
+
+        <span class="karma">8.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C51047" href="#C51047">
+                <time itemprop="dateCreated" datetime="2017-09-18T05:32:40-07:00" class="action-date">Sep '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Phalcon has its own session component. You should be using that, <a href="https://docs.phalcon.io/en/3.2/session">https://docs.phalcon.io/en/3.2/session</a></p>
+<p>I dont know how you came to this complicated mess.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51047" data-cf-modified-c4e31cd660a62a9c99d8c1a6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51047" data-cf-modified-c4e31cd660a62a9c99d8c1a6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="16935" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

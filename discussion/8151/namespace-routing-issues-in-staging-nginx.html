@@ -1,0 +1,353 @@
+---
+layout: default
+title: 'Namespace / routing  issues in staging nginx - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Namespace / routing  issues in staging nginx</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2924/PhillyRay" class="user-moderator-N"><span itemprop="name">PhillyRay</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-08-20T12:08:09-07:00">Aug '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-08-20T12:08:09-07:00">Aug '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1760</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/14d5b710ef649ed6a9c750216e3aa81c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2924/PhillyRay" class="user-moderator-N"><span itemprop="name">PhillyRay</span></a></span>
+                <span class="karma">3.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C8151" href="#C8151">
+        <time class="action-date">Aug '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>When moving my app to staging i have encountered an issue with auto loading with the following error:</p>
+<pre><code> 5876#0: *1 FastCGI sent in stderr: "PHP message: PHP Fatal error:  Class 'App\Config\Config' not found in /var/www/app.com/public/index.php on line 23" while reading response header from upstream, client: xx.xx, server: app.syack.com, request: "GET / HTTP/1.1", upstream: "fastcgi://unix:/var/run/php5-fpm.sock:", host: "app.com"</code></pre>
+<p><strong>Environment</strong></p>
+<ul>
+<li>Ubuntu 14.04</li>
+<li>Phalcon 2.0.5 PPA</li>
+<li>Staging: nginx Dev: apache</li>
+</ul>
+<p><strong>What I've Tried</strong></p>
+<ul>
+<li>Verified phalcon extension present</li>
+<li>Manually included the class (fails later with other namespaces)</li>
+<li>Double checking nginx config</li>
+</ul>
+<p><em>Index.php</em></p>
+<pre><code class="language-php">use \App\Config\Config;
+use \App\Config\Modules;
+use \Phalcon\DI\FactoryDefault;
+use \Phalcon\Mvc\Application as BaseApplication;
+
+class Application extends BaseApplication
+{   
+    protected function registerServices()
+    {
+        $loader = new \Phalcon\Loader();
+        $loader-&gt;registerNamespaces(
+            array(
+               "App\Config"    =&gt; "../app/config/",
+            )
+        )-&gt;register();
+
+        require_once __DIR__ . '../../vendor/autoload.php';
+
+        $config = new Config(); \\fail line 23</code></pre>
+<p><em>nginx config</em></p>
+<pre><code>server {
+    listen 80;
+
+    server_name app.com;
+
+    index index.php index.html index.htm;
+
+    set $root_path '/var/www/app.com/public';
+    root $root_path;
+
+    try_files $uri $uri/ @rewrite;
+
+    location @rewrite {
+        rewrite ^(.*)$ /index.php?_url=$1;
+    }
+
+    location ~ \.php$ {
+       # try_files $uri =404;
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        fastcgi_pass unix:/var/run/php5-fpm.sock;
+        fastcgi_index /index.php;
+        fastcgi_param PATH_INFO       $fastcgi_path_info;
+        fastcgi_param PATH_TRANSLATED $document_root$fastcgi_path_info;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+   location ~* ^/(css|img|js|flv|swf|download)/(.+)$ {
+        root $root_path;
+   }
+
+    location ~ /\.ht {
+       deny all;
+    }
+</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-4532af9bdd241462a7380d72-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-4532af9bdd241462a7380d72-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/14d5b710ef649ed6a9c750216e3aa81c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2924/PhillyRay" class="user-moderator-N"><span itemprop="name">PhillyRay</span></a>        </span>
+        <br>
+
+        <span class="karma">3.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="22157" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '15</span>
+              </span><br/><a name="C22157" href="#C22157">
+                <time itemprop="dateCreated" datetime="2015-08-20T12:26:54-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Ive done some more debugging and actually removed phalcon. Getting the same issue. Its almost like phalcon is not installed. The module is listed under phpinfo and its extension is valid. No errors in php fpm log.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="22157" data-cf-modified-4532af9bdd241462a7380d72-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="22157" data-cf-modified-4532af9bdd241462a7380d72-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/14d5b710ef649ed6a9c750216e3aa81c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2924/PhillyRay" class="user-moderator-N"><span itemprop="name">PhillyRay</span></a>        </span>
+        <br>
+
+        <span class="karma">3.1k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="22161" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '15</span>
+              </span><br/><a name="C22161" href="#C22161">
+                <time itemprop="dateCreated" datetime="2015-08-20T13:05:17-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Removed PPA, compiled from source. This seemed to fix the issue. Only issue now is a volt caching issue. (permissions) easy fix.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="22161" data-cf-modified-4532af9bdd241462a7380d72-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span><span itemprop="downvoteCount">1</span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="22161" data-cf-modified-4532af9bdd241462a7380d72-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/70452aeb2ebcfe5ab6fa38a4f9fb6915?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1800/EquaI1ty" class="user-moderator-N"><span itemprop="name">Alexandr Vitruk</span></a>        </span>
+        <br>
+
+        <span class="karma">6.3k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C22161"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/14d5b710ef649ed6a9c750216e3aa81c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        PhillyRay                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="22501" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '15</span>
+              </span><br/><a name="C22501" href="#C22501">
+                <time itemprop="dateCreated" datetime="2015-08-28T13:32:55-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Removed PPA, compiled from source. This seemed to fix the issue. Only issue now is a volt caching issue. (permissions) easy fix.</p>
+</blockquote>
+<p>Hi, I have the same issue. Could you please describe the solution in details? (English is not my main language). I tried to compile phalcon from sources and to install from a repository but the result didn't change.  </p>
+<p>Thanks.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="22501" data-cf-modified-4532af9bdd241462a7380d72-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="22501" data-cf-modified-4532af9bdd241462a7380d72-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/14d5b710ef649ed6a9c750216e3aa81c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2924/PhillyRay" class="user-moderator-N"><span itemprop="name">PhillyRay</span></a>        </span>
+        <br>
+
+        <span class="karma">3.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C22775" href="#C22775">
+                <time itemprop="dateCreated" datetime="2015-09-02T06:55:42-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If you are uing the nginx configuration as described in the documentation, you need to verify that <code>cgi.fix_pathinfo</code> is set to <code>cgi.fix_pathinfo=1</code> in the php ini file.  The configuration assumes that this is set.. This was also related to my issue.</p>
+<p>My Nginx Config</p>
+<pre><code>server {
+    listen 80;
+
+    server_name domain.com;
+
+    index index.php index.html index.htm;
+
+    set $root_path '/var/www/domain.com/public';
+    root $root_path;
+
+    try_files $uri $uri/ @rewrite;
+
+    location @rewrite {
+        rewrite ^(.*)$ /index.php?_url=$1;
+    }
+
+    location ~ \.php$ {
+       # try_files $uri =404;
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        fastcgi_pass unix:/var/run/php5-fpm.sock;
+        fastcgi_index /index.php;
+        fastcgi_param PATH_INFO       $fastcgi_path_info;
+        fastcgi_param PATH_TRANSLATED $document_root$fastcgi_path_info;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+   location ~* ^/(css|img|js|flv|swf|download)/(.+)$ {
+        root $root_path;
+   }
+
+    location ~ /\.ht {
+       deny all;
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="22775" data-cf-modified-4532af9bdd241462a7380d72-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="22775" data-cf-modified-4532af9bdd241462a7380d72-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/70452aeb2ebcfe5ab6fa38a4f9fb6915?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1800/EquaI1ty" class="user-moderator-N"><span itemprop="name">Alexandr Vitruk</span></a>        </span>
+        <br>
+
+        <span class="karma">6.3k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C22775"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/14d5b710ef649ed6a9c750216e3aa81c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        PhillyRay                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C22819" href="#C22819">
+                <time itemprop="dateCreated" datetime="2015-09-02T12:38:53-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>If you are uing the nginx configuration as described in the documentation, you need to verify that <code>cgi.fix_pathinfo</code> is set to <code>cgi.fix_pathinfo=1</code> in the php ini file.  The configuration assumes that this is set.. This was also related to my issue.</p>
+</blockquote>
+<p>Thanks</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="22819" data-cf-modified-4532af9bdd241462a7380d72-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="22819" data-cf-modified-4532af9bdd241462a7380d72-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/14d5b710ef649ed6a9c750216e3aa81c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2924/PhillyRay" class="user-moderator-N"><span itemprop="name">PhillyRay</span></a>        </span>
+        <br>
+
+        <span class="karma">3.1k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C22819"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/70452aeb2ebcfe5ab6fa38a4f9fb6915?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Alexandr Vitruk                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C22823" href="#C22823">
+                <time itemprop="dateCreated" datetime="2015-09-02T13:28:52-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>did this solve your problem</p>
+<blockquote>
+<blockquote>
+<p>If you are uing the nginx configuration as described in the documentation, you need to verify that <code>cgi.fix_pathinfo</code> is set to <code>cgi.fix_pathinfo=1</code> in the php ini file.  The configuration assumes that this is set.. This was also related to my issue.</p>
+</blockquote>
+<p>Thanks</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="22823" data-cf-modified-4532af9bdd241462a7380d72-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="22823" data-cf-modified-4532af9bdd241462a7380d72-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/70452aeb2ebcfe5ab6fa38a4f9fb6915?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1800/EquaI1ty" class="user-moderator-N"><span itemprop="name">Alexandr Vitruk</span></a>        </span>
+        <br>
+
+        <span class="karma">6.3k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C22823"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/14d5b710ef649ed6a9c750216e3aa81c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        PhillyRay                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C22915" href="#C22915">
+                <time itemprop="dateCreated" datetime="2015-09-04T12:07:25-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>did this solve your problem</p>
+</blockquote>
+<p>As to my case, the error had the <a href="https://forum.phalcon.io/discussion/8253/lemp-namespaces-of-custom-classes-doesnt-work#C22509">other reason</a>. But anyway thanks for your response. I think it could be useful for others.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="22915" data-cf-modified-4532af9bdd241462a7380d72-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="22915" data-cf-modified-4532af9bdd241462a7380d72-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="8151" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

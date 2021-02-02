@@ -1,0 +1,196 @@
+---
+layout: default
+title: 'Multidimensional array validation - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/20/internals">Internals</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Multidimensional array validation</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/355/charnad" class="user-moderator-N"><span itemprop="name">Viktoras</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-04-10T01:46:40-07:00">Apr '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-04-10T01:46:40-07:00">Apr '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Apr '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>2454</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/98d169ed95725f8310bb4150708a4f20?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/355/charnad" class="user-moderator-N"><span itemprop="name">Viktoras</span></a></span>
+                <span class="karma">12.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2047" href="#C2047">
+        <time class="action-date">Apr '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>So it is stated in the documentation: <code>Phalcon\Validation is an independent validation component that validates an arbitrary set of data.</code>
+However I found out that there seem to be no way to validate folded arrays.</p>
+<pre><code class="language-php">$validation = new Phalcon\Validation();
+
+$data = ['external' =&gt; ['internal' =&gt; 1]];
+
+$validation-&gt;add("external", new Phalcon\Validation\Validator\PresenceOf());
+// How do I validate internal?
+$validation-&gt;add('???', new Phalcon\Validation\Validator\PresenceOf());
+
+$errors = $validation-&gt;validate($data);</code></pre>
+<p>I've looked into sources, where it ends with <code>zend_symtable_find</code>, which as far as I understand doesn't go deep into an array (which is absolutely logical by itself).</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-648fd6d7848fe7fb6bb6f8ed-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-648fd6d7848fe7fb6bb6f8ed-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fddcf06b8c23b8067b1eb7e46caedad9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1436/iman38" class="user-moderator-N"><span itemprop="name">iman38</span></a>        </span>
+        <br>
+
+        <span class="karma">2.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7085" href="#C7085">
+                <time itemprop="dateCreated" datetime="2014-04-10T08:59:28-07:00" class="action-date">Apr '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I'm not sure if there's currently validator for sub array. However, --one of my favorite feature of phalcon-- we can customize it.</p>
+<p>For example, you can create custom presence validator like:</p>
+<pre><code class="language-php">use Phalcon\Validation\Validator,
+    Phalcon\Validation\ValidatorInterface,
+    Phalcon\Validation\Message;
+
+class MyPresenceValidator extends Validator implements ValidatorInterface
+{
+
+    /**
+     * Executes the validation
+     *
+     * @param \Phalcon\Validation $validator
+     * @param string $attribute
+     * @return boolean
+     */
+    public function validate($validator, $attribute)
+    {
+        $array = explode(".", $attribute);
+        if (count($array) &gt; 0){
+            $value = $validator-&gt;getValue($array[0]);
+            for($i = 1; $i &lt; count($array); $i++){
+                if (!isset($value[$array[$i]])){
+                    $validator-&gt;appendMessage(new Message(str_replace(":field", $attribute, $validator-&gt;getDefaultMessage("PresenceOf")), $attribute));
+                    return false;
+                }
+                $value = $value[$array[$i]];
+            }
+            if ($value !== null){
+                return true;
+            }
+        }
+        return false;
+    }
+}</code></pre>
+<p>and use it on the validation:</p>
+<pre><code class="language-php">        $validation = new \Phalcon\Validation();
+
+        $data = ['external' =&gt; ['internal' =&gt; ['deeper' =&gt; 1]]];
+
+        $validation-&gt;add("external", new \Phalcon\Validation\Validator\PresenceOf());
+        $validation-&gt;add('external.internal', new MyPresenceValidator());
+        $validation-&gt;add('external.internal.deeper', new MyPresenceValidator());
+        $validation-&gt;add('external.internal.crazystuff', new MyPresenceValidator());
+
+        $errors = $validation-&gt;validate($data);
+
+        echo "errors:";
+        foreach($errors as $error){
+            /* @var $error Message */
+            print_r($error-&gt;getMessage());
+       }</code></pre>
+<p>Well, it's a quick and dirty way to do it, but I hope you get the point.</p>
+<p>Cheers,</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7085" data-cf-modified-648fd6d7848fe7fb6bb6f8ed-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7085" data-cf-modified-648fd6d7848fe7fb6bb6f8ed-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/98d169ed95725f8310bb4150708a4f20?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/355/charnad" class="user-moderator-N"><span itemprop="name">Viktoras</span></a>        </span>
+        <br>
+
+        <span class="karma">12.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7111" href="#C7111">
+                <time itemprop="dateCreated" datetime="2014-04-11T02:56:27-07:00" class="action-date">Apr '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you for an extensive reply. You are right, there is plenty possibilities for workaround in this case. However I hope someday we can have something really powerful for arbitrary data validation. In particular, my attention was attracted by Symfony/Config component, and specifically it's Definition part, where you can define array structure and constraints and validate it.</p>
+<p><a href="http://symfony.com/doc/current/components/config/definition.html">http://symfony.com/doc/current/components/config/definition.html</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7111" data-cf-modified-648fd6d7848fe7fb6bb6f8ed-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7111" data-cf-modified-648fd6d7848fe7fb6bb6f8ed-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e5b9449555b2fabf1a8b56c801c9945b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1342/loleksy" class="user-moderator-N"><span itemprop="name">loleksy</span></a>        </span>
+        <br>
+
+        <span class="karma">82</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C7142" href="#C7142">
+                <time itemprop="dateCreated" datetime="2014-04-12T02:40:01-07:00" class="action-date">Apr '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I am using new validation classes for subarrays and use them in afterValidation method.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="7142" data-cf-modified-648fd6d7848fe7fb6bb6f8ed-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="7142" data-cf-modified-648fd6d7848fe7fb6bb6f8ed-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2047" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

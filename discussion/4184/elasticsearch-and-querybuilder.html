@@ -1,0 +1,175 @@
+---
+layout: default
+title: 'ElasticSearch and QueryBuilder - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">ElasticSearch and QueryBuilder</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2683/brainformatik" class="user-moderator-N"><span itemprop="name">Brainformatik</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-12-05T07:26:34-07:00">Dec '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-12-05T07:26:34-07:00">Dec '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1302</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/011321ad4bf943107062b774140f00e5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2683/brainformatik" class="user-moderator-N"><span itemprop="name">Brainformatik</span></a></span>
+                <span class="karma">3.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4184" href="#C4184">
+        <time class="action-date">Dec '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,</p>
+<p>I'm evaluating possibilities of elastic search related to Phalcon (version 2 in my case). I already checked the implementation of phosphorum to get an idea.</p>
+<p>What my implementation does at the moment:</p>
+<ol>
+<li>Query to elastic search</li>
+<li>Iterate over result to get ids of model entries</li>
+<li>Use QueryBuilder to look after this ids in MySQL database</li>
+<li>Pagination with this QueryBuilder as parameter</li>
+</ol>
+<p>Here some code snippets:</p>
+<pre><code class="language-php">&lt;?php
+// query builder
+$builder = $this-&gt;modelsManager-&gt;createBuilder()
+            -&gt;columns('Bf\Model\Blog.id,title,content,date,name,AuthorAddress.street')
+            -&gt;from('Bf\Model\Blog')
+            -&gt;join('Bf\Model\Author')
+            -&gt;join('Bf\Model\Address', 'Bf\Model\Author.id = AuthorAddress.author', 'AuthorAddress')
+            -&gt;orderBy('Bf\Model\Blog.id');
+...
+
+// after elastic search I have a list of ids and add them as clause to builder
+$builder-&gt;inWhere('Bf\Model\Blog.id', $hitIds); // hitIds = array with ids found by elastic search
+...
+
+// and finally the paginator
+$paginator = new QueryBuilder(
+            array(
+                "limit"=&gt; 500,
+                "page" =&gt; $page,
+                'builder' =&gt; $builder
+            )
+        );
+$page = $paginator-&gt;getPaginate();
+
+// page is assigned to volt template to build up list
+$this-&gt;view-&gt;page = $page;</code></pre>
+<p>Now the issue description ;-)</p>
+<p>With increasing number of ids returned by elastic search and inserted to QueryBuilder-&gt;inWhere() request gets extremly slow:</p>
+<ul>
+<li>1 id found: 0.02 sec.</li>
+<li>1000 ids found: 0.24 sec.</li>
+<li>10000 ids found: ~20 sec!!!</li>
+</ul>
+<p>The time is used somewhere in QueryBuilder where the statement is parsed.</p>
+<p>Any ideas how to speed up? Maybe another implementation for getting phalcon models?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-d5f7becc47307d7436e9d5d8-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-d5f7becc47307d7436e9d5d8-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/011321ad4bf943107062b774140f00e5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2683/brainformatik" class="user-moderator-N"><span itemprop="name">Brainformatik</span></a>        </span>
+        <br>
+
+        <span class="karma">3.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C13968" href="#C13968">
+                <time itemprop="dateCreated" datetime="2014-12-07T23:49:59-07:00" class="action-date">Dec '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/phalcon">@phalcon</a> can you explain what parser does and why it gets slower with increasing number of array values given to the inWhere() method?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13968" data-cf-modified-d5f7becc47307d7436e9d5d8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13968" data-cf-modified-d5f7becc47307d7436e9d5d8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C13990" href="#C13990">
+                <time itemprop="dateCreated" datetime="2014-12-08T08:55:54-07:00" class="action-date">Dec '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think it's creating a bigger PHQL query with 10000 placeholders and 10000 values to bound</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13990" data-cf-modified-d5f7becc47307d7436e9d5d8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13990" data-cf-modified-d5f7becc47307d7436e9d5d8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/011321ad4bf943107062b774140f00e5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2683/brainformatik" class="user-moderator-N"><span itemprop="name">Brainformatik</span></a>        </span>
+        <br>
+
+        <span class="karma">3.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C14010" href="#C14010">
+                <time itemprop="dateCreated" datetime="2014-12-08T23:46:30-07:00" class="action-date">Dec '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This would explain why it takes 20 seconds and 1 GB memory limit to execute the query ;-)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14010" data-cf-modified-d5f7becc47307d7436e9d5d8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14010" data-cf-modified-d5f7becc47307d7436e9d5d8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4184" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

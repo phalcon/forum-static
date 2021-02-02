@@ -1,0 +1,230 @@
+---
+layout: default
+title: 'How to do unit testing of related tables - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How to do unit testing of related tables</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/11653/n-oshiumi" class="user-moderator-N"><span itemprop="name">Naoki Oshiumi</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-11-08T01:30:51-07:00">Nov '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-11-08T01:30:51-07:00">Nov '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '19</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>402</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/69557ca6bc4892d0fe670b10cd922712?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/11653/n-oshiumi" class="user-moderator-N"><span itemprop="name">Naoki Oshiumi</span></a></span>
+                <span class="karma">1.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C18967" href="#C18967">
+        <time class="action-date">Nov '18</time>
+    </a>
+</div>
+<div class="post-content"><div><h1>Using</h1>
+<ul>
+<li>phalcon(3.4)</li>
+<li>phalcon/incubator(3.4)</li>
+<li>phpunit/phpunit(6.5.8)</li>
+<li>phpunit/dbunit(3.0.3)</li>
+</ul>
+<p>How to do unit testing of related tables?</p>
+<p>in my database, tableB  belongs to tableA. and tableC belongs to tableB
+Like This</p>
+<pre><code>class TableA extends \Base\Model
+{
+    public $id:
+    .
+    .
+    .
+
+    public function initialize()
+    {
+        parent::initialize();
+        $this-&gt;belongsTo('TableB', '\TableB', 'id', ['alias' =&gt; 'TableB']);
+    }
+</code></pre>
+<p>and</p>
+<pre><code>class TableB extends \Base\Model
+{
+    public $id:
+    .
+    .
+    .
+
+    public function initialize()
+    {
+        parent::initialize();
+        $this-&gt;belongsTo('TableC', '\TableC', 'id', ['alias' =&gt; 'TableC']);
+    }
+</code></pre>
+<h1>Code to be tested</h1>
+<p>I wanna create unit test which another func is called.</p>
+<pre><code>public function TestAction()
+    {
+
+        $testA = \TestA::findFirst("id = {$id}");
+        $testB = $TestA-&gt;TestB;
+        .
+        .
+        .
+
+        if ($testB-&gt;save()) {
+        .
+        .
+        .
+        $testA-&gt;update();
+                // execute another func(private function)
+                $this-&gt;anotherFunc(
+                    $testB-&gt;testC-&gt;toArray(),
+                    $testB-&gt;toArray(),
+                    $params
+                );
+            }
+        }
+    }</code></pre>
+<h1>Unit Test</h1>
+<pre><code>class TestControllerTest extends \UnitTestCase
+{
+    protected function getDataSet()
+    {
+        return new YamlDataSet(../TestControllerTestDataSet.yml");
+    }
+
+    public function testsSampleAction()
+    {
+
+        $mockTestController = new \App\Controllers\TestController;
+
+        // mock testA model
+        $testAMock = Mockery::mock('overload:\testA);
+
+        // define data that findFirst function return
+        $testAData = $getDataSet-&gt;getTable("testA")-&gt;getRow(0);
+
+        // define testB data that TestA related
+        $testBData = $getDataSet-&gt;getTable("testB")-&gt;getRow(0);
+
+         // define testC data that testB related
+        $testCData = $getDataSet-&gt;getTable("testC")-&gt;getRow(0);
+
+        // array_merge(testB and testC)
+        $testAData = array_merge($testBData, array("testC" =&gt; $testCData));
+        $testAData = array_merge($testAData, array("testB" =&gt; $testBData));
+
+        // change from array to object
+        $data = (object) $testAData;
+
+         $testA-&gt;shouldReceive("findFirst")
+                -&gt;andReturn($testAData);
+
+        $testA-&gt;testB = new class {
+            public function save()
+            {
+                return true;
+            }
+         };
+
+        $mockTestController-&gt;registerAction();
+        $mockTestController-&gt;expects($this-&gt;once())-&gt;method('anotherFunc');
+    }
+</code></pre>
+<h1>current status</h1>
+<p>The details of the error are here..
+I do not know what and how to complete the unit test.
+I ask for support.</p>
+<pre><code>Error: Call to a member function save() on array</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-765c3c9a1ca11f3d5deb82de-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-765c3c9a1ca11f3d5deb82de-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/40fd53ae77323bdb119a01992e0a2dc2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/12137/ashtonmullens" class="user-moderator-N"><span itemprop="name">Ashton Mullens</span></a>        </span>
+        <br>
+
+        <span class="karma">160</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="59269" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '19</span>
+              </span><br/><a name="C59269" href="#C59269">
+                <time itemprop="dateCreated" datetime="2019-03-11T04:38:43-07:00" class="action-date">Mar '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I consider unit testing with Phalcon quite painstaking in general. When I tried to use the laravel-translatable package, though, I had minor mistakes. I should have selected the whole row instead of individual columns.
+Besides, there were also some mistakes while saving the translation. Perhaps, you need to check the stackoverflow questions:</p>
+<ul>
+<li><a href="https://stackoverflow.com/questions/38566117/phalcon-mock-models-for-unit-testing">Phalcon - mock models for unit testing</a> <a href="https://www.writemyessayfast.org/">official</a></li>
+<li><a href="https://stackoverflow.com/questions/53557700/phalcon-php-unit-testing-di-shared-instance">Phalcon PHP Unit Testing DI Shared Instance</a></li>
+</ul></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="59269" data-cf-modified-765c3c9a1ca11f3d5deb82de-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="59269" data-cf-modified-765c3c9a1ca11f3d5deb82de-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b04a2c283afc864aeae5efa14877c972?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/12175/matt5555" class="user-moderator-N"><span itemprop="name">matt5555</span></a>        </span>
+        <br>
+
+        <span class="karma">85</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C59285" href="#C59285">
+                <time itemprop="dateCreated" datetime="2019-03-14T08:05:37-07:00" class="action-date">Mar '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Unit testing is good at checking bugs, but there’s still the possibility of missing an error, so I’m still in favor of <a href="htthttps%3A//itechcraft.com/automation-testing-services/p%3A//">test automation</a>.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="59285" data-cf-modified-765c3c9a1ca11f3d5deb82de-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="59285" data-cf-modified-765c3c9a1ca11f3d5deb82de-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="18967" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

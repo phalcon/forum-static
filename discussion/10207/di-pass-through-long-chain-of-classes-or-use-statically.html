@@ -1,0 +1,339 @@
+---
+layout: default
+title: 'DI: pass through long chain of classes or use statically? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/10/di-ioc">DI/IoC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">DI: pass through long chain of classes or use statically?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3978/rcmonitor" class="user-moderator-N"><span itemprop="name">rcmonitor</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-01-18T05:27:58-07:00">Jan '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-01-18T05:27:58-07:00">Jan '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>695</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/bd52b76de009bd54958266e91bbfd012?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3978/rcmonitor" class="user-moderator-N"><span itemprop="name">rcmonitor</span></a></span>
+                <span class="karma">2.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C10207" href="#C10207">
+        <time class="action-date">Jan '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p><em>I didn't find out how to format spoilers, so it'll be kinda long(</em></p>
+<p>Let's say, I need to use object method that requires some service within dependency injection container.
+For example, logger service.
+And let's say that this object is created inside method of another class that may or may not require DIC.
+Let's also assume that it may be nested deeper than 2 levels.</p>
+<h4>How should I inform that bottom-level class about DIC presense?</h4>
+<h3>Should I pass it through all classes, possibly adding DIC knowledge to objects that don't need it?</h3>
+<p><strong>Something like:</strong></p>
+<p><em>index.php:</em></p>
+<pre><code>use Phalcon\Di\FactoryDefault\Cli;
+use Phalcon\Logger\Adapter\File;
+
+$di = new Cli();
+
+$di-&gt;setShared('logger', function () {
+    return new File('app.log');
+});
+
+$di-&gt;set('creator', 'CreatorClass');
+$oCreator = $di-&gt;get('creator');
+
+$oCreator-&gt;doSomeStuff();</code></pre>
+<p><em>CreatorClass.php:</em></p>
+<pre><code>use Phalcon\Di\InjectionAwareInterface;
+
+class CreatorClass implements InjectionAwareInterface
+{
+    protected $_di;
+
+    public function setDI(\Phalcon\DiInterface $dependencyInjector)
+    {
+        $this-&gt;_di = $dependencyInjector;
+    }
+
+    public function getDI()
+    {
+        return $this-&gt;_di;
+    }
+
+    public function doSomeStuff()
+    {
+        $this-&gt;_di-&gt;set('utilizer', 'UtilizerClass');
+
+        $oUtilizer = $this-&gt;_di-&gt;get('utilizer');
+        $oUtilizer-&gt;useProvider();
+    }
+}</code></pre>
+<p><em>UtilizerClass.php:</em></p>
+<pre><code>use Phalcon\Di\InjectionAwareInterface;
+
+class UtilizerClass implements InjectionAwareInterface
+{
+    protected $_di;
+
+    public function setDI(\Phalcon\DiInterface $dependencyInjector)
+    {
+        $this-&gt;_di = $dependencyInjector;
+    }
+
+    public function getDI()
+    {
+        return $this-&gt;_di;
+    }
+
+    public function useProvider()
+    {
+        $this-&gt;_di-&gt;set('provider', 'ProviderClass');
+
+        $oProvider = $this-&gt;_di-&gt;get('provider');
+        echo $oProvider-&gt;getData();
+        echo $oProvider-&gt;getData();
+    }
+
+}</code></pre>
+<p><em>ProviderClass.php:</em></p>
+<pre><code>use Phalcon\Di\InjectionAwareInterface;
+
+class ProviderClass implements InjectionAwareInterface
+{
+    protected $_di;
+
+    public function setDI(\Phalcon\DiInterface $dependencyInjector)
+    {
+        $this-&gt;_di = $dependencyInjector;
+    }
+
+    public function getDI()
+    {
+        return $this-&gt;_di;
+    }
+
+    public function getData()
+    {
+        $data = 'data';
+
+        $oLogger = $this-&gt;_di-&gt;get('logger');
+        $oLogger-&gt;info($data . ' retrieved');
+
+        return $data;
+    }
+}</code></pre>
+<h3>Or, should i use DI statically only where it really need to be used?</h3>
+<p><strong>Something like:</strong>
+<em>index.php:</em></p>
+<pre><code>use Phalcon\Di\FactoryDefault\Cli;
+use Phalcon\Logger\Adapter\File;
+
+$di = new Cli();
+
+$di-&gt;setShared('logger', function () {
+    return new File('app.log');
+});
+
+$oCreator = new CreatorClass();
+$oCreator-&gt;doSomeStuff();</code></pre>
+<p><em>CreatorClass.php:</em></p>
+<pre><code>class CreatorClass
+{
+
+    public function doSomeStuff()
+    {
+        $oUtilizer = new UtilizerClass();
+        $oUtilizer-&gt;useProvider();
+    }
+}</code></pre>
+<p><em>UtilizerClass.php:</em></p>
+<pre><code>class UtilizerClass
+{
+    public function useProvider()
+    {
+        $oProvider = new ProviderClass();
+        echo $oProvider-&gt;getData();
+    }
+
+}</code></pre>
+<p><em>ProviderClass.php:</em></p>
+<pre><code>use Phalcon\Di;
+
+class ProviderClass
+{
+
+    public function getData()
+    {
+        $data = 'data';
+
+        $oLogger = Di::getDefault()-&gt;get('logger');
+        $oLogger-&gt;info($data . ' retrieved');
+
+        return $data;
+    }
+}</code></pre>
+<h4>Or, maybe, I should use some other approach?</h4></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-41e2160ab71cc4ef108e119a-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-41e2160ab71cc4ef108e119a-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/dfea412df9792aa3d31281290dd07b7e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5735/joyider" class="user-moderator-N"><span itemprop="name">André Karlsson</span></a>        </span>
+        <br>
+
+        <span class="karma">8.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="29093" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '16</span>
+              </span><br/><a name="C29093" href="#C29093">
+                <time itemprop="dateCreated" datetime="2016-01-18T10:26:25-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>hi. this can be done in a few ways. </p>
+<ol>
+<li>Extend your class with Phalcon/Di/injectable</li>
+<li>implement injectionawareinterface on your class and code getDi/setDi and pass your di as a varible</li>
+<li>custom method by passing your di as a variable.</li>
+</ol>
+<p>latley i extend my classes with phalcon/di/injectable since it is easy and also provide you with the eventmanager</p>
+<p>Like:</p>
+<pre><code class="language-php">abstract class RexecProvider extends Injectable implements RexecInterface
+{
+
+    private $ip;
+    private $port;
+    private $rcexec_password;
+    private $error;
+    private $status;
+    //protected $logger;
+    protected $di;
+    protected $statusserver=null;
+
+    /**
+     * Constructor for the new class
+     */
+    public function __construct() {
+        $this-&gt;di=$this-&gt;getDI();
+        //$this-&gt;logger=$this-&gt;di['logger'];
+        $this-&gt;di['logger']-&gt;info("RExec loaded");
+    }</code></pre>
+<p>Regards
+André</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="29093" data-cf-modified-41e2160ab71cc4ef108e119a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="29093" data-cf-modified-41e2160ab71cc4ef108e119a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bd52b76de009bd54958266e91bbfd012?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3978/rcmonitor" class="user-moderator-N"><span itemprop="name">rcmonitor</span></a>        </span>
+        <br>
+
+        <span class="karma">2.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="29101" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '16</span>
+              </span><br/><a name="C29101" href="#C29101">
+                <time itemprop="dateCreated" datetime="2016-01-18T12:35:50-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>So, your actual answer (in case of Injectable solution) is to: </p>
+<ol>
+<li>pass DI through all objects regardless of whether or not they really need to know about DIC in the first place;</li>
+<li>use inheritance to make my code more coupled and decrease possibility to extend really important classes.</li>
+</ol></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="29101" data-cf-modified-41e2160ab71cc4ef108e119a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="29101" data-cf-modified-41e2160ab71cc4ef108e119a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/dfea412df9792aa3d31281290dd07b7e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5735/joyider" class="user-moderator-N"><span itemprop="name">André Karlsson</span></a>        </span>
+        <br>
+
+        <span class="karma">8.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C29101"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/bd52b76de009bd54958266e91bbfd012?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        rcmonitor                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="29103" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '16</span>
+              </span><br/><a name="C29103" href="#C29103">
+                <time itemprop="dateCreated" datetime="2016-01-18T13:19:17-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>So, your actual answer (in case of Injectable solution) is to: </p>
+<ol>
+<li>pass DI through all objects regardless of whether or not they really need to know about DIC in the first place;</li>
+<li>use inheritance to make my code more coupled and decrease possibility to extend really important classes.</li>
+</ol>
+</blockquote>
+<p>well yes where it is needed, A long chain of classes really needs planing. If you look at some major phalcon projects you see that</p>
+<pre><code class="language-php">public function setDi($di) {
+        $this-&gt;_di=$di;
+    }</code></pre>
+<p>is commonly present somehere in the class chain (suggestion 2 from my initial suggestion) and you dont need to implement the interface but it is good practise from an api point of view</p>
+<p>You can also use Phalcon\DI::getDefault() to get the lastest created DI see: <a href="https://docs.phalcon.io/en/latest/api/Phalcon_DI.html"><a href="https://docs.phalcon.io/en/latest/api/Phalcon_DI.html">https://docs.phalcon.io/en/latest/api/Phalcon_DI.html</a></a></p>
+<pre><code class="language-php">$logger = \Phalcon\DI::getDefault()-&gt;get('logger');</code></pre>
+<p>Just as you described, the choice is yours. But Im schooled to avoid statics as much as possible. And it makes perfect sense, especially on DI containers, to pass the variables in the constructor.</p>
+<p>Regards</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="29103" data-cf-modified-41e2160ab71cc4ef108e119a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="29103" data-cf-modified-41e2160ab71cc4ef108e119a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="10207" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,611 @@
+---
+layout: default
+title: 'Whats is the best way to write a fast load bootstrap . - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Whats is the best way to write a fast load bootstrap .</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2891/iraitc" class="user-moderator-N"><span itemprop="name">Hamed</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-12-26T10:42:13-07:00">Dec '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-12-26T10:42:13-07:00">Dec '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1589</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/49c0922574edfe5d372d622f157a3f63?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2891/iraitc" class="user-moderator-N"><span itemprop="name">Hamed</span></a></span>
+                <span class="karma">1.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4337" href="#C4337">
+        <time class="action-date">Dec '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi , I want to know what the best way to write a fast project in Phalcon , I'm writing a project that should response more than 1000 request in second , consider I'll use caching but I wonder about the whole Phalcon framework , I don't know what's the best model to write a very fast bootstrap , for example useing <code>Phalcon\DI\FactoryDefault()</code> or not ? .
+How we should define our services ? with anonymous function or array style ?</p>
+<p>any Idea ?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-26044dcc5b0529c723c34bc5-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-26044dcc5b0529c723c34bc5-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/877a54304e07c8cb38c47b43e1d6b6b3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2828/sergeyklay" class="user-moderator-Y"><span itemprop="name">Serghei Iakovlev</span></a>        </span>
+        <br>
+
+        <span class="karma">39.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="14694" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '15</span>
+              </span><br/><a name="C14694" href="#C14694">
+                <time itemprop="dateCreated" datetime="2015-01-09T17:27:55-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Common and quite good variant.</p>
+<p><code>/public/index.php</code>:</p>
+<pre><code class="language-php">&lt;?php
+
+use \Phalcon\DI\FactoryDefault as PhDi;
+
+define('DOCROOT', realpath(dirname(dirname(__FILE__))).DIRECTORY_SEPARATOR);
+
+try {
+    include DOCROOT . 'common/library/bootstrap.php';
+    $di = new PhDi;
+    $app = new Bootstrap($di);
+    echo $app-&gt;run();
+
+} catch (\Phalcon\Exception $e) {
+    echo $e-&gt;getMessage();
+} catch (PDOException $e){
+    echo $e-&gt;getMessage();
+}</code></pre>
+<p><code>/common/library/bootstrap.php</code></p>
+<pre><code class="language-php">&lt;?php
+
+use Phalcon\DI\FactoryDefault         as PhDi;
+use Phalcon\Exception                 as PhException;
+use Phalcon\Session\Adapter\Files     as PhSession;
+use Phalcon\Config                    as PhConfig;
+use Phalcon\Mvc\Url                   as PhUrl;
+use Phalcon\Mvc\Router                as PhRouter;
+use Phalcon\Db\Adapter\Pdo\Mysql      as PhMysql;
+use Phalcon\Events\Manager            as PhEvents;
+use Phalcon\Logger\Adapter\File       as PhLogger;
+use Phalcon\Mvc\Model\Metadata\Memory as PhMetadataMemory;
+use Phalcon\Assets\Manager            as PhAssets;
+use Phalcon\Mvc\View                  as PhView;
+use Phalcon\Mvc\View\Engine\Volt      as PhVolt;
+use Phalcon\Flash\Session             as PhFlash;
+use Phalcon\Crypt                     as PhCrypt;
+use Phalcon\Security                  as PhSecurity;
+use Phalcon\Version                   as PhVersion;
+use Phalcon\Cache\Frontend\Output     as PhCacheFront;
+use Phalcon\Cache\Backend\File        as PhCacheBackFile;
+use Phalcon\Cache\Backend\Apc         as PhCacheBackApc;
+use Phalcon\Mvc\Application           as PhApplication;
+
+/**
+ * Bootstraps the application
+ */
+class Bootstrap
+{
+    /**
+     * Standard Phalcon\Di
+     * @var PhDi
+     */
+    private $di;
+
+    /**
+     * Bootstrap constructor
+     *
+     * @param PhDi $di Standard Phalcon\Di
+     */
+    public function __construct($di)
+    {
+        // Handle the request
+        $this-&gt;di = $di;
+    }
+
+    /**
+     * Runs the application performing all initializations
+     *
+     * @param array $options
+     * @return mixed
+     */
+    public function run(array $options = [])
+    {
+        $loaders = [
+            'environment',
+            'session',
+            'config',
+            'loader',
+            'url',
+            'router',
+            'database',
+            'modelsMetadata',
+            'logger',
+            'assets',
+            'view',
+            'flash',
+            'crypt',
+            'security',
+            'cache',
+        ];
+
+        try {
+            foreach ($loaders as $service) {
+                $function = 'init' . ucfirst($service);
+                $this-&gt;$function($options);
+            }
+
+            $application = new PhApplication();
+            $application-&gt;setDI($this-&gt;di);
+
+            $config = $this-&gt;di['config'];
+            $application-&gt;registerModules($config-&gt;modules-&gt;toArray());
+
+            return $application-&gt;handle()-&gt;getContent();
+        } catch (PhException $e) {
+            echo $e-&gt;getMessage();
+        } catch (\PDOException $e) {
+            echo $e-&gt;getMessage();
+        }
+    }
+
+    /**
+     * Initializes the Environment
+     *
+     * @param array $options
+     */
+    protected function initEnvironment(array $options = [])
+    {
+        /**
+         * @const APP_START_TIME The start time of the application, used for profiling
+         */
+        define('APP_START_TIME', microtime(TRUE));
+
+        /**
+         * @const DEV_IP Developer IP mask
+         */
+        define('DEV_IP', '192.168.');
+
+        /**
+         * @const APP_PRODUCTION Production stage
+         */
+        define('APP_PRODUCTION', 'production');
+
+        /**
+         * @const APP_DEVELOPMENT Development stage
+         */
+        define('APP_DEVELOPMENT', 'development');
+
+        /**
+         * @const APP_STAGING Staging stage
+         */
+        define('APP_STAGING', 'staging');
+
+        /**
+         * @const APP_TESTING Testing stage
+         */
+        define('APP_TESTING', 'testing');
+
+        /**
+         * @const DS shortcut for DIRECTORY_SEPARATOR
+         */
+        define('DS', DIRECTORY_SEPARATOR);
+
+        /**
+         * @const APP_START_MEMORY The memory usage at the start of the application, used for profiling
+         */
+        define('APP_START_MEMORY', memory_get_usage(defined('HHVM_VERSION')));
+
+        // Set TZ (Kiyv +0200)
+        date_default_timezone_set('Etc/GMT-2');  // CHANGE IT IF NECESSARY
+
+        // Set the default locale
+        setlocale(LC_ALL, 'ru_RU.utf-8'); // CHANGE IT IF NECESSARY
+
+        // Set internal character encoding to UTF-8.
+        mb_internal_encoding('UTF-8');
+
+        // Set the mb_substitute_character to "none"
+        mb_substitute_character('none');
+
+        // Set environment variable
+        if (isset($_SERVER['APP_ENV'])) {
+            // Get environment variable from $_SERVER, .htaccess, apache.conf, nginx.conf, etc.
+            $env = $_SERVER['APP_ENV'];
+        } elseif (get_cfg_var('APP_ENV')) {
+            // Get environment variable from php.ini or from ini_get('user_ini.filename')
+            $env = get_cfg_var('APP_ENV');
+        } else {
+            $env = APP_PRODUCTION;
+        }
+
+        /**
+         * @const APP_ENV Application environment
+         */
+        define('APP_ENV', strtolower($env));
+
+        /**
+         * @const PHALCONDEBUG Defining a debug or environment flag
+         */
+        defined('PHALCONDEBUG') || define('PHALCONDEBUG', APP_ENV === APP_DEVELOPMENT);
+
+        /**
+         * Include Composer autoloader
+         */
+        if (is_file(DOCROOT .'common' . DS . 'vendor' . DS . 'autoload.php')) {
+            require_once(DOCROOT .'common' . DS . 'vendor' . DS . 'autoload.php');
+        }
+    }
+
+    /**
+     * Initializes the Session
+     *
+     * @param array $options
+     */
+    protected function initSession(array $options = [])
+    {
+        $this-&gt;di['session'] = function () {
+            $session = new PhSession;
+            $session-&gt;start();
+
+            return $session;
+        };
+    }
+
+    /**
+     * Initializes the Config. Reads it from its location and
+     * stores it in the Di container for easier access
+     *
+     * @param array $options
+     */
+    protected function initConfig($options = [])
+    {
+        $configFile  = require(DOCROOT . 'config/'.APP_ENV.'.php');
+
+        // Create the new object
+        $config = new PhConfig($configFile);
+
+        // Store it in the Di container
+        // Settings cones from the include
+        $this-&gt;di['config'] = $config;
+    }
+
+    /**
+     * Initializes the Loader
+     *
+     * @param array $options
+     */
+    protected function initLoader($options = [])
+    {
+        // Creates the autoloader
+        $loader = require DOCROOT . 'config/loader.php';
+
+        // Dump it in the DI to reuse it
+        $this-&gt;di['loader'] = $loader;
+    }
+
+    /**
+     * Initializes the Url
+     *
+     * @param array $options
+     */
+    protected function initUrl($options = [])
+    {
+        $config = $this-&gt;di['config'];
+        $baseUrl = $config-&gt;application-&gt;baseUri;
+
+        /**
+         * The URL component is used to generate all kind of urls in the
+         * application
+         */
+        $this-&gt;di['url'] = function () use ($baseUrl) {
+            $url = new PhUrl();
+            $url-&gt;setBaseUri($baseUrl);
+            return $url;
+        };
+    }
+
+    /**
+     * Initializes the Router
+     * @param array $options
+     */
+    protected function initRouter($options = [])
+    {
+        $config = $this-&gt;di['config'];
+        $routes = $config['routes'];
+
+        $this-&gt;di['router'] = function () use ($routes) {
+            $router = new PhRouter(false);
+
+            $router-&gt;notFound([
+                'controller' =&gt; 'index',
+                'action'     =&gt; 'route404'
+            ]);
+
+            $router-&gt;removeExtraSlashes(true);
+
+            foreach ($routes as $route =&gt; $items) {
+                $router-&gt;add($route, $items-&gt;params-&gt;toArray())
+                    -&gt;setName($items-&gt;name);
+            }
+
+            return $router;
+        };
+    }
+
+    /**
+     * Initializes the Database
+     * @param array $options
+     */
+    protected function initDatabase($options = [])
+    {
+        $config = $this-&gt;di['config'];
+        $dbConfig = $config-&gt;database-&gt;toArray();
+        $logsDir = $config-&gt;application-&gt;logsDir;
+
+        $this-&gt;di['db'] = function () use ($dbConfig, $logsDir) {
+            $connection    = new PhMysql($dbConfig);
+            $eventsManager = new PhEvents;
+            $logger        = new PhLogger(sprintf('%s.log', $logsDir . date('Y-m-d').'-sql_debug'));
+            $listener      = new \Your\Best\Listener\DbListener($logger);
+
+            $eventsManager-&gt;attach('db', $listener);
+
+            //Assign the eventsManager to the db adapter instance
+            $connection-&gt;setEventsManager($eventsManager);
+
+            return $connection;
+        };
+    }
+
+    /**
+     * Initializes the Models Metadata
+     *
+     * @param array $options
+     */
+    protected function initModelsMetadata($options = [])
+    {
+        $this-&gt;di['modelsMetadata'] = function () {
+            return new PhMetadataMemory;
+        };
+    }
+
+    /**
+     * Initializes the Logger
+     *
+     * @param array $options
+     */
+    protected function initLogger($options = [])
+    {
+        $config = $this-&gt;di['config'];
+        $logsDir = $config-&gt;application-&gt;logsDir;
+
+        $this-&gt;di['logger'] = function() use($logsDir) {
+            $logger = new PhLogger(sprintf('%s.log', $logsDir . date('Y-m-d')));
+
+            return $logger;
+        };
+    }
+
+    /**
+     * Initializes the Assets
+     *
+     * @param array $options
+     */
+    protected function initAssets($options = [])
+    {
+        $this-&gt;di['assets'] = function() {
+            $assets = new PhAssets;
+            $assets
+                -&gt;addJs('js/jquery.min.js')
+                -&gt;addJs('js/bootstrap.min.js');
+
+            $assets
+                -&gt;addCss('css/bootstrap.min.css')
+                -&gt;addCss('css/font-awesome.min.css');
+
+            return $assets;
+        };
+    }
+
+    /**
+     * Initializes the View and Volt
+     *
+     * @param array $options
+     */
+    protected function initView($options = [])
+    {
+        $config = $this-&gt;di['config'];
+        $di     = $this-&gt;di;
+
+        $voltDir           = $config-&gt;volt-&gt;cacheDir;
+        $compiledExt       = $config-&gt;volt-&gt;compiledExt;
+        $compiledSeparator = $config-&gt;volt-&gt;separator;
+        $debug             = $config-&gt;application-&gt;debug;
+
+        $this-&gt;di['view'] = function () use ($voltDir, $compiledExt, $compiledSeparator, $debug, $di) {
+            $view = new PhView;
+
+            $view-&gt;registerEngines([
+                '.volt' =&gt; function ($view , $di) use ($voltDir, $compiledExt, $compiledSeparator, $debug) {
+                    $volt        = new PhVolt($view, $di);
+                    $voltOptions = [
+                        'compiledPath'      =&gt; $voltDir,
+                        'compiledExtension' =&gt; $compiledExt,
+                        'compiledSeparator' =&gt; $compiledSeparator
+                    ];
+
+                    if ($debug) {
+                        $voltOptions['compileAlways'] = true;
+                    }
+
+                    $volt-&gt;setOptions($voltOptions);
+
+                    $volt-&gt;getCompiler()
+                        -&gt;addFunction('strtotime', 'strtotime')
+                        -&gt;addFunction('isset', 'isset');
+
+                    return $volt;
+                },
+                '.phtml' =&gt; 'Phalcon\Mvc\View\Engine\Php'
+            ]);
+
+            $view-&gt;setVar('version', PhVersion::get());
+
+            return $view;
+        };
+    }
+
+    /**
+     * Initializes the Flash
+     *
+     * @param array $options
+     */
+    protected function initFlash($options = [])
+    {
+        $this-&gt;di['flash'] = function () {
+            return new PhFlash([
+                'error'   =&gt; 'alert alert-danger',
+                'success' =&gt; 'alert alert-success',
+                'notice'  =&gt; 'alert alert-info',
+                'warning' =&gt; 'alert alert-warning'
+            ]);
+        };
+    }
+
+    /**
+     * Initializes the Crypt
+     *
+     * @param array $options
+     */
+    protected function initCrypt($options = [])
+    {
+        $config = $this-&gt;di['config'];
+        $key = $config-&gt;crypt-&gt;key;
+
+        $this-&gt;di['crypt'] = function () use ($key) {
+            $crypt = new PhCrypt;
+            // Set a global encryption key
+            $crypt-&gt;setKey($key);
+
+            return $crypt;
+        };
+    }
+
+    /**
+     * Initializes the Security
+     *
+     * @param array $options
+     */
+    protected function initSecurity($options = [])
+    {
+        $this-&gt;di['security'] = function () {
+            $security = new PhSecurity;
+            // Set the password hashing factor to 12 rounds
+            $security-&gt;setWorkFactor(12);
+
+            return $security;
+        };
+    }
+
+    /**
+     * Initializes the Cache
+     *
+     * @param array $options
+     */
+    protected function initCache($options = [])
+    {
+        $config = $this-&gt;di['config'];
+        $lifeTime = $config-&gt;cache-&gt;lifetime;
+        $cacheDir = $config-&gt;cache-&gt;cacheDir;
+
+        $this-&gt;di['viewCache'] = function () use ($lifeTime, $cacheDir) {
+            // Get the parameters
+            $frontCache = new PhCacheFront(['lifetime' =&gt; $lifeTime]);
+
+            if (function_exists('apc_store')) {
+                $cache = new PhCacheBackApc($frontCache);
+            } else {
+                $cache = new PhCacheBackFile($frontCache, ['cacheDir' =&gt; $cacheDir]);
+            }
+
+            return $cache;
+        };
+    }
+}
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14694" data-cf-modified-26044dcc5b0529c723c34bc5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14694" data-cf-modified-26044dcc5b0529c723c34bc5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/49c0922574edfe5d372d622f157a3f63?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2891/iraitc" class="user-moderator-N"><span itemprop="name">Hamed</span></a>        </span>
+        <br>
+
+        <span class="karma">1.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C14697" href="#C14697">
+                <time itemprop="dateCreated" datetime="2015-01-09T22:31:52-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks Serghei</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14697" data-cf-modified-26044dcc5b0529c723c34bc5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14697" data-cf-modified-26044dcc5b0529c723c34bc5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4337" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

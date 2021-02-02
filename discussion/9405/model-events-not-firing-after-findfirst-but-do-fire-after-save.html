@@ -1,0 +1,198 @@
+---
+layout: default
+title: 'Model events not firing after findFirst() but do fire after save() - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Model events not firing after findFirst() but do fire after save()</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/5433/cbellgit" class="user-moderator-N"><span itemprop="name">cbellgit</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-11-11T14:53:53-07:00">Nov '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-11-11T14:53:53-07:00">Nov '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>544</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/ebafa4fbc1909ab7b85dcf586dc7a9d9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/5433/cbellgit" class="user-moderator-N"><span itemprop="name">cbellgit</span></a></span>
+                <span class="karma">648</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C9405" href="#C9405">
+        <time class="action-date">Nov '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I am attempting to create a function in a Base Model class that would allow me to register events that would fire afterFetch, beforeSave and afterSave so that I can convert unix timestamps to mysql timestamps in utc, and vice versa.</p>
+<p>I want the code to go into the base model, but actually call the registration in the actual model, in case there are models that shouldn't operate this way.</p>
+<p>I have for a base model.</p>
+<pre><code class="language-php">&lt;?php
+use Phalcon\Db\Column;
+use Phalcon\Events\Manager as EventsManager;
+
+class ModelBase extends Phalcon\Mvc\Model {
+
+    /**
+     * this attaches listeners to the beforeSave, afterSave, and afterFetch events of
+     * the given model to convert the dates/datetimes to/from unix timestamps and mysql dattimes in utc
+     */
+    public function register_utc_conversion() {
+        $eventsManager = new EventsManager();
+        // Attach an anonymous function as a listener for "model" events
+        $eventsManager-&gt;attach('model', function ($event, $model) {
+        if ($event-&gt;getType() == 'afterFetch' || $event-&gt;getType() == 'afterSave') {
+                $fields = $model-&gt;getModelsMetaData()-&gt;getDataTypes($model);
+                foreach ($fields as $field =&gt; $type) {
+                    if (($type == Column::TYPE_DATE || $type == Column::TYPE_DATETIME) &amp;&amp; $model-&gt;$field !== null) {
+                        $model-&gt;$field = $model-&gt;getDI()-&gt;get('datehelper')-&gt;from_utc($model-&gt;$field);
+                    }
+                }
+        } else if ($event-&gt;getType() == 'beforeSave') {
+                $fields = $model-&gt;getModelsMetaData()-&gt;getDataTypes($model);
+                foreach ($fields as $field =&gt; $type) {
+                    if ($type == Column::TYPE_DATE &amp;&amp; $model-&gt;$field !== null) {
+                        $model-&gt;$field = $model-&gt;getDI()-&gt;get('datehelper')-&gt;ts_utc($model-&gt;$field, 'Y-m-d');
+                    } else if ($type == Column::TYPE_DATETIME &amp;&amp; $model-&gt;$field !== null) {
+                        $model-&gt;$field = $model-&gt;getDI()-&gt;get('datehelper')-&gt;ts_utc($model-&gt;$field, 'Y-m-d H:i:s');
+                    }
+                }
+        }
+        return true;
+        });
+        $this-&gt;setEventsManager($eventsManager);
+    }
+}</code></pre>
+<p>and for an actual model: (Bellsell_Model extends ModelBase)</p>
+<pre><code class="language-php">&lt;?php
+class Bellsell_Invoices extends Bellsell_Model {
+
+    public $id;
+    public $invoice_number;
+    public $customers_id;
+    public $notes;
+    public $arrive_date;
+    public $pickup_date;
+    public $ordered_from;
+    public $include_sales_tax;
+    public $po_number;
+    public $created;
+    public $updated;
+    public $invoiced;
+
+    public function initialize() {
+        parent::initialize();
+        $this-&gt;setSource('invoices');
+        $this-&gt;hasMany('id', 'Bellsell_Items', 'invoices_id');
+        $this-&gt;belongsTo('customers_id', 'Bellsell_Customers', 'id');
+        $this-&gt;register_utc_conversion();
+    }
+}</code></pre>
+<p>if I load the model using findFirst, the eventsmanager doesn't seem to fire any events, however if I then save the model, the events appear to be fired.  Putting code in the afterFetch() function of the model appears to work, but that defeats what I am trying to accomplish by using EventsManager and being able to register it on a per model basis.  What would be the difference in the afterFetch() function working vs the EventsMananger not working.  Quite certain I am missing something obvious.  Using 2.0.8.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-157569cdc873a023f574d70d-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-157569cdc873a023f574d70d-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C26297" href="#C26297">
+                <time itemprop="dateCreated" datetime="2015-11-12T08:25:54-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Are you sure findFirst return full model ? AfterFetch will fire only if you are selecting full object, if you select some columns then it wont work. Same if you select it fo example with modelsManager.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26297" data-cf-modified-157569cdc873a023f574d70d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26297" data-cf-modified-157569cdc873a023f574d70d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ebafa4fbc1909ab7b85dcf586dc7a9d9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5433/cbellgit" class="user-moderator-N"><span itemprop="name">cbellgit</span></a>        </span>
+        <br>
+
+        <span class="karma">648</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C26311" href="#C26311">
+                <time itemprop="dateCreated" datetime="2015-11-12T10:35:55-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I am using for testing</p>
+<pre><code>$invoice = Bellsell_Invoices::findFirst(873);</code></pre>
+<p>if I look at $invoice-&gt;arrive_date it hasn't been modified after the fetch, but if I do $invoice-&gt;save() then look at $invoice-&gt;arrive_date, it has been modified.</p>
+<p>I was seeing some posts that allude to the fact that findFirst may not fire events until after the object is accessed, but as I mentioned earlier, if I put code in the afterFetch() function of Bellsell_Invoices, that fires, but for some reason the event in EventManager doesn't fire.  I'm tempted to upgrade to 2.1 to see if there is any difference, but not sure I want to risk breaking other things just yet.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26311" data-cf-modified-157569cdc873a023f574d70d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26311" data-cf-modified-157569cdc873a023f574d70d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ebafa4fbc1909ab7b85dcf586dc7a9d9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5433/cbellgit" class="user-moderator-N"><span itemprop="name">cbellgit</span></a>        </span>
+        <br>
+
+        <span class="karma">648</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C26333" href="#C26333">
+                <time itemprop="dateCreated" datetime="2015-11-12T15:49:24-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Started poking around in the sourcecode and found that the afterFetch event isn't fired in the Events Manager, but the afterFetch() function of the model is called if it exists.  I made the appropriate changes in model.zep and recompiled and so far so good.  My registered events seem to fire.  Will do some more testing then see about doing a pull request with the changes (once I figure out how to do a pull request :)).</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26333" data-cf-modified-157569cdc873a023f574d70d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26333" data-cf-modified-157569cdc873a023f574d70d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="9405" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

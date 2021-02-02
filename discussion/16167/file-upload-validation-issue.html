@@ -1,0 +1,722 @@
+---
+layout: default
+title: 'File upload / validation issue - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">File upload / validation issue</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/9201/Videles" class="user-moderator-N"><span itemprop="name">Videles</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-05-22T01:22:49-07:00">May '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-05-22T01:22:49-07:00">May '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Feb '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1490</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/e6f3e4bab0da88ca16fe1e50078ec864?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/9201/Videles" class="user-moderator-N"><span itemprop="name">Videles</span></a></span>
+                <span class="karma">13.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C16167" href="#C16167">
+        <time class="action-date">May '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,</p>
+<p>I have a form in which a user can upload an image via a file input field. The user is allowed to leave the file field empty so it remains empty upon creation or doesnt get updated in the case its left empty on the edit screen.</p>
+<p>When left empty the file type validation is somehow triggered </p>
+<p>When i use the below check, file uploading works, but the validation triggers even if left blank</p>
+<pre><code class="language-php">if($this-&gt;request-&gt;getPost("image") !== '') {
+        //
+}</code></pre>
+<p>if i change this to the below, the validation is skipped but the image/file upload doesnt work anymore.</p>
+<pre><code class="language-php">if($this-&gt;request-&gt;getPost("image") !== NULL) {
+        //
+}</code></pre>
+<p>This is the full controller (above is in the save- and create action)</p>
+<pre><code class="language-php">&lt;?php
+use PhalconTime\Forms\UserForm;
+use PhalconTime\Models\User;
+use Phalcon\Security\Random;
+
+class UserController extends ControllerBase
+{
+
+    /**
+     * The start action, it shows the "search" view
+     */
+    public function indexAction()
+    {
+        $users = User::find();
+
+        $this-&gt;view-&gt;users = $users;
+    }
+
+    /**
+     * Execute the "search" based on the criteria sent from the "index"
+     * Returning a paginator for the results
+     */
+    public function searchAction()
+    {
+        // ...
+    }
+
+    /**
+     * Shows the view to create a "new" user
+     */
+    public function newAction()
+    {
+        $this-&gt;view-&gt;setVar('form', new UserForm(null, ['edit' =&gt; false]));
+    }
+
+    /**
+     * Shows the view to "edit" an existing user
+     */
+    public function editAction($id)
+    {
+        if (!$this-&gt;request-&gt;isPost()) {
+            $user = User::findFirstById($id);
+            if (!$user) {
+                $this-&gt;flash-&gt;error('User not found');
+                return $this-&gt;dispatcher-&gt;forward(["controller" =&gt; "user", "action" =&gt; "index" ]);
+            }
+
+            $user-&gt;setPassword('');
+            $this-&gt;view-&gt;setVar('form', new UserForm($user, ['edit' =&gt; true]));
+        }
+    }
+
+    /**
+     * Creates a user based on the data entered in the "new" action
+     */
+    public function createAction()
+    {
+        if (!$this-&gt;request-&gt;isPost()) {
+            return $this-&gt;dispatcher-&gt;forward(["controller" =&gt; "user", "action" =&gt; "index" ]);
+        }
+
+        $form   = new UserForm;
+        $user   = new User;
+        $data   = $this-&gt;request-&gt;getPost();
+
+        if (!$form-&gt;isValid($data, $user)) {
+            foreach ($form-&gt;getMessages() as $message) {
+                $this-&gt;flash-&gt;error($message);
+            }
+            return $this-&gt;dispatcher-&gt;forward(["controller" =&gt; "user", "action" =&gt; "new" ]);
+        }
+
+        $password       = $this-&gt;request-&gt;getPost("password");
+        $user-&gt;password = $this-&gt;security-&gt;hash($password);
+
+        // @TODO The check always triggers since it has to be !== NULL but if changed uploading doesnt work anymore
+        if($this-&gt;request-&gt;getPost("image") !== '') {
+            if($this-&gt;request-&gt;hasFiles()) {
+                foreach ($this-&gt;request-&gt;getUploadedFiles() as $file) {
+                    if ($this-&gt;extensionCheck($file-&gt;getRealType())) {
+                        $random      = new Random();
+                        $uuid        = $random-&gt;uuid();
+                        $user-&gt;image = $uuid.'_'.$file-&gt;getName();
+
+                        $file-&gt;moveTo('img/uploads/'.$uuid.'_'.$file-&gt;getName());
+                    }
+                    else {
+                        $this-&gt;flash-&gt;error('This typ of file is not supported');
+
+                        return $this-&gt;dispatcher-&gt;forward(["controller" =&gt; "user", "action" =&gt; "new" ]);
+                    }
+                }
+            }
+        }
+
+        if ($user-&gt;save() == false) {
+            foreach ($user-&gt;getMessages() as $message) {
+                $this-&gt;flash-&gt;error($message);
+            }
+            return $this-&gt;dispatcher-&gt;forward(["controller" =&gt; "user", "action" =&gt; "new" ]);
+        }
+
+        $form-&gt;clear();
+        $this-&gt;flash-&gt;success("User created");
+
+        return $this-&gt;dispatcher-&gt;forward(["controller" =&gt; "user", "action" =&gt; "index" ]);
+    }
+
+    /**
+     * Updates a user based on the data entered in the "edit" action
+     */
+    public function saveAction()
+    {
+
+        if (!$this-&gt;request-&gt;isPost()) {
+            return $this-&gt;dispatcher-&gt;forward(["controller" =&gt; "user", "action" =&gt; "index" ]);
+        }
+
+        $id     = $this-&gt;request-&gt;getPost("id", "int");
+        $user   = User::findFirstById($id);
+
+        if (!$user) {
+            $this-&gt;flash-&gt;error("User not found");
+            return $this-&gt;dispatcher-&gt;forward(["controller" =&gt; "user", "action" =&gt; "index" ]);
+        }
+        $currentPassword = $user-&gt;getPassword();
+
+        $form = new UserForm;
+        $this-&gt;view-&gt;setVar('form', $form);
+
+        if($this-&gt;request-&gt;getPost("password") !== '') {
+            $data = $this-&gt;request-&gt;getPost();
+
+            // @TODO on edit screen validation doesn't work
+            // if (!$form-&gt;isValid($data, $user)) {
+            //     foreach ($form-&gt;getMessages() as $message) {
+            //         $this-&gt;flash-&gt;error($message);
+            //     }
+            //     return $this-&gt;dispatcher-&gt;forward(["controller" =&gt; "user", "action" =&gt; "edit" , "params" =&gt; $id]);
+            // }
+
+            $password       = $this-&gt;request-&gt;getPost("password");
+            $user-&gt;password = $this-&gt;security-&gt;hash($password);
+        }
+        else {
+            $user-&gt;password = $currentPassword;
+        }
+
+        if($this-&gt;request-&gt;getPost("image") !== '') {
+            if($this-&gt;request-&gt;hasFiles()) {
+                foreach ($this-&gt;request-&gt;getUploadedFiles() as $file) {
+                    if ($this-&gt;extensionCheck($file-&gt;getRealType())) {
+                        $random      = new Random();
+                        $uuid        = $random-&gt;uuid();
+                        $user-&gt;image = $uuid.'_'.$file-&gt;getName();
+
+                        $file-&gt;moveTo('img/uploads/'.$uuid.'_'.$file-&gt;getName());
+                    }
+                    else {
+                        $this-&gt;flash-&gt;error('This typ of file is not supported');
+
+                        return $this-&gt;dispatcher-&gt;forward(["controller" =&gt; "user", "action" =&gt; "new" ]);
+                    }
+                }
+            }
+        }
+
+        if ($user-&gt;save() == false) {
+            foreach ($user-&gt;getMessages() as $message) {
+                $this-&gt;flash-&gt;error($message);
+            }
+            return $this-&gt;dispatcher-&gt;forward(["controller" =&gt; "user", "action" =&gt; "edit" , "params" =&gt; $id]);
+        }
+
+        $form-&gt;clear();
+        $this-&gt;flash-&gt;success('User updated');
+
+        return $this-&gt;dispatcher-&gt;forward(["controller" =&gt; "user", "action" =&gt; "index" ]);
+    }
+
+    /**
+     * Deletes an existing user
+     */
+    public function deleteAction($id)
+    {
+        $user = User::findFirstById($id);
+
+        if (!$user) {
+            $this-&gt;flash-&gt;error("User not found");
+
+            return $this-&gt;dispatcher-&gt;forward(["controller" =&gt; "user", "action" =&gt; "index" ]);
+        }
+        if (!$user-&gt;delete()) {
+            foreach ($user-&gt;getMessages() as $message) {
+                $this-&gt;flash-&gt;error($message);
+            }
+            return $this-&gt;dispatcher-&gt;forward(["controller" =&gt; "user", "action" =&gt; "index" ]);
+        }
+
+        $this-&gt;flash-&gt;success("User deleted");
+        return $this-&gt;dispatcher-&gt;forward(["controller" =&gt; "user", "action" =&gt; "index" ]);
+    }
+
+    /**
+     * Delete only the image
+     */
+    public function deleteImageAction($id)
+    {
+        $user   = User::findFirstById($id);
+
+        if (!$user) {
+            $this-&gt;flash-&gt;error("User not found");
+            return $this-&gt;dispatcher-&gt;forward(["controller" =&gt; "user", "action" =&gt; "index" ]);
+        }
+
+        $user-&gt;image = NULL;
+
+        $form = new UserForm;
+        $this-&gt;view-&gt;setVar('form', $form);
+
+        if ($user-&gt;save() == false) {
+            foreach ($user-&gt;getMessages() as $message) {
+                $this-&gt;flash-&gt;error($message);
+            }
+            return $this-&gt;dispatcher-&gt;forward(["controller" =&gt; "user", "action" =&gt; "edit" , "params" =&gt; $id]);
+        }
+
+        $form-&gt;clear();
+        $this-&gt;flash-&gt;success('Image removed');
+
+        return $this-&gt;dispatcher-&gt;forward(["controller" =&gt; "user", "action" =&gt; "edit" ]);
+
+    }
+
+    /**
+     * Confirm before deleting records
+     */
+    public function confirmAction($id)
+    {
+        if(!$id) {
+            $this-&gt;flash-&gt;error("User not found");
+
+            return $this-&gt;dispatcher-&gt;forward(["controller" =&gt; "user", "action" =&gt; "index" ]);
+        }
+
+        $this-&gt;view-&gt;setVar('id', $id);
+    }
+
+    /**
+     * Attempt to determine the real file type of a file.
+     *
+     * @param  string $extension Extension (eg 'jpg')
+     * @return boolean
+     *
+     * @TODO move to form object, https://docs.phalcon.io/en/3.0.0/api/Phalcon_Validation_Validator_File.html
+     */
+    private function extensionCheck($extension)
+    {
+        $allowedTypes = [
+            'image/gif',
+            'image/jpg',
+            'image/png',
+            'image/bmp',
+            'image/jpeg'
+        ];
+
+        return in_array($extension, $allowedTypes);
+    }
+
+}
+</code></pre>
+<p>And below is the form</p>
+<pre><code class="language-php">&lt;?php
+
+namespace PhalconTime\Forms;
+
+use Phalcon\Forms\Form;
+use Phalcon\Forms\Element\Text;
+use Phalcon\Forms\Element\Hidden;
+use Phalcon\Forms\Element\Password;
+use Phalcon\Forms\Element\Check;
+use Phalcon\Forms\Element\File;
+use Phalcon\Validation\Validator\File as FileValidator;
+use Phalcon\Validation\Validator\PresenceOf;
+use Phalcon\Validation\Validator\Email;
+use Phalcon\Validation\Validator\Identical;
+use Phalcon\Validation\Validator\StringLength;
+use Phalcon\Validation\Validator\Confirmation;
+
+class UserForm extends Form
+{
+    /**
+     * Initialize the project status form
+     *
+     * @param mixed $entity
+     * @param array $options
+     */
+    public function initialize($entity = null, $options = [])
+    {
+
+        if (isset($options['edit']) &amp;&amp; $options['edit'] === TRUE) {
+            $id = new Hidden(
+                "id", [
+                    "class" =&gt; "hidden",
+                ]
+            );
+            $this-&gt;add($id);
+        }
+
+        // Name
+        $name = new Text(
+            "name",
+            [
+                "placeholder" =&gt; "Name",
+                "class"       =&gt; "form-control",
+            ]
+        );
+        $name-&gt;setLabel("Name");
+        $name-&gt;setFilters(
+            [
+                "striptags",
+                "string",
+            ]
+        );
+        $name-&gt;addValidators(
+            [
+                new PresenceOf(
+                    [
+                        "message" =&gt; "Name is required",
+                    ]
+                )
+            ]
+        );
+        $this-&gt;add($name);
+
+        // Email
+        $email = new Text(
+            "email",
+            [
+                "placeholder" =&gt; "E-mailaddress",
+                "class"       =&gt; "form-control",
+            ]
+        );
+        $email-&gt;setLabel("E-mail");
+        $email-&gt;setFilters(
+            [
+                "striptags",
+                "string",
+            ]
+        );
+        $email-&gt;addValidators(
+            [
+                new PresenceOf(
+                    [
+                        "message" =&gt; "E-mailaddress is required",
+                    ]
+                ),
+                new Email(
+                    [
+                        'message' =&gt; 'E-mailaddress is not valid'
+                    ]
+                )
+            ]
+        );
+        $this-&gt;add($email);
+
+        // Password
+        $password = new Password(
+            "password",
+            [
+                "placeholder" =&gt; "Password",
+                "class"       =&gt; "form-control",
+            ]
+        );
+        $password-&gt;setLabel("Password");
+        $password-&gt;setFilters(
+            [
+                "striptags",
+                "string",
+            ]
+        );
+        $password-&gt;addValidators(
+            [
+                new PresenceOf(
+                    [
+                        "message" =&gt; "Password is required",
+                    ]
+                ),
+                new StringLength(
+                    [
+                        'min' =&gt; 8,
+                        'messageMinimum' =&gt; 'Password is too short. Minimum 8 characters'
+                    ]
+                ),
+                new Confirmation(
+                    [
+                        'message' =&gt; 'Password doesn\'t match confirmation',
+                        'with' =&gt; 'passwordRepeat'
+                    ]
+                )
+            ]
+        );
+        $this-&gt;add($password);
+
+        // Password repeat
+        $passwordRepeat = new Password(
+            "passwordRepeat",
+            [
+                "placeholder" =&gt; "Password repeat",
+                "class"       =&gt; "form-control",
+            ]
+        );
+        $passwordRepeat-&gt;setLabel("Password repeat");
+        $passwordRepeat-&gt;setFilters(
+            [
+                "striptags",
+                "string",
+            ]
+        );
+        $passwordRepeat-&gt;addValidators(
+            [
+                new PresenceOf(
+                    [
+                        "message" =&gt; "Password repeat is required",
+                    ]
+                )
+            ]
+        );
+        $this-&gt;add($passwordRepeat);
+
+        // File
+        $file = new File(
+            "image",
+            [
+                "placeholder" =&gt; ""
+            ]
+        );
+        $file-&gt;setLabel("Profile picture");
+        $file-&gt;addValidators(
+            [
+                new FileValidator(
+                    [
+                        'allowEmpty' =&gt; true
+                    ]
+                )
+            ]
+        );
+        $this-&gt;add($file);
+
+        // Active
+        $active = new Check(
+            "active",
+            [
+                "value" =&gt; 1,
+                "checked" =&gt; "checked"
+            ]
+        );
+        $active-&gt;setLabel("Active");
+        $active-&gt;setFilters(
+            [
+                "striptags",
+                "int",
+            ]
+        );
+        $this-&gt;add($active);
+
+    }
+
+}
+</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-df11b21fc0ffd03677313f95-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-df11b21fc0ffd03677313f95-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C48283" href="#C48283">
+                <time itemprop="dateCreated" datetime="2017-05-22T02:09:15-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Why not move extension check to the validator?</p>
+<pre><code class="language-php">        $file-&gt;setLabel("Profile picture");
+        $file-&gt;addValidators(
+            [
+                new FileValidator(
+                    [
+                        'allowEmpty' =&gt; true,
+                        "allowedTypes" =&gt; [
+                            "image/jpeg",
+                            "image/png",
+                        ],
+                        "messageType" =&gt; "Allowed file types are :types",
+                    ]
+                )
+            ]
+        );</code></pre>
+<p><code>https://docs.phalcon.io/en/3.0.0/api/Phalcon_Validation_Validator_File.html</code></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48283" data-cf-modified-df11b21fc0ffd03677313f95-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48283" data-cf-modified-df11b21fc0ffd03677313f95-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9663b7b6c0bc4e24ecbf57e0defc5925?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8589/PolDeveloper" class="user-moderator-N"><span itemprop="name">Michał Talar</span></a>        </span>
+        <br>
+
+        <span class="karma">6.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C48291" href="#C48291">
+                <time itemprop="dateCreated" datetime="2017-05-23T00:26:04-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi,
+try this:</p>
+<pre><code class="language-php">
+                                     if($this-&gt;request-&gt;hasFiles() == true)
+                                            {
+
+                                                foreach ($this-&gt;request-&gt;getUploadedFiles() as $upload)
+                                                {
+                                                     if($upload-&gt;getName() != '')
+                                                      {
+                                                            //do validation and save image or not
+                                                      }
+                                                      //there is no image uploading
+
+                                                }
+                                            }
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48291" data-cf-modified-df11b21fc0ffd03677313f95-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48291" data-cf-modified-df11b21fc0ffd03677313f95-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e6f3e4bab0da88ca16fe1e50078ec864?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9201/Videles" class="user-moderator-N"><span itemprop="name">Videles</span></a>        </span>
+        <br>
+
+        <span class="karma">13.8k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C48291"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/9663b7b6c0bc4e24ecbf57e0defc5925?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Michał Talar                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C48361" href="#C48361">
+                <time itemprop="dateCreated" datetime="2017-05-24T05:11:26-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank a lot for your help this worked!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48361" data-cf-modified-df11b21fc0ffd03677313f95-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48361" data-cf-modified-df11b21fc0ffd03677313f95-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e6f3e4bab0da88ca16fe1e50078ec864?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9201/Videles" class="user-moderator-N"><span itemprop="name">Videles</span></a>        </span>
+        <br>
+
+        <span class="karma">13.8k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C48283"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Lajos Bencz                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="48365" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '17</span>
+              </span><br/><a name="C48365" href="#C48365">
+                <time itemprop="dateCreated" datetime="2017-05-24T05:16:32-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Why not move extension check to the validator?</p>
+<pre><code class="language-php">        $file-&gt;setLabel("Profile picture");
+        $file-&gt;addValidators(
+            [
+                new FileValidator(
+                    [
+                        'allowEmpty' =&gt; true,
+                        "allowedTypes" =&gt; [
+                            "image/jpeg",
+                            "image/png",
+                        ],
+                    "messageType" =&gt; "Allowed file types are :types",
+                    ]
+                )
+            ]
+        );</code></pre>
+<p><a href="https://docs.phalcon.io/en/3.0.0/api/Phalcon_Validation_Validator_File.html">https://docs.phalcon.io/en/3.0.0/api/Phalcon_Validation_Validator_File.html</a></p>
+<hr />
+<p>I tried this solution but didnt manage to get it to work. It would even allow me to upload a zip file and on update it would make the field empty. I'll look into this solution again later when I'm more familiar with the form objects.</p>
+<p>Thanks a lot though!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48365" data-cf-modified-df11b21fc0ffd03677313f95-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48365" data-cf-modified-df11b21fc0ffd03677313f95-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c901057c9c1d1b989dad8ba3231229d5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10563/sugumar101" class="user-moderator-N"><span itemprop="name">sugumar101</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C53871" href="#C53871">
+                <time itemprop="dateCreated" datetime="2018-02-08T22:29:46-07:00" class="action-date">Feb '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>if($this-&gt;request-&gt;hasFiles() == true) {
+foreach ($this-&gt;request-&gt;getUploadedFiles() as $upload) {
+if($upload-&gt;getName() != '') {
+//do validation and save image or not
+}
+//there is no image uploading
+}
+}</p>
+<p>Its ok , how to validate for image uploaded or not, befor foreach() loop</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="53871" data-cf-modified-df11b21fc0ffd03677313f95-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="53871" data-cf-modified-df11b21fc0ffd03677313f95-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="16167" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

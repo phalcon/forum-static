@@ -1,0 +1,341 @@
+---
+layout: default
+title: 'Memory challenge for Phalcon - user space code wins? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/20/internals">Internals</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Memory challenge for Phalcon - user space code wins?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/420/zerkella" class="user-moderator-N"><span itemprop="name">Andrey Tserkus</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-08-09T14:17:26-07:00">Aug '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-08-09T14:17:26-07:00">Aug '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '13</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">6</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1263</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">3</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/2713b24d747ba910a9a41996bded4460?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/420/zerkella" class="user-moderator-N"><span itemprop="name">Andrey Tserkus</span></a></span>
+                <span class="karma">1.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C741" href="#C741">
+        <time class="action-date">Aug '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi guys,</p>
+<p>recently I've discovered one interesting thing in the PHP engine: memory consumption of returned values is optimized for user space code, but is not optimized for internal code. This deeply affects Phalcon, because, passing high amount of data through it, may become quite ineffective.</p>
+<p>The issue is found in any internal method/function (in any PHP extension), which returns a value. If you look at the mechanism, how 'return_value' variable is passed in and out of internal PHP function in C, then you realize, that you need to fully copy all the returned data into this variable. There is no ability just to increase a 'refcount' of an already existing zval and just return it. This means, that it is not possible to engage PHP's memory optimization mechanism (refcounting for &quot;copy-on-write&quot;).</p>
+<p>At the same time, returning values from a user space method/function is fully optimized by PHP - &quot;copy-on-write&quot; technique is engaged there.</p>
+<p>I've composed and verified the issue in the following script: <a href="http://pastebin.com/MZ0AZmGA">http://pastebin.com/MZ0AZmGA</a> . And you can see the results of running it here: <a href="http://pastebin.com/uhgfpLUn">http://pastebin.com/uhgfpLUn</a></p>
+<p>In the test I took the most simple object in Phalcon and tested, how the memory changes, when passing data in and out non-modified. Essentially, that is what tested:</p>
+<pre><code class="language-php">$string = str_repeat('a', 5000000);
+$rawValue = new Phalcon\Db\RawValue($string);
+$tmp = $rawValue-&gt;getValue();</code></pre>
+<p>The test confirms, that memory consumption increases by 5Mb, when returning value from Phalcon object. Same implementation of the object, made in a normal user space PHP (see links above - the test has it), doesn't suffer from such an issue. Upon returning data, no additional memory is consumed, as the returned value is just a refcounted reference to the original data.</p>
+<p>One good note: the issue is important for string and array zvals only; it doesn't affect internal methods/functions that either return objects, or return value by reference.
+One bad note: this issue is not obvious for a PHP developer, because an experienced programmer knows about reference counting in PHP. So, while heavily relying on this mechanism in an everyday work, a programmer becomes deceived in his expectations of an application performance.</p>
+<p>Overall, this all brings a challenge to Phalcon, because internal functions/methods cannot compete with user space code under scenarios, where high amount of data is traveling across the system mostly for read-only purposes. Not only Phalcon consumes much more memory under those conditions, it also spends much computer time on performing unnecessary duplication, which is high for complex structures like associative arrays.</p>
+<p>So I'm just wondering, guys, what do you think about this issue?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-af1689fc2159cf7f7ca894df-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-af1689fc2159cf7f7ca894df-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">3</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2946" href="#C2946">
+                <time itemprop="dateCreated" datetime="2013-08-09T14:25:38-07:00" class="action-date">Aug '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Why do you assume that Phalcon isn't using highly optimized copy-on-write?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2946" data-cf-modified-af1689fc2159cf7f7ca894df-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2946" data-cf-modified-af1689fc2159cf7f7ca894df-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2713b24d747ba910a9a41996bded4460?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/420/zerkella" class="user-moderator-N"><span itemprop="name">Andrey Tserkus</span></a>        </span>
+        <br>
+
+        <span class="karma">1.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2948" href="#C2948">
+                <time itemprop="dateCreated" datetime="2013-08-09T15:13:12-07:00" class="action-date">Aug '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Phalcon uses copy-on-write mechanics, where it can be used. But it is not possible in returning values from Phalcon methods. To be more precise - it is not an issue of Phalcon, rather it is a drawback of current PHP engine, so other extensions have exactly the same problem. At the same time user space PHP code works perfectly and have no such an issue at all.</p>
+<p>I've provided the test script in the post, so it can be easily verified by anyone.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2948" data-cf-modified-af1689fc2159cf7f7ca894df-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2948" data-cf-modified-af1689fc2159cf7f7ca894df-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2950" href="#C2950">
+                <time itemprop="dateCreated" datetime="2013-08-09T15:57:56-07:00" class="action-date">Aug '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Your point is valid, and I think you know this (<a href="http://stackoverflow.com/questions/17844379/how-is-to-return-array-from-a-php-extension-without-copying-it-in-memory">http://stackoverflow.com/questions/17844379/how-is-to-return-array-from-a-php-extension-without-copying-it-in-memory</a>), it would be better if return_value_ptr has a valid address to copy-on-write the property instead of fully copying it. I think we can pass a valid return_value_ptr to most methods since we have our own functions to call methods and functions.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2950" data-cf-modified-af1689fc2159cf7f7ca894df-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2950" data-cf-modified-af1689fc2159cf7f7ca894df-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5cfc1eb34e142b9035b986311e0e8468?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/306/sjinks" class="user-moderator-Y"><span itemprop="name">Volodymyr Kolesnykov</span></a>        </span>
+        <br>
+
+        <span class="karma">1.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2951" href="#C2951">
+                <time itemprop="dateCreated" datetime="2013-08-09T16:26:59-07:00" class="action-date">Aug '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Are you absolutely sure that your measurements are correct? Looking at the opcode dump, I fail to see where PHP optimizes return value:</p>
+<pre><code class="language-text">number of ops:  31
+compiled vars:  !0 = $string, !1 = $rawValue, !2 = $tmp, !3 = $tmp2, !4 = $phpRawValue, !5 = $tmpPhp, !6 = $tmpPhp2
+line     # *  op                           fetch          ext  return  operands
+---------------------------------------------------------------------------------
+   2     0  &gt;   SEND_VAL                                                 'a'
+         1      SEND_VAL                                                 5000000
+         2      DO_FCALL                                      2  $0      'str_repeat'
+         3      ASSIGN                                                   !0, $0
+   4     4      ECHO                                                     '%0A'
+   5     5      ZEND_FETCH_CLASS                              4  :2      'Phalcon%5CDb%5CRawValue'
+         6      NEW                                              $3      :2
+         7      SEND_VAR                                                 !0
+         8      DO_FCALL_BY_NAME                              1          
+         9      ASSIGN                                                   !1, $3
+   6    10      ZEND_INIT_METHOD_CALL                                    !1, 'getValue'
+        11      DO_FCALL_BY_NAME                              0  $7      
+        12      ASSIGN                                                   !2, $7
+   7    13      ZEND_INIT_METHOD_CALL                                    !1, 'getValue'
+        14      DO_FCALL_BY_NAME                              0  $10     
+        15      ASSIGN                                                   !3, $10
+   9    16      ECHO                                                     '%0A'
+  10    17      ZEND_FETCH_CLASS                              4  :12     'PhpRawValue'
+        18      NEW                                              $13     :12
+        19      SEND_VAR                                                 !0
+        20      DO_FCALL_BY_NAME                              1          
+        21      ASSIGN                                                   !4, $13
+  11    22      ZEND_INIT_METHOD_CALL                                    !4, 'getValue'
+        23      DO_FCALL_BY_NAME                              0  $17     
+        24      ASSIGN                                                   !5, $17
+  12    25      ZEND_INIT_METHOD_CALL                                    !4, 'getValue'
+        26      DO_FCALL_BY_NAME                              0  $20     
+        27      ASSIGN                                                   !6, $20
+  15    28      ECHO                                                     '%0A'
+  18    29      NOP                                                      
+  32    30    &gt; RETURN                                                   1</code></pre>
+<p>Opcodes generated for both cases look the same and I see that in both cases PHP assigns the return value first to a temporary variable and then assigns it to the real variable.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2951" data-cf-modified-af1689fc2159cf7f7ca894df-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2951" data-cf-modified-af1689fc2159cf7f7ca894df-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2713b24d747ba910a9a41996bded4460?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/420/zerkella" class="user-moderator-N"><span itemprop="name">Andrey Tserkus</span></a>        </span>
+        <br>
+
+        <span class="karma">1.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2952" href="#C2952">
+                <time itemprop="dateCreated" datetime="2013-08-09T16:28:56-07:00" class="action-date">Aug '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Phalcon,</p>
+<p>Yep, I know that SO question a little.</p>
+<p>My intent was to know the team's and framework users opinion on this matter: whether you aware of this issue, do you do any active work to promote/help it to be fixed in PHP core, do you plan to put the info about the issue somewhere in Phalcon documentation, other thoughts?..</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2952" data-cf-modified-af1689fc2159cf7f7ca894df-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2952" data-cf-modified-af1689fc2159cf7f7ca894df-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2713b24d747ba910a9a41996bded4460?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/420/zerkella" class="user-moderator-N"><span itemprop="name">Andrey Tserkus</span></a>        </span>
+        <br>
+
+        <span class="karma">1.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2953" href="#C2953">
+                <time itemprop="dateCreated" datetime="2013-08-09T16:38:20-07:00" class="action-date">Aug '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Vladimir,
+the measurements are correct. I intentionally prepared and published the script, so anyone can verify the measurements and confirm them or find a mistake.</p>
+<p>Regarding opcodes - I cannot give you the answer right now, because I have little experience to properly read this raw vm data. However, when examining the PHP vm I noticed, that all the user space functions there are called with zval_ptr_ptr for returning values.
+I suspect, that the main difference is not visible in opcodes. It is not important, where data is assigned, but rather what kind of data it is. In case of user space it is the same zval, it case of internal function, it is a copied zval.
+So my thought, is that details of copying/reference counting are not visible in opcodes.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2953" data-cf-modified-af1689fc2159cf7f7ca894df-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2953" data-cf-modified-af1689fc2159cf7f7ca894df-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5cfc1eb34e142b9035b986311e0e8468?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/306/sjinks" class="user-moderator-Y"><span itemprop="name">Volodymyr Kolesnykov</span></a>        </span>
+        <br>
+
+        <span class="karma">1.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2954" href="#C2954">
+                <time itemprop="dateCreated" datetime="2013-08-09T16:45:59-07:00" class="action-date">Aug '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Give me a couple of hours and I will prove you that you are underestimating Phalcon :-)</p>
+<p>PS: return_value_ptr_ptr is used only when the function is declared to return a reference, ie function&amp; getValue()</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2954" data-cf-modified-af1689fc2159cf7f7ca894df-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2954" data-cf-modified-af1689fc2159cf7f7ca894df-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5cfc1eb34e142b9035b986311e0e8468?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/306/sjinks" class="user-moderator-Y"><span itemprop="name">Volodymyr Kolesnykov</span></a>        </span>
+        <br>
+
+        <span class="karma">1.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2956" href="#C2956">
+                <time itemprop="dateCreated" datetime="2013-08-09T19:57:49-07:00" class="action-date">Aug '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Please try the latest 1.3.0 when you have a free minute ;-)</p>
+<pre><code class="language-text">Creating $string: 5.00M
+Creating Phalcon RawValue: 0.00M
+Getting Phalcon string back: 0.00M
+Getting Phalcon string back again: 0.00M
+
+Creating $string2: 5.00M
+Creating PhpRawValue: 0.00M
+Getting PHP string back: 0.00M
+Getting PHP string back again: 0.00M</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2956" data-cf-modified-af1689fc2159cf7f7ca894df-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2956" data-cf-modified-af1689fc2159cf7f7ca894df-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2713b24d747ba910a9a41996bded4460?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/420/zerkella" class="user-moderator-N"><span itemprop="name">Andrey Tserkus</span></a>        </span>
+        <br>
+
+        <span class="karma">1.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2957" href="#C2957">
+                <time itemprop="dateCreated" datetime="2013-08-10T08:44:18-07:00" class="action-date">Aug '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Good job and interesting commit, Vladimir :) Though, had no time verify, how it works, just looked briefly into the diffs. Going to test it tomorrow.</p>
+<p>Meanwhile I wonder - does it work for internal calls, i.e. calling extension methods from inside an extension? If I understand it right, then the implemented solution was to hack into internals of PHP VM, ignore incoming &quot;return_value&quot; pointer and rather use global state structure. This works for calls from user space code, where VM properly prepares state, but may not work for calls from internal code, where VM is not engaged and all the data is passed via ordinary C function in/out parameters and returned values.</p>
+<p>I will build updated 1.3.0 Phalcon and research it tomorrow.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2957" data-cf-modified-af1689fc2159cf7f7ca894df-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2957" data-cf-modified-af1689fc2159cf7f7ca894df-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5cfc1eb34e142b9035b986311e0e8468?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/306/sjinks" class="user-moderator-Y"><span itemprop="name">Volodymyr Kolesnykov</span></a>        </span>
+        <br>
+
+        <span class="karma">1.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2958" href="#C2958">
+                <time itemprop="dateCreated" datetime="2013-08-10T14:15:39-07:00" class="action-date">Aug '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This will work for both calls from the userspace and calls from the extension (in 5.5; in 5.3 and 5.4 Zend does not invoke zend_execute_internal() from zend_call_function() — however, this is not an issue in Phalcon because of our own implementation of method calls).</p>
+<p>The implemented solution is not a hack — incoming return_value is NOT ignored. What the code does is passes a pointer to return_value in return_value_ptr; no global structures are modified (we do not try to modify EG(return_value_ptr_ptr) etc).</p>
+<p>A cleaner solution is to set 'return_reference' flag in ZEND_BEGIN_ARG_INFO_EX() — note that you are NOT obliged to return a reference in this case, but it allows you to use return_value_ptr.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2958" data-cf-modified-af1689fc2159cf7f7ca894df-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2958" data-cf-modified-af1689fc2159cf7f7ca894df-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="741" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

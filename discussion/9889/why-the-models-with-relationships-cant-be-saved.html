@@ -1,0 +1,446 @@
+---
+layout: default
+title: 'Why the models with relationships can&#039;t be saved? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Why the models with relationships can&#039;t be saved?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3021/xaero7" class="user-moderator-N"><span itemprop="name">xaero</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-12-16T23:32:48-07:00">Dec '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-12-16T23:32:48-07:00">Dec '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">5</span>
+                </td>
+                <td>
+                    <label>Views</label><br>366</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/f3183e109ec4c5c93d7deab887f7b8e1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3021/xaero7" class="user-moderator-N"><span itemprop="name">xaero</span></a></span>
+                <span class="karma">31.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C9889" href="#C9889">
+        <time class="action-date">Dec '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Two tables:</p>
+<pre><code class="language-sql">CREATE TABLE  `users` (
+  `id` int(10) unsigned NOT NULL auto_increment,
+  `name` varchar(32) default NULL
+  PRIMARY KEY (`id`),
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+CREATE TABLE `privileges` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(64) NOT NULL,
+  `users_id` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8;</code></pre>
+<p>Models:</p>
+<pre><code class="language-php">class Users Extends Model
+{
+    //...
+    public function initialize()
+    {
+        $this-&gt;hasOne('id', 'Privileges', 'users_id', ['alias' =&gt; 'privilege']);
+    }
+}
+class Privileges extends Model
+{
+    const NAME_ADMINISTRATOR = "Administrator";
+    const NAME_ULTRAMAN = "Ultraman";   
+    // ...  
+    public function initialize()
+    {
+        $this-&gt;belongsTo('users_id', 'Users', 'id');
+    }
+}</code></pre>
+<p>In the UsersController:</p>
+<pre><code class="language-php">public function editAction($id)
+{
+    $user = Users::findFirstById($id);
+
+    if ($this-&gt;request-&gt;isPost())
+    {
+        // After $user-&gt;save(), I want to save this user's privileges.
+
+        // this will post 'Administrator' or 'Ultraman'
+        $privilege = $this-&gt;request-&gt;getPost("privilege");
+
+        if (! empty($privilege))
+        {
+
+            if (isset($user-&gt;privilege-&gt;id)) {
+                $user_privilege = Privileges::findFirstById($user-&gt;privilege-&gt;id);
+            } else {
+                $user_privilege = new Privileges();
+                $user_privilege-&gt;users_id = $user-&gt;id;
+            }
+
+            //New Group!!! But it seems can't be modified!
+            $user_privilege-&gt;name = $privilege; 
+
+            // modify the user's group
+            if ($user_privilege-&gt;save() == false) {
+                foreach ($user_privilege-&gt;getMessages() as $message) {
+                    $this-&gt;flash-&gt;error((string) $message);
+                }
+            } else {
+                $this-&gt;flash-&gt;success($user-&gt;name . " User's Group Modified successfully!");
+            }
+
+        }
+
+    }
+}</code></pre>
+<p>The code <code>$user_privilege-&gt;save()</code> CAN insert a user's new privilege, but it CANNOT modify a user's privilege! (Can't modify it's privileges.name). Why?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-7601372312f1966afa0591a8-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-7601372312f1966afa0591a8-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C27825" href="#C27825">
+                <time itemprop="dateCreated" datetime="2015-12-17T01:34:53-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You have any error from getMessages ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27825" data-cf-modified-7601372312f1966afa0591a8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27825" data-cf-modified-7601372312f1966afa0591a8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f3183e109ec4c5c93d7deab887f7b8e1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3021/xaero7" class="user-moderator-N"><span itemprop="name">xaero</span></a>        </span>
+        <br>
+
+        <span class="karma">31.3k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C27825"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C27827" href="#C27827">
+                <time itemprop="dateCreated" datetime="2015-12-17T02:27:48-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I've got a success message as the code give.</p>
+<blockquote>
+<p>You have any error from getMessages ?</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27827" data-cf-modified-7601372312f1966afa0591a8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27827" data-cf-modified-7601372312f1966afa0591a8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="27839" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '15</span>
+              </span><br/><a name="C27839" href="#C27839">
+                <time itemprop="dateCreated" datetime="2015-12-17T04:49:10-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well you have all those properties in classes right ? I dont really know whats going on. Maybe just do findFirst instead of findFirsyById ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27839" data-cf-modified-7601372312f1966afa0591a8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27839" data-cf-modified-7601372312f1966afa0591a8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f3183e109ec4c5c93d7deab887f7b8e1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3021/xaero7" class="user-moderator-N"><span itemprop="name">xaero</span></a>        </span>
+        <br>
+
+        <span class="karma">31.3k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C27839"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C27847" href="#C27847">
+                <time itemprop="dateCreated" datetime="2015-12-17T05:21:47-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Oh~ sorry, the code above is not complete. The editAction is exactly like this:</p>
+<pre><code class="language-php">public function editAction($id)
+{
+    $user = Users::findFirstById($id);
+
+    if ($this-&gt;request-&gt;isPost())
+    {
+        // After $user-&gt;save(), I want to save this user's privileges.
+
+        // this will post 'Administrator' or 'Ultraman'
+        $privilege = $this-&gt;request-&gt;getPost("privilege");
+
+        if (! empty($privilege))
+        {
+            if (isset($user-&gt;privilege-&gt;id)) {
+                $user_privilege = Privileges::findFirstById($user-&gt;privilege-&gt;id);
+            } else {
+                $user_privilege = new Privileges();
+                $user_privilege-&gt;users_id = $user-&gt;id;
+            }
+
+            //New Group!!! But it seems can't be modified!
+            $user_privilege-&gt;name = $privilege; 
+
+            // modify the user's group
+            if ($user_privilege-&gt;save() == false) {
+                foreach ($user_privilege-&gt;getMessages() as $message) {
+                    $this-&gt;flash-&gt;error((string) $message);
+                }
+            } else {
+                $this-&gt;flash-&gt;success($user-&gt;name . " User's Group Modified successfully!");
+            }
+
+            // Here I also save the user data
+            if ($user-&gt;save() == false) {
+                foreach ($user-&gt;getMessages() as $message) {
+                    $this-&gt;flash-&gt;error((string) $message);
+                }
+            } else {
+                $this-&gt;flash-&gt;success("updated!");
+            }
+        }
+    }
+}</code></pre>
+<p>After the <code>$user_privilege-&gt;save()</code>, I also save the user's data by <code>$user-&gt;save()</code>, then the user's privilege is updated twice! And finnaly it changed to the original value!</p>
+<p>It seems that <code>$user_privilege-&gt;save()</code> is not necessary, But I don't know how to code the <code>$user-&gt;save()</code> that the user's privilege name value will change automaticly when call <code>$user-&gt;save()</code>.</p>
+<blockquote>
+<p>Well you have all those properties in classes right ? I dont really know whats going on. Maybe just do findFirst instead of findFirsyById ?</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27847" data-cf-modified-7601372312f1966afa0591a8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27847" data-cf-modified-7601372312f1966afa0591a8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C27857" href="#C27857">
+                <time itemprop="dateCreated" datetime="2015-12-17T05:56:36-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well - thats why you have relation - try </p>
+<pre><code class="language-php">$user-&gt;privilege = $user_privilege</code></pre>
+<p>And then when you will do $user-&gt;save() it should save both $user and $user_privilege.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27857" data-cf-modified-7601372312f1966afa0591a8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27857" data-cf-modified-7601372312f1966afa0591a8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f3183e109ec4c5c93d7deab887f7b8e1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3021/xaero7" class="user-moderator-N"><span itemprop="name">xaero</span></a>        </span>
+        <br>
+
+        <span class="karma">31.3k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C27857"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C27895" href="#C27895">
+                <time itemprop="dateCreated" datetime="2015-12-17T17:53:15-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It's odd~~~ I delete the <code>$user_privilege-&gt;save()</code> and remain the <code>$user-&gt;save()</code>, the user's privilege can't be modified!</p>
+<p>Then I try to do the follow things by order:</p>
+<ol>
+<li>execute <code>$user_privilege-&gt;save()</code></li>
+<li>$user-&gt;privilege = $user_privilege</li>
+<li>$user-&gt;save()</li>
+</ol>
+<p>It still remains the original value!</p>
+<p>The first step changes the value, and <code>$user-&gt;privilege = $user_privilege</code> is obviously executed, but the third step changes the value to original value.</p>
+<p>Did the <code>$user-&gt;privilege = $user_privilege</code> can't change the real value of object $user? Or is it because of <code>privilege</code> is a alias name?</p>
+<blockquote>
+<p>Well - thats why you have relation - try </p>
+<pre><code class="language-php">$user-&gt;privilege = $user_privilege</code></pre>
+<p>And then when you will do $user-&gt;save() it should save both $user and $user_privilege.</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27895" data-cf-modified-7601372312f1966afa0591a8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27895" data-cf-modified-7601372312f1966afa0591a8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C27913" href="#C27913">
+                <time itemprop="dateCreated" datetime="2015-12-18T02:17:21-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>What will happen if you do $user_privileage = $user-&gt;privilege; Instead of finding this privileage ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27913" data-cf-modified-7601372312f1966afa0591a8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27913" data-cf-modified-7601372312f1966afa0591a8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f3183e109ec4c5c93d7deab887f7b8e1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3021/xaero7" class="user-moderator-N"><span itemprop="name">xaero</span></a>        </span>
+        <br>
+
+        <span class="karma">31.3k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C27913"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C27963" href="#C27963">
+                <time itemprop="dateCreated" datetime="2015-12-18T18:32:55-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think it works properyly. Instead of <code>$user_privilege = Privileges::findFirstById($user-&gt;privilege-&gt;id);</code>, I just select a user by <code>$user = Users::findFirstById($id);</code>, and then print it out.</p>
+<pre><code class="language-php">$user_privilege = $user-&gt;privilege;
+$this-&gt;view-&gt;up = $user_privilege;</code></pre>
+<p>var_dump($up) in the viewer, the result is:</p>
+<pre><code class="language-php">object(YZOI\Models\Privileges)[97]
+  public 'id' =&gt; string '4' (length=1)
+  public 'name' =&gt; string 'Administrator' (length=13)
+  public 'active' =&gt; string 'Y' (length=1)
+  public 'users_id' =&gt; string '3' (length=1)
+  protected '_dependencyInjector' =&gt; 
+    object(Phalcon\Di\FactoryDefault)[7]
+      protected '_services' =&gt; 
+        array (size=25)
+          'router' =&gt; ...</code></pre>
+<blockquote>
+<p>What will happen if you do $user_privileage = $user-&gt;privilege; Instead of finding this privileage ?</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27963" data-cf-modified-7601372312f1966afa0591a8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27963" data-cf-modified-7601372312f1966afa0591a8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C27965" href="#C27965">
+                <time itemprop="dateCreated" datetime="2015-12-19T03:13:34-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>But what you mean ? If you do $user-&gt;privilege you will select privilge by alias name. There will be no $user-&gt;privilege until you dont use it.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27965" data-cf-modified-7601372312f1966afa0591a8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27965" data-cf-modified-7601372312f1966afa0591a8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f3183e109ec4c5c93d7deab887f7b8e1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3021/xaero7" class="user-moderator-N"><span itemprop="name">xaero</span></a>        </span>
+        <br>
+
+        <span class="karma">31.3k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C27965"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="28005" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '15</span>
+              </span><br/><a name="C28005" href="#C28005">
+                <time itemprop="dateCreated" datetime="2015-12-20T06:26:33-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>By alias name, I can select the privilege, but can't modify the database value ! is it?</p>
+<blockquote>
+<p>But what you mean ? If you do $user-&gt;privilege you will select privilge by alias name. There will be no $user-&gt;privilege until you dont use it.</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28005" data-cf-modified-7601372312f1966afa0591a8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28005" data-cf-modified-7601372312f1966afa0591a8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="9889" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

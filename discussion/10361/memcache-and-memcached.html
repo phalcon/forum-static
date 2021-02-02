@@ -1,0 +1,201 @@
+---
+layout: default
+title: 'memcache and memcached - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/8/cache">Cache</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">memcache and memcached</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3568/dantevirgilio" class="user-moderator-N"><span itemprop="name">dantevirgilio</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-02-01T04:07:10-07:00">Feb '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-02-01T04:07:10-07:00">Feb '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Feb '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1275</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/2daaea1efec37c8f7b9557c12e0a7f16?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3568/dantevirgilio" class="user-moderator-N"><span itemprop="name">dantevirgilio</span></a></span>
+                <span class="karma">6.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C10361" href="#C10361">
+        <time class="action-date">Feb '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi, i'm trying to implement memcached cache in phalcon but it not work very well, so i've some suggestions:</p>
+<ul>
+<li>memcache and libmemcached don't manage a possible down for a memcache server</li>
+<li>if i want to manage it manually i can't use function like  isStarted()(always false) or getLifetime() (always null)</li>
+</ul>
+<p>so to implement memcache correctly i've to use the php library in the DI.</p>
+<p>But if you have some tips for my situation I'd be very grateful</p>
+<p>Thank you</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-b42cb298db12d37b30372254-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-b42cb298db12d37b30372254-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2daaea1efec37c8f7b9557c12e0a7f16?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3568/dantevirgilio" class="user-moderator-N"><span itemprop="name">dantevirgilio</span></a>        </span>
+        <br>
+
+        <span class="karma">6.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C29547" href="#C29547">
+                <time itemprop="dateCreated" datetime="2016-02-01T08:25:59-07:00" class="action-date">Feb '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The best solution i've found is to extend the Libmemcached class:</p>
+<pre><code class="language-php">&lt;?php
+
+use Phalcon\Cache\Backend\Libmemcached;
+
+class LibmemcachedPlugin extends Libmemcached
+{
+    public function isStarted()
+    {
+        $memcache = $this-&gt;_memcache;
+
+        if (!is_object($memcache)) {
+            $this-&gt;_connect();
+            $memcache = $this-&gt;_memcache;
+        }
+
+        $stats = $memcache-&gt;getStats();
+        foreach ($stats as $key =&gt; $value) {
+            if ($stats[$key]['pid'] === -1) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public function getStats()
+    {
+        $memcache = $this-&gt;_memcache;
+
+        if (!is_object($memcache)) {
+            $this-&gt;_connect();
+            $memcache = $this-&gt;_memcache;
+        }
+
+        return $memcache-&gt;getStats();
+    }
+}
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="29547" data-cf-modified-b42cb298db12d37b30372254-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="29547" data-cf-modified-b42cb298db12d37b30372254-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C29863" href="#C29863">
+                <time itemprop="dateCreated" datetime="2016-02-13T04:52:23-07:00" class="action-date">Feb '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>As I see, library does check whenever the connection is alive before trying to contact the daemon.</p>
+<p><a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/cache/backend/libmemcached.zep#L136">https://github.com/phalcon/cphalcon/blob/master/phalcon/cache/backend/libmemcached.zep#L136</a></p>
+<p>But I guess you're talking about HA here, what happens if the daemon goes down. Since this is only a wrapper, there's no implementation for handling system level (daemon) processes, or even remote servers in case your memcacheD is hosted elsewhere. </p>
+<p>That's why I implemented this in services container:</p>
+<pre><code class="language-php">  // NOTE: exiting to command line puts too much overhead
+     $libmemCheck = &lt;&lt;&lt;DAEMON
+ps -e | grep memcached | awk '{print $1}'
+DAEMON;
+    exec($libmemCheck, $rv, $status);
+    !$status ? $pidMem = $rv[0] : $pidMem = 0x00;
+
+    //you can also fetch the PID from file system and compare it with your ps command return value
+    $pid = file_exists('/var/run/memcached.pid') ? file_get_contents('/var/run/memcached.pid') : false;
+
+    //check process ID
+    $pid = file_exists('/var/run/memcached.pid') ? true : false;
+    //check socket
+    $socketExists = file_exists($config-&gt;_daemon-&gt;socket) ? true : false; // socket defined as: /var/run/memcached.sock
+    //throw exception if the daemon is N/A
+    if (!$socketExists || !$pid) throw new \Phalcon\Exception('DAEMON is NaN!');</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="29863" data-cf-modified-b42cb298db12d37b30372254-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="29863" data-cf-modified-b42cb298db12d37b30372254-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C29865" href="#C29865">
+                <time itemprop="dateCreated" datetime="2016-02-13T05:04:19-07:00" class="action-date">Feb '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>So, since I'm running on a same box, I do only this check which is the fastest and should at least catch daemon downtime.</p>
+<pre><code class="language-php"> //check process ID
+    $pid = file_exists('/var/run/memcached.pid') ? true : false;
+    //check socket
+    $socketExists = file_exists($config-&gt;_daemon-&gt;socket) ? true : false;
+    //throw exception if the daemon is N/A
+    if (!$socketExists || !$pid) throw new \Phalcon\Exception('DAEMON is NaN!');
+    //now here we can try to start daemon again with either defining it in a php or to exec() system start.</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="29865" data-cf-modified-b42cb298db12d37b30372254-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="29865" data-cf-modified-b42cb298db12d37b30372254-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="10361" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

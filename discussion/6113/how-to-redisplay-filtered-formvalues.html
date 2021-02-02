@@ -1,0 +1,293 @@
+---
+layout: default
+title: 'How to (re)display filtered Form-Values - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/18/escaping-filtering">Escaping/Filtering</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How to (re)display filtered Form-Values</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3219/GatheredPain" class="user-moderator-N"><span itemprop="name">Falk</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-03-07T10:21:03-07:00">Mar '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-03-07T10:21:03-07:00">Mar '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1225</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/a1ecd1d15c2a356c3957f3f0f88657b1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3219/GatheredPain" class="user-moderator-N"><span itemprop="name">Falk</span></a></span>
+                <span class="karma">3.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6113" href="#C6113">
+        <time class="action-date">Mar '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi</p>
+<p>i'm new to Phalcon and i realy do love the speed an simplicity.
+Unfortunately, it's very hard ( for an 'old' ZF-Dev ) to find out how the simpliest Tasks should be realized with Phalcon.
+Many solutions i try (not only this particular problem) don't work as expected/usual.
+In most cases &quot;my way&quot; is not working with Phalcon and i can't find informations on how it should be done with Phalcon :( ...</p>
+<p>The (current) Problem:</p>
+<p>I want to display a form, prefill it from DB/Model, submit it, filter and validate it, save it an display the saved data or display the error messages and submitted data again in the form.</p>
+<p>In my opion an every-day-task for everyone of us. ... but i just don't get it fully to work with Phalcon. </p>
+<p>Usualy i do something like this (bit simplified):</p>
+<pre><code class="language-php">// Controller
+public function editAction()
+{
+    $object = Model::fecthByPk($this-&gt;getParam('id'));
+
+    $form = new Form(['defaults'=&gt;$object]); // Form defines filtering and validation
+
+    if ($this-&gt;isPost() &amp;&amp; $form-&gt;isValid($this-&gt;getParams())) {
+        $object-&gt;fromArray($form-&gt;getValues());
+        $object-&gt;save();
+    }
+    $this-&gt;view-&gt;assign(array(
+        'form' =&gt; $frm,
+        'object' =&gt; $object,
+    ));
+}
+// View
+&lt;form ...&gt;
+    &lt;? if ($form-&gt;hasError()): ?&gt;
+        &lt;div class="error"&gt;There was an error&lt;/div&gt;
+    &lt;? endif ?&gt;
+    &lt;div class="&lt;?=$form-&gt;field-&gt;hasError() ? 'error' : ''?&gt;"&gt;
+    &lt;?= $form-&gt;field-&gt;render() ?&gt;
+    &lt;/div&gt;
+    ...
+&lt;/form&gt;</code></pre>
+<p>After dozens of pitfalls with forms, form-elements, form-errors, form-validation vs. model-valitation and so on it's nearly working, except the display of the form after submisson.</p>
+<p>The form always displays the submitted data, but i want it to display the sanitized and stored values.</p>
+<p>Example: </p>
+<ul>
+<li>
+<ul>
+<li>field with &quot;trim&quot;-Filter:</li>
+</ul>
+</li>
+<li>
+<ul>
+<li>submited value: &quot;   test   &quot;</li>
+</ul>
+</li>
+<li>
+<ul>
+<li>stored value: &quot;test&quot; (as wanted/expected)</li>
+</ul>
+</li>
+<li>
+<ul>
+<li>re(displayed) Value in the Form: &quot;   test   &quot;  (why?)</li>
+</ul>
+</li>
+</ul>
+<p>(sry, markdown-list not working !?) </p>
+<p>I tried to clear the form and (re)set the entity after validating saving, with no effect. :/</p>
+<p>So, what's wrong, how can i solve it and what am i missing?</p>
+<p>my current action</p>
+<pre><code class="language-php">
+public function editAction($id=null)
+{
+    $success = null;
+
+    $project = Projects::findFirst("id = {$id}");
+
+    $this-&gt;_getProjectForm()-&gt;setEntity($project);
+
+    if ($this-&gt;request-&gt;isPost()) {
+        $this-&gt;_getProjectForm()-&gt;bind($this-&gt;request-&gt;getPost(), $project);
+        $success = $this-&gt;_getProjectForm()-&gt;isValid() &amp;&amp; $project-&gt;save();
+    }
+
+    $this-&gt;view-&gt;setVars(array(
+        'project' =&gt; $project,
+        'form'    =&gt; $this-&gt;_getProjectForm(),
+        'success' =&gt; $success,
+    ));
+}
+</code></pre>
+<p>thanks in advace for your help (... to find my way through Phalcon)</p>
+<p>(P.S.: I'm Missing a &quot;Forms&quot;-Category. )</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-b10e09ac04bfe605b422d949-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-b10e09ac04bfe605b422d949-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a1ecd1d15c2a356c3957f3f0f88657b1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3219/GatheredPain" class="user-moderator-N"><span itemprop="name">Falk</span></a>        </span>
+        <br>
+
+        <span class="karma">3.5k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16427" href="#C16427">
+                <time itemprop="dateCreated" datetime="2015-03-08T05:12:38-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>... found a/the(?) solution in <a href="https://github.com/phalcon/vokuro">vokuro</a></p>
+<pre><code>\Phalcon\Tag::resetInput();</code></pre>
+<pre><code class="language-php">if ($this-&gt;request-&gt;isPost()) {
+    $this-&gt;_getProjectForm()-&gt;bind($this-&gt;request-&gt;getPost(), $project);
+    if ($this-&gt;_getProjectForm()-&gt;isValid() &amp;&amp; $project-&gt;save()) {
+        // reset Tag
+        \Phalcon\Tag::resetInput();
+    }
+}</code></pre>
+<p>Could somebody please explain the sense/background of globaly setting Tag-Values to me?</p>
+<pre><code>\Phalcon\Tag::setDefaults();</code></pre>
+<p>What if i have multiple forms on one page with samen field-names?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16427" data-cf-modified-b10e09ac04bfe605b422d949-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16427" data-cf-modified-b10e09ac04bfe605b422d949-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/60ffc0e01551cc5809445076da642103?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1058/humugus" class="user-moderator-N"><span itemprop="name">humugus</span></a>        </span>
+        <br>
+
+        <span class="karma">7.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="16596" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '15</span>
+              </span><br/><a name="C16596" href="#C16596">
+                <time itemprop="dateCreated" datetime="2015-03-16T03:27:35-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>my approach on edit actions,<br />
+might be usefull for you<br />
+major difference (in case of a successful update) from your approach is this line : </p>
+<pre><code class="language-php">return $this-&gt;response-&gt;redirect('banks/index/'.$id);</code></pre>
+<pre><code class="language-php">public function editAction($id = 0)
+    {
+        $id = $this-&gt;filter-&gt;sanitize($id, 'int');
+        $bankToEdit = Banks::findFirstById($id);
+        $form = new BankForm($bankToEdit); // bind the form and the model
+        if ($this-&gt;request-&gt;isPost() == TRUE)
+        {
+            $form-&gt;bind($_POST, $bankToEdit); //bind post and model to the form
+            if ($form-&gt;isValid($this-&gt;request-&gt;getPost()) == false)
+            {
+                foreach ($form-&gt;getMessages() as $message){$this-&gt;flashSession-&gt;error($message);}
+            }
+            else
+            {
+                $success = $bankToEdit-&gt;update();
+                if($success == TRUE)
+                {
+                    $this-&gt;flashSession-&gt;success($bankToEdit-&gt;name.' '.$this-&gt;translation-&gt;_('_update_success'));
+                    return $this-&gt;response-&gt;redirect('banks/index/'.$id);
+                }
+                else
+                {
+                    $this-&gt;flashSession-&gt;warning($this-&gt;translation-&gt;_('_bank_update_failure'));
+                    foreach ($bankToEdit-&gt;getMessages() as $message){$this-&gt;flashSession-&gt;error($message);}
+                }
+            }
+        }
+        $this-&gt;view-&gt;form = $form;
+        $this-&gt;view-&gt;title = $bankToEdit-&gt;bankName;
+        $this-&gt;view-&gt;subtitle = $this-&gt;translation-&gt;_('_edit');
+    }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16596" data-cf-modified-b10e09ac04bfe605b422d949-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16596" data-cf-modified-b10e09ac04bfe605b422d949-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a1ecd1d15c2a356c3957f3f0f88657b1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3219/GatheredPain" class="user-moderator-N"><span itemprop="name">Falk</span></a>        </span>
+        <br>
+
+        <span class="karma">3.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16951" href="#C16951">
+                <time itemprop="dateCreated" datetime="2015-03-28T05:45:56-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks for the reply!</p>
+<p>I'm aware of this solution, and i know that this works. But i realy don't want this overhead.
+A completely new PageRequest (http-traffic, bootstraping, routing, data-retrieval, form-creation, rendering, ...) doesn't make any sense for only updating the inputs with values i already have.
+It's like &quot;crack a nut with a sledgehammer&quot;.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16951" data-cf-modified-b10e09ac04bfe605b422d949-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16951" data-cf-modified-b10e09ac04bfe605b422d949-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/60ffc0e01551cc5809445076da642103?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1058/humugus" class="user-moderator-N"><span itemprop="name">humugus</span></a>        </span>
+        <br>
+
+        <span class="karma">7.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16972" href="#C16972">
+                <time itemprop="dateCreated" datetime="2015-03-29T13:37:20-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>i understand your statement<br />
+i use ajax whenever i want to avoid extra traffic and overhead</p>
+<p>i know that i still do not provide a solution to your original request<br />
+just for the sake of the conversation :D</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16972" data-cf-modified-b10e09ac04bfe605b422d949-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16972" data-cf-modified-b10e09ac04bfe605b422d949-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6113" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

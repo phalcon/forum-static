@@ -1,0 +1,292 @@
+---
+layout: default
+title: 'Many-to-many bug - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Many-to-many bug</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2470/Pajamaman" class="user-moderator-N"><span itemprop="name">Pajamaman</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-12-24T22:48:51-07:00">Dec '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-12-24T22:48:51-07:00">Dec '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>733</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/e57de23929009c54de7217c7419573b0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2470/Pajamaman" class="user-moderator-N"><span itemprop="name">Pajamaman</span></a></span>
+                <span class="karma">5.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4330" href="#C4330">
+        <time class="action-date">Dec '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>This does not save the tags defined by the many-to-many relationship:</p>
+<pre><code>$article = new Article();
+
+$title = $this-&gt;request-&gt;getPost('title');
+$user_id = $this-&gt;session-&gt;user_id;
+$timestamp = time();
+$content = $this-&gt;request-&gt;getPost('content');
+$sticky = $this-&gt;request-&gt;getPost('sticky') ?: 0;
+$tags = array();
+
+foreach (explode(',', $this-&gt;request-&gt;getPost('tag_names')) as $tag_name) {
+    $tag = Tag::findFirstByName($tag_name);
+
+    if (!$tag) {
+        $tag = new Tag();
+        $tag-&gt;name = $tag_name;
+    }
+
+    $tags[] = $tag;
+}
+
+$success = $article-&gt;save(array(
+    'title' =&gt; $title,
+    'user_id' =&gt; $user_id,
+    'timestamp' =&gt; $timestamp,
+    'content' =&gt; $content,
+    'sticky' =&gt; $sticky,
+    'tags' =&gt; $tags
+));</code></pre>
+<p>However the following works:</p>
+<pre><code>$article = new Article();
+$article-&gt;title = $this-&gt;request-&gt;getPost('title');
+$article-&gt;user_id = $this-&gt;session-&gt;user_id;
+$article-&gt;timestamp = time();
+$article-&gt;content = $this-&gt;request-&gt;getPost('content');
+$article-&gt;sticky = $this-&gt;request-&gt;getPost('sticky') ?: 0;
+$tags = array();
+
+foreach (explode(',', $this-&gt;request-&gt;getPost('tag_names')) as $tag_name) {
+    $tag = Tag::findFirstByName($tag_name);
+
+    if (!$tag) {
+        $tag = new Tag();
+        $tag-&gt;name = $tag_name;
+    }
+
+    $tags[] = $tag;
+}
+
+$article-&gt;tags = $tags;
+
+$success = $article-&gt;save();</code></pre>
+<p>I think this is clearly a bug but I will post the models and schema anyways in case I am doing something wrong:</p>
+<pre><code>&lt;?php
+
+use Phalcon\Mvc\Model;
+
+class Article extends Model
+{
+
+    public $id;
+
+    public $title;
+
+    public $user_id;
+
+    public $timestamp;
+
+    public $content;
+
+    public $sticky;
+
+    public function initialize()
+    {
+        $this-&gt;belongsTo('user_id', 'User', 'id', array(
+            'foreignKey' =&gt; true
+        ));
+
+        $this-&gt;hasManyToMany('id', 'ArticleTag', 'article_id', 'tag_id', 'Tag', 'id', array(
+            'alias' =&gt; 'tags',
+            'foreignKey' =&gt; true
+        ));
+    }
+
+}
+
+&lt;?php
+
+use Phalcon\Mvc\Model,
+    Phalcon\Mvc\Model\Validator\Uniqueness;
+
+class Tag extends Model
+{
+
+    public $id;
+
+    public $name;
+
+    public function initialize()
+    {
+        $this-&gt;hasManyToMany('id', 'ArticleTag', 'tag_id', 'article_id', 'Article', 'id', array(
+            'alias' =&gt; 'articles',
+            'foreignKey' =&gt; true
+        ));
+    }
+
+    public function validation()
+    {
+        $this-&gt;validate(new Uniqueness(
+            array(
+                'field' =&gt; 'name',
+                'message' =&gt; 'The name provided already exists.'
+            )
+        ));
+
+        return !$this-&gt;validationHasFailed();
+    }
+
+}
+
+&lt;?php
+
+use Phalcon\Mvc\Model;
+
+class ArticleTag extends Model
+{
+
+    public $id;
+
+    public $article_id;
+
+    public $tag_id;
+
+    public function initialize()
+    {
+        $this-&gt;belongsTo('article_id', 'Article', 'id', array(
+            'foreignKey' =&gt; 'true'
+        ));
+
+        $this-&gt;belongsTo('tag_id', 'Tag', 'id', array(
+            'foreignKey' =&gt; 'true'
+        ));
+    }
+
+ }
+
+CREATE TABLE IF NOT EXISTS `article` (
+  `id` int(10) NOT NULL AUTO_INCREMENT,
+  `title` varchar(150) NOT NULL,
+  `user_id` int(10) NOT NULL,
+  `timestamp` int(10) NOT NULL,
+  `content` varchar(20000) NOT NULL,
+  `sticky` tinyint(1) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
+
+CREATE TABLE IF NOT EXISTS `article_tag` (
+  `id` int(10) NOT NULL AUTO_INCREMENT,
+  `article_id` int(10) NOT NULL,
+  `tag_id` int(10) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `article_id` (`article_id`,`tag_id`),
+  KEY `tag_id` (`tag_id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
+
+CREATE TABLE IF NOT EXISTS `tag` (
+  `id` int(10) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name` (`name`)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
+
+ALTER TABLE `article_tag`
+  ADD CONSTRAINT `article_tag_ibfk_1` FOREIGN KEY (`article_id`) REFERENCES `article` (`id`),
+  ADD CONSTRAINT `article_tag_ibfk_2` FOREIGN KEY (`tag_id`) REFERENCES `tag` (`id`);</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-94b7c5a0218a59fb52ebe8be-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-94b7c5a0218a59fb52ebe8be-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/decf8c08ec970a3e1438dca5d4b5fbf7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2808/fazalrasel" class="user-moderator-N"><span itemprop="name">Fazal Rasel</span></a>        </span>
+        <br>
+
+        <span class="karma">3.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C14386" href="#C14386">
+                <time itemprop="dateCreated" datetime="2014-12-25T11:18:30-07:00" class="action-date">Dec '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Any validation error?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14386" data-cf-modified-94b7c5a0218a59fb52ebe8be-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14386" data-cf-modified-94b7c5a0218a59fb52ebe8be-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e57de23929009c54de7217c7419573b0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2470/Pajamaman" class="user-moderator-N"><span itemprop="name">Pajamaman</span></a>        </span>
+        <br>
+
+        <span class="karma">5.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C14386"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/decf8c08ec970a3e1438dca5d4b5fbf7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Fazal Rasel                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C14391" href="#C14391">
+                <time itemprop="dateCreated" datetime="2014-12-25T20:29:13-07:00" class="action-date">Dec '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Any validation error?</p>
+</blockquote>
+<p>No, it saves without any error. Just the tags aren't saved.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14391" data-cf-modified-94b7c5a0218a59fb52ebe8be-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14391" data-cf-modified-94b7c5a0218a59fb52ebe8be-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4330" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

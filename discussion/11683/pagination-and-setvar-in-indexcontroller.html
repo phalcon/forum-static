@@ -1,0 +1,257 @@
+---
+layout: default
+title: 'Pagination and setVar in IndexController - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Pagination and setVar in IndexController</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2249/Stefjoe" class="user-moderator-N"><span itemprop="name">Stefjoe</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-05-28T16:31:09-07:00">May '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-05-28T16:31:09-07:00">May '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>May '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>747</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/95593bdf7bc6c62dbd16767e520f13c8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2249/Stefjoe" class="user-moderator-N"><span itemprop="name">Stefjoe</span></a></span>
+                <span class="karma">59.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C11683" href="#C11683">
+        <time class="action-date">May '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,</p>
+<p>in my database, i have stored 10000 datasets. I want to split them into 100. The problem that i have is, the variable in my view.</p>
+<p>index.thumb is undefinied, but when i set the variable with setVar it is working, but 10000 data are loading. </p>
+<p>When i put the paginator into a function, the var page is also undefinied.</p>
+<p>this is my Model:</p>
+<pre><code>&lt;?php
+
+namespace Vokuro\Models;
+use Phalcon\Mvc\Model;
+
+class Index extends Model{
+
+public $id;
+
+public $link;
+
+public $title;
+
+public $tags;
+
+public $thumb;
+}</code></pre>
+<p>My Controller:</p>
+<pre><code>&lt;?php
+namespace Vokuro\Controllers;
+use Phalcon\Mvc\Controller;
+use Phalcon\Mvc\Dispatcher;
+use Phalcon\Tag;
+use Phalcon\Mvc\Model\Criteria;
+use Phalcon\Paginator\Adapter\Model as Paginator;
+use Phalcon\Mvc\Model\Query;
+use Vokuro\Models\Index;
+
+class IndexController extends Controller
+{
+
+public function indexAction()
+{
+
+    $this-&gt;assets
+        -&gt;collection('header')
+        -&gt;addCss('https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css', false)
+        -&gt;addCss('https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css', false)
+        -&gt;addCss('https://fonts.googleapis.com/css?family=Josefin+Sans:400,300', false)
+        -&gt;addCss('plugins/venobox/venobox.css')
+        -&gt;addCss('css/style.css')
+        -&gt;addCss('css/media-queries.css');
+
+    $this-&gt;assets
+        -&gt;collection('footer')
+        -&gt;addJs('https://ajax.googleapis.com/ajax/libs/jquery/1.12.3/jquery.min.js', false)
+        -&gt;addJs('https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js', false)
+        -&gt;addJs('plugins/venobox/venobox.js')
+        -&gt;addJs('js/index.js');
+
+    $post  = Index::find();
+    $this-&gt;view-&gt;setVar('index',$post);
+
+    $numberPage = 1;
+    if ($this-&gt;request-&gt;isPost()) {
+        $query = Criteria::fromInput($this-&gt;di, 'Vokuro\Models\Index', $this-&gt;request-&gt;getPost());
+        $this-&gt;persistent-&gt;searchParams = $query-&gt;getParams();
+    } else {
+        $numberPage = $this-&gt;request-&gt;get("page", "int");
+    }
+
+    $parameters = array();
+    if ($this-&gt;persistent-&gt;searchParams) {
+        $parameters = $this-&gt;persistent-&gt;searchParams;
+    }
+    $vids = Index::find($parameters);
+    if (count($vids) == 0) {
+
+        $this-&gt;flash-&gt;notice("The search did not find any profiles");
+
+        return $this-&gt;dispatcher-&gt;forward(array(
+            "action" =&gt; "index"
+        ));
+    }
+
+    $paginator = new Paginator(array(
+        "data" =&gt; $vids,
+        "limit" =&gt; 10,
+        "page" =&gt; $numberPage
+    ));
+
+    $this-&gt;view-&gt;page = $paginator-&gt;getPaginate();
+
+}
+}</code></pre>
+<p>And my View:</p>
+<pre><code>&lt;div class="row itop25"&gt;
+{% raw %}{%{% endraw %} for index in index {% raw %}%}{% endraw %}
+&lt;div class="col-md-2 col-xs-12 nopadding"&gt;
+    &lt;div class="embed-responsive embed-responsive-16by9"&gt;
+        {% raw %}{{{% endraw %} tag_html("a", ["href":index.link, 'class' : 'venobox embed-responsive embed-responsive-16by9', 'data-gall' : 'vids',  'data-type':'iframe']) {% raw %}}}{% endraw %}
+        {% raw %}{{{% endraw %} image(index.thumb, "class":"img-responsive", "title":index.title) {% raw %}}}{% endraw %}
+        {% raw %}{{{% endraw %} tag_html_close("a") {% raw %}}}{% endraw %}
+    &lt;/div&gt;
+&lt;/div&gt;
+{% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}
+
+&lt;div class="btn-group"&gt;
+    {% raw %}{{{% endraw %} link_to("index/", '&lt;i class="icon-fast-backward"&gt;&lt;/i&gt; First', "class": "btn") {% raw %}}}{% endraw %}
+    {% raw %}{{{% endraw %} link_to("index?page=" ~ page.before, '&lt;i class="icon-step-backward"&gt;&lt;/i&gt; Previous', "class": "btn ") {% raw %}}}{% endraw %}
+    {% raw %}{{{% endraw %} link_to("index?page=" ~ page.next, '&lt;i class="icon-step-forward"&gt;&lt;/i&gt; Next', "class": "btn") {% raw %}}}{% endraw %}
+    {% raw %}{{{% endraw %} link_to("index?page=" ~ page.last, '&lt;i class="icon-fast-forward"&gt;&lt;/i&gt; Last', "class": "btn") {% raw %}}}{% endraw %}
+    &lt;span class="help-inline"&gt;{% raw %}{{{% endraw %} page.current {% raw %}}}{% endraw %}/{% raw %}{{{% endraw %} page.total_pages {% raw %}}}{% endraw %}&lt;/span&gt;
+&lt;/div&gt;</code></pre>
+<p>&lt;/div&gt;</p>
+<p>Thx for help</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-218a35c5e1856bb421c1846b-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-218a35c5e1856bb421c1846b-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/eff69f4e1760f1b3c652281d4030d3cf?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2503/mraspor" class="user-moderator-N"><span itemprop="name">mraspor</span></a>        </span>
+        <br>
+
+        <span class="karma">12.2k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C34831" href="#C34831">
+                <time itemprop="dateCreated" datetime="2016-05-29T03:47:34-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Unfortunately you are doing it wrong :)</p>
+<pre><code class="language-php">
+// In controller
+
+$vids = Index::find($parameters);
+
+$paginator = new Paginator(array(
+        "data" =&gt; $vids,
+        "limit" =&gt; 10,
+        "page" =&gt; $numberPage
+    ));
+
+$this-&gt;view-&gt;setVar('page', $paginator-&gt;getPaginate());
+</code></pre>
+<pre><code class="language-php">
+// In volt view
+
+{% raw %}{%{% endraw %} for item in page.items {% raw %}%}{% endraw %}
+
+{% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}
+
+// And to use page numbers/total numbers
+{% raw %}{{{% endraw %} page.current {% raw %}}}{% endraw %}
+{% raw %}{{{% endraw %} page.first {% raw %}}}{% endraw %}
+{% raw %}{{{% endraw %} page.before {% raw %}}}{% endraw %}
+{% raw %}{{{% endraw %} page.next {% raw %}}}{% endraw %}
+{% raw %}{{{% endraw %} page.last {% raw %}}}{% endraw %}
+{% raw %}{{{% endraw %} page.total_items {% raw %}}}{% endraw %}
+{% raw %}{{{% endraw %} page.total_pages {% raw %}}}{% endraw %}
+</code></pre>
+<p>More of course here: <a href="https://docs.phalcon.io/en/latest/reference/pagination.html">https://docs.phalcon.io/en/latest/reference/pagination.html</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34831" data-cf-modified-218a35c5e1856bb421c1846b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34831" data-cf-modified-218a35c5e1856bb421c1846b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/95593bdf7bc6c62dbd16767e520f13c8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2249/Stefjoe" class="user-moderator-N"><span itemprop="name">Stefjoe</span></a>        </span>
+        <br>
+
+        <span class="karma">59.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C34845" href="#C34845">
+                <time itemprop="dateCreated" datetime="2016-05-30T00:28:37-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hello mraspor,</p>
+<p>now it works :-) Thank you.</p>
+<p>Rgds
+Stefan</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34845" data-cf-modified-218a35c5e1856bb421c1846b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34845" data-cf-modified-218a35c5e1856bb421c1846b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="11683" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

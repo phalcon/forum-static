@@ -1,0 +1,1098 @@
+---
+layout: default
+title: 'Joining model multiple times by alias not working. - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Joining model multiple times by alias not working.</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/7091/Sevavietl" class="user-moderator-N"><span itemprop="name">Sevavietl</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-05-24T04:44:36-07:00">May '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-05-24T04:44:36-07:00">May '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>May '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">20</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1827</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9717b2060ed54447ba2d0b7a1efbef22?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/7091/Sevavietl" class="user-moderator-N"><span itemprop="name">Sevavietl</span></a></span>
+                <span class="karma">2.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C11645" href="#C11645">
+        <time class="action-date">May '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have the model with following relations:</p>
+<pre><code class="language-php">$this-&gt;belongsTo('consolidator_id', 'Models\\Companies', 'id', array('alias' =&gt; 'Consolidators'));
+$this-&gt;belongsTo('customer_id', 'Models\\Companies', 'id', array('alias' =&gt; 'Customers'));</code></pre>
+<p>Then I try to <code>leftJoin()</code> the related models:</p>
+<pre><code class="language-php">$this-&gt;modelsManager-&gt;createBuilder()
+    -&gt;from(['Orders' =&gt; 'Models\Orders'])
+    -&gt;columns([
+        'Customers.name as customerName',
+        'Consolidators.name as consolidatorName',
+    ])
+    -&gt;leftJoin('Models\Companies', null, 'Customers')
+    -&gt;leftJoin('Models\Companies', null, 'Consolidators');</code></pre>
+<p>But I get the error:</p>
+<pre><code>There is more than one relation between models 'Models\Orders' and 'Models\Companies', the join must be done using an alias, when preparing: SELECT Customers.name as customerName, Consolidators.name as consolidatorName FROM [Models\Orders] AS [Orders] LEFT JOIN [Models\Companies] AS [Customers] LEFT JOIN [Models\Companies] AS [Consolidators]
+#0 [internal function]: Phalcon\Mvc\Model\Query-&gt;_getJoins(Array)
+#1 [internal function]: Phalcon\Mvc\Model\Query-&gt;_prepareSelect()
+#2 [internal function]: Phalcon\Mvc\Model\Query-&gt;parse()</code></pre>
+<p>When you try to use <code>getRelationByAlias()</code> method of <code>Phalcon\Mvc\Model\Manager</code> it always will return <code>false</code>, unless you <code>initialize()</code> your model first. This is not really intuitive behaviour. Going further you will always get empty array from <code>getRelations()</code> method.</p>
+<pre><code class="language-php">$this-&gt;modelsManager-&gt;initialize(new Orders());
+
+var_dump($this-&gt;modelsManager-&gt;getRelationByAlias(
+    'Models\\Orders',
+    'Consolidators'
+));</code></pre>
+<p>I went to the <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/model/query.zep">Phalcon repository</a>, and found the following code there (line 1517 - 1546):</p>
+<pre><code class="language-zephir">/**
+ * Get the model name from its source
+ */
+let modelNameAlias = sqlAliasesModels[joinAlias];
+
+/**
+ * Check if the joined model is an alias 
+ */
+let relation = manager-&gt;getRelationByAlias(fromModelName, modelNameAlias);
+if relation === false {
+
+    /**
+     * Check for relations between models
+     */
+    let relations = manager-&gt;getRelationsBetween(fromModelName, modelNameAlias);
+    if typeof relations == "array" {
+
+        /**
+         * More than one relation must throw an exception
+         */
+        if count(relations) != 1 {
+                throw new Exception("There is more than one relation between models '" . fromModelName . "' and '" . joinModel . "', the join must be done using an alias, when preparing: " . this-&gt;_phql);
+        }
+
+        /**
+         * Get the first relationship
+         */
+        let relation = relations[0];
+    }
+}</code></pre>
+<p>This is the place where exception is thrown from. <strong>I guess there is problem with this code - <code>manager-&gt;getRelationsBetween(fromModelName, modelNameAlias);</code> will always return <code>false</code>, unless the model is somehow initialized in the manager first.</strong> I concluded this from the example above.</p>
+<p>Is this a bug, or am I missing something?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-ae8ed2bd8374509087d57307-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-ae8ed2bd8374509087d57307-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C34545" href="#C34545">
+                <time itemprop="dateCreated" datetime="2016-05-24T04:55:17-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think autojoin won't work with aliases, you will have to specify the join clause:</p>
+<pre><code class="language-php">$this-&gt;modelsManager-&gt;createBuilder()
+    -&gt;from(['Orders' =&gt; 'Models\Orders'])
+    -&gt;columns([
+        'Customers.name as customerName',
+        'Consolidators.name as consolidatorName',
+    ])
+    -&gt;leftJoin('Models\Companies', 'Customers.id=Orders.customer_id', 'Customers')
+    -&gt;leftJoin('Models\Companies', 'Consolidators.id=Orders.consolidator_id', 'Consolidators');</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34545" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34545" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="34549" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '16</span>
+              </span><br/><a name="C34549" href="#C34549">
+                <time itemprop="dateCreated" datetime="2016-05-24T06:10:01-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>As i wrote here many times. Aliases in relations definition are only for access related model in object(already selected).</p>
+<p>If you wan to join same class multiple times in query builder you need to provide ON Condition(secon parameter).</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34549" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34549" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9717b2060ed54447ba2d0b7a1efbef22?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/7091/Sevavietl" class="user-moderator-N"><span itemprop="name">Sevavietl</span></a>        </span>
+        <br>
+
+        <span class="karma">2.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C34549"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C34551" href="#C34551">
+                <time itemprop="dateCreated" datetime="2016-05-24T06:34:36-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I provided the code excerpt, that is actually shows that this functionality is implied. What is the purpose of that code then? I didn't paste the whole excerpt. for the sake of brivety, but before there is a part that checks if conditions where provided.</p>
+<blockquote>
+<p>As i wrote here many times. Aliases in relations definition are only for access related model in object(already selected).</p>
+<p>If you wan to join same class multiple times in query builder you need to provide ON Condition(secon parameter).</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34551" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span><span itemprop="downvoteCount">1</span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34551" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C34553" href="#C34553">
+                <time itemprop="dateCreated" datetime="2016-05-24T07:09:22-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The join function of querybuilder has 3 params: model, clause and alias.
+If you only provide the model, ORM will automatically generate the second clause.
+If you want to give it an alias, you <strong>MUST</strong> provide the second clause, <code>null</code> won't work.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34553" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34553" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C34555" href="#C34555">
+                <time itemprop="dateCreated" datetime="2016-05-24T07:12:22-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>As you see:</p>
+<pre><code>SELECT Customers.name as customerName, Consolidators.name as consolidatorName FROM [Models\Orders] AS [Orders] LEFT JOIN [Models\Companies] AS [Customers] LEFT JOIN [Models\Companies] AS [Consolidators]</code></pre>
+<p>Youy query is built without any conditions. You need to provide conditions if you are joining same model more than once.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34555" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34555" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C34553"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Lajos Bencz                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C34557" href="#C34557">
+                <time itemprop="dateCreated" datetime="2016-05-24T07:12:39-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well actually null works, but only if you join it once.</p>
+<blockquote>
+<p>The join function of querybuilder has 3 params: model, clause and alias.
+If you only provide the model, ORM will automatically generate the second clause.
+If you want to give it an alias, you <strong>MUST</strong> provide the second clause, <code>null</code> won't work.</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34557" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34557" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C34557"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C34559" href="#C34559">
+                <time itemprop="dateCreated" datetime="2016-05-24T07:15:26-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If you give it an alias, null won't work ;]</p>
+<blockquote>
+<p>Well actually null works, but only if you join it once.</p>
+<blockquote>
+<p>The join function of querybuilder has 3 params: model, clause and alias.
+If you only provide the model, ORM will automatically generate the second clause.
+If you want to give it an alias, you <strong>MUST</strong> provide the second clause, <code>null</code> won't work.</p>
+</blockquote>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34559" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34559" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C34559"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Lajos Bencz                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C34561" href="#C34561">
+                <time itemprop="dateCreated" datetime="2016-05-24T07:27:58-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It will work :) Im using everywhere null values and it's working fine. You just need join it once.</p>
+<blockquote>
+<p>If you give it an alias, null won't work ;]</p>
+<blockquote>
+<p>Well actually null works, but only if you join it once.</p>
+<blockquote>
+<p>The join function of querybuilder has 3 params: model, clause and alias.
+If you only provide the model, ORM will automatically generate the second clause.
+If you want to give it an alias, you <strong>MUST</strong> provide the second clause, <code>null</code> won't work.</p>
+</blockquote>
+</blockquote>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34561" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34561" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9717b2060ed54447ba2d0b7a1efbef22?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/7091/Sevavietl" class="user-moderator-N"><span itemprop="name">Sevavietl</span></a>        </span>
+        <br>
+
+        <span class="karma">2.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C34557"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C34565" href="#C34565">
+                <time itemprop="dateCreated" datetime="2016-05-24T07:45:40-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Here is the code, that explains why <code>null</code> works with one relation and fails otherwise:</p>
+<pre><code class="language-zephir">/**
+ * More than one relation must throw an exception
+ */
+if count(relations) != 1 {
+    throw new Exception("There is more than one relation between models '" . fromModelName . "' and '" . joinModel . "', the join must be done using an alias, when preparing: " . this-&gt;_phql);
+}
+
+/**
+ * Get the first relationship
+ */
+let relation = relations[0];</code></pre>
+<p>But if you look close this code <strong>tries to resolve the relation as if no alias was provided</strong>. And as I am providing alias this clause shouldn't be executed at all.</p>
+<blockquote>
+<p>Well actually null works, but only if you join it once.</p>
+<blockquote>
+<p>The join function of querybuilder has 3 params: model, clause and alias.
+If you only provide the model, ORM will automatically generate the second clause.
+If you want to give it an alias, you <strong>MUST</strong> provide the second clause, <code>null</code> won't work.</p>
+</blockquote>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34565" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34565" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C34561"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C34567" href="#C34567">
+                <time itemprop="dateCreated" datetime="2016-05-24T07:31:57-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hmm... last I tried it on ~2.0.3 and didn't work, must've been fixed since. Disregard my smartass then :D</p>
+<blockquote>
+<p>It will work :) Im using everywhere null values and it's working fine. You just need join it once.</p>
+<blockquote>
+<p>If you give it an alias, null won't work ;]</p>
+<blockquote>
+<p>Well actually null works, but only if you join it once.</p>
+<blockquote>
+<p>The join function of querybuilder has 3 params: model, clause and alias.
+If you only provide the model, ORM will automatically generate the second clause.
+If you want to give it an alias, you <strong>MUST</strong> provide the second clause, <code>null</code> won't work.</p>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34567" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34567" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="34569" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '16</span>
+              </span><br/><a name="C34569" href="#C34569">
+                <time itemprop="dateCreated" datetime="2016-05-24T07:47:26-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>But you are providing <strong>ALIAS for QUERY BUILDER, ALIASES WHEN DEFINING RELATIONS</strong> are diffrent story and are not related/same things.</p>
+<p>Alias in belongsTo and other relations are basically for:</p>
+<pre><code class="language-php">class Orders extends Model
+{
+  public function initialize()
+  {
+  $this-&gt;belongsTo('consolidator_id', 'Models\\Companies', 'id', array('alias' =&gt; 'Consolidators'));
+  $this-&gt;belongsTo('customer_id', 'Models\\Companies', 'id', array('alias' =&gt; 'Customers'));
+  }
+}
+
+$order = Orders::findFirst();
+$customers = $orders-&gt;Customers; // we can access this thanks to alias in relation definition</code></pre>
+<p>Also not sure why you have everywhere <strong>plural form</strong>. In <strong>Customers</strong> class for example you have some <strong>array</strong> of Customer ? If not then why you name it like this ? Just name it as Customer etc.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34569" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34569" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9717b2060ed54447ba2d0b7a1efbef22?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/7091/Sevavietl" class="user-moderator-N"><span itemprop="name">Sevavietl</span></a>        </span>
+        <br>
+
+        <span class="karma">2.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C34569"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C34571" href="#C34571">
+                <time itemprop="dateCreated" datetime="2016-05-24T07:52:33-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I pasted code from &quot;parser&quot; class, that if I understand correctly parses query, and tries to build native sql. And here it tries to <strong>resolve relation from model by alias</strong>:</p>
+<pre><code class="language-zephir">/**
+ * Check if the joined model is an alias
+ */
+let relation = manager-&gt;getRelationByAlias(fromModelName, modelNameAlias);</code></pre>
+<p>So following this logic <strong>this is the same story</strong>, otherwise this code is simply useless. But you are free correct me if I am wrong.</p>
+<blockquote>
+<p>But you are providing <strong>ALIAS for QUERY BUILDER, ALIASES WHEN DEFINING RELATIONS</strong> are diffrent story and are not related/same things.</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34571" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34571" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="34573" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '16</span>
+              </span><br/><a name="C34573" href="#C34573">
+                <time itemprop="dateCreated" datetime="2016-05-24T07:45:31-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/Sevavietl">@Sevavietl</a> In your case, they aren't the same. You provided the relational alias name as a builder alias name.</p>
+<p>Try this:</p>
+<pre><code class="language-php">$this-&gt;modelsManager-&gt;createBuilder()
+    -&gt;from(['Orders' =&gt; 'Models\Orders'])
+    -&gt;columns([
+        'Customers.name as customerName',
+        'Consolidators.name as consolidatorName',
+    ])
+    -&gt;leftJoin('Customers')
+    -&gt;leftJoin('Consolidators');</code></pre>
+<p>If that won't work either, stick to providing the join clause manually.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34573" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34573" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9717b2060ed54447ba2d0b7a1efbef22?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/7091/Sevavietl" class="user-moderator-N"><span itemprop="name">Sevavietl</span></a>        </span>
+        <br>
+
+        <span class="karma">2.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C34575" href="#C34575">
+                <time itemprop="dateCreated" datetime="2016-05-24T08:00:48-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>For now I made the stub for myself, but using the same logic, as I think was implied to be implemented in the parser:</p>
+<pre><code class="language-php">$this-&gt;modelsManager-&gt;initialize(new $modelName);
+
+array_walk($queryParameters['join'], function ($join) use (
+    &amp;$queryBuilder,
+    $modelName,
+    $modelAlias
+){
+    $relation = $this-&gt;modelsManager-&gt;getRelationByAlias(
+        $modelName,
+        $join['alias']
+    );
+
+    if ($relation === false) {
+        throw new \Exception("There is not relation provided for {$join['alias']}.");
+    }
+
+    $condition = "";
+    $condition .= $modelAlias . '.' . $relation-&gt;getFields();
+    $condition .= ' = ';
+    $condition .= $join['alias'] . '.' . $relation-&gt;getReferencedFields();
+
+    $queryBuilder-&gt;leftJoin($join['model'], $condition, $join['alias']);
+});</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34575" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34575" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="34577" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '16</span>
+              </span><br/><a name="C34577" href="#C34577">
+                <time itemprop="dateCreated" datetime="2016-05-24T08:01:10-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes you are wrong. As was stated above - if there is two relations to same model:</p>
+<pre><code class="language-php">let relations = manager-&gt;getRelationsBetween(fromModelName, modelNameAlias);</code></pre>
+<p>count(relations) will obviously return 2, that's why you have exception. It just writeing wrong message, you need to provide on condition as well when joining same model more than once.</p>
+<p>Initialize method is already done.</p>
+<p>YOU DON'T UNDERSTAND.</p>
+<p>$join['alias'] <strong>IS WHOLE DIFFRENT THING THAN</strong> second parameter in this - <code>$this-&gt;modelsManager-&gt;getRelationByAlias</code></p>
+<p>It's just alias for builded SQL Query, you can't join data in sql from two same tables - if you want - you need to alias them(AS in your query)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34577" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34577" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9717b2060ed54447ba2d0b7a1efbef22?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/7091/Sevavietl" class="user-moderator-N"><span itemprop="name">Sevavietl</span></a>        </span>
+        <br>
+
+        <span class="karma">2.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C34577"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C34581" href="#C34581">
+                <time itemprop="dateCreated" datetime="2016-05-24T07:49:32-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It should resolve relation by alias before and not go there at all, as I provided the same relation aliases in the model and in the builder.</p>
+<blockquote>
+<p>Yes you are wrong. As was stated above - if there is two relations to same model:</p>
+<pre><code class="language-php">let relations = manager-&gt;getRelationsBetween(fromModelName, modelNameAlias);</code></pre>
+<p>count(relations) will obviously return 2, that's why you have exception. It just writeing wrong message, you need to provide on condition as well when joining same model more than once.</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34581" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34581" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="34583" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '16</span>
+              </span><br/><a name="C34583" href="#C34583">
+                <time itemprop="dateCreated" datetime="2016-05-24T07:51:04-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><strong>You just don't unerstand that alias in query builder is whole diffrent thing than alias in relation definition. They are not related, they are totally diffrent thing. Alias in query builder is just alias for SQL Query, alias in relation definition is for accessing this relation in already selected object.</strong></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34583" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34583" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C34581"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/9717b2060ed54447ba2d0b7a1efbef22?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Sevavietl                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="34585" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '16</span>
+              </span><br/><a name="C34585" href="#C34585">
+                <time itemprop="dateCreated" datetime="2016-05-24T08:07:20-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Please listen to what we are saying, relation alias and builder alias <strong>ARE NOT THE SAME</strong>.</p>
+<blockquote>
+<p>It should resolve relation by alias before and not go there at all, as I provided the same relation aliases in the model and in the builder.</p>
+<blockquote>
+<p>Yes you are wrong. As was stated above - if there is two relations to same model:</p>
+<pre><code class="language-php">let relations = manager-&gt;getRelationsBetween(fromModelName, modelNameAlias);</code></pre>
+<p>count(relations) will obviously return 2, that's why you have exception. It just writeing wrong message, you need to provide on condition as well when joining same model more than once.</p>
+</blockquote>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34585" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34585" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9717b2060ed54447ba2d0b7a1efbef22?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/7091/Sevavietl" class="user-moderator-N"><span itemprop="name">Sevavietl</span></a>        </span>
+        <br>
+
+        <span class="karma">2.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C34577"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C34587" href="#C34587">
+                <time itemprop="dateCreated" datetime="2016-05-24T07:52:20-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><code>$join['alias']</code> is my own variable and it has nothing to do with phalcon.</p>
+<blockquote>
+<p>Yes you are wrong. As was stated above - if there is two relations to same model:</p>
+<pre><code class="language-php">let relations = manager-&gt;getRelationsBetween(fromModelName, modelNameAlias);</code></pre>
+<p>count(relations) will obviously return 2, that's why you have exception. It just writeing wrong message, you need to provide on condition as well when joining same model more than once.</p>
+<p>Initialize method is already done.</p>
+<p>YOU DON'T UNDERSTAND.</p>
+<p>$join['alias'] <strong>IS WHOLE DIFFRENT THING THAN</strong> second parameter in this - <code>$this-&gt;modelsManager-&gt;getRelationByAlias</code></p>
+<p>It's just alias for builded SQL Query, you can't join data in sql from two same tables - if you want - you need to alias them(AS in your query)</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34587" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34587" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="34589" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '16</span>
+              </span><br/><a name="C34589" href="#C34589">
+                <time itemprop="dateCreated" datetime="2016-05-24T08:14:07-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Okay you just implemented some your own stuff. But you don't understand that there is no bug, everything is working as it should be. You just don't understand that relation alias is diffrent thing than query alias.</p>
+<p>And this code:</p>
+<pre><code class="language-php">let relation = manager-&gt;getRelationByAlias(fromModelName, modelNameAlias);</code></pre>
+<p>Yes it can get relations from model. But you have to use relation aliases here so:</p>
+<pre><code class="language-php">$this-&gt;modelsManager-&gt;createBuilder()
+    -&gt;from(['Orders' =&gt; 'Models\Orders'])
+    -&gt;columns([
+        'Customers.name as customerName',
+        'Consolidators.name as consolidatorName',
+    ])
+    -&gt;leftJoin('Customers', null, 'Customers')
+    -&gt;leftJoin('Consolidators', null, 'Consolidators');</code></pre>
+<p>Then it will work fine. Without alias as 3rd argument there will be exception thrown.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34589" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34589" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9717b2060ed54447ba2d0b7a1efbef22?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/7091/Sevavietl" class="user-moderator-N"><span itemprop="name">Sevavietl</span></a>        </span>
+        <br>
+
+        <span class="karma">2.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C34583"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C34591" href="#C34591">
+                <time itemprop="dateCreated" datetime="2016-05-24T08:19:59-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Here is whole code excerpt:</p>
+<pre><code class="language-zephir">                /**
+                 * Check if the model already have pre-defined conditions
+                 */
+                if !fetch preCondition, joinPreCondition[joinAlias] {
+
+                    /**
+                     * Get the model name from its source
+                     */
+                    let modelNameAlias = sqlAliasesModels[joinAlias];
+
+                    /**
+                     * Check if the joined model is an alias
+                     */
+                    let relation = manager-&gt;getRelationByAlias(fromModelName, modelNameAlias);
+                    if relation === false {
+
+                        /**
+                         * Check for relations between models
+                         */
+                        let relations = manager-&gt;getRelationsBetween(fromModelName, modelNameAlias);
+                        if typeof relations == "array" {
+
+                            /**
+                             * More than one relation must throw an exception
+                             */
+                            if count(relations) != 1 {
+                                throw new Exception("There is more than one relation between models '" . fromModelName . "' and '" . joinModel . "', the join must be done using an alias, when preparing: " . this-&gt;_phql);
+                            }
+
+                            /**
+                             * Get the first relationship
+                             */
+                            let relation = relations[0];
+                        }
+                    }
+
+                    /*
+                     * Valid relations are objects
+                     */
+                    if typeof relation == "object" {
+
+                        /**
+                         * Get the related model alias of the left part
+                         */
+                        let modelAlias = sqlModelsAliases[fromModelName];
+
+                        /**
+                         * Generate the conditions based on the type of join
+                         */
+                        if !relation-&gt;isThrough() {
+                            let sqlJoin = this-&gt;_getSingleJoin(joinType, joinSource, modelAlias, joinAlias, relation);
+                        } else {
+                            let sqlJoin = this-&gt;_getMultiJoin(joinType, joinSource, modelAlias, joinAlias, relation);
+                        }
+
+                        /**
+                         * Append or merge joins
+                         */
+                        if isset sqlJoin[0] {
+                            for sqlJoinItem in sqlJoin {
+                                let sqlJoins[] = sqlJoinItem;
+                            }
+                        } else {
+                            let sqlJoins[] = sqlJoin;
+                        }
+
+                    } else {
+
+                        /**
+                         * Join without conditions because no relation has been found between the models
+                         */
+                        let sqlJoins[] = [
+                            "type": joinType,
+                            "source": joinSource,
+                            "conditions": []
+                        ];
+                    }
+</code></pre>
+<p>Tell me, please, the hypothetical situation when this <code>let relation = manager-&gt;getRelationByAlias(fromModelName, modelNameAlias);</code> will be not false.</p>
+<blockquote>
+<p><strong>You just don't unerstand that alias in query builder is whole diffrent thing than alias in relation definition. They are not related, they are totally diffrent thing. Alias in query builder is just alias for SQL Query, alias in relation definition is for accessing this relation in already selected object.</strong></p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34591" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34591" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="34593" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '16</span>
+              </span><br/><a name="C34593" href="#C34593">
+                <time itemprop="dateCreated" datetime="2016-05-24T08:09:29-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I wrote this situation above. Here you have this method : <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/model/manager.zep#L1098">https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/model/manager.zep#L1098</a></p>
+<pre><code class="language-php">$this-&gt;modelsManager-&gt;createBuilder()
+    -&gt;from(['Orders' =&gt; 'Models\Orders'])
+    -&gt;columns([
+        'Customers.name as customerName',
+        'Consolidators.name as consolidatorName',
+    ])
+    -&gt;leftJoin('Customers', null, 'Customers')
+    -&gt;leftJoin('Consolidators', null, 'Consolidators');</code></pre>
+<p>Its accessing exactly the relation by <strong>RELATION ALIAS</strong> from your defined relations. But it has to be a first attribute in joins, thrid attribute is <strong>QUERY ALIAS(in sql)</strong></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34593" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34593" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C34595" href="#C34595">
+                <time itemprop="dateCreated" datetime="2016-05-24T08:10:31-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This will return a relation object instead of false:</p>
+<pre><code class="language-php">$manager-&gt;getRelationByAlias('Models\Orders','Consolidators');</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34595" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34595" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9717b2060ed54447ba2d0b7a1efbef22?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/7091/Sevavietl" class="user-moderator-N"><span itemprop="name">Sevavietl</span></a>        </span>
+        <br>
+
+        <span class="karma">2.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C34593"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C34597" href="#C34597">
+                <time itemprop="dateCreated" datetime="2016-05-24T08:30:39-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Ok, thank you. I tried this, but it causes error:</p>
+<pre><code>Model 'Customers' could not be loaded
+#0 [internal function]: Phalcon\Mvc\Model\Manager-&gt;load('Customers', true)
+#1 [internal function]: Phalcon\Mvc\Model\Query-&gt;_getJoin(Object(Phalcon\Mvc\Model\Manager), Array)
+#2 [internal function]: Phalcon\Mvc\Model\Query-&gt;_getJoins(Array)
+#3 [internal function]: Phalcon\Mvc\Model\Query-&gt;_prepareSelect()
+#4 [internal function]: Phalcon\Mvc\Model\Query-&gt;parse()</code></pre>
+<blockquote>
+<p>I wrote this situation above. Here you have this method : <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/model/manager.zep#L1098">https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/model/manager.zep#L1098</a></p>
+<pre><code class="language-php">$this-&gt;modelsManager-&gt;createBuilder()
+   -&gt;from(['Orders' =&gt; 'Models\Orders'])
+   -&gt;columns([
+       'Customers.name as customerName',
+       'Consolidators.name as consolidatorName',
+   ])
+   -&gt;leftJoin('Customers', null, 'Customers')
+   -&gt;leftJoin('Consolidators', null, 'Consolidators');</code></pre>
+<p>Its accessing exactly the relation by <strong>RELATION ALIAS</strong> from your defined relations. But it has to be a first attribute in joins, thrid attribute is <strong>QUERY ALIAS(in sql)</strong></p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34597" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34597" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="34599" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '16</span>
+              </span><br/><a name="C34599" href="#C34599">
+                <time itemprop="dateCreated" datetime="2016-05-24T08:31:48-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>And now this is bug, beacause it supposed to load this relation, but it doesn't. </p>
+<p>Actually this happens beacause of this line <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/model/query.zep#L1316">https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/model/query.zep#L1316</a> - it just tries to load as model name.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34599" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34599" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9717b2060ed54447ba2d0b7a1efbef22?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/7091/Sevavietl" class="user-moderator-N"><span itemprop="name">Sevavietl</span></a>        </span>
+        <br>
+
+        <span class="karma">2.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C34599"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="34601" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '16</span>
+              </span><br/><a name="C34601" href="#C34601">
+                <time itemprop="dateCreated" datetime="2016-05-24T08:23:40-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Still, I thik that this is not really intuitive, because why I have to specify two same aliases here:</p>
+<pre><code class="language-php">-&gt;leftJoin('Customers', null, 'Customers')
+-&gt;leftJoin('Consolidators', null, 'Consolidators');</code></pre>
+<p>I understand what you mean. But this is not really pretty logic.</p>
+<blockquote>
+<p>And now this is bug, beacause it supposed to load this relation, but it doesn't. </p>
+<p>Actually this happens beacause of this line <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/model/query.zep#L1316">https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/model/query.zep#L1316</a> - it just tries to load as model name.</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34601" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34601" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C34603" href="#C34603">
+                <time itemprop="dateCreated" datetime="2016-05-24T08:44:46-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Beacause first is relation alias OR MODEL NAMESPACE, thrid is query alias. Totally diffrent things. But im guessing if there could possibly be working joining using relation aliases then we won't even need those third parameters beacause well, there is already some unique alias we can use.</p>
+<p>It's just looking like someone wanted to implement such an ability but forgot about it.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34603" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34603" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9717b2060ed54447ba2d0b7a1efbef22?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/7091/Sevavietl" class="user-moderator-N"><span itemprop="name">Sevavietl</span></a>        </span>
+        <br>
+
+        <span class="karma">2.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C34599"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C34605" href="#C34605">
+                <time itemprop="dateCreated" datetime="2016-05-24T08:46:10-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Can you advise me if there is a tutorial on how to debug and compile phaclon myself?</p>
+<blockquote>
+<p>And now this is bug, beacause it supposed to load this relation, but it doesn't. </p>
+<p>Actually this happens beacause of this line <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/model/query.zep#L1316">https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/model/query.zep#L1316</a> - it just tries to load as model name.</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34605" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34605" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C34607" href="#C34607">
+                <time itemprop="dateCreated" datetime="2016-05-24T08:32:58-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Install zephir, clone phalcon repository and just zephir fullclean and then zephir build.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34607" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34607" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C34605"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/9717b2060ed54447ba2d0b7a1efbef22?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Sevavietl                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="34609" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '16</span>
+              </span><br/><a name="C34609" href="#C34609">
+                <time itemprop="dateCreated" datetime="2016-05-24T08:53:29-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Install zephir (<a href="https://docs.zephir-lang.com/en/latest/install.html">https://docs.zephir-lang.com/en/latest/install.html</a>), then:</p>
+<pre><code>git clone https://github.com/phalcon/cphalcon -b 2.0.x --single-branch
+cd cphalcon
+zephir build
+cd build
+./install</code></pre>
+<blockquote>
+<p>Can you advise me if there is a tutorial on how to debug and compile phaclon myself?</p>
+<blockquote>
+<p>And now this is bug, beacause it supposed to load this relation, but it doesn't. </p>
+<p>Actually this happens beacause of this line <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/model/query.zep#L1316">https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/model/query.zep#L1316</a> - it just tries to load as model name.</p>
+</blockquote>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="34609" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="34609" data-cf-modified-ae8ed2bd8374509087d57307-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="11645" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

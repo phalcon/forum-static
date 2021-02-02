@@ -1,0 +1,332 @@
+---
+layout: default
+title: 'App crash when saving data (using APC metadata cache) - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/8/cache">Cache</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">App crash when saving data (using APC metadata cache)</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/5897/egoism" class="user-moderator-N"><span itemprop="name">egoism</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-01-06T14:46:49-07:00">Jan '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-01-06T14:46:49-07:00">Jan '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>768</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9b531fd495cfdac522e89dd468faee2b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/5897/egoism" class="user-moderator-N"><span itemprop="name">egoism</span></a></span>
+                <span class="karma">914</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C10099" href="#C10099">
+        <time class="action-date">Jan '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi community,</p>
+<p>I have a problem using APC meta-data in my app and trying save a data.</p>
+<p>Declaration models meta-data in DI:</p>
+<pre><code class="language-php">$di-&gt;set('modelsMetadata', function() use ($di){
+    $metaData = new Phalcon\Mvc\Model\MetaData\Apc(array(
+        'lifetime' =&gt; 86400,
+        'prefix' =&gt; 'metadata_'
+    ));
+
+    return $metaData;
+});</code></pre>
+<p>Model Sessions:</p>
+<pre><code class="language-php">class Sessions extends Phalcon\Mvc\Model {
+
+    /** @var int ID session auto_increment */
+    public $id;
+
+    /** @var int ID user */
+    public $id_user;
+
+    /** @var string Session hash */
+    public $hash;
+
+    /** @var int User IP */
+    public $ip;
+
+    /** @var string Selected language */    
+    public $language;
+
+    /** @var string Date activity */
+    public $date_activity;
+
+    public function initialize(){
+        $this-&gt;hasOne('id_user', 'Users', 'id', array('alias' =&gt; 'user'));
+    }
+</code></pre>
+<p>Saving data using Phalcon\Mvc\Model:</p>
+<pre><code class="language-php">$session = new Sessions();
+$session-&gt;id_user = $user-&gt;id;
+$session-&gt;hash = $someHash;
+$session-&gt;ip = ip2long($this-&gt;request-&gt;getClientAddress());
+$session-&gt;date_activity = time();
+$session-&gt;language = Language::getDefault();
+$session-&gt;save();</code></pre>
+<p>Output after saving:</p>
+<pre><code>
+Notice: Undefined index: 1 in phalcon/mvc/model/metadata.zep on line 276 in /var/www/auction-dev/data/www/test-dev/backend/controllers/client/AuthController.php on line 79
+
+Phalcon\Mvc\Model\Exception:The meta-data is invalid or is corrupt
+File = phalcon/mvc/model/metadata.zep
+Line = 391
+
+0 [internal function]: Phalcon\Mvc\Model\MetaData-&gt;getPrimaryKeyAttributes(Object(Sessions))
+1 [internal function]: Phalcon\Mvc\Model-&gt;_exists(Object(Phalcon\Mvc\Model\MetaData\Apc), Object(Phalcon\Db\Adapter\Pdo\Mysql), 'sessions')
+2 /var/www/auction-dev/data/www/test-dev/backend/controllers/client/AuthController.php(79): Phalcon\Mvc\Model-&gt;save()
+3 [internal function]: AuthController-&gt;loginAction()
+4 [internal function]: Phalcon\Dispatcher-&gt;dispatch()
+5 /var/www/auction-dev/data/www/test-dev/index.php(276): Phalcon\Mvc\Application-&gt;handle()
+6 {main}</code></pre>
+<p>What am I doing wrong?
+Thanks.</p>
+<p><strong>UPD</strong></p>
+<p>I tried manually get primary attributes and keys of model, but result remains the same:</p>
+<pre><code class="language-php">$session = new Sessions();
+echo '&lt;pre&gt;'.print_r($this-&gt;modelsMetadata-&gt;getAttributes($session), true).'&lt;/pre&gt;';
+echo '&lt;pre&gt;'.print_r($this-&gt;modelsMetadata-&gt;getNonPrimaryKeyAttributes($session), true).'&lt;/pre&gt;';
+echo '&lt;pre&gt;'.print_r($this-&gt;modelsMetadata-&gt;getPrimaryKeyAttributes($session), true).'&lt;/pre&gt;';</code></pre>
+<p>Output is:</p>
+<pre><code>Array
+(
+    [0] =&gt; id
+    [1] =&gt; id_user
+    [2] =&gt; hash
+    [3] =&gt; ip
+    [4] =&gt; language
+    [5] =&gt; date_activity
+)
+
+Array
+(
+    [0] =&gt; id_user
+    [1] =&gt; hash
+    [2] =&gt; ip
+    [3] =&gt; language
+    [4] =&gt; date_activity
+)
+
+Notice: Undefined index: 1 in phalcon/mvc/model/metadata.zep on line 276 in /var/www/auction-dev/data/www/test-dev/backend/controllers/client/AuthController.php on line 74
+
+Phalcon\Mvc\Model\Exception:The meta-data is invalid or is corrupt
+File = phalcon/mvc/model/metadata.zep
+Line = 391
+
+0 /var/www/auction-dev/data/www/test-dev/backend/controllers/client/AuthController.php(74): Phalcon\Mvc\Model\MetaData-&gt;getPrimaryKeyAttributes(Object(Sessions))
+1 [internal function]: AuthController-&gt;loginAction()
+2 [internal function]: Phalcon\Dispatcher-&gt;dispatch()
+3 /var/www/auction-dev/data/www/test-dev/index.php(276): Phalcon\Mvc\Application-&gt;handle()
+4 {main}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-548cdb66652befaf0ab81fb9-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-548cdb66652befaf0ab81fb9-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/98fc515e032dfcffbd7c6720001bf151?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5239/oscarmolinadev" class="user-moderator-N"><span itemprop="name">Oscar Molina</span></a>        </span>
+        <br>
+
+        <span class="karma">4.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="28671" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '16</span>
+              </span><br/><a name="C28671" href="#C28671">
+                <time itemprop="dateCreated" datetime="2016-01-07T04:11:55-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think that annotations are wrong.</p>
+<p><a href="https://docs.phalcon.io/en/latest/reference/models-metadata.html#annotations-strategy"><a href="https://docs.phalcon.io/en/latest/reference/models-metadata.html#annotations-strategy">https://docs.phalcon.io/en/latest/reference/models-metadata.html#annotations-strategy</a></a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28671" data-cf-modified-548cdb66652befaf0ab81fb9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28671" data-cf-modified-548cdb66652befaf0ab81fb9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9b531fd495cfdac522e89dd468faee2b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5897/egoism" class="user-moderator-N"><span itemprop="name">egoism</span></a>        </span>
+        <br>
+
+        <span class="karma">914</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C28671"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/98fc515e032dfcffbd7c6720001bf151?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Oscar Molina                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="28691" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '16</span>
+              </span><br/><a name="C28691" href="#C28691">
+                <time itemprop="dateCreated" datetime="2016-01-07T11:00:44-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>I think that annotations are wrong.</p>
+<p><a href="https://docs.phalcon.io/en/latest/reference/models-metadata.html#annotations-strategy"><a href="https://docs.phalcon.io/en/latest/reference/models-metadata.html#annotations-strategy">https://docs.phalcon.io/en/latest/reference/models-metadata.html#annotations-strategy</a></a></p>
+</blockquote>
+<p>But I don't use any strategy.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28691" data-cf-modified-548cdb66652befaf0ab81fb9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28691" data-cf-modified-548cdb66652befaf0ab81fb9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c0ce8f5e133750a4dfea4712e533a178?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/15/le51" class="user-moderator-N"><span itemprop="name">le51</span></a>        </span>
+        <br>
+
+        <span class="karma">43.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C28699" href="#C28699">
+                <time itemprop="dateCreated" datetime="2016-01-07T14:04:11-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi,</p>
+<p>I think that it could come from your model definition: it has one relation with another object of SessionModel itself. It looks strange to associate the session to another one ! If user_id=15, he is now associated with a session that has id=15 !</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28699" data-cf-modified-548cdb66652befaf0ab81fb9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28699" data-cf-modified-548cdb66652befaf0ab81fb9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9b531fd495cfdac522e89dd468faee2b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5897/egoism" class="user-moderator-N"><span itemprop="name">egoism</span></a>        </span>
+        <br>
+
+        <span class="karma">914</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C28699"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/c0ce8f5e133750a4dfea4712e533a178?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        le51                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C28707" href="#C28707">
+                <time itemprop="dateCreated" datetime="2016-01-07T14:58:02-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Hi,</p>
+<p>I think that it could come from your model definition: it has one relation with another object of SessionModel itself. It looks strange to associate the session to another one ! If user_id=15, he is now associated with a session that has id=15 !</p>
+</blockquote>
+<p>Sorry, my mistake. Corrected the typo and checked without relations - the same result :(</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28707" data-cf-modified-548cdb66652befaf0ab81fb9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28707" data-cf-modified-548cdb66652befaf0ab81fb9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9b531fd495cfdac522e89dd468faee2b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5897/egoism" class="user-moderator-N"><span itemprop="name">egoism</span></a>        </span>
+        <br>
+
+        <span class="karma">914</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="28747" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '16</span>
+              </span><br/><a name="C28747" href="#C28747">
+                <time itemprop="dateCreated" datetime="2016-01-09T07:10:43-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I replaced the metadata cache on Phalcon\Mvc\Model\MetaData\Files and app works fine!</p>
+<p>It's a bug in Phalcon\Mvc\Model\MetaData\Apc class?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28747" data-cf-modified-548cdb66652befaf0ab81fb9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28747" data-cf-modified-548cdb66652befaf0ab81fb9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c0ce8f5e133750a4dfea4712e533a178?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/15/le51" class="user-moderator-N"><span itemprop="name">le51</span></a>        </span>
+        <br>
+
+        <span class="karma">43.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C28765" href="#C28765">
+                <time itemprop="dateCreated" datetime="2016-01-10T04:38:38-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi,</p>
+<p>maybe it is a bug.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28765" data-cf-modified-548cdb66652befaf0ab81fb9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28765" data-cf-modified-548cdb66652befaf0ab81fb9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/edef46b828663537df8a820c679aad6b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1968/zhao5908" class="user-moderator-N"><span itemprop="name">zhao yi</span></a>        </span>
+        <br>
+
+        <span class="karma">1.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C28771" href="#C28771">
+                <time itemprop="dateCreated" datetime="2016-01-10T08:36:51-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>what do you use , <a href="http://php.net/manual/en/book.apc.php">apc</a> or <a href="http://php.net/manual/en/book.apcu.php">apcu</a> , only support apc currently</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28771" data-cf-modified-548cdb66652befaf0ab81fb9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28771" data-cf-modified-548cdb66652befaf0ab81fb9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="10099" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

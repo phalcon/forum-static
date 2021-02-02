@@ -1,0 +1,256 @@
+---
+layout: default
+title: 'Issue with nginx host file, php-fpm and phalcon 4.x - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/27/external-tools">External Tools</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Issue with nginx host file, php-fpm and phalcon 4.x</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/6853/Hoet" class="user-moderator-N"><span itemprop="name">Hoet</span></a></span>
+            <time itemprop="dateCreated" datetime="2020-11-14T14:02:57-07:00">Nov '20</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2020-11-14T14:02:57-07:00">Nov '20</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>104</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/cfe29c6fec2b71ae311c675cdc3d7562?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/6853/Hoet" class="user-moderator-N"><span itemprop="name">Hoet</span></a></span>
+                <span class="karma">4.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C20979" href="#C20979">
+        <time class="action-date">Nov '20</time>
+    </a>
+</div>
+<div class="post-content"><div><p>The situation</p>
+<p>I have the following directory structure</p>
+<ul>
+<li>config</li>
+<li>controllers</li>
+<li>models</li>
+<li>views</li>
+<li>public
+<ul>
+<li>index.php</li>
+</ul></li>
+<li>backend
+<ul>
+<li>modules</li>
+<li>public
+<ul>
+<li>index.php</li>
+</ul></li>
+</ul></li>
+<li>......</li>
+</ul>
+<p>The hosting account is a vagrant environment with debian 10, mariadb, php-fpm and nginx.</p>
+<p>I have a frontend that is located in the root of the hosting account and the index.php thus located at &quot;/var/www/phalcon.test/web/public&quot;.</p>
+<p>I also have a backend that is located in the sub folder backend in the root of the hosting acocunt and the index.php is located at &quot;/var/www/phalcon.test/web/backend/public&quot;.</p>
+<p>Basically I have two separate phalcon projects in the same hosting account.</p>
+<p>I've tried various things, read nginx documentation and I have been searching in google, but I have not been able to find a working nginx host set-up for the above folder structure.</p>
+<p>The frontend is working without a problem, but I can't seems to get the backend working. I can access statis files like index.txt, but when I try to access the index.php directly or implicit I get a nginx 404 error message. I have tried various &quot;solutions&quot; for the &quot;locarion /backend/&quot; directive but none is working. I'm looking for a solution using the above folder structure. Not looking into subdomains.</p>
+<p>Any help is appricited.</p>
+<p>I use the following host file</p>
+<pre><code>server {
+  listen  80;
+  listen  [::]:80;
+
+  index index.php index.html index.htm;
+  root /var/www/cms-base.test/web/public;
+
+  error_log /var/www/cms-base.test/logs/nginx-error.log;
+  access_log /var/www/cms-base.test/logs/nginx-access.log;
+  rewrite_log on;
+
+  charset     utf-8;
+  server_name cms-base.test www.cms-base.test;
+
+  client_max_body_size 100M;
+  fastcgi_read_timeout 1800;
+
+  # Set environment
+  fastcgi_param APPLICATION_ENV development;
+
+  # Set location for the frontend
+  location / {
+    try_files $uri $uri/ /index.php?_url=$uri&amp;$args;
+  }
+
+  # Set location for the backend
+  location /backend {
+    root /var/www/cms-base.test/web/backend/public;
+
+    try_files $uri $uri/ /index.php?_url=$uri&amp;$args;
+  }
+
+  location ~ [^/]\.php(/|$) {
+    fastcgi_pass  unix:/var/run/php/vagrant.sock;
+
+    fastcgi_index /index.php;
+
+    include fastcgi_params;
+
+    fastcgi_split_path_info ^(.+?\.php)(/.*)$;
+    if (!-f $document_root$fastcgi_script_name) {
+      return 404;
+    }
+
+    fastcgi_param PATH_INFO       $fastcgi_path_info;
+    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+  }
+
+  location ~ /\.ht {
+    deny all;
+  }
+
+  location = /favicon.ico {
+    log_not_found off;
+    access_log off;
+  }
+
+  location = /robots.txt {
+    log_not_found off;
+    access_log off;
+  }
+
+  # make sure that static files are cached for max duration
+  location ~* \.(js|css|less|png|jpg|jpeg|gif|ico|woff|ttf|svg|tpl)$ {
+    expires       max;
+    access_log    off;
+    log_not_found off;
+  }
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-6b349d1842d5ad80b734298d-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-6b349d1842d5ad80b734298d-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/97cfdb3586f82c3e1e4fe562bda688b8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/571/duythien" class="user-moderator-Y"><span itemprop="name">Thien Tran</span></a>        </span>
+        <br>
+
+        <span class="karma">58.3k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C64845" href="#C64845">
+                <time itemprop="dateCreated" datetime="2020-11-17T07:12:21-07:00" class="action-date">Nov '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi</p>
+<p>In location backend you should doing following</p>
+<pre><code>
+# Set location for the backend
+  location /backend {
+       alias /var/www/cms-base.test/web/backend/public;
+
+        if (!-e $request_filename) { rewrite ^ /backend/index.php last; }
+                             location ~* \.php(/|$) {
+                                 fastcgi_pass  unix:/var/run/php/vagrant.sock;
+                                 fastcgi_split_path_info ^(.+\.php)(/.*)$;
+                                 fastcgi_param SCRIPT_FILENAME $request_filename;
+                                 include fastcgi_params;
+                             }
+                             location ~* \.(jpg|jpeg|gif|png|css|js|ico|xml)$ {
+                                         expires 5d;
+                              }
+         }
+     }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64845" data-cf-modified-6b349d1842d5ad80b734298d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64845" data-cf-modified-6b349d1842d5ad80b734298d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/cfe29c6fec2b71ae311c675cdc3d7562?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6853/Hoet" class="user-moderator-N"><span itemprop="name">Hoet</span></a>        </span>
+        <br>
+
+        <span class="karma">4.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="64851" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '20</span>
+              </span><br/><a name="C64851" href="#C64851">
+                <time itemprop="dateCreated" datetime="2020-11-17T10:37:44-07:00" class="action-date">Nov '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This is almost what I was looking for. Phalcon is running on both the front and back. So that is working perfect</p>
+<p>The only issue I run in to now is that the _url supplied to the backend/public/index.php contains &quot;/backend&quot; instead of &quot;/&quot; or for users &quot;/backend/users&quot; instead of &quot;/users&quot;. I can strip the /backend in my bootstrap before I send it to the application handler. But I rather have that part outside and in the host file instead.</p>
+<p>Any idea on how to do that ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="64851" data-cf-modified-6b349d1842d5ad80b734298d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="64851" data-cf-modified-6b349d1842d5ad80b734298d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e01266635976492e68d6c23dd6e9e178?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/14571/Marysssd" class="user-moderator-N"><span itemprop="name">Marysssd</span></a>        </span>
+        <br>
+
+        <span class="karma">72</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="65169" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '20</span>
+              </span><br/><a name="C65169" href="#C65169">
+                <time itemprop="dateCreated" datetime="2020-12-16T00:33:15-07:00" class="action-date">Dec '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The PHP-FPM (FastCGI Process Manager) is usually used to allow Nginx to  provides a powerful set of tools that offer maximum performance for your PHP  index index.php index.html index.htm; # if file exists return it right away if And this second configuration allow you to have different configurations by host</p>
+<p><a href="https://www.tellpopeyes.buzz/">TellPopeyes</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="65169" data-cf-modified-6b349d1842d5ad80b734298d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="65169" data-cf-modified-6b349d1842d5ad80b734298d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="20979" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

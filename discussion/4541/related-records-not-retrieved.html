@@ -1,0 +1,197 @@
+---
+layout: default
+title: 'Related records not retrieved - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Related records not retrieved</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/203/dimhoLt" class="user-moderator-N"><span itemprop="name">dimhoLt</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-01-21T07:01:15-07:00">Jan '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-01-21T07:01:15-07:00">Jan '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>555</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/c17126b287f7a68ffaf35acc558391d5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/203/dimhoLt" class="user-moderator-N"><span itemprop="name">dimhoLt</span></a></span>
+                <span class="karma">22.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4541" href="#C4541">
+        <time class="action-date">Jan '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello!</p>
+<p>I'm currently writing unit tests for my models, and I've ran into an issue where related records are no longer retrieved by the magical functionality from defining relations.</p>
+<p>It has worked before, and I'm sure it is I who have done something to mess it up, but I have no idea as of how to troubleshoot. It is only two relations in my entire system that have stopped working.</p>
+<p><strong>Problem description</strong>
+Here's example code to show the problem. For the actual models, and how I've set it up, see below.</p>
+<pre><code class="language-php">&lt;?php
+
+// Retrieve an UcCheck.
+$ucCheck = UcCheck::findFirst();
+
+// This DOES work.
+$ucCheckIncomes = UcCheckIncome::find(
+    array(
+        "conditions" =&gt; "uc_check_id = :ucCheckId:",
+        "bind" =&gt; array("ucCheckId" =&gt; $ucCheck-&gt;getId()
+    )
+);
+var_dump(count($ucCheckIncomes)); // 2 (Correct - there are two related ones in the DB)
+
+// This does NOT work:
+$ucCheckIncomes = $ucCheck-&gt;getUcIncomes();
+var_dump(count($ucCheckIncomes)); // 0 (..?)</code></pre>
+<p><strong>Code for recreating the conditions</strong>
+Here is an example table of a credit check (it has been stripped of fields to make troubleshooting easier):</p>
+<pre><code class="language-sql">CREATE TABLE `uc_check` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `applicant_id` int(11) unsigned NOT NULL,
+  `firstname` varchar(50) DEFAULT NULL,
+  `lastname` varchar(50) DEFAULT NULL,
+  `fullname` varchar(150) DEFAULT NULL,
+  `address` varchar(50) DEFAULT NULL,
+  `added_on` datetime NOT NULL,
+  `deleted_on` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `applicant_id_2` (`applicant_id`,`deleted_on`),
+
+  -- Ignore the Applicant for now - this relation works.
+  -- KEY `applicant_id` (`applicant_id`),
+  -- CONSTRAINT `uc_check_ibfk_1` FOREIGN KEY (`applicant_id`) REFERENCES `applicant` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8</code></pre>
+<p>And in the model for this table, aside from getters and setters, I have this:</p>
+<pre><code class="language-php">&lt;?php
+
+namespace Models;
+
+use \Phalcon\Mvc\Model;
+
+class UcCheck extends Model {
+
+    /**
+     * Initialization.
+     *
+     * @return void
+     */
+    public function initialize() {
+        parent::initialize();
+
+        $this-&gt;belongsTo('applicant_id', '\Models\Applicant', 'id', array("alias" =&gt; "Applicant", "reusable" =&gt; true));
+        $this-&gt;hasMany('id', '\Models\UcCheckIncome', 'uc_check_id', array("alias" =&gt; "UcIncomes", "reusable" =&gt; true));
+
+        $this-&gt;addSoftDeleteBehavior();
+    }
+
+    /* GETTERS AND SETTERS FROM HERE */
+
+}</code></pre>
+<p>The related records I'm trying to retrieve look like this (also stripped of some arbitrary values):</p>
+<pre><code class="language-sql">CREATE TABLE `uc_check_income` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `uc_check_id` int(11) unsigned NOT NULL,
+  `year` int(8) NOT NULL,
+  `final_income` int(8) NOT NULL,
+  `added_on` datetime NOT NULL
+  PRIMARY KEY (`id`),
+  KEY `uc_check_id` (`uc_check_id`),
+  CONSTRAINT `uc_check_income_ibfk_1` FOREIGN KEY (`uc_check_id`) REFERENCES `uc_check` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8</code></pre>
+<pre><code class="language-php">&lt;?php
+
+namespace Models;
+
+use \Phalcon\Mvc\Model;
+
+class UcCheckIncome extends Model {
+
+    /**
+     * Initialization.
+     *
+     * @return void
+     */
+    public function initialize() {
+        parent::initialize();
+
+        $this-&gt;belongsTo('uc_check_id', '\Models\UcCheck', 'id', array("alias" =&gt; "UcCheck", "reusable" =&gt; true));
+
+        $this-&gt;addSoftDeleteBehavior();
+    }
+
+    /* GETTERS AND SETTERS FROM HERE */
+
+}</code></pre>
+<p><strong>Additional info</strong>
+I am using <code>ModelMetaData</code>, which I have been sure to delete and have re-generated before running the tests again.</p>
+<p>The tests have worked before. I must have changed something, but what?</p>
+<p>Thanks for your time.</p>
+<p>// dimhoLt</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-45ce6ca4d8455934a9f09404-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-45ce6ca4d8455934a9f09404-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c17126b287f7a68ffaf35acc558391d5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/203/dimhoLt" class="user-moderator-N"><span itemprop="name">dimhoLt</span></a>        </span>
+        <br>
+
+        <span class="karma">22.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C15145" href="#C15145">
+                <time itemprop="dateCreated" datetime="2015-01-21T07:58:56-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I've found the problem.</p>
+<p>I had misunderstood what the <code>"reusable" =&gt; true</code> meant. I thought it would always make a request to the database, but cache the result. Apparently, it does not, but doesn't request it if they're not loaded with the object (I gotta read up on this). Removing all <code>"reusable" =&gt; true</code> from my relations solved the problems.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="15145" data-cf-modified-45ce6ca4d8455934a9f09404-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="15145" data-cf-modified-45ce6ca4d8455934a9f09404-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4541" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

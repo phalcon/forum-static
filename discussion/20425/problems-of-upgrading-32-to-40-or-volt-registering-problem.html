@@ -1,0 +1,773 @@
+---
+layout: default
+title: 'Problems of upgrading 3.2 to 4.0 or `volt` registering problem.... - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Problems of upgrading 3.2 to 4.0 or `volt` registering problem....</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3021/xaero7" class="user-moderator-N"><span itemprop="name">xaero</span></a></span>
+            <time itemprop="dateCreated" datetime="2020-03-10T01:33:26-07:00">Mar '20</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2020-03-10T01:33:26-07:00">Mar '20</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>325</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/f3183e109ec4c5c93d7deab887f7b8e1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3021/xaero7" class="user-moderator-N"><span itemprop="name">xaero</span></a></span>
+                <span class="karma">31.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C20425" href="#C20425">
+        <time class="action-date">Mar '20</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm trying to upgrade Phalcon 3.2.4 to 4.0, and got a problem:
+In my volt template :<code>{% raw %}{{{% endraw %} flashSession.output()  {% raw %}}}{% endraw %}</code>, it says:</p>
+<pre><code>PHP message: PHP Fatal error:  Uncaught Error: Call to a member function output() on null in /.../var/volt/_var_www_app_views_users_login.volt.php:49
+Stack trace:
+#0 [internal function]: unknown()
+#1 [internal function]: Phalcon\Mvc\View\Engine\Volt-&gt;render('/var/www/....', Array, true)
+#2 [internal function]: Phalcon\Mvc\View-&gt;engineRender(Array, 'users/login', true)
+#3 [internal function]: Phalcon\Mvc\View-&gt;processRender('users', 'login', Array)
+#4 [internal function]: Phalcon\Mvc\View-&gt;render('users', 'login')
+#5 /var/www/..../public/index.php(38): Phalcon\Mvc\Application-&gt;handle('/users/login')
+#6 {main}
+  thrown in /var/www/.../var/volt/_var_www_app_views_users_login.volt.php on line 49" while reading response header from upstream, client: 10.0.10.171, server: default, request: "GET /users/login HTTP/1.1", upstream: "fastcgi://unix:/var/run/php/php7.2-fpm.sock:", host: "10.0.10.116:83"
+</code></pre>
+<p>But in the Controllers, the code <code>$this-&gt;flashSession-&gt;output()</code> works well (but can't get the flash message)!</p>
+<p>I think it is the problem of registering <code>volt</code> services? In Controllers, it can gets the <code>$di</code> object, but in the <code>volt</code> it can't gets the <code>$di</code>objects. How to register the <code>volt</code>services?</p>
+<p>I'm using code style of Phalcon 3.x:</p>
+<p>In <code>public/index.php</code>:</p>
+<pre><code>include APP_DIR . "/config/services.php";
+$application = new Application($di);</code></pre>
+<p>In <code>/config/services.php</code>:</p>
+<pre><code>$di = new FactoryDefault();
+....
+$di-&gt;set('view', function() use ($config) {
+
+    $view = new View();
+
+    $view-&gt;setViewsDir($config-&gt;application-&gt;viewsDir);
+
+    $view-&gt;registerEngines(array(
+        '.volt' =&gt; function(View $view) use ($config) {
+            $volt = new Volt($view);
+            $volt-&gt;setOptions(array(
+                'path' =&gt; $config-&gt;application-&gt;cacheDir . 'volt/',
+                'separator' =&gt; '_'
+            ));
+            $volt-&gt;getCompiler()-&gt;addFunction('__', function ($resolvedArgs, $exprArgs){
+                return '__(' . $resolvedArgs . ')';
+            });
+            return $volt;
+        },
+        '.phtml' =&gt; 'Phalcon\Mvc\View\Engine\Php' //// Generate Template files uses PHP itself as the template engine
+    ));
+    return $view;
+});</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-c5a4170c2eecefd08bb8d21c-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-c5a4170c2eecefd08bb8d21c-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f3183e109ec4c5c93d7deab887f7b8e1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3021/xaero7" class="user-moderator-N"><span itemprop="name">xaero</span></a>        </span>
+        <br>
+
+        <span class="karma">31.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C62437" href="#C62437">
+                <time itemprop="dateCreated" datetime="2020-03-10T06:26:45-07:00" class="action-date">Mar '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>the code <code>{% raw %}{{{% endraw %} this.flashSession.output() {% raw %}}}{% endraw %}</code>can work, but it can't get the flash message</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62437" data-cf-modified-c5a4170c2eecefd08bb8d21c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62437" data-cf-modified-c5a4170c2eecefd08bb8d21c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C62439" href="#C62439">
+                <time itemprop="dateCreated" datetime="2020-03-10T09:46:51-07:00" class="action-date">Mar '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The <code>volt</code> service is being registered just fine.  Otherwise you wouldn't be getting this error - which is an error caused by Volt's rendering engine.</p>
+<p>The error is saying that it Volt can't find <code>flashSession</code> when you call <code>{% raw %}{{{% endraw %} flashSession.output() {% raw %}}}{% endraw %}</code>.  Normally I would say check your services file to see if <code>flashSession</code> is registered.  But if this is working with v3.2.4, I'm not sure why it's not with v4.0.5.</p>
+<p>You said <code>{% raw %}{{{% endraw %} this.flashSession.output() {% raw %}}}{% endraw %}</code> runs, but just doesn't output anything.  What happens if you put this in your <code>.volt</code> file?</p>
+<pre><code class="language-php">&lt;pre&gt;
+&lt;?php print_r($_SESSION); ?&gt;
+&lt;/pre&gt;</code></pre>
+<p>That will at least show you if the message has been stored in <code>$_SESSION</code></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62439" data-cf-modified-c5a4170c2eecefd08bb8d21c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62439" data-cf-modified-c5a4170c2eecefd08bb8d21c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f3183e109ec4c5c93d7deab887f7b8e1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3021/xaero7" class="user-moderator-N"><span itemprop="name">xaero</span></a>        </span>
+        <br>
+
+        <span class="karma">31.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="62443" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '20</span>
+              </span><br/><a name="C62443" href="#C62443">
+                <time itemprop="dateCreated" datetime="2020-03-10T19:59:07-07:00" class="action-date">Mar '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks for  the reply!</p>
+<p>the output of <code>$_SESSION</code> is</p>
+<pre><code>Array
+(
+    [$PHALCON/CSRF/KEY$] =&gt; N2lGTm5vZHZGanVDK0VzYjhlbmsyQT09
+    [phrase-captcha] =&gt; v6rl7
+    [$PHALCON/CSRF$] =&gt; bm9wMUpISk1Ub05wMW8wOSsrRUMyZz09
+    [problem_source] =&gt; XOJ
+)</code></pre>
+<p>It doesn't contain any flash message.</p>
+<p>Some related code in <code>/config/services.php</code> are:</p>
+<pre><code class="language-php">use Phalcon\Session\Adapter\Stream as SessionAdapter,
+    Phalcon\Session\Manager as SessionManager,
+    Phalcon\Flash\Direct as Flash,
+    Phalcon\Flash\Session as FlashSession;
+...
+
+$di = new FactoryDefault();
+
+$di-&gt;set('view', function() use ($config) {
+
+    $view = new View();
+
+    $view-&gt;setViewsDir($config-&gt;application-&gt;viewsDir);
+
+    $view-&gt;registerEngines(array(
+        '.volt' =&gt; function(View $view) use ($config) {
+            $volt = new Volt($view);
+            $volt-&gt;setOptions(array(
+                'path' =&gt; $config-&gt;application-&gt;cacheDir . 'volt/',
+                'separator' =&gt; '_'
+            ));
+            $volt-&gt;getCompiler()-&gt;addFunction('__', function ($resolvedArgs, $exprArgs){
+                return '__(' . $resolvedArgs . ')';
+            });
+            return $volt;
+        },
+        '.phtml' =&gt; 'Phalcon\Mvc\View\Engine\Php' //// Generate Template files uses PHP itself as the template engine
+    ));
+    return $view;
+});
+
+$di-&gt;set('config', function() use ($config) {
+   return $config;
+}, true);
+
+// If the configuration specify the use of metadata adapter use it or use memory otherwise
+$di-&gt;set('modelsMetadata', function() use ($config) {
+    return new MetaDataAdapter(array(
+        'metaDataDir' =&gt; $config-&gt;application-&gt;cacheDir . 'metaData/'
+    ));
+});
+
+$di-&gt;setShared('security', function () {
+    $security = new Security();
+    // set Work factor (how many times we go through)
+    $security-&gt;setWorkFactor(12); // can be a number from 1-12
+    // set Default Hash
+    $security-&gt;setDefaultHash(Security::CRYPT_BLOWFISH_Y); // choose default hash
+    return $security;
+});
+
+/**
+ * Crypt service
+ */
+$di-&gt;set('crypt', function () use ($config) {
+    $crypt = new Crypt();
+    $crypt-&gt;setKey($config-&gt;application-&gt;cryptSalt);
+    return $crypt;
+});
+
+$di-&gt;set('cookies', function () {
+    $cookies = new Cookies();
+    $cookies-&gt;useEncryption(true);
+    return $cookies;
+}, true);
+
+// Start the session the first time some component request the session service
+$di-&gt;set('session', function () {
+    $handler = new SessionAdapter();
+    $session = new SessionManager();
+    $session-&gt;setAdapter($handler);
+    $session-&gt;start();
+    return $session;
+});
+
+// flash css class
+
+$di-&gt;set('flash', function() {
+    $escaper = new Escaper();
+    $flash = new Flash($escaper);
+    $flash-&gt;setImplicitFlush(false);
+    $flash-&gt;setcssClasses(array(
+        'error' =&gt; 'alert alert-danger alert-dark',
+        'success' =&gt; 'alert alert-success alert-dark',
+        'notice' =&gt; 'alert alert-info alert-dark',
+        'warning' =&gt; 'alert alert-dark',
+    ));
+    return $flash;
+});
+
+$di-&gt;set('flashSession', function() {
+    $escaper   = new Escaper();
+    $session   = new SessionManager();
+    $files     = new SessionAdapter();
+    $session-&gt;setAdapter($files);
+    $flash = new FlashSession($escaper, $session);
+    $flash-&gt;setImplicitFlush(false);
+    $flash-&gt;setcssClasses(array(
+        'error' =&gt; 'alert alert-danger alert-dark',
+        'success' =&gt; 'alert alert-success alert-dark',
+        'notice' =&gt; 'alert alert-info alert-dark',
+        'warning' =&gt; 'alert alert-dark',
+    ));
+    return $flash;
+});
+
+/**
+ * Dispatcher use a default namespace
+ */
+$di-&gt;set('dispatcher', function(){
+    $dispatcher = new Dispatcher();
+    $dispatcher-&gt;setDefaultNamespace('XOJ\Controllers');
+
+    return $dispatcher;
+});</code></pre>
+<p>BTW, the dispatcher service also can't work. <code>{% raw %}{%{% endraw %} if dispatcher.getControllerName()==.... {% raw %}%}{% endraw %}</code> returns:</p>
+<pre><code>PHP message: PHP Notice:  Undefined variable: dispatcher</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62443" data-cf-modified-c5a4170c2eecefd08bb8d21c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62443" data-cf-modified-c5a4170c2eecefd08bb8d21c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C62449" href="#C62449">
+                <time itemprop="dateCreated" datetime="2020-03-11T07:50:03-07:00" class="action-date">Mar '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I imagine other services also don't work? It seems your template doesn't have access to the Dependency Injector.</p>
+<p>If you're geting that message displayed to the screen instead of a rendered template, then perhaps you were right in the first place and this <em>is</em> a Volt problem.  If Volt were rendering the template, it would supress regular output (ie: notices).</p>
+<p>Is your template file named <code>[something].volt</code> or <code>[something].phtml</code>?  If the latter, then you're using raw PHP as the template engine, which would probably explain why the Dependency Injector isn't available.  Try changing the extension to <code>.volt</code>.</p>
+<p>If that's not the case, another thing I noticed is this line:</p>
+<pre><code class="language-php">$volt = new Volt($view);</code></pre>
+<p>Are you including this line:</p>
+<pre><code class="language-php">use \Phalcon\Mvc\View\Engine\Volt</code></pre>
+<p>at the top of the file?  If not then the Volt engine isn't being loaded as you're not specifying the namespace.  Either include that line or use the full namespaced class name when creating the new object.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62449" data-cf-modified-c5a4170c2eecefd08bb8d21c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62449" data-cf-modified-c5a4170c2eecefd08bb8d21c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f3183e109ec4c5c93d7deab887f7b8e1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3021/xaero7" class="user-moderator-N"><span itemprop="name">xaero</span></a>        </span>
+        <br>
+
+        <span class="karma">31.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="62453" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '20</span>
+              </span><br/><a name="C62453" href="#C62453">
+                <time itemprop="dateCreated" datetime="2020-03-11T08:37:17-07:00" class="action-date">Mar '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes my template file named <code>*.volt</code>, and the result of complied file named something like this <code>_var_www_myname_app_views_users_login.volt.php</code> automatically, and the  code of <code>*.volt</code> template mixed with volt grammer and php code, somethings like this:</p>
+<pre><code class="language-html">{% raw %}{%{% endraw %} if page.items is defined {% raw %}%}{% endraw %}
+&lt;div class="row"&gt;
+    &lt;div class="col-sm-12"&gt;
+        &lt;div class="panel colourable"&gt;
+            &lt;div class="panel-body text-center"&gt;
+                &lt;ul class="pagination"&gt;
+                    &lt;li&gt;&lt;a href="{% raw %}{{{% endraw %} url(admin_uri~'/problems/list?page='~page.first) {% raw %}}}{% endraw %}"&gt;&lt;i class="fa fa-angle-double-left"&gt;&lt;/i&gt;&lt;/a&gt;&lt;/li&gt;
+                    &lt;?php for ($i=1; $i&lt;=$page-&gt;total_pages; $i++) {
+                            echo "&lt;li";
+                        if ($i == $page-&gt;current) echo " class='active'";
+                        echo "&gt;&lt;a href='" , $this-&gt;url-&gt;get($admin_uri.'/problems/list?page=') , $i , "'&gt;" , $i , "&lt;/a&gt;&lt;/li&gt;";
+                    }?&gt;
+                    &lt;li&gt;&lt;a href="{% raw %}{{{% endraw %} url(admin_uri~'/problems/list?page='~page.first) {% raw %}}}{% endraw %}"&gt;&lt;i class="fa fa-angle-double-right"&gt;&lt;/i&gt;&lt;/a&gt;&lt;/li&gt;
+                &lt;/ul&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+{% raw %}{%{% endraw %} endif {% raw %}%}{% endraw %}
+{% raw %}{%{% endraw %} include("partials/testdata") {% raw %}%}{% endraw %}</code></pre>
+<p>The result of volt template <code>{% raw %}{{{% endraw %} content() {% raw %}}}{% endraw %}  {% raw %}{{{% endraw %} flashSession.output() {% raw %}}}{% endraw %}</code> is <code>&lt;?= $this-&gt;getContent() ?&gt; &lt;?= $flashSession-&gt;output() ?&gt;</code>, The template seems to be rendered correctly.</p>
+<p>Below is the full code of <code>/config/services.php</code></p>
+<pre><code class="language-php">&lt;?php
+
+use Phalcon\Di\FactoryDefault,
+    Phalcon\Di,
+    Phalcon\Mvc\View,
+    Phalcon\Mvc\View\Engine\Volt,
+    Phalcon\Mvc\Dispatcher,
+    Phalcon\Url as UrlResolver,
+    Phalcon\Db\Adapter\Pdo\Mysql as DbAdapter,
+    Phalcon\Mvc\Model\MetaData\Memory as MetaDataAdapter,
+    Phalcon\Session\Adapter\Stream as SessionAdapter,
+    Phalcon\Session\Manager as SessionManager,
+    Phalcon\Cache\Frontend\Output as FrontendCache,
+    Phalcon\Cache\Frontend\Data as FrontendData,
+    Phalcon\Cache\Backend\File as BackendCache,
+    Phalcon\Cache\Backend\Memcache as BackendMemcache,
+    Phalcon\Crypt,
+    Phalcon\Security,
+    Phalcon\Events\Manager as EventsManager,
+    Phalcon\Translate\Adapter\Gettext,
+    Phalcon\Http\Response\Cookies,
+    Phalcon\Escaper,
+    Phalcon\Di\DiInterface,
+    Phalcon\Di\ServiceProviderInterface,
+    Phalcon\Flash\Direct as Flash,
+    Phalcon\Flash\Session as FlashSession;
+
+// The FactoryDefault Dependency Injector automatically register the right services providing a full stack framework
+$di = new FactoryDefault();
+
+$di-&gt;set('router', function(){
+    return require __DIR__ . '/routes.php';
+}, true);
+
+// The URL component is used to generate all kind of urls in the application
+$di-&gt;set('url', function() use ($config) {
+
+    $url = new UrlResolver();
+
+    $url-&gt;setBaseUri($config-&gt;application-&gt;baseUri);
+    return $url;
+}, true);
+
+// Setting up the view component
+$di-&gt;set('view', function() use ($config) {
+
+    $view = new View();
+
+    $view-&gt;setViewsDir($config-&gt;application-&gt;viewsDir);
+
+    $view-&gt;registerEngines(array(
+        '.volt' =&gt; function(View $view) use ($config) {
+            $volt = new Volt($view);
+            $volt-&gt;setOptions(array(
+                'path' =&gt; $config-&gt;application-&gt;cacheDir . 'volt/',
+                'separator' =&gt; '_'
+            ));
+            $volt-&gt;getCompiler()-&gt;addFunction('__', function ($resolvedArgs, $exprArgs){
+                return '__(' . $resolvedArgs . ')';
+            });
+            return $volt;
+        },
+        '.phtml' =&gt; 'Phalcon\Mvc\View\Engine\Php' //// Generate Template files uses PHP itself as the template engine
+    ));
+    return $view;
+});
+
+// Database connection is created based in the parameters defined in the configuration file
+$di-&gt;set('db', function() use ($config) {
+    return new DbAdapter(array(
+        'host' =&gt; $config-&gt;database-&gt;host,
+        'username' =&gt; $config-&gt;database-&gt;username,
+        'password' =&gt; $config-&gt;database-&gt;password,
+        'dbname' =&gt; $config-&gt;database-&gt;dbname,
+        'charset' =&gt; 'utf8'
+    ));
+});
+
+$di-&gt;set('config', function() use ($config) {
+   return $config;
+}, true);
+
+// If the configuration specify the use of metadata adapter use it or use memory otherwise
+$di-&gt;set('modelsMetadata', function() use ($config) {
+    return new MetaDataAdapter(array(
+        'metaDataDir' =&gt; $config-&gt;application-&gt;cacheDir . 'metaData/'
+    ));
+});
+
+// Set the views cache service
+/**
+$di-&gt;set('viewCache', function() use ($config) {
+// Cache data for one day by default
+$fontCache = new FrontendCache(["lifetime" =&gt; 86400]);
+
+// File backend settings
+$cache = new BackendCache($fontCache, [
+"cacheDir" =&gt; $config-&gt;application-&gt;cacheDir . 'cache/',
+]);
+
+return $cache;
+});
+ */
+
+// Set the models cache service
+/*
+$di-&gt;set('modelsCache', function () {
+    // Cache for one day
+    $frontCache = new FrontendData(["lifetime" =&gt; 86400]);
+
+    // Memcached connection settings
+    $cache = new BackendMemcache(
+        $frontCache,
+        ["servers" =&gt; array(array(
+            "host" =&gt; "localhost",
+            "port" =&gt; "11211"
+        ))]
+    );
+    return $cache;
+});
+*/
+
+$di-&gt;setShared('security', function () {
+    $security = new Security();
+    // set Work factor (how many times we go through)
+    $security-&gt;setWorkFactor(12); // can be a number from 1-12
+    // set Default Hash
+    $security-&gt;setDefaultHash(Security::CRYPT_BLOWFISH_Y); // choose default hash
+    return $security;
+});
+
+/**
+ * Crypt service
+ */
+$di-&gt;set('crypt', function () use ($config) {
+    $crypt = new Crypt();
+    $crypt-&gt;setKey($config-&gt;application-&gt;cryptSalt);
+    return $crypt;
+});
+
+$di-&gt;set('cookies', function () {
+    $cookies = new Cookies();
+    $cookies-&gt;useEncryption(true);
+    return $cookies;
+}, true);
+
+// Start the session the first time some component request the session service
+$di-&gt;set('session', function () {
+    $handler = new SessionAdapter();
+    $session = new SessionManager();
+    $session-&gt;setAdapter($handler);
+    $session-&gt;start();
+    return $session;
+});
+
+// flash css class
+
+$di-&gt;set('flash', function() {
+    $escaper = new Escaper();
+    $flash = new Flash($escaper);
+    $flash-&gt;setImplicitFlush(false);
+    $flash-&gt;setcssClasses(array(
+        'error' =&gt; 'alert alert-danger alert-dark',
+        'success' =&gt; 'alert alert-success alert-dark',
+        'notice' =&gt; 'alert alert-info alert-dark',
+        'warning' =&gt; 'alert alert-dark',
+    ));
+    return $flash;
+});
+
+$di-&gt;set('flashSession', function() {
+    $escaper   = new Escaper();
+    $session   = new SessionManager();
+    $files     = new SessionAdapter();
+    $session-&gt;setAdapter($files);
+    $flash = new FlashSession($escaper, $session);
+    $flash-&gt;setImplicitFlush(false);
+    $flash-&gt;setcssClasses(array(
+        'error' =&gt; 'alert alert-danger alert-dark',
+        'success' =&gt; 'alert alert-success alert-dark',
+        'notice' =&gt; 'alert alert-info alert-dark',
+        'warning' =&gt; 'alert alert-dark',
+    ));
+    return $flash;
+});
+
+/**
+ * Dispatcher use a default namespace
+ */
+$di-&gt;set('dispatcher', function(){
+    $dispatcher = new Dispatcher();
+    $dispatcher-&gt;setDefaultNamespace('YZOI\Controllers');
+/**
+    $eventsManager = new EventsManager();
+    $eventsManager-&gt;attach("dispatch", function ($event, $dispatcher, $exception) {
+        //controller or action doesn't exist
+        $object = $event-&gt;getData();
+        if ($event-&gt;getType() == 'beforeException') {
+            switch ($exception-&gt;getCode()) {
+                case Dispatcher::EXCEPTION_HANDLER_NOT_FOUND:
+                case Dispatcher::EXCEPTION_ACTION_NOT_FOUND:
+                    $dispatcher-&gt;forward([
+                        'controller' =&gt; 'errors',
+                        'action'     =&gt; 'index'
+                    ]);
+                    return false;
+                case Dispatcher::EXCEPTION_CYCLIC_ROUTING:
+                    $dispatcher-&gt;forward([
+                        'controller' =&gt; 'errors',
+                        'action'     =&gt; 'show404'
+                    ]);
+                    return false;
+            }
+        }
+    });
+*/
+    return $dispatcher;
+});
+
+/**
+ * Custom authentication component
+ */
+$di-&gt;set('auth', function () {
+    return new Auth();
+});
+
+$di-&gt;set('mailer', function () {
+    return new Mailer();
+});
+
+$di-&gt;set('translation', function () use ($di) {
+    $lang = $di-&gt;get('auth')-&gt;getIdentity();
+    $lang = ($lang) ? $lang-&gt;display_lang : 'zh';
+    $lang_dir = $di-&gt;get('config')-&gt;application-&gt;langDir;
+
+    $controller = $di-&gt;get('router')-&gt;getControllerName();
+    if (! $controller) $controller = 'index';
+
+    require $lang_dir . $lang . '/main.php';
+    $lang_addtional = $lang_dir . $lang . '/' . $controller . '.php';
+    if (file_exists($lang_addtional))
+        require $lang_addtional;
+
+    $translation = new Phalcon\Translate\Adapter\NativeArray(array(
+        "content" =&gt; $_messages
+    ));
+    //var_dump($translation);
+    return $translation;
+
+}, true);
+
+/*
+$di-&gt;set('swiftmailer', function() use ($config) {
+    include $config-&gt;application-&gt;libraryDir . 'swift_required.php';
+    $transport = Swift_SmtpTransport::newInstance($config-&gt;smtp_host)
+        -&gt;setUsername($config-&gt;smtp_username)
+        -&gt;setPassword($config-&gt;smtp_password);
+    $mailer = Swift_Mailer::newInstance($transport);
+    return $mailer;
+});*/
+
+/**
+ * Translation function call anywhere
+ *
+ * @param $string
+ *
+ * @return mixed
+ */
+if (! function_exists('__')) {
+    function __($string, array $placeholder = null)
+    {
+        $translation = \Phalcon\Di::getDefault()-&gt;get('translation');
+        return $translation-&gt;_($string, $placeholder);
+    }
+}</code></pre>
+<p>Without modify and before the upgrading, all the code works well. </p>
+<p>And now, the <code>Db</code> services can work( with CURD works well), the <code>dispatcher</code> and <code>flashSession</code> services can't work.</p>
+<p>I'm not sure where is the problem.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62453" data-cf-modified-c5a4170c2eecefd08bb8d21c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62453" data-cf-modified-c5a4170c2eecefd08bb8d21c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="62455" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '20</span>
+              </span><br/><a name="C62455" href="#C62455">
+                <time itemprop="dateCreated" datetime="2020-03-11T09:49:11-07:00" class="action-date">Mar '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I'm not sure what the problem is either.  It looks like <code>{% raw %}{{{% endraw %} flashSession.output() {% raw %}}}{% endraw %}</code> <em>should</em> be rendered to <code>&lt;?php $this-&gt;flashSession-&gt;output(); ?&gt;</code> but it's not.</p>
+<p>Maybe mention this in the Discord channel: <a href="https://discordapp.com/channels/310910488152375297/314381544888336386">https://discordapp.com/channels/310910488152375297/314381544888336386</a> ?  You might get a few interested people taking a look.</p>
+<p>I'm using v3.4.5 and created a working, simplified test case with:</p>
+<pre><code class="language-php">$DI = new \Phalcon\DI\FactoryDefault();
+// Volt setup omitted for brevity
+
+$DI-&gt;set('flash', function() {
+    return new \Phalcon\Flash\Direct();
+});
+
+$DI-&gt;set('flashSession', function() {
+    return new \Phalcon\Flash\Session();
+});
+
+if(isset($_GET['log'])){
+    $DI-&gt;get('flashSession')-&gt;notice($_GET['log']);
+}</code></pre>
+<p>I then went to <code>/my/page?log=foobar</code>, then <code>/my/page/</code>, and saw &quot;foobar&quot; outputed.</p>
+<p>If that doesn't work for you in v4, then this is likely a Phalcon bug.  If it does work, then the problem's with your code somewhere and we can keep digging.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62455" data-cf-modified-c5a4170c2eecefd08bb8d21c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62455" data-cf-modified-c5a4170c2eecefd08bb8d21c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f3183e109ec4c5c93d7deab887f7b8e1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3021/xaero7" class="user-moderator-N"><span itemprop="name">xaero</span></a>        </span>
+        <br>
+
+        <span class="karma">31.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C62463" href="#C62463">
+                <time itemprop="dateCreated" datetime="2020-03-12T05:38:35-07:00" class="action-date">Mar '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi Dylan, Thank you very much! According to your code I change to the simplest registion of the services:</p>
+<pre><code class="language-php">$di-&gt;set('session', function () {
+    $handler = new SessionAdapter();
+    $session = new SessionManager();
+    $session
+        -&gt;setAdapter($handler)
+        -&gt;start();
+    return $session;
+});
+
+// flash css class
+$di-&gt;set('flash', function() {
+    $flash = new Flash();
+    $flash-&gt;setImplicitFlush(false);
+    $flash-&gt;setcssClasses(array(
+        'error' =&gt; 'alert alert-danger alert-dark',
+        'success' =&gt; 'alert alert-success alert-dark',
+        'notice' =&gt; 'alert alert-info alert-dark',
+        'warning' =&gt; 'alert alert-dark',
+    ));
+    return $flash;
+});
+
+$di-&gt;set('flashSession', function() {
+    $flash = new FlashSession();
+    //$flash-&gt;setImplicitFlush(false);
+    $flash-&gt;setcssClasses(array(
+        'error' =&gt; 'alert alert-danger alert-dark',
+        'success' =&gt; 'alert alert-success alert-dark',
+        'notice' =&gt; 'alert alert-info alert-dark',
+        'warning' =&gt; 'alert alert-dark',
+    ));
+    return $flash;
+});</code></pre>
+<p>and this time it works! and the <code>dispatcher</code> service also worked! Although I don't what's the problem</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62463" data-cf-modified-c5a4170c2eecefd08bb8d21c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62463" data-cf-modified-c5a4170c2eecefd08bb8d21c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C62468" href="#C62468">
+                <time itemprop="dateCreated" datetime="2020-03-12T07:43:55-07:00" class="action-date">Mar '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well, I'd start adding back functionality until it breaks.</p>
+<p>This should have no affect on the dispatcher, so I wonder if it's unrelated.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62468" data-cf-modified-c5a4170c2eecefd08bb8d21c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62468" data-cf-modified-c5a4170c2eecefd08bb8d21c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="20425" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

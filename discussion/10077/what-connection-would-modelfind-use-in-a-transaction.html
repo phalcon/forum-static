@@ -1,0 +1,739 @@
+---
+layout: default
+title: 'What connection would Model::find() use in a transaction? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">What connection would Model::find() use in a transaction?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/32/guweigang" class="user-moderator-N"><span itemprop="name">洋沙居士</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-01-04T19:52:45-07:00">Jan '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-01-04T19:52:45-07:00">Jan '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>949</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9fde75bf4807a52cb35e4769583e99f9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/32/guweigang" class="user-moderator-N"><span itemprop="name">洋沙居士</span></a></span>
+                <span class="karma">9.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C10077" href="#C10077">
+        <time class="action-date">Jan '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>As Title said, and see codes below:</p>
+<pre><code class="language-php">&lt;?php
+
+try {
+        $transaction = $manager-&gt;get();
+        $modelA = new FooModel();
+        $modelA-&gt;setTransaction($transaction);
+        $modelA-&gt;a = "xxx";
+        $modelA-&gt;b = "yyy";
+        if($modelA-&gt;save() == false) {   // use $transaction-&gt;getConnection() to do the save operation
+            $transaction-&gt;rollbak();
+        }
+
+        $modelB = new BarModel();
+        $modelB-&gt;setTransaction($transaction);
+        $modelB-&gt;a = "xxx";
+        $modelB-&gt;b = "yyy";
+        if($modelB-&gt;save() == false) { // use $transaction-&gt;getConnection() to do the save operation
+            $transaction-&gt;rollback();
+        }
+        $count = FooModel::count();  // What conneciton would this line use???
+        $transaction-&gt;commit();
+} catch(TxFailed $e) {
+    // ...
+}
+
+return $count;
+</code></pre>
+<p>Someone would say, you can do the calculating after the transaction. Yes, I can. But I splite read and write connection in my app. There is lantency between master and slaves.</p>
+<p>So, is there a good way to do this work?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-75dfd5e1a37c691f17aed39e-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-75dfd5e1a37c691f17aed39e-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b58ae5d515c7285229c9f07af9a11e39?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1727/Mechzeit" class="user-moderator-N"><span itemprop="name">Mitchell Macpherson</span></a>        </span>
+        <br>
+
+        <span class="karma">6.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="28551" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '16</span>
+              </span><br/><a name="C28551" href="#C28551">
+                <time itemprop="dateCreated" datetime="2016-01-04T22:34:50-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It would use the model connection which is either specified explicitly, or falls back to the service db.</p>
+<p>Without checking the Phalcon internals, it should in theory be the same connection as what's returned when you execute</p>
+<pre><code class="language-php">//Returns Database service from the DI container
+(new FooModel())-&gt;getReadConnectionService(); //service name
+(new FooModel())-&gt;getReadConnection(); //service resolve (object)</code></pre>
+<p>See <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model.html">https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model.html</a> :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28551" data-cf-modified-75dfd5e1a37c691f17aed39e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28551" data-cf-modified-75dfd5e1a37c691f17aed39e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9fde75bf4807a52cb35e4769583e99f9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/32/guweigang" class="user-moderator-N"><span itemprop="name">洋沙居士</span></a>        </span>
+        <br>
+
+        <span class="karma">9.4k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C28551"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/b58ae5d515c7285229c9f07af9a11e39?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Mitchell Macpherson                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C28561" href="#C28561">
+                <time itemprop="dateCreated" datetime="2016-01-05T04:16:07-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>So, you mean it use a different db connection with the one in transaction?</p>
+<blockquote>
+<p>It would use the model connection which is either specified explicitly, or falls back to the service db.</p>
+<p>Without checking the Phalcon internals, it should in theory be the same connection as what's returned when you execute</p>
+<pre><code class="language-php">//Returns Database service from the DI container
+(new FooModel())-&gt;getReadConnectionService(); //service name
+(new FooModel())-&gt;getReadConnection(); //service resolve (object)</code></pre>
+<p>See <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model.html">https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model.html</a> :)</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28561" data-cf-modified-75dfd5e1a37c691f17aed39e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28561" data-cf-modified-75dfd5e1a37c691f17aed39e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b58ae5d515c7285229c9f07af9a11e39?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1727/Mechzeit" class="user-moderator-N"><span itemprop="name">Mitchell Macpherson</span></a>        </span>
+        <br>
+
+        <span class="karma">6.9k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C28561"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/9fde75bf4807a52cb35e4769583e99f9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        洋沙居士                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C28571" href="#C28571">
+                <time itemprop="dateCreated" datetime="2016-01-05T07:04:52-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It depends how your 'db' service is setup. If the service is shared, then same connection is used - if it's not shared then it is a different connection.</p>
+<p>I believe \Phalcon\Di\FactoryDefault has 'db' not set as a shared service if that's what you're using.</p>
+<p>tl;dr: It depends if your 'db' service is set as shared or not really.</p>
+<blockquote>
+<p>So, you mean it use a different db connection with the one in transaction?</p>
+<blockquote>
+<p>It would use the model connection which is either specified explicitly, or falls back to the service db.</p>
+<p>Without checking the Phalcon internals, it should in theory be the same connection as what's returned when you execute</p>
+<pre><code class="language-php">//Returns Database service from the DI container
+(new FooModel())-&gt;getReadConnectionService(); //service name
+(new FooModel())-&gt;getReadConnection(); //service resolve (object)</code></pre>
+<p>See <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model.html">https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model.html</a> :)</p>
+</blockquote>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28571" data-cf-modified-75dfd5e1a37c691f17aed39e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28571" data-cf-modified-75dfd5e1a37c691f17aed39e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9fde75bf4807a52cb35e4769583e99f9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/32/guweigang" class="user-moderator-N"><span itemprop="name">洋沙居士</span></a>        </span>
+        <br>
+
+        <span class="karma">9.4k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C28571"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/b58ae5d515c7285229c9f07af9a11e39?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Mitchell Macpherson                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="28607" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '16</span>
+              </span><br/><a name="C28607" href="#C28607">
+                <time itemprop="dateCreated" datetime="2016-01-05T20:54:20-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I basicly agree with you. But if you go deep into the Phalcon Internals, you can see：</p>
+<pre><code class="language-zephir">
+        /**
+         * Gets the connection used to read data for the model
+         */
+        public function getReadConnection() -&gt; &lt;AdapterInterface&gt;
+        {
+                var transaction;
+
+                let transaction = &lt;TransactionInterface&gt; this-&gt;_transaction;
+                if typeof transaction == "object" {
+                        return transaction-&gt;getConnection();
+                }
+
+                return (&lt;ManagerInterface&gt; this-&gt;_modelsManager)-&gt;getReadConnection(this);
+        }</code></pre>
+<p>So, do you think it wii use the conneciton of transaction or not?</p>
+<blockquote>
+<p>It depends how your 'db' service is setup. If the service is shared, then same connection is used - if it's not shared then it is a different connection.</p>
+<p>I believe \Phalcon\Di\FactoryDefault has 'db' not set as a shared service if that's what you're using.</p>
+<p>tl;dr: It depends if your 'db' service is set as shared or not really.</p>
+<blockquote>
+<p>So, you mean it use a different db connection with the one in transaction?</p>
+<blockquote>
+<p>It would use the model connection which is either specified explicitly, or falls back to the service db.</p>
+<p>Without checking the Phalcon internals, it should in theory be the same connection as what's returned when you execute</p>
+<pre><code class="language-php">//Returns Database service from the DI container
+(new FooModel())-&gt;getReadConnectionService(); //service name
+(new FooModel())-&gt;getReadConnection(); //service resolve (object)</code></pre>
+<p>See <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model.html">https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model.html</a> :)</p>
+</blockquote>
+</blockquote>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28607" data-cf-modified-75dfd5e1a37c691f17aed39e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28607" data-cf-modified-75dfd5e1a37c691f17aed39e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b58ae5d515c7285229c9f07af9a11e39?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1727/Mechzeit" class="user-moderator-N"><span itemprop="name">Mitchell Macpherson</span></a>        </span>
+        <br>
+
+        <span class="karma">6.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C28607"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/9fde75bf4807a52cb35e4769583e99f9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        洋沙居士                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C28609" href="#C28609">
+                <time itemprop="dateCreated" datetime="2016-01-05T21:13:21-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Based the order that your code is executing your code, I would say yes.</p>
+<p>One way to check would be:</p>
+<pre><code class="language-php">&lt;?php
+
+try {
+        $transaction = $manager-&gt;get();
+        $modelA = new FooModel();
+        $modelA-&gt;setTransaction($transaction);
+        $modelA-&gt;a = "xxx";
+        $modelA-&gt;b = "yyy";
+        if($modelA-&gt;save() == false) {   // use $transaction-&gt;getConnection() to do the save operation
+            $transaction-&gt;rollbak();
+        }
+
+        $modelB = new BarModel();
+        $modelB-&gt;setTransaction($transaction);
+        $modelB-&gt;a = "xxx";
+        $modelB-&gt;b = "yyy";
+        if($modelB-&gt;save() == false) { // use $transaction-&gt;getConnection() to do the save operation
+            $transaction-&gt;rollback();
+        }
+
+        if((new FooModel())-&gt;getReadConnectionService()-&gt;isUnderTransaction()){
+            $count = FooModel::count();  // What conneciton would this line use???
+        } else {
+            $transaction-&gt;rollback();
+            throw new \Exception('Unable to count database rows with same connection');
+        }
+        $transaction-&gt;commit();
+} catch(TxFailed $e) {
+    // ...
+}
+
+return $count;</code></pre>
+<blockquote>
+<p>I basicly agree with you. But if you go deep into the Phalcon Internals, you can see：</p>
+<pre><code class="language-zephir">
+       /**
+        * Gets the connection used to read data for the model
+        */
+       public function getReadConnection() -&gt; &lt;AdapterInterface&gt;
+       {
+               var transaction;
+
+               let transaction = &lt;TransactionInterface&gt; this-&gt;_transaction;
+               if typeof transaction == "object" {
+                       return transaction-&gt;getConnection();
+               }
+
+               return (&lt;ManagerInterface&gt; this-&gt;_modelsManager)-&gt;getReadConnection(this);
+       }</code></pre>
+<p>So, do you think it wii use the conneciton of transaction or not?</p>
+<blockquote>
+<p>It depends how your 'db' service is setup. If the service is shared, then same connection is used - if it's not shared then it is a different connection.</p>
+<p>I believe \Phalcon\Di\FactoryDefault has 'db' not set as a shared service if that's what you're using.</p>
+<p>tl;dr: It depends if your 'db' service is set as shared or not really.</p>
+<blockquote>
+<p>So, you mean it use a different db connection with the one in transaction?</p>
+<blockquote>
+<p>It would use the model connection which is either specified explicitly, or falls back to the service db.</p>
+<p>Without checking the Phalcon internals, it should in theory be the same connection as what's returned when you execute</p>
+<pre><code class="language-php">//Returns Database service from the DI container
+(new FooModel())-&gt;getReadConnectionService(); //service name
+(new FooModel())-&gt;getReadConnection(); //service resolve (object)</code></pre>
+<p>See <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model.html">https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model.html</a> :)</p>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28609" data-cf-modified-75dfd5e1a37c691f17aed39e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28609" data-cf-modified-75dfd5e1a37c691f17aed39e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9fde75bf4807a52cb35e4769583e99f9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/32/guweigang" class="user-moderator-N"><span itemprop="name">洋沙居士</span></a>        </span>
+        <br>
+
+        <span class="karma">9.4k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C28609"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/b58ae5d515c7285229c9f07af9a11e39?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Mitchell Macpherson                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="28615" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '16</span>
+              </span><br/><a name="C28615" href="#C28615">
+                <time itemprop="dateCreated" datetime="2016-01-06T05:18:35-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes! I have tested it as you said. The result is:</p>
+<pre><code class="language-php">// codes: 
+var_dump((new FooModel())-&gt;getReadConnectionService());
+var_dump((new FooModel())-&gt;getReadConnection()-&gt;isUnderTransaction());
+
+// output:
+string(13) "msg_box_slave"
+bool(false)</code></pre>
+<p>So here we are: It will use another db connection even in a transaction context.</p>
+<p><strong>Do you know if there is a way to use a specific db-connection when do Model::find() ?</strong></p>
+<p>If yes, maybe I can do something like this:</p>
+<pre><code class="language-php">FooModel::find("age&gt;5", $transaction-&gt;getConnection());</code></pre>
+<blockquote>
+<p>Based the order that your code is executing your code, I would say yes.</p>
+<p>One way to check would be:</p>
+<pre><code class="language-php">&lt;?php
+
+try {
+       $transaction = $manager-&gt;get();
+       $modelA = new FooModel();
+       $modelA-&gt;setTransaction($transaction);
+       $modelA-&gt;a = "xxx";
+       $modelA-&gt;b = "yyy";
+       if($modelA-&gt;save() == false) {   // use $transaction-&gt;getConnection() to do the save operation
+           $transaction-&gt;rollbak();
+       }
+
+       $modelB = new BarModel();
+       $modelB-&gt;setTransaction($transaction);
+       $modelB-&gt;a = "xxx";
+       $modelB-&gt;b = "yyy";
+       if($modelB-&gt;save() == false) { // use $transaction-&gt;getConnection() to do the save operation
+           $transaction-&gt;rollback();
+       }
+
+      if((new FooModel())-&gt;getReadConnectionService()-&gt;isUnderTransaction()){
+           $count = FooModel::count();  // What conneciton would this line use???
+      } else {
+          $transaction-&gt;rollback();
+          throw new \Exception('Unable to count database rows with same connection');
+      }
+       $transaction-&gt;commit();
+} catch(TxFailed $e) {
+   // ...
+}
+
+return $count;</code></pre>
+<blockquote>
+<p>I basicly agree with you. But if you go deep into the Phalcon Internals, you can see：</p>
+<pre><code class="language-zephir">
+       /**
+        * Gets the connection used to read data for the model
+        */
+       public function getReadConnection() -&gt; &lt;AdapterInterface&gt;
+       {
+               var transaction;
+
+               let transaction = &lt;TransactionInterface&gt; this-&gt;_transaction;
+               if typeof transaction == "object" {
+                       return transaction-&gt;getConnection();
+               }
+
+               return (&lt;ManagerInterface&gt; this-&gt;_modelsManager)-&gt;getReadConnection(this);
+       }</code></pre>
+<p>So, do you think it wii use the conneciton of transaction or not?</p>
+<blockquote>
+<p>It depends how your 'db' service is setup. If the service is shared, then same connection is used - if it's not shared then it is a different connection.</p>
+<p>I believe \Phalcon\Di\FactoryDefault has 'db' not set as a shared service if that's what you're using.</p>
+<p>tl;dr: It depends if your 'db' service is set as shared or not really.</p>
+<blockquote>
+<p>So, you mean it use a different db connection with the one in transaction?</p>
+<blockquote>
+<p>It would use the model connection which is either specified explicitly, or falls back to the service db.</p>
+<p>Without checking the Phalcon internals, it should in theory be the same connection as what's returned when you execute</p>
+<pre><code class="language-php">//Returns Database service from the DI container
+(new FooModel())-&gt;getReadConnectionService(); //service name
+(new FooModel())-&gt;getReadConnection(); //service resolve (object)</code></pre>
+<p>See <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model.html">https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model.html</a> :)</p>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28615" data-cf-modified-75dfd5e1a37c691f17aed39e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28615" data-cf-modified-75dfd5e1a37c691f17aed39e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b58ae5d515c7285229c9f07af9a11e39?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1727/Mechzeit" class="user-moderator-N"><span itemprop="name">Mitchell Macpherson</span></a>        </span>
+        <br>
+
+        <span class="karma">6.9k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C28615"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/9fde75bf4807a52cb35e4769583e99f9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        洋沙居士                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C28651" href="#C28651">
+                <time itemprop="dateCreated" datetime="2016-01-06T23:36:21-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Yes! I have tested it as you said. The result is:</p>
+<pre><code class="language-php">// codes: 
+var_dump((new FooModel())-&gt;getReadConnectionService());
+var_dump((new FooModel())-&gt;getReadConnection()-&gt;isUnderTransaction());
+
+// output:
+string(13) "msg_box_slave"
+bool(false)</code></pre>
+<p>So here we are: It will use another db connection even in a transaction context.</p>
+<p><strong>Do you know if there is a way to use a specific db-connection when do Model::find() ?</strong></p>
+<p>If yes, maybe I can do something like this:</p>
+<pre><code class="language-php">FooModel::find("age&gt;5", $transaction-&gt;getConnection());</code></pre>
+</blockquote>
+<p>In theory you could do so with the modelsManager service: <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model_Manager.html">https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model_Manager.html</a></p>
+<p>(It will be a service 'modelsManager' resolved service in your DI.)</p>
+<pre><code class="language-php">\Phalcon\Di::getDefault()-&gt;get('modelsManager')-&gt;setReadConnection('Model', $transaction-&gt;getDbService());</code></pre>
+<p>setReadConnectionService<br />
+getReadConnection</p>
+<p>Will be the functions of interest to you.</p>
+<p>However the accuracy of ($model-&gt;create() === true) should be enough to verify that it was written to the database, rather than executing a count query?</p>
+<blockquote>
+<blockquote>
+<p>Based the order that your code is executing your code, I would say yes.</p>
+<p>One way to check would be:</p>
+<pre><code class="language-php">&lt;?php
+
+try {
+       $transaction = $manager-&gt;get();
+       $modelA = new FooModel();
+       $modelA-&gt;setTransaction($transaction);
+       $modelA-&gt;a = "xxx";
+       $modelA-&gt;b = "yyy";
+       if($modelA-&gt;save() == false) {   // use $transaction-&gt;getConnection() to do the save operation
+           $transaction-&gt;rollbak();
+       }
+
+       $modelB = new BarModel();
+       $modelB-&gt;setTransaction($transaction);
+       $modelB-&gt;a = "xxx";
+       $modelB-&gt;b = "yyy";
+       if($modelB-&gt;save() == false) { // use $transaction-&gt;getConnection() to do the save operation
+           $transaction-&gt;rollback();
+       }
+
+     if((new FooModel())-&gt;getReadConnectionService()-&gt;isUnderTransaction()){
+           $count = FooModel::count();  // What conneciton would this line use???
+     } else {
+         $transaction-&gt;rollback();
+         throw new \Exception('Unable to count database rows with same connection');
+     }
+       $transaction-&gt;commit();
+} catch(TxFailed $e) {
+   // ...
+}
+
+return $count;</code></pre>
+<blockquote>
+<p>I basicly agree with you. But if you go deep into the Phalcon Internals, you can see：</p>
+<pre><code class="language-zephir">
+       /**
+        * Gets the connection used to read data for the model
+        */
+       public function getReadConnection() -&gt; &lt;AdapterInterface&gt;
+       {
+               var transaction;
+
+               let transaction = &lt;TransactionInterface&gt; this-&gt;_transaction;
+               if typeof transaction == "object" {
+                       return transaction-&gt;getConnection();
+               }
+
+               return (&lt;ManagerInterface&gt; this-&gt;_modelsManager)-&gt;getReadConnection(this);
+       }</code></pre>
+<p>So, do you think it wii use the conneciton of transaction or not?</p>
+<blockquote>
+<p>It depends how your 'db' service is setup. If the service is shared, then same connection is used - if it's not shared then it is a different connection.</p>
+<p>I believe \Phalcon\Di\FactoryDefault has 'db' not set as a shared service if that's what you're using.</p>
+<p>tl;dr: It depends if your 'db' service is set as shared or not really.</p>
+<blockquote>
+<p>So, you mean it use a different db connection with the one in transaction?</p>
+<blockquote>
+<p>It would use the model connection which is either specified explicitly, or falls back to the service db.</p>
+<p>Without checking the Phalcon internals, it should in theory be the same connection as what's returned when you execute</p>
+<pre><code class="language-php">//Returns Database service from the DI container
+(new FooModel())-&gt;getReadConnectionService(); //service name
+(new FooModel())-&gt;getReadConnection(); //service resolve (object)</code></pre>
+<p>See <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model.html">https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model.html</a> :)</p>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28651" data-cf-modified-75dfd5e1a37c691f17aed39e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28651" data-cf-modified-75dfd5e1a37c691f17aed39e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9fde75bf4807a52cb35e4769583e99f9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/32/guweigang" class="user-moderator-N"><span itemprop="name">洋沙居士</span></a>        </span>
+        <br>
+
+        <span class="karma">9.4k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C28651"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/b58ae5d515c7285229c9f07af9a11e39?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Mitchell Macpherson                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C28657" href="#C28657">
+                <time itemprop="dateCreated" datetime="2016-01-07T01:52:49-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>In theory you could do so with the modelsManager service: <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model_Manager.html">https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model_Manager.html</a></p>
+<p>(It will be a service 'modelsManager' resolved service in your DI.)</p>
+<pre><code class="language-php">\Phalcon\Di::getDefault()-&gt;get('modelsManager')-&gt;setReadConnection('Model', $transaction-&gt;getDbService());</code></pre>
+<p>setReadConnectionService<br />
+getReadConnection</p>
+<p>Will be the functions of interest to you.</p>
+</blockquote>
+<p>But if there are other actions after that transaction, I have to change that back to slave service.</p>
+<blockquote>
+<p>However the accuracy of ($model-&gt;create() === true) should be enough to verify that it was written to the database, rather than executing a count query?</p>
+</blockquote>
+<p>The code is just a sample to describe this problem. We do not use this code in production.</p>
+<p>Thank you very much.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28657" data-cf-modified-75dfd5e1a37c691f17aed39e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28657" data-cf-modified-75dfd5e1a37c691f17aed39e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9fde75bf4807a52cb35e4769583e99f9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/32/guweigang" class="user-moderator-N"><span itemprop="name">洋沙居士</span></a>        </span>
+        <br>
+
+        <span class="karma">9.4k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C28651"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/b58ae5d515c7285229c9f07af9a11e39?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Mitchell Macpherson                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="32903" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '16</span>
+              </span><br/><a name="C32903" href="#C32903">
+                <time itemprop="dateCreated" datetime="2016-04-22T04:46:15-07:00" class="action-date">Apr '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>maybe i should implement Model::selectReadConnection() , and that works for me.</p>
+<pre><code class="language-php">class FooModel extends \Phalcon\Mvc\Model
+{
+    public function selectReadConnection()
+    {
+        $txm = $this-&gt;di-&gt;get('txm');
+        $txm-&gt;setDbService($this-&gt;getWriteConnectionService());
+        $transaction = $txm-&gt;get(false); // set autoBegin =  false
+        if($transaction-&gt;isValid()) {
+            return $this-&gt;getWriteConnection();
+        } else {
+            return $this-&gt;getReadConnection();
+        }
+    }
+}</code></pre>
+<blockquote>
+<blockquote>
+<p>Yes! I have tested it as you said. The result is:</p>
+<pre><code class="language-php">// codes: 
+var_dump((new FooModel())-&gt;getReadConnectionService());
+var_dump((new FooModel())-&gt;getReadConnection()-&gt;isUnderTransaction());
+
+// output:
+string(13) "msg_box_slave"
+bool(false)</code></pre>
+<p>So here we are: It will use another db connection even in a transaction context.</p>
+<p><strong>Do you know if there is a way to use a specific db-connection when do Model::find() ?</strong></p>
+<p>If yes, maybe I can do something like this:</p>
+<pre><code class="language-php">FooModel::find("age&gt;5", $transaction-&gt;getConnection());</code></pre>
+</blockquote>
+<p>In theory you could do so with the modelsManager service: <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model_Manager.html">https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model_Manager.html</a></p>
+<p>(It will be a service 'modelsManager' resolved service in your DI.)</p>
+<pre><code class="language-php">\Phalcon\Di::getDefault()-&gt;get('modelsManager')-&gt;setReadConnection('Model', $transaction-&gt;getDbService());</code></pre>
+<p>setReadConnectionService<br />
+getReadConnection</p>
+<p>Will be the functions of interest to you.</p>
+<p>However the accuracy of ($model-&gt;create() === true) should be enough to verify that it was written to the database, rather than executing a count query?</p>
+<blockquote>
+<blockquote>
+<p>Based the order that your code is executing your code, I would say yes.</p>
+<p>One way to check would be:</p>
+<pre><code class="language-php">&lt;?php
+
+try {
+       $transaction = $manager-&gt;get();
+       $modelA = new FooModel();
+       $modelA-&gt;setTransaction($transaction);
+       $modelA-&gt;a = "xxx";
+       $modelA-&gt;b = "yyy";
+       if($modelA-&gt;save() == false) {   // use $transaction-&gt;getConnection() to do the save operation
+           $transaction-&gt;rollbak();
+       }
+
+       $modelB = new BarModel();
+       $modelB-&gt;setTransaction($transaction);
+       $modelB-&gt;a = "xxx";
+       $modelB-&gt;b = "yyy";
+       if($modelB-&gt;save() == false) { // use $transaction-&gt;getConnection() to do the save operation
+           $transaction-&gt;rollback();
+       }
+
+    if((new FooModel())-&gt;getReadConnectionService()-&gt;isUnderTransaction()){
+           $count = FooModel::count();  // What conneciton would this line use???
+    } else {
+        $transaction-&gt;rollback();
+        throw new \Exception('Unable to count database rows with same connection');
+    }
+       $transaction-&gt;commit();
+} catch(TxFailed $e) {
+   // ...
+}
+
+return $count;</code></pre>
+<blockquote>
+<p>I basicly agree with you. But if you go deep into the Phalcon Internals, you can see：</p>
+<pre><code class="language-zephir">
+       /**
+        * Gets the connection used to read data for the model
+        */
+       public function getReadConnection() -&gt; &lt;AdapterInterface&gt;
+       {
+               var transaction;
+
+               let transaction = &lt;TransactionInterface&gt; this-&gt;_transaction;
+               if typeof transaction == "object" {
+                       return transaction-&gt;getConnection();
+               }
+
+               return (&lt;ManagerInterface&gt; this-&gt;_modelsManager)-&gt;getReadConnection(this);
+       }</code></pre>
+<p>So, do you think it wii use the conneciton of transaction or not?</p>
+<blockquote>
+<p>It depends how your 'db' service is setup. If the service is shared, then same connection is used - if it's not shared then it is a different connection.</p>
+<p>I believe \Phalcon\Di\FactoryDefault has 'db' not set as a shared service if that's what you're using.</p>
+<p>tl;dr: It depends if your 'db' service is set as shared or not really.</p>
+<blockquote>
+<p>So, you mean it use a different db connection with the one in transaction?</p>
+<blockquote>
+<p>It would use the model connection which is either specified explicitly, or falls back to the service db.</p>
+<p>Without checking the Phalcon internals, it should in theory be the same connection as what's returned when you execute</p>
+<pre><code class="language-php">//Returns Database service from the DI container
+(new FooModel())-&gt;getReadConnectionService(); //service name
+(new FooModel())-&gt;getReadConnection(); //service resolve (object)</code></pre>
+<p>See <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model.html">https://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model.html</a> :)</p>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="32903" data-cf-modified-75dfd5e1a37c691f17aed39e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="32903" data-cf-modified-75dfd5e1a37c691f17aed39e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="10077" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

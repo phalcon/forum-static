@@ -1,0 +1,163 @@
+---
+layout: default
+title: 'Model relationship query vs query builder join - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Model relationship query vs query builder join</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1448/warut21" class="user-moderator-N"><span itemprop="name">warut21</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-02-26T02:21:16-07:00">Feb '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-02-26T02:21:16-07:00">Feb '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1528</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/36be29781f9bf7ec40f0039020926029?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1448/warut21" class="user-moderator-N"><span itemprop="name">warut21</span></a></span>
+                <span class="karma">8.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6025" href="#C6025">
+        <time class="action-date">Feb '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello, What is a better one to query data and related record in another table between get model and select related record when use or join table using query builder.</p>
+<p>I have 2 tables Property and Property image, which method is better to show a property.</p>
+<pre><code>## property model ##
+class Property extends \Phalcon\Mvc\Model
+{
+/**
+ * @Primary
+ * @var integer
+ */
+public $id;
+
+/**
+ * @var string
+ */
+public $name;
+
+  /**
+ * @var string
+ */
+public $slug;
+
+public function initialize()
+{
+$this-&gt;hasMany("id", "Property_image", "property_id", array('alias' =&gt; 'Image'));
+}
+}
+
+## property_image ##
+class Property_image extends \Phalcon\Mvc\Model
+{
+    /**
+ * @Primary
+ * @var integer
+ */
+public $id;
+
+ /**
+ * @var string
+ */
+public $property_id;
+
+/**
+ * @var string
+ */
+public $image;
+
+public function initialize()
+{
+        $this-&gt;belongsTo("property_id", "Property", "id", array('alias' =&gt; 'Property'));
+}
+}</code></pre>
+<p>Method 1:</p>
+<pre><code>    $property = Property::findFirstBySlug($slug);
+    $images = $property-&gt;Image;
+    foreach ($images as image) { echo $image-&gt;image;}</code></pre>
+<p>Method 2:</p>
+<pre><code>    $property = $this-&gt;modelsManager-&gt;createBuilder()
+    -&gt;columns('PI.image'))
+    -&gt;addfrom("Webapp\Frontend\Models\Property","P")
+    -&gt;leftjoin("Webapp\Frontend\Models\Property_image","PI.project_id = P.id","PI")
+    -&gt;where("P.slug = :slug:",array("slug" =&gt; $slug))
+    -&gt;getQuery()
+    -&gt;execute()
+    -&gt;getFirst();</code></pre>
+<p>another question, If use method 2 and I want to update property table, Do I have to find fiest by slug again and use $property-&gt;save()   ?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-66bd0a104f48531a54d0aeca-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-66bd0a104f48531a54d0aeca-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/7f19eda68ce7976e552e53f2b09a6c2b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3459/Druid33" class="user-moderator-N"><span itemprop="name">Peter Skultety</span></a>        </span>
+        <br>
+
+        <span class="karma">718</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16551" href="#C16551">
+                <time itemprop="dateCreated" datetime="2015-03-13T04:59:23-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>In method 1 you make 2 request in to DB.
+In method 2 it should be only one request.</p>
+<p>maybe you can use third method in this case. Something like this:</p>
+<pre><code class="language-php">$property_image = Property_image::findByPorpertyId($slug);
+foreach ($property_image as $image) { 
+    echo $image-&gt;image;
+}</code></pre>
+<p>Your question to update i cant answer, becouse dont understand what you exactly mean.
+But in case you wont to update record in database, you can use $property-&gt;update(), instead of $property-&gt;save(). Its faster. And you dont create new record instead updating one, if you miss id or something go wrong.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16551" data-cf-modified-66bd0a104f48531a54d0aeca-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16551" data-cf-modified-66bd0a104f48531a54d0aeca-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6025" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

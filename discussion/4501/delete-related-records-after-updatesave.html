@@ -1,0 +1,211 @@
+---
+layout: default
+title: 'Delete related records after update/save - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Delete related records after update/save</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2571/paulopastoriza" class="user-moderator-N"><span itemprop="name">Paulo Pastoriza</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-01-16T09:14:56-07:00">Jan '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-01-16T09:14:56-07:00">Jan '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1569</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/2693eb37861963afc843eed7fd7d1935?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2571/paulopastoriza" class="user-moderator-N"><span itemprop="name">Paulo Pastoriza</span></a></span>
+                <span class="karma">4.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4501" href="#C4501">
+        <time class="action-date">Jan '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I hav two models.</p>
+<pre><code class="language-php">namespace Manager\Models;
+use Phalcon\Mvc\Model;
+use Phalcon\Mvc\Model\Validator\Uniqueness;
+class Aliases extends Model
+{
+    public $id;
+    public $name;
+    public $description;
+    public $aliastypeId;
+    public function validation()
+    {
+        $this-&gt;validate(new Uniqueness(array(
+            "field" =&gt; "name",
+            "message" =&gt; "The alias is already registered"
+        )));
+        return $this-&gt;validationHasFailed() != true;
+    }
+    public function initialize()
+    {
+        $this-&gt;hasMany('id', 'Manager\Models\AliasesContent', 'aliasId', array(
+            'alias' =&gt; 'aliasescontent',
+            'reusable' =&gt; true
+        ));
+    }
+}
+
+namespace Manager\Models;
+use Phalcon\Mvc\Model;
+class AliasesContent extends Model
+{
+    public $id;
+    public $content;
+    public $aliasId;
+    public function initialize()
+    {
+        $this-&gt;belongsTo('aliasId', 'Manager\Models\Aliases', 'id', array(
+            'alias' =&gt; 'aliases',
+            'reusable' =&gt; true
+        ));
+    }
+}</code></pre>
+<p>When I edit a &quot;Aliases&quot; and saved, I have to remove all the contents of the table &quot;AliasesContent&quot; referring to &quot;AliasesContent.aliasId&quot; to re-enter the new content.</p>
+<pre><code class="language-php">public function editAction($id)
+{
+if ($this-&gt;request-&gt;isPost()) {
+   $aliases-&gt;assign(array(
+      'name' =&gt;$this-&gt;request-&gt;getPost('name', 'striptags'),
+      'description' =&gt; $this-&gt;request-&gt;getPost('description', 'striptags')
+   ));
+
+   // Delete the entire contents of the related table.
+   AliasesContent::find('aliasId IN ('.$id.')')-&gt;delete();
+   // ------------
+
+   $aliasContentPost = $this-&gt;request-&gt;getPost('aliascontent');
+   $aliascontent = array();
+   foreach ($aliasContentPost as $key =&gt; $value) {
+      $aliascontent[$key] = new AliasesContent();
+      $aliascontent[$key]-&gt;content = $value;
+   }
+   $aliases-&gt;AliasesContent = $aliascontent;
+   if (!$aliases-&gt;save()) {
+      $this-&gt;flash-&gt;error($aliases-&gt;getMessages());
+   } else {
+      $this-&gt;flash-&gt;success("Alias was updated successfully");
+   }
+}</code></pre>
+<p>The problem is that if the update/save fails the validation name (Uniqueness) present in the model, the related table records are deleted and new records are not inserted.</p>
+<p>I do not want to update only the difference, I need to be removed all records in the related table and reinsert the new records, after validation of the main table &quot;Aliases&quot;.</p>
+<p>Thanks for any help.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-0bd8ee40df287f0a95f6b6f2-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-0bd8ee40df287f0a95f6b6f2-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/877a54304e07c8cb38c47b43e1d6b6b3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2828/sergeyklay" class="user-moderator-Y"><span itemprop="name">Serghei Iakovlev</span></a>        </span>
+        <br>
+
+        <span class="karma">39.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C14979" href="#C14979">
+                <time itemprop="dateCreated" datetime="2015-01-16T13:41:34-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Here we have solved a similar problem:</p>
+<p><a href="http://forum.phalcon.io/discussion/4371/how-can-i-delete-records-in-a-manytomany-relationship">http://forum.phalcon.io/discussion/4371/how-can-i-delete-records-in-a-manytomany-relationship</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14979" data-cf-modified-0bd8ee40df287f0a95f6b6f2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14979" data-cf-modified-0bd8ee40df287f0a95f6b6f2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bdee79ea2680ec179fa34b9201fc74b7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1873/RompePC" class="user-moderator-N"><span itemprop="name">RompePC</span></a>        </span>
+        <br>
+
+        <span class="karma">33.8k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C14982" href="#C14982">
+                <time itemprop="dateCreated" datetime="2015-01-16T15:42:46-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yeah, when you update a record of a table like yours that have depending records, you have to re-create the relations. I also had to do that many times.</p>
+<p>And for this:</p>
+<blockquote>
+<p>The problem is that if the update/save fails the validation name (Uniqueness) present in the model, the related table records are deleted and new records are not inserted.</p>
+</blockquote>
+<p>Just do a <code>if ($alias-&gt;create())</code>. Inside, initiate a manual transaction first (<code>$this-&gt;db-&gt;begin()</code>). When you do all your logic correctly (sucesfully delete/recreate records), do a commit (<code>$this-&gt;db-&gt;commit()</code>); else, a rollback (<code>$this-&gt;db-&gt;rollback()</code>). This way you will have your original records intacted and no ones will be created.</p>
+<p>More info on <a href="http://docs.phalcon.io/es/latest/reference/models.html#manual-transactions">http://docs.phalcon.io/es/latest/reference/models.html#manual-transactions</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14982" data-cf-modified-0bd8ee40df287f0a95f6b6f2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14982" data-cf-modified-0bd8ee40df287f0a95f6b6f2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2693eb37861963afc843eed7fd7d1935?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2571/paulopastoriza" class="user-moderator-N"><span itemprop="name">Paulo Pastoriza</span></a>        </span>
+        <br>
+
+        <span class="karma">4.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C15104" href="#C15104">
+                <time itemprop="dateCreated" datetime="2015-01-20T10:57:32-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you for your help RompePC and Seghei.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="15104" data-cf-modified-0bd8ee40df287f0a95f6b6f2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="15104" data-cf-modified-0bd8ee40df287f0a95f6b6f2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4501" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

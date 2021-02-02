@@ -1,0 +1,146 @@
+---
+layout: default
+title: 'phalcon\loader - singular vs plural namespaces loading problem - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">phalcon\loader - singular vs plural namespaces loading problem</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/358/metialb" class="user-moderator-N"><span itemprop="name">metialb</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-01-05T11:50:54-07:00">Jan '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-01-05T11:50:54-07:00">Jan '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>587</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/a12c2903a6ced2d39d80e635e5ee3fc4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/358/metialb" class="user-moderator-N"><span itemprop="name">metialb</span></a></span>
+                <span class="karma">8.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C10083" href="#C10083">
+        <time class="action-date">Jan '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I found a bug in a phalcon project I have been working on that was hard to troubleshoot because it happenns only in the testing environment (there are a few differences between the centos environments: may be phalcon versions or apache versions but I am assuming that they are not the reason).
+So the problem is that a file is not found, because of a missing &quot;s&quot; in the &quot;Controller&quot; namespace registration.</p>
+<p>This is the file where the namespaces are registered (note the App\Front\Controller missing the &quot;s&quot; at the end)</p>
+<pre><code class="language-php">//File1
+
+$loader-&gt;registerNamespaces(
+    array(
+        'App\Front\Controller'             =&gt; MODULES_PATH.'/front/controllers/',
+        'App\Front\Model'                   =&gt; MODULES_PATH.'/front/models/',
+        'App\Front\Validator'               =&gt; MODULES_PATH.'/front/validators/',
+        'App\Front\Service'                 =&gt; MODULES_PATH.'/front/services/'
+    )
+);
+$loader-&gt;register();</code></pre>
+<p>Then there is a file where, after loading the above one, meaning after having the loader registered, there is some dispatcher forwarding happening as below:</p>
+<pre><code class="language-php">//File2
+
+$this-&gt;dispatcher-&gt;forward(array(
+    "namespace" =&gt; "App\\Front\\Controllers",
+    "controller"=&gt; $this-&gt;getControllerName(),
+    "action"    =&gt; $forwardAction
+    )
+);</code></pre>
+<p>While this is one of the controllers that is being requested and is found/loaded/returned, except for in my testing machine.</p>
+<pre><code class="language-php">//File3
+
+namespace App\Front\Controllers;
+
+class SomeController extends \Phalcon\Mvc\Controller {
+
+}</code></pre>
+<p>So basically changing the first key in the registerNamespaces() method in File1 from 'App\Front\Controller' to 'App\Front\Controllers' in my development environment (the working scenario) does not make a difference at all. The controller class/file is loaded in both cases and php does not bark about file not being found.
+If I change &quot;App\Front\Controllers&quot; to &quot;App\Front\Controller&quot; in either File2 or File3, then all the references to that namespace must be in singular in all the three files otherwise it won't work.</p>
+<p>So I am puzzled as to why this is happening? Is there some type of magical internal implementation in the registerNamespaces() method that checks for the plural of a word/noun as well (it's the only thing I can think of) or is there something else that I am not seeing?</p>
+<p>p.s. Fixing my testing environment, required simply appending another &quot;s&quot; to the 'App\Front\Controller' in File1.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-8516b27e00c49e839b828870-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-8516b27e00c49e839b828870-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C28587" href="#C28587">
+                <time itemprop="dateCreated" datetime="2016-01-05T14:58:44-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well just to be noticed: you shouldnt forward in multimodule application to controller in another module imho. If you doing it you should consider changing something in your application logic.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28587" data-cf-modified-8516b27e00c49e839b828870-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28587" data-cf-modified-8516b27e00c49e839b828870-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9fde75bf4807a52cb35e4769583e99f9?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/32/guweigang" class="user-moderator-N"><span itemprop="name">洋沙居士</span></a>        </span>
+        <br>
+
+        <span class="karma">9.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C28597" href="#C28597">
+                <time itemprop="dateCreated" datetime="2016-01-05T16:53:35-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You just need to keep them all the same.
+But, I still doubt why your development environment works ok with the wrong register?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28597" data-cf-modified-8516b27e00c49e839b828870-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28597" data-cf-modified-8516b27e00c49e839b828870-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="10083" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,223 @@
+---
+layout: default
+title: 'work with api and manage RAM and Time - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/26/http-environment">HTTP Environment</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">work with api and manage RAM and Time</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2366/EhsanJamshidi" class="user-moderator-N"><span itemprop="name">EhsanJamshidi</span></a></span>
+            <time itemprop="dateCreated" datetime="2019-03-30T07:10:18-07:00">Mar '19</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2019-03-30T07:10:18-07:00">Mar '19</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Apr '19</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>267</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9685ab3e268b32d408979da6f6afe5c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2366/EhsanJamshidi" class="user-moderator-N"><span itemprop="name">EhsanJamshidi</span></a></span>
+                <span class="karma">8.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C19519" href="#C19519">
+        <time class="action-date">Mar '19</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Sorry to ask this question here it is not completly related to PHALCON,
+In my project I need to get JSON from an API, this API divide their information in to pages,
+I use some code like this to get JSON from API</p>
+<p>$LastPage = 750;
+$Type1 = [];
+$Type2 = [];
+for ($i = 0; $i &lt; $LastPage; $i = $i + 1) {
+$UrlJson = &quot;<a href="http://example.com/page?&quot;.$i">http://example.com/page?".$i</a>;
+$contents =<a href="https://forum.phalcon.io/user/0/file"> @file</a>_get_contents($UrlJson);
+if ($contents !== false) {
+foreach($contents['entity'] as $entity){
+array_push($Type1, $entity['typeOne'])
+array_push($Type2, $entity['typeTwo'])
+}
+}
+}</p>
+<p>each json have size around 400 KB
+this process take 20 minute
+any idea how can I make it faster to receive the info from API, something like read a few page together?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-6db2d054da6447595ebfefc6-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-6db2d054da6447595ebfefc6-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="59439" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '19</span>
+              </span><br/><a name="C59439" href="#C59439">
+                <time itemprop="dateCreated" datetime="2019-04-01T03:47:35-07:00" class="action-date">Apr '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If pagination info is only available after a successful request, you can't really parallelize the requests (each request relies on the previous state).</p>
+<p>But in theory, you could refactor your http request to use <code>curl_multi_exec</code>:</p>
+<pre><code class="language-php">$nodes = array($url1, $url2, $url3);
+$node_count = count($nodes);
+
+$curl_arr = array();
+$master = curl_multi_init();
+
+for($i = 0; $i &lt; $node_count; $i++)
+{
+    $url =$nodes[$i];
+    $curl_arr[$i] = curl_init($url);
+    curl_setopt($curl_arr[$i], CURLOPT_RETURNTRANSFER, true);
+    curl_multi_add_handle($master, $curl_arr[$i]);
+}
+
+do {
+    curl_multi_exec($master,$running);
+} while($running &gt; 0);
+
+for($i = 0; $i &lt; $node_count; $i++)
+{
+    $results[] = curl_multi_getcontent  ( $curl_arr[$i]  );
+}
+print_r($results);</code></pre>
+<p><a href="https://stackoverflow.com/questions/9308779/php-parallel-curl-requests">https://stackoverflow.com/questions/9308779/php-parallel-curl-requests</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="59439" data-cf-modified-6db2d054da6447595ebfefc6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="59439" data-cf-modified-6db2d054da6447595ebfefc6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9685ab3e268b32d408979da6f6afe5c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2366/EhsanJamshidi" class="user-moderator-N"><span itemprop="name">EhsanJamshidi</span></a>        </span>
+        <br>
+
+        <span class="karma">8.0k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C59439"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Lajos Bencz                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C59441" href="#C59441">
+                <time itemprop="dateCreated" datetime="2019-04-01T05:57:37-07:00" class="action-date">Apr '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I used your suggestion, but it took more then 4GB memory of my server? any idea where I am doing wrong, I used exact code as yours and just extract information from it, by the way, I send 10 request at once, then 10 more in a loop.</p>
+<blockquote>
+<p>If pagination info is only available after a successful request, you can't really parallelize the requests (each request relies on the previous state).</p>
+<p>But in theory, you could refactor your http request to use <code>curl_multi_exec</code>:</p>
+<pre><code class="language-php">$nodes = array($url1, $url2, $url3);
+$node_count = count($nodes);
+
+$curl_arr = array();
+$master = curl_multi_init();
+
+for($i = 0; $i &lt; $node_count; $i++)
+{
+   $url =$nodes[$i];
+   $curl_arr[$i] = curl_init($url);
+   curl_setopt($curl_arr[$i], CURLOPT_RETURNTRANSFER, true);
+   curl_multi_add_handle($master, $curl_arr[$i]);
+}
+
+do {
+   curl_multi_exec($master,$running);
+} while($running &gt; 0);
+
+for($i = 0; $i &lt; $node_count; $i++)
+{
+   $results[] = curl_multi_getcontent  ( $curl_arr[$i]  );
+}
+print_r($results);</code></pre>
+<p><a href="https://stackoverflow.com/questions/9308779/php-parallel-curl-requests">https://stackoverflow.com/questions/9308779/php-parallel-curl-requests</a></p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="59441" data-cf-modified-6db2d054da6447595ebfefc6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="59441" data-cf-modified-6db2d054da6447595ebfefc6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="59443" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '19</span>
+              </span><br/><a name="C59443" href="#C59443">
+                <time itemprop="dateCreated" datetime="2019-04-01T07:17:36-07:00" class="action-date">Apr '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well, there's no free lunch.</p>
+<p>You can request the API one at a time, and save memory, complexity but suffer in execution time.</p>
+<p>You can use parallel fetching to save execution time and complexity, but suffer more memory usage.</p>
+<p>You can also refactor the whole task to parallelized, streaming requests to save memory and time, but suffer from a more complex code.</p>
+<blockquote>
+<p>I used your suggestion, but it took more then 4GB memory of my server? </p>
+</blockquote>
+<p>If the size of one response is around 400MB, then it's working as intented. You can decrease that by streaming the response and parsing it in chunks. But that would mean you have to parse the JSON yourself aswell.</p>
+<p>EDIT:</p>
+<p>If you want to do the third (memory-friendly, parallel fetching), I'd suggest you save the response JSON files to disk, then parse it with a 3rd party library.</p>
+<p>An example for a single streaming CURL request saved to disk: <a href="https://gist.github.com/lmammino/4353399">https://gist.github.com/lmammino/4353399</a></p>
+<p>A library for streamed parsing of JSON files: <a href="https://github.com/salsify/jsonstreamingparser">https://github.com/salsify/jsonstreamingparser</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="59443" data-cf-modified-6db2d054da6447595ebfefc6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="59443" data-cf-modified-6db2d054da6447595ebfefc6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="19519" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

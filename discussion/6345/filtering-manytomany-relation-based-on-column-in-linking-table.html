@@ -1,0 +1,315 @@
+---
+layout: default
+title: 'Filtering many-to-many relation based on column in linking table - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Filtering many-to-many relation based on column in linking table</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3614/alistairtweed" class="user-moderator-N"><span itemprop="name">Alistair Tweed</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-04-09T07:33:29-07:00">Apr '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-04-09T07:33:29-07:00">Apr '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Apr '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1534</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/1d5f520094e5ed999caeb71349829c1d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3614/alistairtweed" class="user-moderator-N"><span itemprop="name">Alistair Tweed</span></a></span>
+                <span class="karma">1.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6345" href="#C6345">
+        <time class="action-date">Apr '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I am currently working with a database that stores regions in a hierarchy based on the depth between the parent and the child.</p>
+<p><strong>Database</strong></p>
+<pre><code class="language-sql">CREATE TABLE regions (
+    `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    `name` VARCHAR(100) NOT NULL,
+    `chain` TINYTEXT NOT NULL,
+);
+
+CREATE TABLE regions_tree (
+    `parent_id` INT NOT NULL,
+    `child_id` INT NOT NULL,
+    `depth` INT NOT NULL DEFAULT 0
+);</code></pre>
+<p><strong>Table: regions</strong></p>
+<pre><code>id  name                chain
+1   All                 All
+2   Asia Pacific        All-Asia Pacific
+3   Australia           All-Asia Pacific-Australia
+4   Queensland          All-Asia Pacific-Australia-Queensland
+5   New South Wales     All-Asia Pacific-Australia-New South Wales</code></pre>
+<p><strong>Table: regions_tree</strong></p>
+<pre><code>parent_id   child_id    depth
+1           1           0
+2           2           0
+2           1           1
+3           3           0
+3           2           1
+3           1           2
+4           4           0
+4           3           1
+4           2           2
+4           1           3
+5           5           0
+5           3           1
+5           2           2
+5           1           3</code></pre>
+<p>I am able to return a resultset of an individual region's parents by defining a <code>hasManyToMany()</code> relationship in the <code>Regions</code> model:</p>
+<p><strong>Models</strong></p>
+<pre><code class="language-php">class RegionsTree extends \Phalcon\Mvc\Model
+{
+    public function getSource()
+    {
+        return 'regions_tree';
+    }
+}
+
+class Regions extends \Phalcon\Mvc\Model
+{
+    public function initialize()
+    {
+        $this-&gt;hasManytoMany('id', 'RegionsTree', 'child_id', 'parent_id', 'Regions', 'id', array('alias' =&gt; 'parents'));
+    }
+}</code></pre>
+<p><strong>Controller</strong></p>
+<pre><code class="language-php">$this-&gt;view-&gt;regions = Regions::find();</code></pre>
+<p><strong>View</strong></p>
+<pre><code class="language-php">{% raw %}{%{% endraw %} for region in regions {% raw %}%}{% endraw %}
+    &lt;p&gt;{% raw %}{{{% endraw %} region.name {% raw %}}}{% endraw %} - {% raw %}{{{% endraw %} region.parents.getFirst().name {% raw %}}}{% endraw %}&lt;/p&gt;
+{% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}</code></pre>
+<p><strong>Output</strong></p>
+<pre><code>All - All
+Asia Pacific - Asia Pacific
+Australia - Australia
+Queensland - Queensland
+New South Wales - New South Wales</code></pre>
+<hr />
+<p>I would like to return just one parent based on the depth column in the linking table (regions_tree.depth). Normally, I would use the following SQL to find this parent:</p>
+<pre><code class="language-sql">SELECT a.`id`
+FROM `regions` AS a
+LEFT JOIN `regions_tree` ON `regions_tree`.`parent_id` = a.`id`
+LEFT JOIN `regions` AS b ON b.`id` = `regions_tree`.`child_id`
+WHERE b.`id` = $child_id AND `regions_tree`.`depth` = 1;</code></pre>
+<p>Is there a way of filtering a <code>hasManyToMany()</code> relationship (preferrably inside <code>initialize()</code>)? If not, what would be the best way to achieve the following result:</p>
+<pre><code class="language-php">{% raw %}{%{% endraw %} for region in regions {% raw %}%}{% endraw %}
+    &lt;p&gt;{% raw %}{{{% endraw %} region.name {% raw %}}}{% endraw %} - {% raw %}{{{% endraw %} region.parent.name {% raw %}}}{% endraw %}&lt;/p&gt;
+{% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}</code></pre>
+<pre><code>All - 
+Asia Pacific - All
+Australia - Asia Pacific
+Queensland - Australia
+New South Wales - Australia</code></pre>
+<p>Thanks in advance. I appreciate it!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-240781f22acd755e33f5cdc4-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-240781f22acd755e33f5cdc4-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/97cfdb3586f82c3e1e4fe562bda688b8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/571/duythien" class="user-moderator-Y"><span itemprop="name">Thien Tran</span></a>        </span>
+        <br>
+
+        <span class="karma">58.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="17164" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '15</span>
+              </span><br/><a name="C17164" href="#C17164">
+                <time itemprop="dateCreated" datetime="2015-04-09T08:29:07-07:00" class="action-date">Apr '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hey man</p>
+<p>The first to use hasManyToMany you need to 3 models, Here I'm see you have to 2 models so you can't use it. To the solution you try method belongTo or hasMany</p>
+<pre><code class="language-php">$this-&gt;belongsTo('parent_id', 'Regions',  'id', array('alias' =&gt; 'parent'));</code></pre>
+<p>The next  in conroller you set variable to view</p>
+<pre><code class="language-php">$this-&gt;view-&gt;regions =  Regions::find()
+</code></pre>
+<p>Then in volt</p>
+<pre><code class="language-php">{% raw %}{%{% endraw %} for region in regions {% raw %}%}{% endraw %}
+    &lt;p&gt;{% raw %}{{{% endraw %} region.name {% raw %}}}{% endraw %} - {% raw %}{{{% endraw %} region.parent.name {% raw %}}}{% endraw %}&lt;/p&gt;
+{% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17164" data-cf-modified-240781f22acd755e33f5cdc4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17164" data-cf-modified-240781f22acd755e33f5cdc4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1d5f520094e5ed999caeb71349829c1d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3614/alistairtweed" class="user-moderator-N"><span itemprop="name">Alistair Tweed</span></a>        </span>
+        <br>
+
+        <span class="karma">1.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C17165" href="#C17165">
+                <time itemprop="dateCreated" datetime="2015-04-09T09:14:40-07:00" class="action-date">Apr '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks for your reply.</p>
+<p>The reason there are only two models is because both the parent and child are regions, so the linking table (regions_tree) really just holds ids from the regions table. As mentioned in my original post, I have no trouble returning a resultset of all the parents of an individual region using a <code>hasManyToMany()</code> relationship. What I need is to select or filter out a specific record from within that resultset based on a column in the linking table (or <code>RegionsTree</code> model).</p>
+<p>Your suggestion may work (although I believe the <code>belongsTo()</code> relationship should be defined in the <code>RegionsTree</code> model), but it does not take into consideration the depth column, which is required to filter the parents.</p>
+<p>If I were to use the tables from the Phalcon documentation, as an example, it would be like trying to select all <code>Parts</code> of a <code>Robot</code> that have a specific created_at date in the robots_parts table and store the results as a property that's accessible from within a <code>for</code> loop in the view. Is this possible?</p>
+<pre><code class="language-sql">CREATE TABLE `robots` (
+    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+    `name` varchar(70) NOT NULL,
+    `type` varchar(32) NOT NULL,
+    `year` int(11) NOT NULL,
+    PRIMARY KEY (`id`)
+);
+
+CREATE TABLE `robots_parts` (
+    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+    `robots_id` int(10) NOT NULL,
+    `parts_id` int(10) NOT NULL,
+    `created_at` DATE NOT NULL,
+    PRIMARY KEY (`id`),
+    KEY `robots_id` (`robots_id`),
+    KEY `parts_id` (`parts_id`)
+);
+
+CREATE TABLE `parts` (
+    `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+    `name` varchar(70) NOT NULL,
+    PRIMARY KEY (`id`)
+);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17165" data-cf-modified-240781f22acd755e33f5cdc4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17165" data-cf-modified-240781f22acd755e33f5cdc4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/97cfdb3586f82c3e1e4fe562bda688b8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/571/duythien" class="user-moderator-Y"><span itemprop="name">Thien Tran</span></a>        </span>
+        <br>
+
+        <span class="karma">58.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="17166" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '15</span>
+              </span><br/><a name="C17166" href="#C17166">
+                <time itemprop="dateCreated" datetime="2015-04-09T09:32:51-07:00" class="action-date">Apr '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi</p>
+<p>I think it possible, you can take example here <a href="http://phalcontip.com/discussion/32/how-to-use-hasmanytomany-in-phalcon">http://phalcontip.com/discussion/32/how-to-use-hasmanytomany-in-phalcon</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17166" data-cf-modified-240781f22acd755e33f5cdc4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17166" data-cf-modified-240781f22acd755e33f5cdc4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1d5f520094e5ed999caeb71349829c1d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3614/alistairtweed" class="user-moderator-N"><span itemprop="name">Alistair Tweed</span></a>        </span>
+        <br>
+
+        <span class="karma">1.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="17167" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '15</span>
+              </span><br/><a name="C17167" href="#C17167">
+                <time itemprop="dateCreated" datetime="2015-04-09T09:54:27-07:00" class="action-date">Apr '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think you have misunderstood my question. I know how to set up the many-to-many relationship; I have done this, and it returns the results as expected.</p>
+<p>Moving away from the many-to-many relationship, I can almost achieve what I need using the code below, but I'm stuck with a hard-coded child_id value. As the <code>region.parent</code> property will be accessed inside a <code>for</code> loop in the view, it's impossible to know what the child_id value will be so it should be dynamically set.</p>
+<pre><code class="language-php">class Regions extends \Phalcon\Mvc\Model
+{
+    public $parent;
+
+    public function initialize()
+    {
+        $phql = "SELECT a.id
+        FROM Regions AS a
+        LEFT JOIN RegionsTree ON RegionsTree.parent_id = a.id
+        LEFT JOIN Regions AS b ON b.id = RegionsTree.child_id
+        WHERE b.id = :child_id: AND RegionsTree.depth = 1";
+
+        $query = new \Phalcon\Mvc\Model\Query($phql, $this-&gt;getDI());
+        $result = $query-&gt;execute(array('child_id' =&gt; 3)); // This value should be dynamic (eg. $this-&gt;id)
+
+        $parent_id = $result-&gt;getFirst()-&gt;id;
+        $this-&gt;parent = Regions::find($parent_id);
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17167" data-cf-modified-240781f22acd755e33f5cdc4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17167" data-cf-modified-240781f22acd755e33f5cdc4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/210/andresgutierrez" class="user-moderator-Y"><span itemprop="name">Andres Gutierrez</span></a>        </span>
+        <br>
+
+        <span class="karma">34.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C17170" href="#C17170">
+                <time itemprop="dateCreated" datetime="2015-04-09T12:42:06-07:00" class="action-date">Apr '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You can use the query builder: <a href="http://docs.phalcon.io/en/latest/reference/phql.html#creating-queries-using-the-query-builder">http://docs.phalcon.io/en/latest/reference/phql.html#creating-queries-using-the-query-builder</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17170" data-cf-modified-240781f22acd755e33f5cdc4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17170" data-cf-modified-240781f22acd755e33f5cdc4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6345" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

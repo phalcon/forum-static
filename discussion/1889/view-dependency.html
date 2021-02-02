@@ -1,0 +1,399 @@
+---
+layout: default
+title: 'View dependency - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">View dependency</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1330/HraKK" class="user-moderator-N"><span itemprop="name">HraKK</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-03-24T08:57:47-07:00">Mar '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-03-24T08:57:47-07:00">Mar '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>848</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">-1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/0c158e1bbed229360474402b43ad2cd8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1330/HraKK" class="user-moderator-N"><span itemprop="name">HraKK</span></a></span>
+                <span class="karma">1.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1889" href="#C1889">
+        <time class="action-date">Mar '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi guys!</p>
+<p>We are starting use the phalcon framework! The first impression was great. But after all I found several issues wihich I don't understand.</p>
+<p>First of all I don't like a way in which the dependency injection is used. Now, its used as Registry pattern, not more. Let me explain a little. For ex. I'd like to make my custom View. So I wrote this </p>
+<pre><code class="language-php">$this-&gt;di-&gt;set(
+            'view',
+            function () {          
+                return new \stdClass();
+            }
+        );</code></pre>
+<p>Let me see what I'll get?</p>
+<pre><code>Fatal error: Phalcon\Mvc\Application::handle(): Call to undefined method start() on class stdClass</code></pre>
+<p>What? Are you kidding me?
+It's mean what Phalcon use DI in this way:</p>
+<pre><code class="language-php">class Controller
+{
+    public function __construct(DependencyInjectionInterface $di)
+    {
+       $this-&gt;view = $di-&gt;getShared('view');
+    }
+}</code></pre>
+<p>instead of </p>
+<pre><code class="language-php">class Controller
+{
+    public function __construct(DependencyInjectionInterface $di, ViewInterface $view)
+    {
+       $this-&gt;view = $view
+    }
+}</code></pre>
+<p>or</p>
+<pre><code class="language-php">class Controller
+{
+    public function __construct(DependencyInjectionInterface $di)
+    {
+       $this-&gt;setView($di-&gt;getShared('view');
+    }
+
+    protected function setView(ViewInterface $view)
+    {
+       $this-&gt;view = $view
+    }
+}</code></pre>
+<p>It doesn't make sense.</p>
+<p>Ok, let we move forward.</p>
+<p>I'm creating an application that communicate via JSON protocol. Or AMF for example.
+Should I use hierarchical template structure? Or maybe catch output buffering? I think no. The phalcon developers do not think so.
+I have no way to replace default implementation of view logic. Is this a CMS or a framework? So...</p>
+<p>My opinion is that phalcon should has a separate view logic to render, store and engine service. Let me describe a little.
+View -&gt; should only store the data what you are what to represent.
+RenderEngine -&gt; explain how this data will be render.
+Render -&gt; render view with given engine.</p>
+<p>For example we have some data to output:</p>
+<pre><code class="language-php">$view = new View();
+$view-&gt;test = 'hello word';</code></pre>
+<p>And we are want to render data to HTML template, so we are going to write follow lines:</p>
+<pre><code class="language-php">$engine = new HTMLTemplateEngine();
+$engine-&gt;setLayer('main');
+$render = new Render();
+$render-&gt;process($view, $engine);</code></pre>
+<p>Or we want to render answer in JSON format:</p>
+<pre><code class="language-php">$engine = new JSONEngine();
+$render = new Render();
+$render-&gt;process($view, $engine);</code></pre>
+<p>Something like that. Again with this way we are keep one responsibility principle.</p>
+<p>What are you  think, does it make sense?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-ed0115d4eb17ab0eb5644fcf-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span><span itemprop="downvoteCount">1</span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-ed0115d4eb17ab0eb5644fcf-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fcae2565ce4d1ed7240231932dec115a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/659/oleg578" class="user-moderator-N"><span itemprop="name">Oleg</span></a>        </span>
+        <br>
+
+        <span class="karma">8.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="6503" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '14</span>
+              </span><br/><a name="C6503" href="#C6503">
+                <time itemprop="dateCreated" datetime="2014-03-24T09:44:50-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>I'm creating an application that communicate via JSON protocol. Or AMF for example. Should I use hierarchical template structure? Or maybe catch output buffering? I think no. The phalcon developers do not think so. I have no way to replace default implementation of view logic. Is this a CMS or a framework? So...</p>
+</blockquote>
+<p>Maybe you'd better examine in greater detail Phalcon.
+For example, I have application on Phalcon in real.
+In this application I request form from Ajax. Form is created by Volt template engine and transmitted to browser via Ajax post request with CSRF protection from Phalcon as JSON. And all works..
+Example :</p>
+<pre><code class="language-php">public function signupAction()
+    {
+        $this-&gt;view-&gt;disable();
+        $signupform = new \FM\Apps\Forms\SignUpForm();
+        $form_html = [
+            'signupform' =&gt; $signupform-&gt;renderform()
+        ];
+        echo json_encode($form_html);
+    }</code></pre>
+<p>Class SignUpForm compile form (popup window) from view/form/signup.volt and action return JSON string with form.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6503" data-cf-modified-ed0115d4eb17ab0eb5644fcf-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6503" data-cf-modified-ed0115d4eb17ab0eb5644fcf-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/0c158e1bbed229360474402b43ad2cd8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1330/HraKK" class="user-moderator-N"><span itemprop="name">HraKK</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="6504" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '14</span>
+              </span><br/><a name="C6504" href="#C6504">
+                <time itemprop="dateCreated" datetime="2014-03-24T09:54:12-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Oleg, mate!</p>
+<p>You are absolutly right! But I want to emphasize that you can solve this problem using standard phalcon implementation.</p>
+<p>But! This way is not optimize and a little out of OOP and SOLID principles.
+Whats look more reasonably?</p>
+<pre><code class="language-php">public function signupAction()
+    {
+        $this-&gt;view-&gt;disable();
+        $signupform = new \FM\Apps\Forms\SignUpForm();
+        $form_html = [
+            'signupform' =&gt; $signupform-&gt;renderform()
+        ];
+        echo json_encode($form_html);
+    }</code></pre>
+<p>or </p>
+<pre><code class="language-php">public function signupAction()
+    {
+        $signupform = new \FM\Apps\Forms\SignUpForm();
+        $this-&gt;view-&gt;signupform = $signupform-&gt;renderform();        
+    }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6504" data-cf-modified-ed0115d4eb17ab0eb5644fcf-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6504" data-cf-modified-ed0115d4eb17ab0eb5644fcf-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/0c158e1bbed229360474402b43ad2cd8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1330/HraKK" class="user-moderator-N"><span itemprop="name">HraKK</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6506" href="#C6506">
+                <time itemprop="dateCreated" datetime="2014-03-24T09:58:50-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Current realisation of view is a bit excessive... Separate view give to us more flexible configuration and remove useless parts.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6506" data-cf-modified-ed0115d4eb17ab0eb5644fcf-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6506" data-cf-modified-ed0115d4eb17ab0eb5644fcf-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fcae2565ce4d1ed7240231932dec115a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/659/oleg578" class="user-moderator-N"><span itemprop="name">Oleg</span></a>        </span>
+        <br>
+
+        <span class="karma">8.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6511" href="#C6511">
+                <time itemprop="dateCreated" datetime="2014-03-24T11:51:46-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Nothing prevents you to inject any class to view, if you need :)
+With magic methods (__call)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6511" data-cf-modified-ed0115d4eb17ab0eb5644fcf-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6511" data-cf-modified-ed0115d4eb17ab0eb5644fcf-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/0c158e1bbed229360474402b43ad2cd8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1330/HraKK" class="user-moderator-N"><span itemprop="name">HraKK</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="6512" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '14</span>
+              </span><br/><a name="C6512" href="#C6512">
+                <time itemprop="dateCreated" datetime="2014-03-24T12:10:28-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Maybe my explanation isn't clean as I think. Let me try again.</p>
+<p>In your case you should disable addition functionality what you don't need.</p>
+<pre><code class="language-php">$this-&gt;view-&gt;disable();</code></pre>
+<p>and add operand echo and json_encode to manipulate output in each method also</p>
+<pre><code class="language-php">echo json_encode($form_html);</code></pre>
+<p>So right now Phalcon View isn't help you and you should make manipulation with it like at procedure style.</p>
+<p><strong>What I suggest</strong></p>
+<p>1) View should only contain data to output</p>
+<pre><code class="language-php"> $signupform = new \FM\Apps\Forms\SignUpForm();
+$this-&gt;view-&gt;signupform = $signupform-&gt;renderform();   </code></pre>
+<p>2) Mechanic of output should be realized in RenderEngine</p>
+<pre><code class="language-php">class JSONRenderEngine implements RenderEngineInterface
+{
+    public function render(ViewInterface $view)
+    {
+       echo json_encode($view-&gt;getData());
+    }
+}</code></pre>
+<p>3) You can set engine in three ways: default in application, default in controller, custom in method. Let choose default in controller for example, so your example should be like this:</p>
+<pre><code class="language-php">class Controller extendes \Phalcon\Controller
+{
+    public function __construct(DependencyInjectionInterface $di)
+    {
+       $this-&gt;di = $di;
+       $this-&gt;setRenderEngine($di-&gt;getShared('renderEngine');
+
+    }
+
+    public function signupAction()
+    {        
+        $signupform = new \FM\Apps\Forms\SignUpForm();
+        $this-&gt;view-&gt;form_html = [
+            'signupform' =&gt; $signupform-&gt;renderform()
+        ];
+        $this-&gt;render();
+    }
+
+    protected function render()
+    {
+        $render = $di-&gt;getShared('render');
+        $render-&gt;process($this-&gt;view, $this-&gt;renderEngine);
+    }
+}</code></pre>
+<p>Where Render is simplest class like this:</p>
+<pre><code class="language-php">class Render implements RenderInterface
+{
+    public function process($view, $engine)
+    {
+        $engine-&gt;render($view);
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6512" data-cf-modified-ed0115d4eb17ab0eb5644fcf-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6512" data-cf-modified-ed0115d4eb17ab0eb5644fcf-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fcae2565ce4d1ed7240231932dec115a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/659/oleg578" class="user-moderator-N"><span itemprop="name">Oleg</span></a>        </span>
+        <br>
+
+        <span class="karma">8.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6513" href="#C6513">
+                <time itemprop="dateCreated" datetime="2014-03-24T12:53:33-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Maybe.</p>
+<p>But I don't need view render, when I need JSON response.
+And Phalcon give me direct access to Volt Compiler.
+So I get the result quickly. Without unnecessary layer.
+This is not right, maybe.
+I can't open code. but it have only a few rows :)
+However, it has greater speed. :)</p>
+<p>I like Phalcon, because I can always have a coding at a low level, if need. And make my code faster.
+I waited Phalcon a long time :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6513" data-cf-modified-ed0115d4eb17ab0eb5644fcf-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6513" data-cf-modified-ed0115d4eb17ab0eb5644fcf-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/0c158e1bbed229360474402b43ad2cd8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1330/HraKK" class="user-moderator-N"><span itemprop="name">HraKK</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="6514" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '14</span>
+              </span><br/><a name="C6514" href="#C6514">
+                <time itemprop="dateCreated" datetime="2014-03-24T12:56:33-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><pre><code>but it have only a few rows</code></pre>
+<p>With my way your code will be more simplest and clean. </p>
+<pre><code>And make my code faster</code></pre>
+<p>This is no affect application speed but if it is affect it give a possitive result!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6514" data-cf-modified-ed0115d4eb17ab0eb5644fcf-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6514" data-cf-modified-ed0115d4eb17ab0eb5644fcf-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fcae2565ce4d1ed7240231932dec115a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/659/oleg578" class="user-moderator-N"><span itemprop="name">Oleg</span></a>        </span>
+        <br>
+
+        <span class="karma">8.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6517" href="#C6517">
+                <time itemprop="dateCreated" datetime="2014-03-24T13:23:43-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks.
+But I'll stay with my code style :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6517" data-cf-modified-ed0115d4eb17ab0eb5644fcf-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6517" data-cf-modified-ed0115d4eb17ab0eb5644fcf-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1889" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

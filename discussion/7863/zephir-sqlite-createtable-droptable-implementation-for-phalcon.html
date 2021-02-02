@@ -1,0 +1,246 @@
+---
+layout: default
+title: 'Zephir Sqlite createTable, dropTable implementation for Phalcon - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/24/show-community">Show to Community</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Zephir Sqlite createTable, dropTable implementation for Phalcon</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2638/OpenEX" class="user-moderator-N"><span itemprop="name">OpenEX</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-07-29T04:20:30-07:00">Jul '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-07-29T04:20:30-07:00">Jul '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>706</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/7d07df1c3468ad43eaeaaf58e2623676?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2638/OpenEX" class="user-moderator-N"><span itemprop="name">OpenEX</span></a></span>
+                <span class="karma">9.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C7863" href="#C7863">
+        <time class="action-date">Jul '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Introducion.
+I've recently written on the phalcon forums a topic remembering createTable for SQLite and pasting there my initial code for dropColumn implementation for this db engine. I also mentioned there an important thing, that normally you cannot drop column in SQLite you must use a workaround (read there please; thus dropColumn for SQLite must always be flawed, especially with big data in a particular table)
+All relevant information and (a )?link[s]{0,1} :) can be found here:
+<a href="https://forum.phalcon.io/discussion/7835/sqlite-dropcolumn-implementation-+-remembering-createtable">https://forum.phalcon.io/discussion/7835/sqlite-dropcolumn-implementation-+-remembering-createtable</a></p>
+<p>The point:
+I would like to introduce a <strong>Zephir</strong> example of an initial implementation of both createTable and dropColumn methods/functionality unavailable either in Phalcon or SQLite engine.
+This worked for me initially so you can test it, suggest any improvements (limited column types are now supported and schemas altogether not). </p>
+<p>And the question is <strong>could it be implemented in one of the next releases of Phalcon framework?</strong></p>
+<pre><code class="language-php">namespace Zmanager\Phalcon\Db\Adapter\Pdo;
+
+class Sqliteextended extends \Phalcon\Db\Adapter\Pdo\Sqlite {
+
+     public function createTable(string tableName, string schemaName, array definition) {
+
+        string createTableQuery,
+                  name,
+                  type,
+                  primary,
+                  notNull,
+                  autoIncrement,
+                  colon;
+        array numberCapableColumns;
+        var columnObj;          
+        int countdefinitioncolumns, i;
+
+        let countdefinitioncolumns = count(definition["columns"]) - 1;
+        let createTableQuery="CREATE TABLE ".tableName." (";
+
+        for i in range(0, countdefinitioncolumns) {
+
+                let columnObj=definition["columns"][i];    
+                let name=(string) columnObj-&gt;getName();
+                let numberCapableColumns=[\Phalcon\Db\Column::TYPE_INTEGER, \Phalcon\Db\Column::TYPE_VARCHAR];
+
+                switch (columnObj-&gt;getType()) {
+                    case \Phalcon\Db\Column::TYPE_INTEGER: let type="INT"; break;
+                    case \Phalcon\Db\Column::TYPE_VARCHAR: let type="VARCHAR"; break; 
+                    case \Phalcon\Db\Column::TYPE_TEXT: let type="TEXT"; break;
+                }
+
+                if columnObj-&gt;isPrimary() == true {let primary = "PRIMARY KEY";} else {let primary = "";}
+
+                if columnObj-&gt;isNotNull() == true {let notNull = "NOT NULL";} else {let notNull = "";}
+
+                if columnObj-&gt;isAutoIncrement() == true {let autoIncrement = "AUTOINCREMENT";} else {let autoIncrement = "";}
+
+                if i&lt;countdefinitioncolumns {let colon = ",";} else {let colon = "";}
+
+                //http://www.sqlite.org/faq.html#q1
+                //Short answer: A column declared INTEGER PRIMARY KEY will autoincrement.
+                //INTEGER(10) is wrong INTEGER IS WITHOUT NUMBER AND ONLY THIS CAN BE AUTOINCREMENTED
+                //AUTOINCREMENT CAN BE ADDED
+                //INT(10) is ok
+                if columnObj-&gt;isPrimary()==true {
+                    if type=="INT" {
+                        if columnObj-&gt;isAutoIncrement()==true {
+                              let type="INTEGER";
+                        }
+                    }    
+                }
+
+                if in_array(columnObj-&gt;getType(), numberCapableColumns)==true {
+                        if columnObj-&gt;getSize()&gt;0 {
+                            if type!="INTEGER" {
+                                    let type=type."(".columnObj-&gt;getSize().")";
+                            }            
+                        }            
+                } 
+
+                let createTableQuery=createTableQuery."\n".name." ".type." ".primary." ".autoIncrement." ".notNull." ".colon."\n";
+        }
+
+        let createTableQuery=createTableQuery."\n);";
+
+        return this-&gt;execute(createTableQuery);
+
+    }
+
+    public function dropColumn(string tableName, string schemaName, string columnName) {
+
+        //
+        //    from sqlite page http://www.sqlite.org/faq.html#q11 - and this is implemented below
+
+        //    BEGIN TRANSACTION;
+        //    CREATE TEMPORARY TABLE t1_backup(a,b);
+        //    INSERT INTO t1_backup SELECT a,b FROM t1;
+        //    DROP TABLE t1;
+        //    CREATE TABLE t1(a,b);
+        //    INSERT INTO t1 SELECT a,b FROM t1_backup;
+        //    DROP TABLE t1_backup;
+        //    COMMIT;
+        //
+
+        this-&gt;begin();
+        string aquery;
+        var columnsTemp, columnsTemp2;
+        array currentStateColumnList,
+                 newColumnNames;
+        int countdefinitioncolumns, k, f;
+
+        let currentStateColumnList=[];
+        let columnsTemp= this-&gt;describeColumns(tableName, false);
+        let countdefinitioncolumns=count(columnsTemp) - 1;
+
+        for k in range(0, countdefinitioncolumns) {
+                let currentStateColumnList[k]=columnsTemp[k]-&gt;getName();
+        }
+
+        for k in range(0, countdefinitioncolumns) {
+            if (columnsTemp[k]-&gt;getName()==columnName) {
+                array_splice(columnsTemp, k, 1);
+                break;
+            }
+        }
+
+        let columnsTemp2=["columns": columnsTemp];
+        let countdefinitioncolumns =count(columnsTemp2["columns"]) - 1;
+
+        let aquery="\nCREATE TEMPORARY TABLE ".tableName."_backup(".implode(",", currentStateColumnList).");\nINSERT INTO ".tableName."_backup SELECT ".implode(",", currentStateColumnList)." FROM ".tableName.";\nDROP TABLE ".tableName.";";
+        this-&gt;execute(aquery);
+
+        this-&gt;createTable(tableName, "", columnsTemp2);
+
+        let newColumnNames=[];
+        for f in range(0, countdefinitioncolumns) {
+               let newColumnNames[f]=columnsTemp2["columns"][f]-&gt;getName();
+        }
+
+        this-&gt;execute("\nINSERT INTO ".tableName." SELECT ".implode(",", newColumnNames)." FROM ".tableName."_backup;\n");
+        this-&gt;execute("\nDROP TABLE ".tableName."_backup;\n");
+        this-&gt;commit();
+
+    }
+
+}</code></pre>
+<p>By the way Zephir is not that difficult if as a Zephir newbie i was able to do this PHP translation into Zephir. It took me about 4 hours with little knowledge.
+(edited updated code)</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-a2b34eb9d0d0977a0a65b785-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-a2b34eb9d0d0977a0a65b785-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/7d07df1c3468ad43eaeaaf58e2623676?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2638/OpenEX" class="user-moderator-N"><span itemprop="name">OpenEX</span></a>        </span>
+        <br>
+
+        <span class="karma">9.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="21445" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '15</span>
+              </span><br/><a name="C21445" href="#C21445">
+                <time itemprop="dateCreated" datetime="2015-08-01T08:02:50-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I did some performance test with the below code - i don't see any relevant difference between Zephir and PHP implementations partly because of i suppose sqlite functions doing their quite long job on a database.
+10 php 5, zephir 7
+100   php 43, zephir 41
+1000 php 420, zephir 431</p>
+<p>code used for my primitive testing.</p>
+<pre><code class="language-php">        // zephir or not zephir: $connection=$connectionZ;
+        if ($connection-&gt;tableExists("table_name_testa")) $connection-&gt;dropTable("table_name_testa");
+
+        $timeone=time();
+        for ($a=0;$a&lt;1000;$a++) {
+                     $connection-&gt;createTable("table_name_testa",$app_tables[0][1],$app_tables[0][2]);
+                     $connection-&gt;dropColumn("table_name_testa", null, "readable_name");
+                     $connection-&gt;dropTable("table_name_testa");
+        }
+        $timetwo=time();
+        echo "&lt;h2&gt;AA".($timetwo-$timeone)."BB&lt;/h2&gt;";ob_flush();
+</code></pre>
+<p>By the way &quot;zephir -fstatic-type-inference -flocal-context-pass&quot; didn't work from me Exception: Unrecognized action &quot;-flocal-context-pass&quot; so it is without optimisations compiled</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21445" data-cf-modified-a2b34eb9d0d0977a0a65b785-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21445" data-cf-modified-a2b34eb9d0d0977a0a65b785-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="7863" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

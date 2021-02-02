@@ -1,0 +1,278 @@
+---
+layout: default
+title: 'Save related records onCreate in transaction-like way - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Save related records onCreate in transaction-like way</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/66/arantir" class="user-moderator-N"><span itemprop="name">arantir</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-02-25T15:09:06-07:00">Feb '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-02-25T15:09:06-07:00">Feb '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Feb '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1330</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">3</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/0a4893b2103244c9dfdb6b83dd334d78?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/66/arantir" class="user-moderator-N"><span itemprop="name">arantir</span></a></span>
+                <span class="karma">32.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C81" href="#C81">
+        <time class="action-date">Feb '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have a related has-many table. And there is a record needed to be created for any new record for the main table.
+As I read, this is the transaction-like way:</p>
+<pre><code class="language-php">&lt;?php
+$acc = new Account();
+$acc-&gt;login = 'blablabla';
+$data = new Data();
+$data-&gt;var = 'somevar';
+$data-&gt;value = someval'';
+$acc-&gt;data = [$data]; // php 5.4 array syntax
+$acc-&gt;create();</code></pre>
+<p>and it works.</p>
+<p>But why does don't work this?</p>
+<pre><code class="language-php">&lt;?php
+class Account extends Phalcon\Mvc\Model
+{
+// ...
+    public function beforeCreate()
+    // public function beforeValidationOnCreate() // -- also have been tried
+    {
+        $data = new Data();
+        $data-&gt;var = 'somevar';
+        $data-&gt;value = someval'';
+        $this-&gt;data = [$data]; // php 5.4 array syntax
+    }</code></pre>
+<p>There is just nothing saved to the 'data' table. Logically I expected it would work like the fist one.</p>
+<p>There just must always be a such record creation for any account creation and It has to be saved in transaction-like way for safety. Because the data is calculated from an account's fields, it is much easier to create an account like this &quot;$account-&gt;create($_POST)&quot; and data would be created automatically.</p>
+<p>Seems like I just doing something wrong, because the second way is really very useful and simple to has the right to exist.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-9ebf994d852ce3fd1619f2e0-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-9ebf994d852ce3fd1619f2e0-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">3</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C348" href="#C348">
+                <time itemprop="dateCreated" datetime="2013-02-25T16:20:36-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>A bit lengthly reason. Related records can't be added to the model in the before* callbacks, this happens because the ORM doesn't know if the record exists or not in order to call beforeCreate or beforeUpdate.</p>
+<p>A related record could be used to fill the primary key, consider the following example:</p>
+<pre><code class="language-sql">CREATE TABLE comments (
+  uuid char(36) NOT NULL,
+  posts_id int(10) unsigned NOT NULL,
+  comment text,
+  PRIMARY KEY (uuid,posts_id)
+);
+CREATE TABLE posts (
+  id int(10) unsigned NOT NULL AUTO_INCREMENT,
+  title varchar(64) NOT NULL,
+  content text NOT NULL,
+  PRIMARY KEY (id)
+);</code></pre>
+<p>The posts_id field is part of the primary key in the table &quot;comments&quot;. This field is filled with an auto_numeric field generated right after save a &quot;posts&quot; row.</p>
+<pre><code class="language-php">$post = new Posts();
+$post-&gt;title = 'Some cool title';
+$post-&gt;content = 'This is the content';
+
+$comment-&gt;uuid = SomeUUIdGenerator();
+$comment-&gt;comment = 'Hey, this is a comment';
+$comment-&gt;post = $post;
+$comment-&gt;save();</code></pre>
+<p>The $post must be saved first to fill the primary key of $comment (posts_id). But $comment is the parent save(), so $comment-&gt;save() must take a decision, what should I call? beforeCreate or beforeUpdate? The unique way to know that is having completely filled its primary key (both uuid and posts_id), so the ORM must know if the record exists to call beforeUpdate or beforeCreate with confidence/consistency.</p>
+<p>When $comment-&gt;save() is called the ORM designs a plan to save the parent record + its related records in the correct order, in a safe way, calling the right callbacks, notifying the right behaviors and according to the type of relations used, so changing that plan on the run is not allowed.</p>
+<p>Here, you can add a method that adds the $post before save() is called:</p>
+<pre><code class="language-php">&lt;?php
+
+class Comments extends Phalcon\Mvc\Model
+{
+     public function prependPost()
+     {
+         $post = new Posts();
+         $post-&gt;title = 'Some cool title';
+         $post-&gt;content = 'This is the content';
+         $this-&gt;post = $post;
+     }
+}</code></pre>
+<p>Then call it before save:</p>
+<pre><code class="language-php">$comment-&gt;uuid = SomeUUIdGenerator();
+$comment-&gt;comment = 'Hey, this is a comment';
+$comment-&gt;prependPost();
+$comment-&gt;save();</code></pre>
+<p>Or override the save method to assign the related record:</p>
+<pre><code class="language-php">&lt;?php
+
+class Comments extends Phalcon\Mvc\Model
+{
+     public function save($data=null)
+     {
+           if (!$this-&gt;posts_id) {
+                $post-&gt;title = 'Some cool title';
+                $post-&gt;content = 'This is the content';
+                $this-&gt;post = $post;
+           }
+           return parent::save($data);
+     }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="348" data-cf-modified-9ebf994d852ce3fd1619f2e0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="348" data-cf-modified-9ebf994d852ce3fd1619f2e0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/0a4893b2103244c9dfdb6b83dd334d78?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/66/arantir" class="user-moderator-N"><span itemprop="name">arantir</span></a>        </span>
+        <br>
+
+        <span class="karma">32.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C349" href="#C349">
+                <time itemprop="dateCreated" datetime="2013-02-25T17:11:42-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanлs, was very cognitive in terms of understanding framework work.
+Think, overriding may become solution.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="349" data-cf-modified-9ebf994d852ce3fd1619f2e0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="349" data-cf-modified-9ebf994d852ce3fd1619f2e0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/37aa8b18ff5b5da54bd3072474ae90da?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4849/Zaszczyk" class="user-moderator-N"><span itemprop="name">Mateusz Błaszczyk</span></a>        </span>
+        <br>
+
+        <span class="karma">14.1k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C348"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Phalcon                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C30199" href="#C30199">
+                <time itemprop="dateCreated" datetime="2016-02-23T10:14:37-07:00" class="action-date">Feb '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>That reason should be described in documentation.</p>
+<blockquote>
+<p>A bit lengthly reason. Related records can't be added to the model in the before* callbacks, this happens because the ORM doesn't know if the record exists or not in order to call beforeCreate or beforeUpdate.</p>
+<p>A related record could be used to fill the primary key, consider the following example:</p>
+<pre><code class="language-sql">CREATE TABLE comments (
+ uuid char(36) NOT NULL,
+ posts_id int(10) unsigned NOT NULL,
+ comment text,
+ PRIMARY KEY (uuid,posts_id)
+);
+CREATE TABLE posts (
+ id int(10) unsigned NOT NULL AUTO_INCREMENT,
+ title varchar(64) NOT NULL,
+ content text NOT NULL,
+ PRIMARY KEY (id)
+);</code></pre>
+<p>The posts_id field is part of the primary key in the table &quot;comments&quot;. This field is filled with an auto_numeric field generated right after save a &quot;posts&quot; row.</p>
+<pre><code class="language-php">$post = new Posts();
+$post-&gt;title = 'Some cool title';
+$post-&gt;content = 'This is the content';
+
+$comment-&gt;uuid = SomeUUIdGenerator();
+$comment-&gt;comment = 'Hey, this is a comment';
+$comment-&gt;post = $post;
+$comment-&gt;save();</code></pre>
+<p>The $post must be saved first to fill the primary key of $comment (posts_id). But $comment is the parent save(), so $comment-&gt;save() must take a decision, what should I call? beforeCreate or beforeUpdate? The unique way to know that is having completely filled its primary key (both uuid and posts_id), so the ORM must know if the record exists to call beforeUpdate or beforeCreate with confidence/consistency.</p>
+<p>When $comment-&gt;save() is called the ORM designs a plan to save the parent record + its related records in the correct order, in a safe way, calling the right callbacks, notifying the right behaviors and according to the type of relations used, so changing that plan on the run is not allowed.</p>
+<p>Here, you can add a method that adds the $post before save() is called:</p>
+<pre><code class="language-php">&lt;?php
+
+class Comments extends Phalcon\Mvc\Model
+{
+    public function prependPost()
+    {
+        $post = new Posts();
+        $post-&gt;title = 'Some cool title';
+        $post-&gt;content = 'This is the content';
+        $this-&gt;post = $post;
+    }
+}</code></pre>
+<p>Then call it before save:</p>
+<pre><code class="language-php">$comment-&gt;uuid = SomeUUIdGenerator();
+$comment-&gt;comment = 'Hey, this is a comment';
+$comment-&gt;prependPost();
+$comment-&gt;save();</code></pre>
+<p>Or override the save method to assign the related record:</p>
+<pre><code class="language-php">&lt;?php
+
+class Comments extends Phalcon\Mvc\Model
+{
+    public function save($data=null)
+    {
+          if (!$this-&gt;posts_id) {
+               $post-&gt;title = 'Some cool title';
+               $post-&gt;content = 'This is the content';
+               $this-&gt;post = $post;
+          }
+          return parent::save($data);
+    }
+}</code></pre>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="30199" data-cf-modified-9ebf994d852ce3fd1619f2e0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="30199" data-cf-modified-9ebf994d852ce3fd1619f2e0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="81" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,183 @@
+---
+layout: default
+title: 'Query builder &quot;alias&quot; parameter - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Query builder &quot;alias&quot; parameter</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10703/Xerphis" class="user-moderator-N"><span itemprop="name">Xerphis</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-03-19T04:26:14-07:00">Mar '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-03-19T04:26:14-07:00">Mar '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>398</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/deac7a61ebe061bfc2884973b0e8280c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10703/Xerphis" class="user-moderator-N"><span itemprop="name">Xerphis</span></a></span>
+                <span class="karma">3.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17956" href="#C17956">
+        <time class="action-date">Mar '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi.</p>
+<p>Let us assume a simple situation in which, for example, we want get &quot;articles&quot; by referring to the model and using the built-in &quot;find&quot; method. Morover, for the &quot;articles&quot; we would like to include the model of the &quot;authors&quot; of the article.</p>
+<p>In this situation, the code would look like:</p>
+<pre><code class="language-php">$articeles = \Models\ArticlesModel::find([
+    'joins' =&gt; [
+        'Models\Authors',
+        'author.id = [Models\Articles].fk_author',
+        'author',
+        'inner'
+    ],
+    'columns' =&gt; [
+        '[Models\Correspondences].*',
+        'author.*'
+    ],
+]);</code></pre>
+<p>I understand that we can also use the &quot;createBuilder&quot; method from the shared &quot;modelsManager&quot; service and use the parameter &quot;models&quot;, but then we do not refer to the selected model class. I would still like to use the model class and the &quot;find&quot; method.</p>
+<p>Unfortunately, in this situation, the main model we refer to appears in the object  &quot;models\Articles&quot;. Object of result shows:</p>
+<pre><code>Object Phalcon\Mvc\Model\Row (
+-&gt;models\Articles (public) = Object Models\Articles extends Abstr\Models\AbstractArticles (
+     Models\Articles methods: (98) (
+       -&gt;initialize();
+       -&gt;validation();
+       -&gt;setId();
+      ...
+ -&gt;author = Object Models\Authors extends Abstr\Models\AbstractAuthors (
+     Models\Authors methods: (98) (
+       -&gt;initialize();
+       -&gt;validation();
+       -&gt;setId();
+      ...
+ )</code></pre>
+<p>It is not easy to appeal to him because it would be necessary to use:</p>
+<pre><code class="language-php">$articles-&gt;getFirst()-&gt;{'models\Articles'};</code></pre>
+<p>In addition, you probably can not refer from the Volt template in this way.</p>
+<p>In this situation, it would help to add the &quot;alias&quot; parameter to the builder. This parameter would be used as an alias for the main model to which we refer. In this way, it would replace &quot;models\Articles&quot; with the definition of &quot;articles&quot;. For example:</p>
+<pre><code class="language-php">$articeles = \Models\ArticlesModel::find([
+    'alias' =&gt; 'article',
+    'joins' =&gt; [
+        'Models\Authors',
+        'author.id = [Models\Articles].fk_author',
+        'author',
+        'inner'
+    ]
+    ...
+]);</code></pre>
+<p>Result:</p>
+<pre><code> Object Phalcon\Mvc\Model\Row (
+ -&gt;article = Object Models\Articles extends Abstr\Models\AbstractArticles (
+     Models\Articles methods: (98) (
+       -&gt;initialize();
+       -&gt;validation();
+       -&gt;setId();
+      ...
+ -&gt;author = Object Models\Authors extends Abstr\Models\AbstractAuthors (
+     Models\Authors methods: (98) (
+       -&gt;initialize();
+       -&gt;validation();
+       -&gt;setId();
+      ...
+ )</code></pre>
+<p>I was able to overwrite the built-in method &quot;getPreparedQuery&quot;. Works as it should. The zephir method would look like this:</p>
+<pre><code class="language-zep">
+    /**
+     * shared prepare query logic for find and findFirst method
+     */
+    private static function getPreparedQuery(var params, var limit = null) -&gt; &lt;Query&gt; {
+        var builder, bindParams, bindTypes, transaction, cache, manager, query, dependencyInjector;
+
+        let dependencyInjector = Di::getDefault();
+        let manager = &lt;ManagerInterface&gt; dependencyInjector-&gt;getShared("modelsManager");
+
+        /**
+         * Builds a query with the passed parameters
+         */
+        let builder = manager-&gt;createBuilder(params);
+
+        if isset params["alias"] {
+            builder-&gt;from([params["alias"] =&gt; get_called_class()]);
+        } else {
+            builder-&gt;from(get_called_class());
+        }
+
+        if limit != null {
+            builder-&gt;limit(limit);
+        }
+
+        let query = builder-&gt;getQuery();
+
+        ...</code></pre>
+<p>Please consider the proposal.</p>
+<p>Regards
+Przemyslaw</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-b4bcbbc81ffcda5a972633e5-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-b4bcbbc81ffcda5a972633e5-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C54430" href="#C54430">
+                <time itemprop="dateCreated" datetime="2018-03-19T05:04:49-07:00" class="action-date">Mar '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi it's a good idea, <a href="https://github.com/phalcon/cphalcon/issues/new">create NPR</a> and share your idea in github repo</p>
+<p>Good luck</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="54430" data-cf-modified-b4bcbbc81ffcda5a972633e5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="54430" data-cf-modified-b4bcbbc81ffcda5a972633e5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17956" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

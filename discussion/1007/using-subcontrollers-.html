@@ -1,0 +1,206 @@
+---
+layout: default
+title: 'Using SubControllers? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Using SubControllers?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/602/Raistlfiren" class="user-moderator-N"><span itemprop="name">Raistlfiren</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-10-09T21:29:09-07:00">Oct '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-10-09T21:29:09-07:00">Oct '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '13</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1149</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">2</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/c020e5a487b89dd01f30cbf8c3b67c67?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/602/Raistlfiren" class="user-moderator-N"><span itemprop="name">Raistlfiren</span></a></span>
+                <span class="karma">4.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1007" href="#C1007">
+        <time class="action-date">Oct '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>I am trying to access a simple subcontroller as follows: /modules/controller/action... I have seen the github example: <a href="https://github.com/phalcon/mvc/tree/master/simple-subcontrollers">https://github.com/phalcon/mvc/tree/master/simple-subcontrollers</a> and I have attempted to follow it to a T, but I still get handler class cannot be loaded. It is even more weid because I am able to access it at work under my vagrant environment, but under my Gentoo environment at home it fails to load. I have everything setup correctly, that I know of, but I have no idea where the problem may lie. I am running PHP 5.3.10 at work and PHP 5.5.* on my Gentoo machine. I attempted to make sure the configs were as similar as possible, but still no luck! I ran into a similar issue with attempting to load the PHP DebugBar under the Phalcon loader. That didn't work so I used composer and it worked just fine. </p>
+<p>Here is the relevant code: </p>
+<p>.htaccess</p>
+<pre><code class="language-php">RewriteBase /~tyler/mvc/
+
+&lt;IfModule mod_rewrite.c&gt;
+    RewriteEngine On
+    RewriteRule ^$ public/ [L]
+    RewriteRule (.*) public/$1 [L]
+&lt;/IfModule&gt;</code></pre>
+<pre><code class="language-php">RewriteBase /~tyler/mvc/
+
+AddDefaultCharset UTF-8
+
+&lt;IfModule mod_rewrite.c&gt;
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^(.*)$ index.php?_url=/$1 [QSA,L]
+&lt;/IfModule&gt;
+</code></pre>
+<p>Routers</p>
+<pre><code class="language-php">$router-&gt;add('/modules/:controller/:action/:params', array(
+    'namespace' =&gt; 'MyApp\Controllers\Modules',
+    'controller' =&gt; 1,
+    'action' =&gt; 2,
+    'params' =&gt; 3,
+));
+
+$router-&gt;add('/modules/:controller', array(
+    'namespace' =&gt; 'MyApp\Controllers\Modules',
+    'controller' =&gt; 1
+));
+
+$router-&gt;add('/modules/:controller/:action', array(
+    'namespace' =&gt; 'MyApp\Controllers\Modules',
+    'controller' =&gt; 1,
+    'action' =&gt; 2
+));</code></pre>
+<pre><code class="language-php">/**
+* Dispatcher use a default namespace
+*/
+$di-&gt;set('dispatcher', function() {
+    $dispatcher = new Dispatcher();
+    $dispatcher-&gt;setDefaultNamespace('MyApp\Controllers');
+    return $dispatcher;
+});</code></pre>
+<pre><code class="language-php">
+&lt;?php
+
+namespace MyApp\Controllers\Modules;
+
+use Phalcon\Mvc\Controller,
+    Phalcon\Mvc\Dispatcher;
+
+class ControllerBase extends Controller
+{
+    //Append software title to the title of each webpage
+    public function initialize()
+    {
+        $this-&gt;tag-&gt;setTitle(' - ' . $this-&gt;config-&gt;application-&gt;softwareTitle);
+    }
+
+    public function beforeExecuteRoute(Dispatcher $dispatcher)
+    {
+        if (!$this-&gt;user-&gt;id){
+            if ($dispatcher-&gt;getControllerName() != 'session') {
+                return $this-&gt;response-&gt;redirect('login');
+            }
+        }
+    }
+
+}
+
+&lt;?php
+
+namespace MyApp\Controllers\Modules;
+
+use Phalcon\Mvc\Controller,
+    Phalcon\Mvc\View;
+
+class TestController extends ControllerBase
+{
+    public function testAction()
+    {
+       echo 'Hello';
+
+    }
+
+}</code></pre>
+<p>Thanks for any help!!!! </p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-3bda0fd9524564d99c6687ae-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-3bda0fd9524564d99c6687ae-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c020e5a487b89dd01f30cbf8c3b67c67?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/602/Raistlfiren" class="user-moderator-N"><span itemprop="name">Raistlfiren</span></a>        </span>
+        <br>
+
+        <span class="karma">4.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3780" href="#C3780">
+                <time itemprop="dateCreated" datetime="2013-10-09T21:42:18-07:00" class="action-date">Oct '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Nevermind I solved it of course after many hours of fiddling with it. </p>
+<p>Added to the config file:</p>
+<pre><code class="language-php">'controllersmDir'   =&gt; __DIR__ . '/../controllers/modules/',</code></pre>
+<p>And to the loader:</p>
+<pre><code class="language-php">'MyApp\Controllers\Modules' =&gt; $config-&gt;application-&gt;controllersmDir,</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3780" data-cf-modified-3bda0fd9524564d99c6687ae-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3780" data-cf-modified-3bda0fd9524564d99c6687ae-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1eb2415bda000b22fd1f801bb9e8c003?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2/niden" class="user-moderator-Y"><span itemprop="name">Nikolaos Dimopoulos</span></a>        </span>
+        <br>
+
+        <span class="karma">39.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3817" href="#C3817">
+                <time itemprop="dateCreated" datetime="2013-10-12T08:48:16-07:00" class="action-date">Oct '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Great!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3817" data-cf-modified-3bda0fd9524564d99c6687ae-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3817" data-cf-modified-3bda0fd9524564d99c6687ae-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1007" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

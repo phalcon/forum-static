@@ -1,0 +1,119 @@
+---
+layout: default
+title: 'Best way to check if a controller exists in a custom route matching - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Best way to check if a controller exists in a custom route matching</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/87/noobiwan" class="user-moderator-N"><span itemprop="name">Lewiz</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-06-30T13:34:23-07:00">Jun '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-06-30T13:34:23-07:00">Jun '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1311</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/f995126f75088cac3803b91febd711fb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/87/noobiwan" class="user-moderator-N"><span itemprop="name">Lewiz</span></a></span>
+                <span class="karma">32.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C7367" href="#C7367">
+        <time class="action-date">Jun '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi guys,</p>
+<p>I want to achieve the following behaviour:</p>
+<ul>
+<li>Use the default configuration of Phalcon router</li>
+<li>Allow custom routes to be set in the database</li>
+<li>Custom routes and the default route can have the same pattern (conflict)</li>
+<li>Custom routes set in the database can't match a controller name (to avoid conflict)</li>
+<li>Default routes have priority </li>
+</ul>
+<p>I want it to be as performant as possible since almost all hits will pass through this route. I want to avoid unecessary filesystem checks and database trips. I was looking for a method within Phalcon to check if a controller exists, but I couldn't find one so I decided to use is_file. </p>
+<p>Here is my implementation. If the route matches an existing controller, I simply fail the route and let Phalcon use the default route resolution. If a controller doesn't exist then I redirect to a custom controller (Profile) that will eventually check if the route is set in the database.</p>
+<pre><code class="language-php">$router-&gt;add('/([a-z\d.]{6,})/:params', [
+    "controller" =&gt; "profile",
+    "action" =&gt; "index",
+    "username" =&gt; 1,
+    "params" =&gt; 2
+])-&gt;beforeMatch(function($uri, $route) use ($di) {
+    if (preg_match($route-&gt;getCompiledPattern(), $uri, $match)){
+        $username = $match[1];
+        $controller = ucfirst(strtolower($username));
+
+        if(is_file($di['config']-&gt;application-&gt;controllersDir . $controller . 'Controller.php')){
+            return false;
+        }
+    }
+
+    return true;
+});</code></pre>
+<p>Any thoughts? Suggestions? </p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-9fcfc63c4f6a4919f8e967c4-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-9fcfc63c4f6a4919f8e967c4-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e00a6fdd3e722135512e013b7f1e9693?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a>        </span>
+        <br>
+
+        <span class="karma">17.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C20173" href="#C20173">
+                <time itemprop="dateCreated" datetime="2015-07-02T23:04:49-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>My first quesetion is if you're looking for performance, why are you handling routes through a database?  That seems counter-productive.  If you're looking for performance there wouldn't be any routing handled outside of Phalcon, or whatever framework you're using.  Yes, the models would access your database and if that's what you're talking about then I think its &quot;easier&quot; to create all custom routes and then tweak for performance from there.  That's what I'm doing, anyway...  No need to make your app way more complicated than it needs to be for what might be not much of a performance increase.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="20173" data-cf-modified-9fcfc63c4f6a4919f8e967c4-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="20173" data-cf-modified-9fcfc63c4f6a4919f8e967c4-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="7367" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

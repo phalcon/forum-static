@@ -1,0 +1,258 @@
+---
+layout: default
+title: 'Disable saving of related records - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Disable saving of related records</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3234/phillipsnick" class="user-moderator-N"><span itemprop="name">Nick Phillips</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-02-21T11:39:49-07:00">Feb '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-02-21T11:39:49-07:00">Feb '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>853</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/b0b860fee2cf3e34d05f1eba74ab946a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3234/phillipsnick" class="user-moderator-N"><span itemprop="name">Nick Phillips</span></a></span>
+                <span class="karma">1.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C5851" href="#C5851">
+        <time class="action-date">Feb '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi</p>
+<p>Having a few issues with the ORM executing unnessary queries which I can't find a way to disable. I'd much rather explicitly call save on models than have the ORM try do it's magic with certian relations.</p>
+<p>Here is an example I have created in its simplest form, not actually tested this code, it's more to explain my problem.</p>
+<p>Models:</p>
+<pre><code class="language-php">// User
+class User extends Model
+{
+    public $userId;
+    public $countryId;
+    public $email;
+    public $createdAt;
+    public $updatedAt;
+
+    public function initialize()
+    {
+        $this-&gt;setSource('users');
+        $this-&gt;useDynamicUpdate(true);
+
+        $this-&gt;hasOne('countryId', 'Country', 'countryId', [
+            'alias' =&gt; 'country'
+        ]);
+    }
+
+    public function beforeValidationOnCreate()
+    {
+        $this-&gt;createdAt = date('Y-m-d H:i:s');
+    }
+
+    public function beforeValidationOnUpdate()
+    {
+        $this-&gt;updatedAt = date('Y-m-d H:i:s');
+    }
+}
+
+// Country
+class Country extends Model
+{
+    public $countryId;
+    public $name;
+    public $createdAt;
+    public $updatedAt;
+
+    public function initialize()
+    {
+        $this-&gt;setSource('users');
+        $this-&gt;useDynamicUpdate(true);
+    }
+
+    public function beforeValidationOnCreate()
+    {
+        $this-&gt;createdAt = date('Y-m-d H:i:s');
+    }
+
+    public function beforeValidationOnUpdate()
+    {
+        $this-&gt;updatedAt = date('Y-m-d H:i:s');
+    }
+}</code></pre>
+<p>Code to create the unnessary update.</p>
+<pre><code class="language-php">$user = User::findFirstByEmail('<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="5c32353f371c39243d312c3039723f3331">[email&#160;protected]</a>');
+var_dump($user-&gt;country);
+
+$user-&gt;email = '<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="0e60676d654e7b7e6a6f7a6b6a206d6163">[email&#160;protected]</a>';
+$user-&gt;save();</code></pre>
+<p>This will result in the following two queries (ignoring the select).</p>
+<pre><code class="language-sql">UPDATE `users` SET `email` = '<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="96f8fff5fdd6e3e6f2f7e2f3f2b8f5f9fb">[email&#160;protected]</a>', `updatedAt` = '2015-02-21 18:24:07' WHERE `userId` = '1'
+UPDATE `countries` SET `updatedAt` = '2015-02-21 18:24:07' WHERE `countryId` = '1'</code></pre>
+<p>I have played around with the 'action' paramater on the relation passing constants from Phalcon\Mvc\Model\Relation but no change.</p>
+<p>Any suggestions? :)</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-1dfac64dc33b18d820e15276-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-1dfac64dc33b18d820e15276-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9a998e084495cefe223e97ff0bfe2d8b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3050/7thcubic" class="user-moderator-N"><span itemprop="name">7thcubic</span></a>        </span>
+        <br>
+
+        <span class="karma">2.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16110" href="#C16110">
+                <time itemprop="dateCreated" datetime="2015-02-23T11:04:13-07:00" class="action-date">Feb '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>the before validation on update calls is handled before the save. so i am pretty sure thats why it changes =d</p>
+<p>For the country model though, updated and created is useless? since country list is pretty much supposed to be static, and unless drastic changes in real world u will always have a fix number of country =d</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16110" data-cf-modified-1dfac64dc33b18d820e15276-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16110" data-cf-modified-1dfac64dc33b18d820e15276-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b0b860fee2cf3e34d05f1eba74ab946a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3234/phillipsnick" class="user-moderator-N"><span itemprop="name">Nick Phillips</span></a>        </span>
+        <br>
+
+        <span class="karma">1.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16111" href="#C16111">
+                <time itemprop="dateCreated" datetime="2015-02-23T11:07:11-07:00" class="action-date">Feb '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Country is just an example, wanted to keep it simple for my explination. </p>
+<p>There must be a way to disable saving of related records, if not that's really a huge oversight.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16111" data-cf-modified-1dfac64dc33b18d820e15276-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16111" data-cf-modified-1dfac64dc33b18d820e15276-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9a998e084495cefe223e97ff0bfe2d8b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3050/7thcubic" class="user-moderator-N"><span itemprop="name">7thcubic</span></a>        </span>
+        <br>
+
+        <span class="karma">2.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16113" href="#C16113">
+                <time itemprop="dateCreated" datetime="2015-02-23T11:45:05-07:00" class="action-date">Feb '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>one thing i know of for sure is, unless you retrieve the related records. it wont get saved.</p>
+<p>If you load model a, which is related to model b, but do not call it. by any means, $a-&gt;b or $a-&gt;getB(). b model will not be loaded into existence and it wont be saved. when you call $a-&gt;save();</p>
+<p>The very moment u access any thing from model b, a will have the related model b and thus it will go thru the normal saving route.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16113" data-cf-modified-1dfac64dc33b18d820e15276-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16113" data-cf-modified-1dfac64dc33b18d820e15276-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/69fb63c4f6819872bf0010b24194a73a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1898/hugofcampos" class="user-moderator-N"><span itemprop="name">Hugo Campos</span></a>        </span>
+        <br>
+
+        <span class="karma">909</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C30697" href="#C30697">
+                <time itemprop="dateCreated" datetime="2016-03-08T05:40:52-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This is indeed stange. </p>
+<p>I am having deadlock problems caused by this. It could have a way to disable update related.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="30697" data-cf-modified-1dfac64dc33b18d820e15276-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="30697" data-cf-modified-1dfac64dc33b18d820e15276-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/cbe2b93c8a65410fd2d5dec0f664be57?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8453/antsokol" class="user-moderator-N"><span itemprop="name">Anton Sokolov</span></a>        </span>
+        <br>
+
+        <span class="karma">723</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="46949" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '17</span>
+              </span><br/><a name="C46949" href="#C46949">
+                <time itemprop="dateCreated" datetime="2017-03-26T07:39:26-07:00" class="action-date">Mar '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>one thing i know of for sure is, unless you retrieve the related records. it wont get saved.</p>
+</blockquote>
+<p>I have the same situation in the phalcon 3.0.0.
+Update to phalcon 3.1.1
+But if I use code like this</p>
+<pre><code class="language-php">public function afterFetch()
+    {
+        // Преобразуем данные
+        $this-&gt;data = json_decode($this-&gt;data, JSON_OBJECT_AS_ARRAY);
+    }</code></pre>
+<p>then the model is considered changed.
+It is not comfortable.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="46949" data-cf-modified-1dfac64dc33b18d820e15276-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="46949" data-cf-modified-1dfac64dc33b18d820e15276-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="5851" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

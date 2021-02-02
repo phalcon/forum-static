@@ -1,0 +1,274 @@
+---
+layout: default
+title: 'Foreach vs Crazy Resultset - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Foreach vs Crazy Resultset</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/6035/hisorange" class="user-moderator-N"><span itemprop="name">Varga Zsolt</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-01-22T09:10:04-07:00">Jan '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-01-22T09:10:04-07:00">Jan '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>462</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/23da2be74a85a811fb4a9f193c0f0b06?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/6035/hisorange" class="user-moderator-N"><span itemprop="name">Varga Zsolt</span></a></span>
+                <span class="karma">1.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C15361" href="#C15361">
+        <time class="action-date">Jan '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have seen many weird bug but this one wins the prime. I cannot even define the reason or the what arounds with it. Let the code talk! :D</p>
+<p>It's started with this</p>
+<pre><code class="language-php">    $orders = OrderModel::find();
+
+    foreach ($orders as $order) {
+      $order-&gt;callSmth();
+    }
+
+    foreach ($orders as $ord) {
+      try {
+          if ( ! is_bool($ord)) {
+              $ord-&gt;callAnotherThing();
+          } else {
+              throw new Exception('It became a boolean...');
+          }
+      } catch (Exception $e) {
+          fwrite(STDOUT, 'It became a boolean!');
+      }
+    }</code></pre>
+<p>Oki, let me walk this through, the <strong>OrderModel</strong> after a simple foreach turns into a bool if I try to foreach it again; This is rather weird, but what is even more weird the unexpected result, when the <strong>$ord</strong> variable is being tested for bool, returns false, then the PHP drops an error saying I called <strong>callAnotherThing</strong> on a boolean... The model turns into boolean between the is_bool and the call, without any interaction or modification.</p>
+<p>Nope, I am not crazy, who testing the model for bool on default, just added that because the error log had an entry saying I call the fn on a bool, and this is a debuging code.</p>
+<p>But things get worse now. Today I found a code where an another result set turns into this joking madness, instead of the model turning into bool the following happens:</p>
+<pre><code class="language-php">    $stacks = StackModel::find('status != "disposed"');
+
+    foreach ($stacks as $stack) {
+        if ($stack-&gt;status == 'disposed') {
+            throw new Exception('Stack is disposed .... ' . $stack-&gt;status);
+        }
+    }</code></pre>
+<p>There is no <strong>getStatus</strong> modification on the model, if I call <code>print_r($stacks-&gt;toArray());</code> the models prints the status as <strong>stored</strong>, but then when I start to iterate it, the <strong>$status</strong> variable turns into <strong>disposed</strong>, this makes no sense, there is not even a single line of code to do that, nothing is being called, just the foreach :D</p>
+<p>No cache nor modifications on the model, I could not even turn the <strong>$ord</strong> variable into a boolean even if I try with the first fn called, no references are used nothing. The second example makes the least sense.</p>
+<p>Usualy I know where or what can cause a bug, but I never seen anything like this.</p>
+<hr />
+<p>Spec live server:</p>
+<ul>
+<li>PHP: 5.6.29 </li>
+<li>OS: Debian 8.6</li>
+<li>MySql: 5.7</li>
+<li>Phalcon: 3.0.1</li>
+</ul>
+<p>Spec dev server:</p>
+<ul>
+<li>PHP: 5.6.27</li>
+<li>OS: Debian 8.6</li>
+<li>MySql: 5.7</li>
+<li>Phalcon: 3.0.3</li>
+</ul></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-17a6e81d4bb73a9f31050f4a-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-17a6e81d4bb73a9f31050f4a-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/23da2be74a85a811fb4a9f193c0f0b06?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6035/hisorange" class="user-moderator-N"><span itemprop="name">Varga Zsolt</span></a>        </span>
+        <br>
+
+        <span class="karma">1.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C45217" href="#C45217">
+                <time itemprop="dateCreated" datetime="2017-01-22T09:13:30-07:00" class="action-date">Jan '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Forgot to mention but this is not constant, not happening with every resultset or query, it's just randomly starts to happen all around with a 100k+ line of code, the codes above worked perfectly for months now, without any update or change they started to break, and more and more problem happens day by day.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="45217" data-cf-modified-17a6e81d4bb73a9f31050f4a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="45217" data-cf-modified-17a6e81d4bb73a9f31050f4a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="45261" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '17</span>
+              </span><br/><a name="C45261" href="#C45261">
+                <time itemprop="dateCreated" datetime="2017-01-23T09:00:11-07:00" class="action-date">Jan '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I would start with checking sql what query is being made and check with raw query what it's returning. It doesn't have to be phalcon problem.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="45261" data-cf-modified-17a6e81d4bb73a9f31050f4a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="45261" data-cf-modified-17a6e81d4bb73a9f31050f4a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/23da2be74a85a811fb4a9f193c0f0b06?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6035/hisorange" class="user-moderator-N"><span itemprop="name">Varga Zsolt</span></a>        </span>
+        <br>
+
+        <span class="karma">1.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="45279" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '17</span>
+              </span><br/><a name="C45279" href="#C45279">
+                <time itemprop="dateCreated" datetime="2017-01-24T00:03:47-07:00" class="action-date">Jan '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Sadly the returning values are fine, before the iteration begins, if I call a print_r($resultSet-&gt;toArray()); I get the expected values.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="45279" data-cf-modified-17a6e81d4bb73a9f31050f4a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="45279" data-cf-modified-17a6e81d4bb73a9f31050f4a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/92baeb391922c7aba36de5d65677e683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2391/BadLuckBurt" class="user-moderator-N"><span itemprop="name">BadLuckBurt</span></a>        </span>
+        <br>
+
+        <span class="karma">2.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C45387" href="#C45387">
+                <time itemprop="dateCreated" datetime="2017-01-26T04:01:38-07:00" class="action-date">Jan '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>In your first example, what do you see when you var_dump the $ord variable after $ord-&gt;callAnotherThing fails?
+The second one is weird, does it always happen to the same record when you're iterating or is it just random?</p>
+<p>Also, what happens when you use a for($i =0;) count loop instead of foreach?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="45387" data-cf-modified-17a6e81d4bb73a9f31050f4a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="45387" data-cf-modified-17a6e81d4bb73a9f31050f4a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/23da2be74a85a811fb4a9f193c0f0b06?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6035/hisorange" class="user-moderator-N"><span itemprop="name">Varga Zsolt</span></a>        </span>
+        <br>
+
+        <span class="karma">1.4k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C45387"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/92baeb391922c7aba36de5d65677e683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        BadLuckBurt                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C45429" href="#C45429">
+                <time itemprop="dateCreated" datetime="2017-01-27T01:45:55-07:00" class="action-date">Jan '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>In the first the value turns into a false, even tho the is_bool test returns false.
+Second one happens with the &quot;same&quot; record, in terms of the last entry, but the stacks moving around fast, so happens with a different database row, it's just happens with the last entry for now.</p>
+<p>Many more weird things started to fold out with the ResultSet, now I have a point where it can't count itself, even tho it has 2 object the -&gt;count() returns with &quot;1&quot;</p>
+<blockquote>
+<p>In your first example, what do you see when you var_dump the $ord variable after $ord-&gt;callAnotherThing fails?
+The second one is weird, does it always happen to the same record when you're iterating or is it just random?</p>
+<p>Also, what happens when you use a for($i =0;) count loop instead of foreach?</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="45429" data-cf-modified-17a6e81d4bb73a9f31050f4a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="45429" data-cf-modified-17a6e81d4bb73a9f31050f4a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/92baeb391922c7aba36de5d65677e683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2391/BadLuckBurt" class="user-moderator-N"><span itemprop="name">BadLuckBurt</span></a>        </span>
+        <br>
+
+        <span class="karma">2.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C45523" href="#C45523">
+                <time itemprop="dateCreated" datetime="2017-01-30T07:40:06-07:00" class="action-date">Jan '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hm, what happens when you combine those two foreaches into one? I can't shake the feeling it has something to do with that.</p>
+<p>Do you see the same behaviour on both your dev and live environment?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="45523" data-cf-modified-17a6e81d4bb73a9f31050f4a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="45523" data-cf-modified-17a6e81d4bb73a9f31050f4a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C45525" href="#C45525">
+                <time itemprop="dateCreated" datetime="2017-01-30T08:31:05-07:00" class="action-date">Jan '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>What is your db service set up (<code>$di-&gt;set(...</code>)? It reminds me of mysql cursor misconfiguration...</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="45525" data-cf-modified-17a6e81d4bb73a9f31050f4a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="45525" data-cf-modified-17a6e81d4bb73a9f31050f4a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="15361" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

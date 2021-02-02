@@ -1,0 +1,272 @@
+---
+layout: default
+title: 'Upgrading to 3.2 (from 3.0.x) - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Upgrading to 3.2 (from 3.0.x)</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/5159/tobispace" class="user-moderator-N"><span itemprop="name">tobispace</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-06-30T03:26:01-07:00">Jun '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-06-30T03:26:01-07:00">Jun '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>478</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/6c5a7ed70304818cf1753f148f442737?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/5159/tobispace" class="user-moderator-N"><span itemprop="name">tobispace</span></a></span>
+                <span class="karma">12.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C16449" href="#C16449">
+        <time class="action-date">Jun '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello everyone,</p>
+<p>we want to upgrade our Phalcon version from 3.0.2 to 3.2.</p>
+<p>We are checking the Changelog: <a href="https://github.com/phalcon/cphalcon/blob/master/CHANGELOG.md">https://github.com/phalcon/cphalcon/blob/master/CHANGELOG.md</a></p>
+<h4>Changed fields evaluation</h4>
+<p>With the new version, <code>getChangedFields()</code> and <code>hasChanged()</code> perform the control by comparison of the type and value of the variable, unlike before, when control was performed only by value.</p>
+<p>With 3.2, we are experiencing errors on these evaluations. The errors are detected for the evaluation of boolean fields (which, in the database, are <code>TINYINT</code> fields with a value of <code>0</code> or <code>1</code>) and numeric fields (<code>INT</code>, <code>DECIMAL</code>, etc.).</p>
+<p>We tried two alternative ways to adapt our applications in order to properly handle this new behaviour. The two alternatives are based on the use of these two <code>PDO</code> connection options:</p>
+<pre><code class="language-php">$config['options'] = [
+    \Pdo::ATTR_EMULATE_PREPARES     =&gt; false,
+    \Pdo::ATTR_STRINGIFY_FETCHES    =&gt; false,
+];</code></pre>
+<ol>
+<li>
+<p><strong>Without</strong> using the options</p>
+<ul>
+<li>
+<p><code>getSnapshotData()</code> always returns all values cast as <code>string</code> (or <code>NULL</code>, of course). So, if we force all Models to always return all <code>string</code> values, we do not have any problem</p>
+</li>
+<li>However this would not be the best solution</li>
+</ul>
+</li>
+<li>
+<p><strong>Using</strong> the options</p>
+<ul>
+<li>
+<p>Doing so, we should intervene on <strong>all of our Models</strong> by <strong>modifying the getters and the setters</strong> so they always return and set the data <em>casting to the correct type</em> based on the field in the database</p>
+</li>
+<li>
+<p>We also realized that using these options causes some unexpected behaviour with <code>PDO</code> prepared statements. It appears that using the same named parameter as a multiple placeholder in the same query causes an error; we also found this StackOverflow thread: <a href="https://stackoverflow.com/questions/7603896/php-pdo-prepare-repetitive-variables">https://stackoverflow.com/questions/7603896/php-pdo-prepare-repetitive-variables</a></p>
+</li>
+<li>Are there other implications that we should take into account and which we have not yet noticed, using these two new options?</li>
+</ul>
+</li>
+</ol>
+<p>What should we do to upgrade our application? Do you have any suggestion? Is there anything else we should try to do?</p>
+<h4>Snapshots and refresh</h4>
+<p>In order to have some snapshot data on creates, we used to invoke <code>setSnapshotData()</code>.</p>
+<p>Reading the Changelog it seems that with 3.2 all Models will always have a Snapshot ready to be used after any <code>save()</code> (on both updates and creates): is that right? So we should delete all <code>setSnapshotData()</code> used before (when we used it to have snapshots on create)?</p>
+<p>Another issue that we experienced before 3.2 was the need to make a <code>refresh()</code> in order to <em>clean</em> the snapshot. However from 3.2 it appears to be an <em>automatic</em> action always performed by the <code>save()</code>.</p>
+<p>Is that right? Should we delete all our <code>refresh()</code> invocations (when we invoke the method after a <code>save()</code> to refresh the snapshot)?</p>
+<h4>Model <code>assign()</code> method</h4>
+<p>We are using <code>assign()</code> on various occasions to speed up new Model instances creation. With 3.2 we noticed that if a Model doesn't have a setter for one or more of its properties, <code>assign()</code> throws an Exception. However, we need some of our models to not make some setters available.</p>
+<p>On the Changelog we noticed that there's a new method <code>setup()</code> that appears to have exactly the same behaviour of the previous <code>assign()</code> where no exceptions were thrown if a setter was missing, thus only using properties names.</p>
+<p>Is that right? Should we use <code>setup()</code> instead of <code>assign()</code> when we're working with a Model in which some setter methods are missing?</p>
+<p>Thank you very much for your attention and precious help.</p>
+<p>Have a nice day!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-eee91fc1105d629f5fd4217b-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-eee91fc1105d629f5fd4217b-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C49273" href="#C49273">
+                <time itemprop="dateCreated" datetime="2017-07-01T11:25:04-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>That's interesting with this exception on assign. Change was only supposed to make it possible to speed up assign method because it was always using setters even it wasn't needed. About snapshot and refresh - yea you can remove it, though keep in mind that fields which are having default value in database will not get updated - I created issue beacause this'll need some discussion what to do with those.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49273" data-cf-modified-eee91fc1105d629f5fd4217b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49273" data-cf-modified-eee91fc1105d629f5fd4217b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6c5a7ed70304818cf1753f148f442737?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5159/tobispace" class="user-moderator-N"><span itemprop="name">tobispace</span></a>        </span>
+        <br>
+
+        <span class="karma">12.9k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C49273"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C49307" href="#C49307">
+                <time itemprop="dateCreated" datetime="2017-07-04T01:27:33-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>That's interesting with this exception on assign. Change was only supposed to make it possible to speed up assign method because it was always using setters even it wasn't needed. About snapshot and refresh - yea you can remove it, though keep in mind that fields which are having default value in database will not get updated - I created issue beacause this'll need some discussion what to do with those.</p>
+</blockquote>
+<p>Thank you very much. We will test which method is the best one, to remove or not to remove the refresh(). Can you provide the link to the issue you opened, please?</p>
+<p>What about the <code>getChangedFields()</code> &quot;issue&quot;? Do you have any suggestion?</p>
+<p>Thank you</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49307" data-cf-modified-eee91fc1105d629f5fd4217b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49307" data-cf-modified-eee91fc1105d629f5fd4217b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="49321" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '17</span>
+              </span><br/><a name="C49321" href="#C49321">
+                <time itemprop="dateCreated" datetime="2017-07-04T07:31:02-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Which issue? It was always using type and value i think, don't know about this change.</p>
+<p><a href="https://github.com/phalcon/cphalcon/issues/12745">https://github.com/phalcon/cphalcon/issues/12745</a> here is issue, if you have any idea how to solve it then great</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49321" data-cf-modified-eee91fc1105d629f5fd4217b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49321" data-cf-modified-eee91fc1105d629f5fd4217b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6c5a7ed70304818cf1753f148f442737?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5159/tobispace" class="user-moderator-N"><span itemprop="name">tobispace</span></a>        </span>
+        <br>
+
+        <span class="karma">12.9k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C49321"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="49323" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '17</span>
+              </span><br/><a name="C49323" href="#C49323">
+                <time itemprop="dateCreated" datetime="2017-07-04T08:25:08-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Which issue? It was always using type and value i think, don't know about this change.</p>
+</blockquote>
+<p>Wrong. We are using Phalcon 3.0.3 now. Let me explain with an example.</p>
+<p>A Model which is keeping Snapshot has a field called <code>Active</code> of type <code>TINYINT(1)</code>. Other fields inside the Model are all <code>VARCHAR</code>.</p>
+<p>At the moment, record with <code>id = 100</code> has <code>Active = 1</code>. The user <strong>doesn't change any field</strong> and saves the record, also leaving <code>Active = 1</code>.</p>
+<p>Inside <code>beforeUpdate()</code> we have a procedure that checks if some fields have changed their value using <code>getChangedFields()</code>.</p>
+<p>With 3.0.3 <code>getChangedFields()</code> returns an empty array.</p>
+<p>With 3.2.0 <code>getChangedFields()</code> returns <code>[ Active ]</code> (because the Model retreives the value as <code>int</code> but when we instantiate the Model we set the values as <code>string</code>.</p>
+<p><strong>This</strong> is the problem.</p>
+<p>Any idea why?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49323" data-cf-modified-eee91fc1105d629f5fd4217b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49323" data-cf-modified-eee91fc1105d629f5fd4217b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="49341" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '17</span>
+              </span><br/><a name="C49341" href="#C49341">
+                <time itemprop="dateCreated" datetime="2017-07-05T03:44:46-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Just send/set it as a int then? It was a bug that it wasn't checking type, now it's fixed.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49341" data-cf-modified-eee91fc1105d629f5fd4217b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49341" data-cf-modified-eee91fc1105d629f5fd4217b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6c5a7ed70304818cf1753f148f442737?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5159/tobispace" class="user-moderator-N"><span itemprop="name">tobispace</span></a>        </span>
+        <br>
+
+        <span class="karma">12.9k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C49341"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C49771" href="#C49771">
+                <time itemprop="dateCreated" datetime="2017-07-21T09:12:31-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Just send/set it as a int then? It was a bug that it wasn't checking type, now it's fixed.</p>
+</blockquote>
+<p>Ok. So we can take all our 234 Models and cast all values inside all setters and getters. At least on numeric type fields.</p>
+<p>Do you think that this will solve the problem definitively?</p>
+<p>Thank you</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49771" data-cf-modified-eee91fc1105d629f5fd4217b-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49771" data-cf-modified-eee91fc1105d629f5fd4217b-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="16449" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

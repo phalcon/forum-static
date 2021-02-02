@@ -1,0 +1,354 @@
+---
+layout: default
+title: 'How to fetch computed columns using the query builder ? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How to fetch computed columns using the query builder ?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/658/lunaticPenguin" class="user-moderator-N"><span itemprop="name">Corentin Legros</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-03-18T15:33:30-07:00">Mar '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-03-18T15:33:30-07:00">Mar '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">5</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1963</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/247904650e1dbceb017019df86ba3e74?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/658/lunaticPenguin" class="user-moderator-N"><span itemprop="name">Corentin Legros</span></a></span>
+                <span class="karma">2.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1829" href="#C1829">
+        <time class="action-date">Mar '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi there,</p>
+<p>I'm having troubles to fetch computed columns using the query builder. My concrete situtation is the following : I've an user list and I want to display in this list if the member is logged in or not. So my computation is currently based on the last activity user's. Something like :</p>
+<pre><code class="language-sql">SELECT username, (TIMESTAMPDIFF(MINUTE, TIMESTAMP(last_activity), CURRENT_TIMESTAMP()) &lt; 20) AS logged_in FROM user LIMIT 30;</code></pre>
+<p>But how can I use the query builder ? This is an important point because I've built my own model layer over the phalcon models. It allows me to fetch every columns I want in every models with automatic joins. All columns, except computed columns :(</p>
+<p>Here is the link to the referred doc : <a href="http://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model_Query_Builder.html">http://docs.phalcon.io/en/latest/api/Phalcon_Mvc_Model_Query_Builder.html</a>.
+As you can see, there is no case explained about fetching computed columns.</p>
+<p>Any idea ?</p>
+<p>Thanks in advance for your help!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-f389814c81273acb43bf62d0-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-f389814c81273acb43bf62d0-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c5015ff5abf61005cefc66fe169eb24b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/690/glydetech" class="user-moderator-N"><span itemprop="name">Andrew Clarke</span></a>        </span>
+        <br>
+
+        <span class="karma">3.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="6350" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '14</span>
+              </span><br/><a name="C6350" href="#C6350">
+                <time itemprop="dateCreated" datetime="2014-03-19T09:34:28-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Just add computed columns in the same way as regular columns:</p>
+<pre><code class="language-php">    $builder-&gt;columns(array(
+            'username',
+            'TIMESTAMPDIFF(MINUTE, TIMESTAMP(last_activity), CURRENT_TIMESTAMP()) as tsdiff'))
+        -&gt;from('user')
+        -&gt;where('tsdiff &lt; 20')
+        -&gt;limit(10);</code></pre>
+<p>I see that you're simply doing a timestamp calculation - consider just sending in a relevant where clause with prepared parameters. The exact format will depend on your field content:</p>
+<pre><code class="language-php">    $builder-&gt;columns(array(
+            'username',
+            'last_activity'
+        -&gt;from('user')
+        -&gt;where('last_activity &lt; :t:', array('t' =&gt; strtotime('-20 minutes')))
+        -&gt;limit(10);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6350" data-cf-modified-f389814c81273acb43bf62d0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6350" data-cf-modified-f389814c81273acb43bf62d0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/247904650e1dbceb017019df86ba3e74?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/658/lunaticPenguin" class="user-moderator-N"><span itemprop="name">Corentin Legros</span></a>        </span>
+        <br>
+
+        <span class="karma">2.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="6373" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '14</span>
+              </span><br/><a name="C6373" href="#C6373">
+                <time itemprop="dateCreated" datetime="2014-03-19T17:24:23-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>hi! Thank you for your answer!</p>
+<p>I've test what you suggest but it cannot compute a valid query. It generates me an error :</p>
+<blockquote>
+<p>Phalcon\Mvc\Model\Exception: Column 'MINUTE' doesn't belong to any of the selected models (1), when preparing: SELECT id, username, TIMESTAMPDIFF(MINUTE, TIMESTAMP(last_activity), CURRENT_TIMESTAMP()) as tsdiff FROM [User] AS [u] ORDER BY id asc LIMIT 15</p>
+</blockquote>
+<p>I cannot figure out why it interpretes &quot;minute&quot; as a column. Maybe the keywords list's is not complete in the orm code ?
+Plus I can't use it as where statement because this is not a filter criteria (I need all results and some of them flagged)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6373" data-cf-modified-f389814c81273acb43bf62d0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6373" data-cf-modified-f389814c81273acb43bf62d0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/247904650e1dbceb017019df86ba3e74?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/658/lunaticPenguin" class="user-moderator-N"><span itemprop="name">Corentin Legros</span></a>        </span>
+        <br>
+
+        <span class="karma">2.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6446" href="#C6446">
+                <time itemprop="dateCreated" datetime="2014-03-22T02:18:37-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>In fact I misinterpret the resolve button with the &quot;vote button&quot;.
+So my issue isn't solved.</p>
+<p>What about this &quot;minute&quot; sql keyword ? Should I create another thread in the forum ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6446" data-cf-modified-f389814c81273acb43bf62d0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6446" data-cf-modified-f389814c81273acb43bf62d0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/dede1b7c15e73b4e3614a4411df5a3d0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3660/felipefug" class="user-moderator-N"><span itemprop="name">Felipe</span></a>        </span>
+        <br>
+
+        <span class="karma">49</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="17311" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '15</span>
+              </span><br/><a name="C17311" href="#C17311">
+                <time itemprop="dateCreated" datetime="2015-04-15T08:10:54-07:00" class="action-date">Apr '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I have this problem, I use:</p>
+<p>$builder-&gt;columns('TIMESTAMPDIFF(YEAR, u.birthday, CURDATE()) as age, COUNT(u.id) as total') </p>
+<p>Result: Column 'YEAR' doesn't belong to any of the selected models (1) </p>
+<p>How do resolve it?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17311" data-cf-modified-f389814c81273acb43bf62d0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span><span itemprop="downvoteCount">1</span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17311" data-cf-modified-f389814c81273acb43bf62d0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b0bb557c053980a9cdf299670576ad09?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4931/sverdier" class="user-moderator-N"><span itemprop="name">sverdier</span></a>        </span>
+        <br>
+
+        <span class="karma">37</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C23237" href="#C23237">
+                <time itemprop="dateCreated" datetime="2015-09-11T15:40:44-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Same bug</p>
+<p>-&gt;columns(array('id', 'email', 'firstname', 'lastname', 'TIMESTAMPDIFF( YEAR ,birthday,CURDATE()) AS age'));
+Result: Column 'YEAR' doesn't belong to any of the selected models (1)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23237" data-cf-modified-f389814c81273acb43bf62d0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span><span itemprop="downvoteCount">1</span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23237" data-cf-modified-f389814c81273acb43bf62d0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/93324bf1559733610493a890c6eccfb8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9437/kumy" class="user-moderator-N"><span itemprop="name">kumy</span></a>        </span>
+        <br>
+
+        <span class="karma">1.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C48025" href="#C48025">
+                <time itemprop="dateCreated" datetime="2017-05-08T09:26:36-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>For may case, I've registered a custom dialect function in my <code>services.php</code></p>
+<pre><code class="language-php">/**
+ * Database connection is created based in the parameters defined in the configuration file
+ */
+$di-&gt;setShared('db', function() {
+    $config = $this-&gt;getConfig();
+
+    $dialect = new Phalcon\Db\Dialect\Mysql();
+    // Register a new function called TIMESTAMPDIFF_HOUR
+    $dialect-&gt;registerCustomFunction(
+        'TIMESTAMPDIFF_HOUR',
+        function($dialect, $expression) {
+            $arguments = $expression['arguments'];
+            return sprintf(
+                " TIMESTAMPDIFF(HOUR, %s, %s)",
+                $dialect-&gt;getSqlExpression($arguments[0]),
+                $dialect-&gt;getSqlExpression($arguments[1])
+             );
+        }
+    );
+
+    $class = 'Phalcon\Db\Adapter\Pdo\\'.$config-&gt;database-&gt;adapter;
+    $params = [
+        'host' =&gt; $config-&gt;database-&gt;host,
+        'username' =&gt; $config-&gt;database-&gt;username,
+        'password' =&gt; $config-&gt;database-&gt;password,
+        'dbname' =&gt; $config-&gt;database-&gt;dbname,
+        'charset' =&gt; $config-&gt;database-&gt;charset,
+        "dialectClass"  =&gt; $dialect
+    ];
+
+    $connection = new $class($params);
+
+    return $connection;
+});</code></pre>
+<p>Then I can use it in my Controller like</p>
+<pre><code class="language-php">        $this-&gt;view-&gt;geokrety = $this
+            -&gt;modelsManager
+            -&gt;createBuilder()
+            -&gt;from('GkRuchy')
+            -&gt;join('GkUsers')
+            -&gt;join('GkGeokrety')
+            -&gt;join('GkWaypointy')
+            -&gt;where('owner_id = :userid:', ['userid' =&gt; $this-&gt;view-&gt;user-&gt;user_id])
+            -&gt;andWhere('TIMESTAMPDIFF_HOUR(GkRuchy.date_added, NOW()) &lt; 240')
+            -&gt;orderBy('date_added ASC, GkRuchy.date ASC')
+            -&gt;getQuery()
+            -&gt;execute();</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48025" data-cf-modified-f389814c81273acb43bf62d0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48025" data-cf-modified-f389814c81273acb43bf62d0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">3</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/752faeec18cdeb480f13e0729dd37021?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1935/diogocavilha" class="user-moderator-N"><span itemprop="name">Diogo Alexsander Cavilha</span></a>        </span>
+        <br>
+
+        <span class="karma">518</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C48025"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/93324bf1559733610493a890c6eccfb8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        kumy                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C53659" href="#C53659">
+                <time itemprop="dateCreated" datetime="2018-01-25T09:47:24-07:00" class="action-date">Jan '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks ever so much, Kumi.</p>
+<p>I had the same trouble and that dialect scheme has worked pretty well for me.</p>
+<blockquote>
+<p>For may case, I've registered a custom dialect function in my <code>services.php</code></p>
+<pre><code class="language-php">/**
+* Database connection is created based in the parameters defined in the configuration file
+*/
+$di-&gt;setShared('db', function() {
+   $config = $this-&gt;getConfig();
+
+   $dialect = new Phalcon\Db\Dialect\Mysql();
+   // Register a new function called TIMESTAMPDIFF_HOUR
+   $dialect-&gt;registerCustomFunction(
+       'TIMESTAMPDIFF_HOUR',
+       function($dialect, $expression) {
+           $arguments = $expression['arguments'];
+           return sprintf(
+               " TIMESTAMPDIFF(HOUR, %s, %s)",
+               $dialect-&gt;getSqlExpression($arguments[0]),
+               $dialect-&gt;getSqlExpression($arguments[1])
+            );
+       }
+   );
+
+   $class = 'Phalcon\Db\Adapter\Pdo\\'.$config-&gt;database-&gt;adapter;
+   $params = [
+       'host' =&gt; $config-&gt;database-&gt;host,
+       'username' =&gt; $config-&gt;database-&gt;username,
+       'password' =&gt; $config-&gt;database-&gt;password,
+       'dbname' =&gt; $config-&gt;database-&gt;dbname,
+       'charset' =&gt; $config-&gt;database-&gt;charset,
+       "dialectClass"  =&gt; $dialect
+   ];
+
+   $connection = new $class($params);
+
+   return $connection;
+});</code></pre>
+<p>Then I can use it in my Controller like</p>
+<pre><code class="language-php">       $this-&gt;view-&gt;geokrety = $this
+           -&gt;modelsManager
+           -&gt;createBuilder()
+           -&gt;from('GkRuchy')
+           -&gt;join('GkUsers')
+           -&gt;join('GkGeokrety')
+           -&gt;join('GkWaypointy')
+           -&gt;where('owner_id = :userid:', ['userid' =&gt; $this-&gt;view-&gt;user-&gt;user_id])
+           -&gt;andWhere('TIMESTAMPDIFF_HOUR(GkRuchy.date_added, NOW()) &lt; 240')
+           -&gt;orderBy('date_added ASC, GkRuchy.date ASC')
+           -&gt;getQuery()
+           -&gt;execute();</code></pre>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="53659" data-cf-modified-f389814c81273acb43bf62d0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="53659" data-cf-modified-f389814c81273acb43bf62d0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1829" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

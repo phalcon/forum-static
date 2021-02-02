@@ -1,0 +1,937 @@
+---
+layout: default
+title: 'Opening several pages with forms invalidate security tokens - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/16/security">Security</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Opening several pages with forms invalidate security tokens</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1045/Milad" class="user-moderator-N"><span itemprop="name">Milad</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-06-09T02:25:14-07:00">Jun '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-06-09T02:25:14-07:00">Jun '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">12</span>
+                </td>
+                <td>
+                    <label>Views</label><br>2198</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/7b95071a0abb8f7da18d17d860a7e5f1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1045/Milad" class="user-moderator-N"><span itemprop="name">Milad</span></a></span>
+                <span class="karma">8.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2507" href="#C2507">
+        <time class="action-date">Jun '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello</p>
+<p>Let's suppose that we have a form to edit entries, if we open for example five editing forms for five of these entries, the security token in the first four opened ones will be invalidated.</p>
+<p>Any tip?</p>
+<p>Regards</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ff0126f15d80ceb5ae3ed45405dd0ea7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1374/scento" class="user-moderator-N"><span itemprop="name">Wenzel Pünter</span></a>        </span>
+        <br>
+
+        <span class="karma">899</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="8473" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '14</span>
+              </span><br/><a name="C8473" href="#C8473">
+                <time itemprop="dateCreated" datetime="2014-06-09T03:21:50-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Phalcon is storing the current security token in the session element <code>$PHALCON/CSRF/KEY$</code>. You can extend the Security class to support individual security tokens for each form:</p>
+<pre><code class="language-php">&lt;?php
+/**
+ * Prefixed Security
+ * 
+ * @author Wenzel Pünter &lt;<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="671002091d020b27170f020b0e1f490a02">[email&#160;protected]</a>&gt;
+*/
+class PrefixedSecurity extends \Phalcon\Security
+{
+    /**
+     * Alphanumerical Filter
+     * 
+     * @param string $value
+     * @return string
+    */
+    private static function filterAlnum($value)
+    {
+        $filtered = '';
+        $value = (string)$value;
+        $value_l = strlen($value);
+        $zero_char = chr(0);
+
+        for($i = 0; $i &lt; $value_l; ++$i) {
+            if($value[$i] == $zero_char) {
+                break;
+            }
+
+            if(ctype_alnum($value[$i]) === true) {
+                $filtered .= $value[$i];
+            }
+        }
+
+        return $filtered;
+    }
+
+    /**
+     * Generates a pseudo random token key to be used as input's name in a CSRF check
+     *
+     * @param string $prefix
+     * @param int|null $numberBytes
+     * @return string
+     * @throws \Phalcon\Security\Exception
+     */
+    public function getTokenKey($prefix = '', $numberBytes = null)
+    {
+        if(is_string($prefix) === false) {
+            throw new \Phalcon\Security\Exception('Invalid prefix.');
+        }
+
+        if(is_null($numberBytes) === true) {
+            $numberBytes = 12;
+        } elseif(is_int($numberBytes) === false) {
+            throw new \Phalcon\Security\Exception('Invalid parameter type.');
+        }
+
+        if(function_exists('openssl_random_pseudo_bytes') === false) {
+            throw new \Phalcon\Security\Exception('Openssl extension must be loaded');
+        }
+
+        $random_bytes = openssl_random_pseudo_bytes($numberBytes);
+        $base64bytes = base64_encode($random_bytes);
+        $safe_bytes = self::filterAlnum($base64bytes);
+
+        //@warning no length check for $safe_bytes
+
+        if(is_object($this-&gt;_dependencyInjector) === false) {
+            throw new \Phalcon\Security\Exception('A dependency injection container is required to access the \'session\' service');
+        }
+
+        $session = $this-&gt;_dependencyInjector-&gt;getShared('session');
+        if(is_object($session) === false ||
+            $session instanceof \Phalcon\Session\AdapterInterface === false) {
+            throw new \Phalcon\Security\Exception('Session service is unavailable.');
+        }
+
+        $session-&gt;set('$PHALCON/CSRF/KEY$'.$prefix.'$', $safe_bytes);
+        return $safe_bytes;
+    }
+
+    /**
+     * Generates a pseudo random token value to be used as input's value in a CSRF check
+     *
+     * @param string $prefix
+     * @param int|null $numberBytes
+     * @return string
+     * @throws \Phalcon\Security\Exception
+     */
+    public function getToken($prefix = '', $numberBytes = null)
+    {
+        if(is_string($prefix) === false) {
+            throw new \Phalcon\Security\Exception('Invalid prefix.');
+        }
+
+        if(is_null($numberBytes) === true) {
+            $numberBytes = 12;
+        } elseif(is_int($numberBytes) === false) {
+            throw new \Phalcon\Security\Exception('Invalid parameter type.');
+        }
+
+        if(function_exists('openssl_random_pseudo_bytes') === false) {
+            throw new \Phalcon\Security\Exception('Openssl extension must be loaded');
+        }
+
+        $random_bytes = openssl_random_pseudo_bytes($numberBytes);
+
+        //@note MD5 is weak
+        $token = md5($random_bytes);
+
+        if(is_object($this-&gt;_dependencyInjector) === false) {
+            throw new \Phalcon\Security\Exception('A dependency injection container is required to access the \'session\' service');
+        }
+
+        $session = $this-&gt;_dependencyInjector-&gt;getShared('session');
+        if(is_object($session) === false ||
+            $session instanceof \Phalcon\Session\AdapterInterface === false) {
+            throw new \Phalcon\Security\Exception('Session service is unavailable.');
+        }
+
+        $session-&gt;set('$PHALCON/CSRF$'.$prefix.'$', $token);
+
+        return $token;
+    }
+
+    /**
+     * Check if the CSRF token sent in the request is the same that the current in session
+     *
+     * @param string $prefix
+     * @param string|null $tokenKey
+     * @param string|null $tokenValue
+     * @return boolean
+     * @throws \Phalcon\Security\Exception
+     */
+    public function checkToken($prefix = '', $tokenKey = null, $tokenValue = null)
+    {
+        /* Type check */
+        if(is_string($prefix) === false) {
+            throw new \Phalcon\Security\Exception('Invalid prefix.');
+        }
+
+        if(is_null($tokenKey) === false &amp;&amp; is_string($tokenKey) === false) {
+            throw new \Phalcon\Security\Exception('Invalid parameter type.');
+        }
+
+        if(is_null($tokenValue) === false &amp;&amp; is_string($tokenValue) === false) {
+            throw new \Phalcon\Security\Exception('Invalid parameter type.');
+        }
+
+        /* Get session service */
+        if(is_object($this-&gt;_dependencyInjector) === false) {
+            throw new \Phalcon\Security\Exception('A dependency injection container is required to access the \'session\' service');
+        }
+
+        $session = $this-&gt;_dependencyInjector-&gt;getShared('session');
+        if(is_object($session) === false ||
+            $session instanceof \Phalcon\Session\AdapterInterface === false) {
+            throw new \Phalcon\Security\Exception('Session service is unavailable.');
+        }
+
+        /* Get token data */
+        if(is_null($tokenKey) === true) {
+            $tokenKey = $session-&gt;get('$PHALCON\CSRF\KEY$'.$prefix.'$');
+        }
+
+        if(is_null($tokenValue) === true) {
+            $request = $this-&gt;_dependencyInjector-&gt;getShared('service');
+
+            if(is_object($request) === false ||
+                $request instanceof \Phalcon\Http\RequestInterface === false) {
+                throw new \Phalcon\Security\Exception('Request service is unavailable.');
+            }
+
+            //We always check if the value is correct in post
+            $tokenValue = $request-&gt;getPost($tokenKey);
+        }
+
+        $session_token = $session-&gt;get('$PHALCON/CSRF$'.$prefix.'$');
+
+        //The value is the same?
+        return ($tokenValue === $session_token ? true : false);
+    }
+
+    /**
+     * Returns the value of the CSRF token in session
+     *
+     * @param string $prefix
+     * @return string
+     * @throws \Phalcon\Security\Exception
+     */
+    public function getSessionToken($prefix = '')
+    {
+        if(is_string($prefix) === false) {
+            throw new \Phalcon\Security\Exception('Invalid prefix.');
+        }
+
+        if(is_object($this-&gt;_dependencyInjector) === false) {
+            throw new \Phalcon\Security\Exception('A dependency injection container is required to access the \'session\' service');
+        }
+
+        $session = $this-&gt;_dependencyInjector-&gt;getShared('session');
+        if(is_object($session) === false ||
+            $session instanceof \Phalcon\Session\AdapterInterface === false) {
+            throw new \Phalcon\Security\Exception('Session service is unavailable.');
+        }
+
+        return $session-&gt;get('$PHALCON/CSRF$'.$prefix.'$');
+    }
+}
+?&gt;</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8473" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8473" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">3</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C8484" href="#C8484">
+                <time itemprop="dateCreated" datetime="2014-06-09T09:24:22-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Alternatively, you can generate the session token once, then just re-use it for every form.  This is still sufficient protection against CSRF attacks.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8484" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8484" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/24e438429d975d345e4f99e53b740150?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1487/Conradaek" class="user-moderator-N"><span itemprop="name">Conradaek</span></a>        </span>
+        <br>
+
+        <span class="karma">26.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C8648" href="#C8648">
+                <time itemprop="dateCreated" datetime="2014-06-14T13:41:36-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>quasipickle is completely right! </p>
+<p><strong>To have a secure protection against CSRF attacks we only need to generate ONE token and use it for ENTIRE session.</strong></p>
+<ol>
+<li>Generate token/key only once - when the user logs in. </li>
+<li>Use this token for entire session in each form. It does not matter how many tabs/forms is being opened.</li>
+<li>
+<p>Delete token from session once - when user logs out from the app.</p>
+<p>Some post from stackoverflow I have read:</p>
+</li>
+</ol>
+<ol>
+<li><a href="http://stackoverflow.com/questions/20057225/csrf-token-collisions-with-multiple-tabs"><a href="http://stackoverflow.com/questions/20057225/csrf-token-collisions-with-multiple-tabs">http://stackoverflow.com/questions/20057225/csrf-token-collisions-with-multiple-tabs</a></a></li>
+<li><a href="http://stackoverflow.com/questions/15829977/too-many-csrf-tokens-generated-php-how-do-i-deal-with-them?rq=1"><a href="http://stackoverflow.com/questions/15829977/too-many-csrf-tokens-generated-php-how-do-i-deal-with-them?rq=1">http://stackoverflow.com/questions/15829977/too-many-csrf-tokens-generated-php-how-do-i-deal-with-them?rq=1</a></a></li>
+<li><a href="http://stackoverflow.com/questions/10466241/new-csrf-token-per-request-or-not"><a href="http://stackoverflow.com/questions/10466241/new-csrf-token-per-request-or-not">http://stackoverflow.com/questions/10466241/new-csrf-token-per-request-or-not</a></a></li>
+<li><a href="http://stackoverflow.com/questions/20587746/one-token-vs-multiple-tokens-to-prevent-csrf-attacks"><a href="http://stackoverflow.com/questions/20587746/one-token-vs-multiple-tokens-to-prevent-csrf-attacks">http://stackoverflow.com/questions/20587746/one-token-vs-multiple-tokens-to-prevent-csrf-attacks</a></a></li>
+<li><a href="http://stackoverflow.com/questions/6724365/csrf-protection-question?rq=1"><a href="http://stackoverflow.com/questions/6724365/csrf-protection-question?rq=1">http://stackoverflow.com/questions/6724365/csrf-protection-question?rq=1</a></a></li>
+<li><a href="http://stackoverflow.com/questions/6929449/are-we-really-secured-from-csrf?rq=1"><a href="http://stackoverflow.com/questions/6929449/are-we-really-secured-from-csrf?rq=1">http://stackoverflow.com/questions/6929449/are-we-really-secured-from-csrf?rq=1</a></a></li>
+</ol>
+<p>A quatation from official OWASP document:</p>
+<blockquote>
+<p>In general, <strong>developers need only generate this token once for the current session. After initial generation of this token, the value is stored in the session and is utilized for each subsequent request until the session expires.</strong> When a request is issued by the end-user, the server-side component must verify the existence and validity of the token in the request as compared to the token found in the session. If the token was not found within the request or the value provided does not match the value within the session, then the request should be aborted, token should be reset and the event logged as a potential CSRF attack in progress.</p>
+</blockquote>
+<p>In fact OWASP says ones can consider having different token for each request but I stay with one for entire session.</p>
+<blockquote>
+<p>To further enhance the security of this proposed design, consider randomizing the CSRF token parameter name and or value for each request. Implementing this approach results in the generation of per-request tokens as opposed to per-session tokens. Note, however, that this may result in usability concerns. For example, the &quot;Back&quot; button browser capability is often hindered as the previous page may contain a token that is no longer valid. Interaction with this previous page will result in a CSRF false positive security event at the server. Regardless of the approach taken, developers are encouraged to protect the CSRF token the same way they protect authenticated session identifiers, such as the use of SSLv3/TLS.</p>
+</blockquote>
+<p>Source: <a href="https://www.owasp.org/index.php/Cross-SiteRequestForgery%28CSRF%29PreventionCheatSheet#GeneralRecommendation:SynchronizerTokenPattern"><a href="https://www.owasp.org/index.php/Cross-SiteRequestForgery%28CSRF%29PreventionCheatSheet#GeneralRecommendation:SynchronizerTokenPattern">https://www.owasp.org/index.php/Cross-SiteRequestForgery%28CSRF%29PreventionCheatSheet#GeneralRecommendation:SynchronizerTokenPattern</a></a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8648" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8648" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ff0126f15d80ceb5ae3ed45405dd0ea7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1374/scento" class="user-moderator-N"><span itemprop="name">Wenzel Pünter</span></a>        </span>
+        <br>
+
+        <span class="karma">899</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C8653" href="#C8653">
+                <time itemprop="dateCreated" datetime="2014-06-15T03:12:43-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>All in all<a href="https://forum.phalcon.io/user/0/Milad"> @Milad</a> should decide whether to use per-session or per-request tokens.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8653" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8653" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/7b95071a0abb8f7da18d17d860a7e5f1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1045/Milad" class="user-moderator-N"><span itemprop="name">Milad</span></a>        </span>
+        <br>
+
+        <span class="karma">8.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C8678" href="#C8678">
+                <time itemprop="dateCreated" datetime="2014-06-15T11:44:26-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks All, I'd go for one-time generated token per session because it's easier, hassle-free and yet it's secure enough. But I don't know to whom I should award the correct answer.</p>
+<p>Thank you all.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8678" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8678" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/7b95071a0abb8f7da18d17d860a7e5f1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1045/Milad" class="user-moderator-N"><span itemprop="name">Milad</span></a>        </span>
+        <br>
+
+        <span class="karma">8.7k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="8797" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '14</span>
+              </span><br/><a name="C8797" href="#C8797">
+                <time itemprop="dateCreated" datetime="2014-06-19T06:30:09-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you all for your input.</p>
+<p>I'll use the one token per session.</p>
+<p>I have solved it using this app/library/security.php:</p>
+<pre><code class="language-php">    &lt;?php
+
+    class Security extends \Phalcon\Security
+    {
+        public function getTokenKey($numberBytes = 13)
+        {
+            $key = '$PHALCON/CSRF/KEY$';
+
+            $tokenKey = \Phalcon\DI::getDefault()-&gt;get('session')-&gt;$key;
+
+            if ($tokenKey)
+            {
+                return $tokenKey;
+            }
+
+            return parent::getTokenKey($numberBytes);
+        }
+
+        public function getToken($numberBytes = 32)
+        {
+            $key = '$PHALCON/CSRF$';
+
+            $token = \Phalcon\DI::getDefault()-&gt;get('session')-&gt;$key;
+
+            if ($token)
+            {
+                return $token;
+            }
+
+            return parent::getToken($numberBytes);
+        }
+    }</code></pre>
+<p>And in the bootstrapper index.php</p>
+<pre><code class="language-php">    $di-&gt;set('security', function() {
+        $security = new Security();
+        return $security;
+    }, true);</code></pre>
+<p>Best regards</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8797" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8797" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c074566de20e7e7678c24ce4ddac599f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3457/Yurist-85" class="user-moderator-N"><span itemprop="name">Yurist-85</span></a>        </span>
+        <br>
+
+        <span class="karma">134</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C8797"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/7b95071a0abb8f7da18d17d860a7e5f1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Milad                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C16523" href="#C16523">
+                <time itemprop="dateCreated" datetime="2015-03-11T23:18:38-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Perfect solution!
+Thank a lot =)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16523" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16523" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/801b74806ffa32b4689e877784414ee8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2005/Slind14" class="user-moderator-N"><span itemprop="name">Slind14</span></a>        </span>
+        <br>
+
+        <span class="karma">5.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C8797"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/7b95071a0abb8f7da18d17d860a7e5f1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Milad                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C21565" href="#C21565">
+                <time itemprop="dateCreated" datetime="2015-08-04T19:49:48-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hey Milad,</p>
+<p>when do you set the session tokens? I only see you checking those but not saving them. I also made a quick test and it didn't work for me. </p>
+<blockquote>
+<p>Thank you all for your input.</p>
+<p>I'll use the one token per session.</p>
+<p>I have solved it using this app/library/security.php:</p>
+<pre><code class="language-php">  &lt;?php
+
+  class Security extends \Phalcon\Security
+  {
+      public function getTokenKey($numberBytes = 13)
+      {
+          $key = '$PHALCON/CSRF/KEY$';
+
+          $tokenKey = \Phalcon\DI::getDefault()-&gt;get('session')-&gt;$key;
+
+          if ($tokenKey)
+          {
+              return $tokenKey;
+          }
+
+          return parent::getTokenKey($numberBytes);
+      }
+
+      public function getToken($numberBytes = 32)
+      {
+          $key = '$PHALCON/CSRF$';
+
+          $token = \Phalcon\DI::getDefault()-&gt;get('session')-&gt;$key;
+
+          if ($token)
+          {
+              return $token;
+          }
+
+          return parent::getToken($numberBytes);
+      }
+  }</code></pre>
+<p>And in the bootstrapper index.php</p>
+<pre><code class="language-php">  $di-&gt;set('security', function() {
+      $security = new Security();
+      return $security;
+  }, true);</code></pre>
+<p>Best regards</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21565" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21565" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c074566de20e7e7678c24ce4ddac599f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3457/Yurist-85" class="user-moderator-N"><span itemprop="name">Yurist-85</span></a>        </span>
+        <br>
+
+        <span class="karma">134</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C21565"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/801b74806ffa32b4689e877784414ee8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Slind14                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="21567" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '15</span>
+              </span><br/><a name="C21567" href="#C21567">
+                <time itemprop="dateCreated" datetime="2015-08-04T20:12:11-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>On login.
+Just set token once when user signs in and use it.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21567" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21567" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/801b74806ffa32b4689e877784414ee8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2005/Slind14" class="user-moderator-N"><span itemprop="name">Slind14</span></a>        </span>
+        <br>
+
+        <span class="karma">5.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C21567"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/c074566de20e7e7678c24ce4ddac599f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Yurist-85                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="21571" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '15</span>
+              </span><br/><a name="C21571" href="#C21571">
+                <time itemprop="dateCreated" datetime="2015-08-04T20:19:10-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Do you have a code snippet, because I tried that.
+Also doesn't this mean a user could for example delete posts to whom he doesn't have access. While when using one token per page this token + the view accesss protected it?</p>
+<blockquote>
+<p>On login.
+Just set token once when user signs in and use it.</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21571" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21571" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/801b74806ffa32b4689e877784414ee8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2005/Slind14" class="user-moderator-N"><span itemprop="name">Slind14</span></a>        </span>
+        <br>
+
+        <span class="karma">5.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C21573" href="#C21573">
+                <time itemprop="dateCreated" datetime="2015-08-04T21:01:15-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Found the issue. </p>
+<pre><code>\Phalcon\DI::getDefault()-&gt;get('session')-&gt;$key;</code></pre>
+<p>needs to be</p>
+<pre><code>\Phalcon\DI::getDefault()-&gt;get('session')-&gt;get($key);</code></pre>
+<p>Unfortuntately it didn't throw any error.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21573" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21573" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/7b95071a0abb8f7da18d17d860a7e5f1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1045/Milad" class="user-moderator-N"><span itemprop="name">Milad</span></a>        </span>
+        <br>
+
+        <span class="karma">8.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="21619" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '15</span>
+              </span><br/><a name="C21619" href="#C21619">
+                <time itemprop="dateCreated" datetime="2015-08-05T11:40:29-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This code is for PhalconPHP 1.3, not 2.0 so be advised.</p>
+<p>Also the generation happens in the very same file:</p>
+<pre><code>class Security extends \Phalcon\Security
+{
+  public function getTokenKey($numberBytes = 13)
+  {
+      $key = '$PHALCON/CSRF/KEY$';
+
+      $tokenKey = \Phalcon\DI::getDefault()-&gt;get('session')-&gt;$key;
+
+      if ($tokenKey)
+      {
+          return $tokenKey;
+      }
+
+      return parent::getTokenKey($numberBytes);
+  }
+
+  public function getToken($numberBytes = 32)
+  {
+      $key = '$PHALCON/CSRF$';
+
+      $token = \Phalcon\DI::getDefault()-&gt;get('session')-&gt;$key;
+
+      if ($token)
+      {
+          return $token;
+      }
+
+      return parent::getToken($numberBytes);
+  }
+}</code></pre>
+<p>The lines:</p>
+<pre><code>return parent::getTokenKey($numberBytes);</code></pre>
+<p>and</p>
+<pre><code>return parent::getToken($numberBytes);</code></pre>
+<p>Both generates and return token and token key if they are not generated begore, so they are generated when they are needed for the first time (not after login necessarily) and they are used until the session ends or expires.</p>
+<p>Of course the parent functions come from \Phalcon\Security.</p>
+<p>You initialize the Security class in index.php</p>
+<pre><code>$di-&gt;set('security', function() {
+    $security = new Security();
+    return $security;
+}, true);</code></pre>
+<p>Regards</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21619" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21619" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/801b74806ffa32b4689e877784414ee8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2005/Slind14" class="user-moderator-N"><span itemprop="name">Slind14</span></a>        </span>
+        <br>
+
+        <span class="karma">5.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C21619"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/7b95071a0abb8f7da18d17d860a7e5f1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Milad                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C21629" href="#C21629">
+                <time itemprop="dateCreated" datetime="2015-08-05T18:23:44-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you, but the issue wasn't with how I tried to use it. It also doesn't require you to set it on login. The issue was with the syntax where there was an error, see previous post. </p>
+<blockquote>
+<p>This code is for PhalconPHP 1.3, not 2.0 so be advised.</p>
+<p>Also the generation happens in the very same file:</p>
+<p>class Security extends \Phalcon\Security
+{
+public function getTokenKey($numberBytes = 13)
+{
+$key = '$PHALCON/CSRF/KEY$';</p>
+<pre><code>    $tokenKey = \Phalcon\DI::getDefault()-&gt;get('session')-&gt;$key;
+
+    if ($tokenKey)
+    {
+        return $tokenKey;
+    }
+
+    return parent::getTokenKey($numberBytes);
+}
+
+public function getToken($numberBytes = 32)
+{
+    $key = '$PHALCON/CSRF$';
+
+    $token = \Phalcon\DI::getDefault()-&gt;get('session')-&gt;$key;
+
+    if ($token)
+    {
+        return $token;
+    }
+
+    return parent::getToken($numberBytes);
+}</code></pre>
+<p>}</p>
+<p>The lines:</p>
+<p>return parent::getTokenKey($numberBytes);</p>
+<p>and</p>
+<p>return parent::getToken($numberBytes);</p>
+<p>Both generates and return token and token key if they are not generated begore, so they are generated when they are needed for the first time (not after login necessarily) and they are used until the session ends or expires.</p>
+<p>Of course the parent functions come from \Phalcon\Security.</p>
+<p>You initialize the Security class in index.php</p>
+<p>$di-&gt;set('security', function() {
+$security = new Security();
+return $security;
+}, true);</p>
+<p>Regards</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21629" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21629" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d516c7391759f1a9253aa2f60337a10f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4921/thiagolcks" class="user-moderator-N"><span itemprop="name">Thiago Locks</span></a>        </span>
+        <br>
+
+        <span class="karma">1.4k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C8797"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/7b95071a0abb8f7da18d17d860a7e5f1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Milad                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C23225" href="#C23225">
+                <time itemprop="dateCreated" datetime="2015-09-11T11:15:01-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks Milad!</p>
+<p>I'm using Phalcon 2.0.6 and I've noticed that when the token is checked it's regenerated. So I've also overridden the checkToken method changing this default behavior.</p>
+<pre><code class="language-php">class Security extends \Phalcon\Security
+{
+    public function getTokenKey($numberBytes = 13)
+    {
+        $key = '$PHALCON/CSRF/KEY$';
+
+        $tokenKey = \Phalcon\DI::getDefault()-&gt;get('session')-&gt;get($key);
+
+        if ($tokenKey) {
+            return $tokenKey;
+        }
+
+        return parent::getTokenKey($numberBytes);
+    }
+
+    public function getToken($numberBytes = 32)
+    {
+        $key = '$PHALCON/CSRF$';
+
+        $token = \Phalcon\DI::getDefault()-&gt;get('session')-&gt;get($key);
+
+        if ($token) {
+            return $token;
+        }
+
+        return parent::getToken($numberBytes);
+    }
+
+    public function checkToken($tokenKey = null, $tokenValue = null, $destroyIfValid = false)
+    {
+        $tokenKey = $tokenKey ?: $this-&gt;getTokenKey();
+        $tokenValue = $tokenValue ?: $this-&gt;getToken();
+        return parent::checkToken($tokenKey, $tokenValue, $destroyIfValid);
+    }
+
+}</code></pre>
+<blockquote>
+<p>Thank you all for your input.</p>
+<p>I'll use the one token per session.</p>
+<p>I have solved it using this app/library/security.php:</p>
+<pre><code class="language-php">  &lt;?php
+
+  class Security extends \Phalcon\Security
+  {
+      public function getTokenKey($numberBytes = 13)
+      {
+          $key = '$PHALCON/CSRF/KEY$';
+
+          $tokenKey = \Phalcon\DI::getDefault()-&gt;get('session')-&gt;$key;
+
+          if ($tokenKey)
+          {
+              return $tokenKey;
+          }
+
+          return parent::getTokenKey($numberBytes);
+      }
+
+      public function getToken($numberBytes = 32)
+      {
+          $key = '$PHALCON/CSRF$';
+
+          $token = \Phalcon\DI::getDefault()-&gt;get('session')-&gt;$key;
+
+          if ($token)
+          {
+              return $token;
+          }
+
+          return parent::getToken($numberBytes);
+      }
+  }</code></pre>
+<p>And in the bootstrapper index.php</p>
+<pre><code class="language-php">  $di-&gt;set('security', function() {
+      $security = new Security();
+      return $security;
+  }, true);</code></pre>
+<p>Best regards</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23225" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23225" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/144ffe4dc6e3636abbde0b00519375a3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8931/krazzer" class="user-moderator-N"><span itemprop="name">Kaz</span></a>        </span>
+        <br>
+
+        <span class="karma">2.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="45163" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '17</span>
+              </span><br/><a name="C45163" href="#C45163">
+                <time itemprop="dateCreated" datetime="2017-01-20T06:26:29-07:00" class="action-date">Jan '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Great solution! I needed this for a multi level ajax form :)</p>
+<p>This is how I use it in Phalcon 3:</p>
+<pre><code class="language-php">use Phalcon\Di;
+
+class Security extends \Phalcon\Security
+{
+    public function getTokenKey()
+    {
+        $tokenKey = Di::getDefault()-&gt;get('session')-&gt;get($this-&gt;_tokenKeySessionID);
+
+        if ($tokenKey) {
+            return $tokenKey;
+        }
+
+        return parent::getTokenKey();
+    }
+
+    public function getToken()
+    {
+        $token = Di::getDefault()-&gt;get('session')-&gt;get($this-&gt;_tokenValueSessionID);
+
+        if ($token) {
+            return $token;
+        }
+
+        return parent::getToken();
+    }
+
+    public function checkToken($tokenKey = null, $tokenValue = null, $destroyIfValid = false)
+    {
+        return parent::checkToken($tokenKey, $tokenValue, $destroyIfValid);
+    }
+}</code></pre>
+<p>The checkToken method should not fetch the key &amp; value from the session, because the post value (which should be checked) will be overridden</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="45163" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="45163" data-cf-modified-ec5ceb3752ede480c90df69e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2507" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,379 @@
+---
+layout: default
+title: 'Is it &quot;expensive&quot; to store resultset (as array of Records) in session/persistent? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Is it &quot;expensive&quot; to store resultset (as array of Records) in session/persistent?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3520/SevaJmurov" class="user-moderator-N"><span itemprop="name">Seva Jmurov</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-03-21T03:19:00-07:00">Mar '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-03-21T03:19:00-07:00">Mar '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">8</span>
+                </td>
+                <td>
+                    <label>Views</label><br>537</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/f5c6ce717e91b110b115c9353611c070?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3520/SevaJmurov" class="user-moderator-N"><span itemprop="name">Seva Jmurov</span></a></span>
+                <span class="karma">15.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C10841" href="#C10841">
+        <time class="action-date">Mar '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello.
+I'm rewriting shopping cart for my application. My current thinking of cart is:
+Two model classes: <code>Invoice</code> which can have many items in it and <code>Item</code> which has one invoice, and a Singleton class <code>Cart</code> for managing items in selected invoice, which stores ordered Items in session as array of records and a link to Invoice which currently in cart.
+It works like:</p>
+<pre><code class="language-php">Cart::getInstance()-&gt;getItems();
+Cart::getInstance()-&gt;putItem($itemCode, $qty);
+Cart::getInstance()-&gt;removeItem($itemCode);
+Cart::getInstance()-&gt;save()</code></pre>
+<p>During operation with cart it stores items as array of records in session.
+All changes are written to database on save only.</p>
+<pre><code class="language-php">$cart = Invoice::find([
+  'conditions'=&gt;"user_id = :own_id: and invoice_number = :inv_num:",  
+  'bind' =&gt; ['own_id'=&gt;static::$ownerId,'inv_num'=&gt;static::$invNum],
+  'limit' =&gt; 1                                                                                     
+   ])-&gt;getFirst();
+$cart -&gt; InvoiceItems = static::$cartItems;
+static::$cartInstance-&gt;save(); </code></pre>
+<p>This works nice in test environment, however because I'm storing the whole records in session, I doubt if this is best solution. I haven't much experience with storing large session variables, but I know they do affect performance. </p>
+<p>So, is there a better way to store Phalcon's result set, if don't want changes to be immediately written to database? (tmp database, toarray, caching, transactions?)</p>
+<p>Any way to measure perfomance impact?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-e0f2935ce965f07360ba4a47-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-e0f2935ce965f07360ba4a47-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="31315" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '16</span>
+              </span><br/><a name="C31315" href="#C31315">
+                <time itemprop="dateCreated" datetime="2016-03-21T04:17:31-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well you should use ram for such a things, like apc/redis/memcache - then it should be fine, of course if you have enough memory. To make sure you don't run out of ram then you can create some swap file on your machine - but then it will have performance impact beacause it will read from memory.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="31315" data-cf-modified-e0f2935ce965f07360ba4a47-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="31315" data-cf-modified-e0f2935ce965f07360ba4a47-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6221c81c81cd357c818daec1bb8b17ff?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4153/nikolay-mihaylov" class="user-moderator-N"><span itemprop="name">Nikolay Mihaylov</span></a>        </span>
+        <br>
+
+        <span class="karma">93.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="31325" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '16</span>
+              </span><br/><a name="C31325" href="#C31325">
+                <time itemprop="dateCreated" datetime="2016-03-21T06:18:47-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hello, just going to share my way of doing ecommerce sites (in all kinds of frameworks i used so far):</p>
+<p>I just have a session variable, lets name it <strong>Basket</strong>. In basket i store only short information about the added products like title, path to image, quantity, single price, total price. Then i have a helper file (BasketHelper) which handles operations like add,edit, remove product, calculate prices e.t.c. (its all simple array operations).</p>
+<p>If you dont need to use object methods from items added to basket you can go with my way. If you are dependant on model methods do it your way and if your site begins to grow you can always use different service/server for session like Wojciech recommended.</p>
+<p>P.S. Wojciech i like how you said &quot;Dont run out of <strong>rum</strong> :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="31325" data-cf-modified-e0f2935ce965f07360ba4a47-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="31325" data-cf-modified-e0f2935ce965f07360ba4a47-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C31327" href="#C31327">
+                <time itemprop="dateCreated" datetime="2016-03-21T06:20:56-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hahhahahah :D</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="31327" data-cf-modified-e0f2935ce965f07360ba4a47-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="31327" data-cf-modified-e0f2935ce965f07360ba4a47-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C31349" href="#C31349">
+                <time itemprop="dateCreated" datetime="2016-03-21T08:09:18-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes, it's a realy bad practice to store complete resultsets in session.</p>
+<p>A better approach is to <strong>limit the fields you save as session variable to an array of row ids</strong>, so you can easily build up the whole resultset on demand.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="31349" data-cf-modified-e0f2935ce965f07360ba4a47-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span><span itemprop="downvoteCount">1</span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="31349" data-cf-modified-e0f2935ce965f07360ba4a47-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="31357" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '16</span>
+              </span><br/><a name="C31357" href="#C31357">
+                <time itemprop="dateCreated" datetime="2016-03-21T08:36:12-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You mean that he will faster select all records from database and build them again ? Nice joke.
+Just dont use session(and if you have to use them use them stored in memcache). Only the problem is ram usage - if you have enough then store them in ram, just dont use files as a session. If you are using files, then get it each time from database beacause most of database is using query based result cache.</p>
+<pre><code>Invoice::find([
+  'conditions'=&gt;"user_id = :own_id: and invoice_number = :inv_num:",  
+  'bind' =&gt; ['own_id'=&gt;static::$ownerId,'inv_num'=&gt;static::$invNum],
+  'limit' =&gt; 1                                                                                     
+   ])-&gt;getFirst();</code></pre>
+<p>rewrite it to:</p>
+<pre><code>Invoice::findFirst([
+  'conditions'=&gt;"user_id = :own_id: and invoice_number = :inv_num:",  
+  'bind' =&gt; ['own_id'=&gt;static::$ownerId,'inv_num'=&gt;static::$invNum],                                                                                   
+   ]);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="31357" data-cf-modified-e0f2935ce965f07360ba4a47-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="31357" data-cf-modified-e0f2935ce965f07360ba4a47-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C31357"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C31359" href="#C31359">
+                <time itemprop="dateCreated" datetime="2016-03-21T08:47:01-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>That requires an ORM caching to be setup in the first place. His question was about storing resultsets in session, which I've addressed. There are tons of ways to optimize application speed, but without knowing his code+db (don't even want to), it's quite hard to answer.</p>
+<p>Also, your latest answer only changes a model to a resultset, which I don't really see how could possibly help.</p>
+<blockquote>
+<p>You mean that he will faster select all records from database and build them again ? Nice joke.
+Just dont use session(and if you have to use them use them stored in memcache). Only the problem is ram usage - if you have enough then store them in ram, just dont use files as a session. If you are using files, then get it each time from database beacause most of database is using query based result cache.</p>
+<pre><code>Invoice::find([
+ 'conditions'=&gt;"user_id = :own_id: and invoice_number = :inv_num:",  
+ 'bind' =&gt; ['own_id'=&gt;static::$ownerId,'inv_num'=&gt;static::$invNum],
+ 'limit' =&gt; 1                                                                                     
+  ])-&gt;getFirst();</code></pre>
+<p>rewrite it to:</p>
+<pre><code>Invoice::findFirst([
+ 'conditions'=&gt;"user_id = :own_id: and invoice_number = :inv_num:",  
+ 'bind' =&gt; ['own_id'=&gt;static::$ownerId,'inv_num'=&gt;static::$invNum],                                                                                   
+  ]);</code></pre>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="31359" data-cf-modified-e0f2935ce965f07360ba4a47-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="31359" data-cf-modified-e0f2935ce965f07360ba4a47-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="31361" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '16</span>
+              </span><br/><a name="C31361" href="#C31361">
+                <time itemprop="dateCreated" datetime="2016-03-21T09:01:15-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It's just simplified cuz he had not needed one line in code. That doesn't require a ORM caching. He can just store current cart in memcache/redis/apc, if he is using session based on memcache - then he can store them in session without caring about anything. If dont then store them in memche/redis/apc where key will be session id.</p>
+<p>You could possibly reduce memory usage by storing everything as arrays and then build resultset/models.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="31361" data-cf-modified-e0f2935ce965f07360ba4a47-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="31361" data-cf-modified-e0f2935ce965f07360ba4a47-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C31361"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C31363" href="#C31363">
+                <time itemprop="dateCreated" datetime="2016-03-21T09:13:42-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Shame on me, I read ::find instead of ::findFirst, you're right on that one.</p>
+<p>But, he wants to persist a shopping cart information and not in db. Sessions are the easiest way to go. Now, I know that factory sessions in PHP are stored in files, which are quite slow compared to memory access. However, since you can change the session backend in phalcon, it's easy to optimize it (memcached/apc/whatever) later on without changing the actual business logic.</p>
+<p>In either case, storing resultsets in session (file or memory) is a disastrous practice, period. If he needs an additional quantity variable, he should use a <code>$productCode =&gt; $quantity</code> array and not resultset.</p>
+<blockquote>
+<p>It's just simplified cuz he had not needed one line in code. That doesn't require a ORM caching. He can just store current cart in memcache/redis/apc, if he is using session based on memcache - then he can store them in session without caring about anything. If dont then store them in memche/redis/apc where key will be session id.</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="31363" data-cf-modified-e0f2935ce965f07360ba4a47-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="31363" data-cf-modified-e0f2935ce965f07360ba4a47-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f5c6ce717e91b110b115c9353611c070?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3520/SevaJmurov" class="user-moderator-N"><span itemprop="name">Seva Jmurov</span></a>        </span>
+        <br>
+
+        <span class="karma">15.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="31365" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '16</span>
+              </span><br/><a name="C31365" href="#C31365">
+                <time itemprop="dateCreated" datetime="2016-03-21T09:57:37-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks for your responces guys.
+I've had pretty small and (IMO) neat class for cart, like (simplified):</p>
+<pre><code class="language-php">class Cart extends Component {
+    private static $items = null;
+    private static $instance;    
+    private static $ownerId;    
+    private static $logger;    
+    private static $invoiceId;
+
+    public function __construct() {        
+        if (isset($this -&gt; persistent -&gt; cartItems)) {            
+            self::$items = $this -&gt; persistent -&gt; cartItems;
+        }
+        if ($this -&gt; auth -&gt; getIdentity()) {
+            self::$ownerId = $this -&gt; auth -&gt; getIdentity()['id'];
+        }
+    }
+
+    public function reset() {        
+        self::$items = null;
+        $this-&gt;persistent-&gt;cartItems = null;
+    }
+
+    public static function getInstance() {
+        if (is_null(self::$instance)) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+
+    public function getItems() {
+        return self::$items;
+    }
+
+    public function putItem($itemCode, $itemType, $itemPrice, $qty = 1) {
+        if (is_array(self::$items)) {
+            if (array_key_exists($itemCode, self::$items)) {
+                self::$items[$itemCode]['qty'] += $qty;
+            } else {
+                self::$items[$itemCode] = ['qty' =&gt;$qty,'type'=&gt;$itemType,'price'=&gt;$itemPrice];
+            }
+        } else {
+            self::$items = ["$itemCode" =&gt; ['qty'=&gt;$qty,'type'=&gt;$itemType,'price'=&gt;$itemPrice]];
+        }
+         $this -&gt; persistent -&gt; cartItems = self::$items;
+    }
+
+    public function removeItem($itemCode) {        
+        if (array_key_exists($itemCode, self::$items)) {
+            unset(self::$items[$itemCode]);
+        }       
+       self::$items = array_filter(self::$items);          
+       $this -&gt; persistent -&gt; cartItems = self::$items;
+    }
+}</code></pre>
+<p>However recently I've changed simple cart management page to dynamic grid, with editable rows, filtering, reordering and so on and so far. And I doubted how to reflect all the canges applied on the grid in cart correctly. I thought of making grid interact with card class(I needed Records in session for that).
+Now I am inclined to modify this original class to modify and reorder items, rather than expirement with Resultsets in session, and leave datagrid as is, that is affect Invoice and Item models directly.</p>
+<p>PS. Wojciech, thanks for poiting to findFirst.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="31365" data-cf-modified-e0f2935ce965f07360ba4a47-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="31365" data-cf-modified-e0f2935ce965f07360ba4a47-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="10841" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,585 @@
+---
+layout: default
+title: 'Keep old input in volt - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/3/volt">Volt</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Keep old input in volt</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/12087/Pagana0709" class="user-moderator-N"><span itemprop="name">Pagana0709</span></a></span>
+            <time itemprop="dateCreated" datetime="2019-10-22T21:00:45-07:00">Oct '19</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2019-10-22T21:00:45-07:00">Oct '19</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '19</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>206</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/a9474706045646c4ea5c2779dc058d9a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/12087/Pagana0709" class="user-moderator-N"><span itemprop="name">Pagana0709</span></a></span>
+                <span class="karma">1.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C20041" href="#C20041">
+        <time class="action-date">Oct '19</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm trying to keep old input in volt when the user submits wrong data (something like {% raw %}{{{% endraw %} old('variable') {% raw %}}}{% endraw %} in laravel)</p>
+<p>I've been going through some related posts without success (
+<a href="https://forum.phalcon.io/discussion/1918/keep-old-inputs">https://forum.phalcon.io/discussion/1918/keep-old-inputs</a>,
+<a href="https://forum.phalcon.io/discussion/1865/how-to-create-a-delete-confirmation-in-other-page">https://forum.phalcon.io/discussion/1865/how-to-create-a-delete-confirmation-in-other-page</a>). </p>
+<p>I am using phalcon 3, without forms.</p>
+<p>I've tried the following: </p>
+<p><strong>app/config/services.php</strong></p>
+<pre><code class="language-php">&lt;?php
+
+use Phalcon\Mvc\View;
+use Phalcon\Mvc\View\Engine\Php as PhpEngine;
+use Phalcon\Mvc\Url as UrlResolver;
+use Phalcon\Mvc\View\Engine\Volt as VoltEngine;
+use Phalcon\Mvc\Model\Metadata\Memory as MetaDataAdapter;
+use Phalcon\Session\Adapter\Files as SessionAdapter;
+use Phalcon\Flash\Session as Flash;
+
+use Phalcon\Mvc\Dispatcher;
+use Phalcon\Mvc\Model\Manager as ModelsManager;
+
+/**
+ * Setting up the view component
+ */
+$di-&gt;setShared('view', function () {
+    $config = $this-&gt;getConfig();
+
+    $view = new View();
+    $view-&gt;setDI($this);
+    $view-&gt;setViewsDir($config-&gt;application-&gt;viewsDir);
+
+    $view-&gt;registerEngines([
+        '.volt' =&gt; function ($view) {
+            $config = $this-&gt;getConfig();
+
+            $volt = new VoltEngine($view, $this);
+
+            $volt-&gt;setOptions([
+                'compiledPath' =&gt; $config-&gt;application-&gt;cacheDir,
+                'compiledSeparator' =&gt; '_',
+                'compiledExtension' =&gt; '.compiled',                
+            ]);
+
+            return $volt;
+        }
+
+    ]);
+
+    return $view;
+});
+
+/**
+ * Start the session the first time some component request the session service
+ */
+$di-&gt;setShared('session', function () {
+    $session = new SessionAdapter();
+
+    session_name('econtrol');
+
+    $session-&gt;start();
+
+    return $session;
+});
+
+/**
+ * Register the session flash service with the Twitter Bootstrap classes
+ */
+$di-&gt;set('flash', function () {
+
+    $flash = new Flash();
+    $flash-&gt;setAutomaticHtml(false);
+
+    return $flash;
+
+});
+
+// Registering a dispatcher
+$di-&gt;set('dispatcher', function () {
+    $dispatcher = new Dispatcher();
+    $dispatcher-&gt;setDefaultNamespace('App\Controllers');    
+    return $dispatcher;
+});
+</code></pre>
+<p><strong>app/controllers/InformacionController
+</strong></p>
+<pre><code class="language-php">&lt;?php
+
+namespace App\Controllers;
+
+use App\Models\Informacion as Informacion; 
+use Phalcon\Validation;
+
+class InformacionController extends ControllerBase
+{
+
+    public function indexAction()
+    {
+
+        $informacion = Informacion::findFirst(
+            [
+                'columns' =&gt; [
+                    'nombre_institucion',
+                    'domicilio'
+                ], 
+                'informacion_id is not null',
+                'orderBy' =&gt; 'informacion_id asc'
+            ]
+        );
+
+        $this-&gt;view-&gt;informacion = $informacion;        
+        return $this-&gt;view-&gt;render('informacion', 'index');
+    }
+
+    public function editAction()
+    {
+        $informacion = Informacion::findFirst(
+            [
+                'columns' =&gt; [
+                    'nombre_institucion',
+                    'domicilio'
+                ], 
+                'informacion_id is not null',
+                'orderBy' =&gt; 'informacion_id asc'
+            ]
+        );
+
+        $this-&gt;view-&gt;informacion = $informacion;        
+        return $this-&gt;view-&gt;render('informacion','edit');
+    }
+
+    public function updateAction()
+    {
+        $informacion = Informacion::findFirst(1);   
+
+        if ($informacion == null) {
+            // to implement soon...
+        } else {
+            // getting the post data
+            $informacion-&gt;nombre_institucion = $this-&gt;request-&gt;getPost('nombre_institucion');
+            $informacion-&gt;domicilio = $this-&gt;request-&gt;getPost('domicilio');
+            $informacion-&gt;actualizacion = date("Y-m-d H:i:s");  //  update column   
+
+            if ($informacion-&gt;update() == false) {
+
+                // getting errors
+                $old = [];
+                foreach($this-&gt;request-&gt;getPost() as $key=&gt;$msg){
+                    $old[$key] = $msg;
+                }
+
+                $this-&gt;session-&gt;set('errors', $old);
+
+                //die(var_dump($_SESSION['_flashMessages']));       
+                //die(var_dump($_SESSION['domicilio']));        
+
+                foreach ($informacion-&gt;getMessages() as $message) {
+                    $this-&gt;flash-&gt;error($message-&gt;getMessage());
+                }
+
+                return $this-&gt;response-&gt;redirect('informacion/editar');
+
+            } else {
+
+                $this-&gt;flash-&gt;success('Información guardada');
+
+                // remove errors
+                $this-&gt;session-&gt;remove('errors');
+
+                return $this-&gt;response-&gt;redirect('informacion/editar');
+
+            }           
+
+        }
+
+    }
+
+}
+</code></pre>
+<p><strong>app/views/informacion/edit.volt
+</strong></p>
+<pre><code class="language-html">  &lt;main id="main"&gt;
+
+    &lt;!--==========================
+      Services Section
+    ============================--&gt;
+    &lt;section id="about"&gt;
+
+      &lt;div class="container justify-content-center"&gt;
+        &lt;div class="section-header"&gt;
+          &lt;h2&gt;Información&lt;/h2&gt;
+        &lt;/div&gt;
+
+        &lt;div class="row"&gt;
+
+          &lt;div class="col-md-12"&gt;
+            &lt;div class="box"&gt;
+
+              &lt;div class="card"&gt;
+                &lt;div class="card-header"&gt;
+                  &lt;h3&gt;Show data&lt;/h3&gt;
+                &lt;/div&gt;
+                &lt;div class="card-body"&gt;
+                  &lt;h5 class="card-title"&gt;5&lt;/h5&gt;
+
+                  {% raw %}{%{% endraw %} for msg in flashSession.getMessages('success') {% raw %}%}{% endraw %}
+                    &lt;div class="alert alert-success alert-dismissible fade show" role="alert"&gt;
+                      &lt;i class="fa fa-check-circle"&gt;&lt;/i&gt;
+                      &lt;strong&gt;Ok&lt;/strong&gt; {% raw %}{{{% endraw %} msg {% raw %}}}{% endraw %}
+                      &lt;button type="button" class="close" data-dismiss="alert" aria-label="Close"&gt;
+                        &lt;span aria-hidden="true"&gt;&amp;times;&lt;/span&gt;
+                      &lt;/button&gt;
+                    &lt;/div&gt;
+                  {% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}
+
+                  {% raw %}{%{% endraw %} set output = flash.getMessages('error') {% raw %}%}{% endraw %}
+                  {% raw %}{%{% endraw %} if output | length {% raw %}%}{% endraw %}
+                    &lt;div class="alert alert-danger alert-dismissible fade show" role="alert"&gt;
+                      &lt;i class="fa fa-times-circle"&gt;&lt;/i&gt;
+                      &lt;strong&gt;Boo&lt;/strong&gt; 
+
+                      {% raw %}{%{% endraw %} for msg in output {% raw %}%}{% endraw %}
+                      &lt;li&gt;{% raw %}{{{% endraw %} msg {% raw %}}}{% endraw %}&lt;/li&gt;
+                      {% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}
+
+                      &lt;button type="button" class="close" data-dismiss="alert" aria-label="Close"&gt;
+                        &lt;span aria-hidden="true"&gt;&amp;times;&lt;/span&gt;
+                      &lt;/button&gt;
+                    &lt;/div&gt;
+                  {% raw %}{%{% endraw %} endif {% raw %}%}{% endraw %}
+
+                  {% raw %}{%{% endraw %} for msg in flashSession.getMessages('warning') {% raw %}%}{% endraw %}
+                  &lt;div class="alert alert-warning alert-dismissible fade show" role="alert"&gt;
+                    &lt;i class="fa fa-exclamation-circle"&gt;&lt;/i&gt;                  
+                    &lt;strong&gt;Wait...&lt;/strong&gt; {% raw %}{{{% endraw %} msg {% raw %}}}{% endraw %}
+                    &lt;button type="button" class="close" data-dismiss="alert" aria-label="Close"&gt;
+                      &lt;span aria-hidden="true"&gt;&amp;times;&lt;/span&gt;
+                    &lt;/button&gt;
+                  &lt;/div&gt;
+                  {% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}
+
+                  {% raw %}{{{% endraw %} form('informacion/actualizar', 'method': 'post', 'id': 'frm') {% raw %}}}{% endraw %}
+
+                    &lt;div class="form-group"&gt;
+                      &lt;label&gt;Nombre de la institución&lt;/label&gt;
+                      &lt;input type="text" class="form-control" name="nombre_institucion" placeholder="{% raw %}{{{% endraw %} informacion.nombre_institucion {% raw %}}}{% endraw %}"&gt;
+                    &lt;/div&gt;
+                    &lt;div class="form-group"&gt;
+                  {% raw %}{%{% endraw %} set old_data = session.get('errors') {% raw %}%}{% endraw %}
+                  {% raw %}{%{% endraw %} if old_data == null {% raw %}%}{% endraw %} 
+                      &lt;label&gt;Domicilio&lt;/label&gt;
+                      &lt;input type="text" class="form-control" name="domicilio" value="vacio" placeholder="{% raw %}{{{% endraw %} informacion.domicilio {% raw %}}}{% endraw %}"&gt;
+                      {% raw %}{%{% endraw %} else {% raw %}%}{% endraw %} 
+                      &lt;label&gt;Domicilio&lt;/label&gt;
+                      &lt;input type="text" class="form-control" name="domicilio" value="{% raw %}{{{% endraw %} old_data['domicilio'] {% raw %}}}{% endraw %}" placeholder="{% raw %}{{{% endraw %} informacion.domicilio {% raw %}}}{% endraw %}"&gt;
+                  {% raw %}{%{% endraw %} endif {% raw %}%}{% endraw %}
+                  &lt;!-- tried to delete session directly here--&gt;
+                  {# { session.destroy('domicilio') } #}
+
+                    &lt;a href="{% raw %}{{{% endraw %} url('informacion/editar') {% raw %}}}{% endraw %}" class="btn btn-light btn-cancel"&gt;
+                      &lt;i class="fa fa-chevron-circle-left"&gt;&lt;/i&gt;
+                      Cancel
+                    &lt;/a&gt;
+                    &lt;button type="reset" class="btn btn-danger btn-reset"&gt;
+                      &lt;i class="fa fa-undo"&gt;&lt;/i&gt;
+                      Reset
+                    &lt;/button&gt;
+                    &lt;button type="submit" class="btn btn-primary btn-continue" id="btn_continue"&gt;
+                      &lt;i class="fa fa-chevron-circle-right"&gt;&lt;/i&gt;
+                      &lt;span class="text-btn"&gt;Continue&lt;/span&gt;
+                    &lt;/button&gt;
+
+                  {% raw %}{{{% endraw %} end_form() {% raw %}}}{% endraw %}
+
+                &lt;/div&gt; &lt;!-- end card body --&gt;
+              &lt;/div&gt;&lt;!-- end card--&gt;
+
+            &lt;/div&gt;
+          &lt;/div&gt;
+
+        &lt;/div&gt;
+
+      &lt;/div&gt;
+    &lt;/section&gt;&lt;!-- #services --&gt;
+
+  &lt;/main&gt;</code></pre>
+<p><strong>app/models/Informacion.php
+</strong></p>
+<pre><code class="language-php">&lt;?php
+
+namespace App\Models;
+
+use Phalcon\Mvc\Model;
+
+use Phalcon\Validation;
+use Phalcon\Validation\Validator\PresenceOf;
+use Phalcon\Validation\Validator\Regex;
+
+class Informacion extends Model
+{
+
+    /**
+     *
+     * @var integer
+     * @Primary
+     * @Identity
+     * @Column(column="informacion_id", type="integer", length=10, nullable=false)
+     */
+    public $informacion_id;
+
+    /**
+     *
+     * @var string
+     * @Column(column="nombre_institucion", type="string", length=50, nullable=false)
+     */
+    public $nombre_institucion;
+
+    /**
+     *
+     * @var string
+     * @Column(column="domicilio", type="string", length=200, nullable=false)
+     */
+    public $domicilio;
+
+    /**
+     *
+     * @var string
+     * @Column(column="creacion", type="string", nullable=false)
+     */
+    public $creacion;
+
+    /**
+     *
+     * @var string
+     * @Column(column="actualizacion", type="string", nullable=true)
+     */
+    public $actualizacion;
+
+    /**
+     * Initialize method for model.
+     */
+    public function initialize()
+    {
+        $this-&gt;setSchema("econtrol");
+        $this-&gt;setSource("informacion");
+    }
+
+    /**
+     * Returns table name mapped in the model.
+     *
+     * @return string
+     */
+    public function getSource()
+    {
+        return 'informacion';
+    }
+
+    /**
+     * Allows to query a set of records that match the specified conditions
+     *
+     * @param mixed $parameters
+     * @return Informacion[]|Informacion|\Phalcon\Mvc\Model\ResultSetInterface
+     */
+    public static function find($parameters = null)
+    {
+        return parent::find($parameters);
+    }
+
+    /**
+     * Allows to query the first record that match the specified conditions
+     *
+     * @param mixed $parameters
+     * @return Informacion|\Phalcon\Mvc\Model\ResultInterface
+     */
+    public static function findFirst($parameters = null)
+    {
+        return parent::findFirst($parameters);
+    }
+
+    public function validation()
+    {
+        $validator = new Validation();
+
+        $validator-&gt;add([
+                'nombre_institucion',
+                'domicilio'
+            ],
+            new Regex([
+                    "pattern" =&gt; [
+                        'nombre_institucion' =&gt; '/^[A-Za-z]*([a-zA-Z0-9Ññ]+\s)*[a-zA-Z0-9Ññ]+$/',
+                        'domicilio' =&gt; '/^[A-Za-z]*([a-zA-Z0-9Ññ]+\s)*[a-zA-Z0-9Ññ]+$/'
+                    ],
+            ])
+        );
+
+        return $this-&gt;validate($validator);
+    }
+
+}
+</code></pre>
+<p><strong>app/config/router.php
+</strong></p>
+<pre><code class="language-php">        $router-&gt;addGet('/informacion', array(
+            'controller' =&gt; 'informacion', 
+            'action' =&gt; 'index' 
+        ));
+
+        $router-&gt;addGet('/informacion/editar', array(
+            'controller' =&gt; 'informacion', 
+            'action' =&gt; 'edit' 
+        ));
+
+        $router-&gt;addPost('/informacion/actualizar', array(
+            'controller' =&gt; 'informacion', 
+            'action' =&gt; 'update' 
+        ));     </code></pre>
+<p>But is very ugly,  doesn´t clean inputs on reload and a has bunch of code in the view.</p>
+<p>I tried to send the data through  <code>return $this-&gt;response-&gt;redirect('informacion/editar');</code> in controller but  <code>response-&gt;redirect</code> cannot send data and <code>{% raw %}{%{% endraw %} session.destroy('domicilio') {% raw %}%}{% endraw %}</code> nor <code>{% raw %}{%{% endraw %} session.remove('domicilio') {% raw %}%}{% endraw %}</code>cannot be called from volt.</p>
+<p>Or if you can enlighten me with an explicit example, it would be much better because I am a beginner. Thank you. </p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-941770172526cbe2189ae9ae-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-941770172526cbe2189ae9ae-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5915f25e654c4f9e60fe51700cdee683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4769/Izopi4a" class="user-moderator-Y"><span itemprop="name">Izo</span></a>        </span>
+        <br>
+
+        <span class="karma">85.5k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C61129" href="#C61129">
+                <time itemprop="dateCreated" datetime="2019-10-23T06:17:11-07:00" class="action-date">Oct '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>you can open php tags in volt</p>
+<pre><code>&lt;?php
+// normal php code
+?&gt;</code></pre>
+<p>but perhaps you can <code>this.getDi().getShared("session")-&gt;remove("domicilio");</code> and it will delete the session.</p>
+<p>You could use Phalocn forms in order to achieve that</p>
+<p>docs:
+<a href="https://docs.phalcon.io/3.4/en/forms">https://docs.phalcon.io/3.4/en/forms</a></p>
+<p>Than every fields has a method -&gt;setDefault(); where you can put some logic. and all those html attributes can put there ( and the logic )</p>
+<p>After that in volt you just</p>
+<pre><code>form.render("my_element_name")</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="61129" data-cf-modified-941770172526cbe2189ae9ae-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="61129" data-cf-modified-941770172526cbe2189ae9ae-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C61135" href="#C61135">
+                <time itemprop="dateCreated" datetime="2019-10-23T10:20:18-07:00" class="action-date">Oct '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>In your <code>indexAction()</code> method, overwrite what was pulled from the database, if it exists in the session:</p>
+<pre><code class="language-php">public function indexAction()
+{
+    $informacion = Informacion::findFirst(
+        [
+            'columns' =&gt; [
+                'nombre_institucion',
+                'domicilio'
+            ], 
+            'informacion_id is not null',
+            'orderBy' =&gt; 'informacion_id asc'
+        ]
+    );
+
+    // Overwrite here
+    if($this-&gt;session-&gt;has('errors')){
+        foreach($this-&gt;session-&gt;get('errors') as $key=&gt;$value){
+            $informacion[$key] = $value;
+        }
+    }
+
+    $this-&gt;view-&gt;informacion = $informacion;        
+    return $this-&gt;view-&gt;render('informacion', 'index');
+}</code></pre>
+<p>Then, in your view, simply output properties of <code>$informacion</code>.  The view shouldn't really be aware of stuff in the session anyway - that's a controller issue.</p>
+<p>I'd also recommend using <code>$this-&gt;persistent</code> rather than <code>$this-&gt;session</code>, as <code>persistent</code> isolates the values to just the controller: <a href="https://docs.phalcon.io/3.4/en/session#persistent-data-in-components">https://docs.phalcon.io/3.4/en/session#persistent-data-in-components</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="61135" data-cf-modified-941770172526cbe2189ae9ae-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="61135" data-cf-modified-941770172526cbe2189ae9ae-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a9474706045646c4ea5c2779dc058d9a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/12087/Pagana0709" class="user-moderator-N"><span itemprop="name">Pagana0709</span></a>        </span>
+        <br>
+
+        <span class="karma">1.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C61141" href="#C61141">
+                <time itemprop="dateCreated" datetime="2019-10-24T12:08:50-07:00" class="action-date">Oct '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Perhaps I must use forms to do that. Thanks for your answers!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="61141" data-cf-modified-941770172526cbe2189ae9ae-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="61141" data-cf-modified-941770172526cbe2189ae9ae-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="20041" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

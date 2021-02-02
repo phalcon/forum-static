@@ -1,0 +1,114 @@
+---
+layout: default
+title: 'Why should I call $di-&gt;getSession() in order to synchronize Phalcon sessions and PHP sessions ? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/28/session">Session</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Why should I call $di-&gt;getSession() in order to synchronize Phalcon sessions and PHP sessions ?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/4775/pheromix" class="user-moderator-N"><span itemprop="name">pheromix</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-02-18T00:59:47-07:00">Feb '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-02-18T00:59:47-07:00">Feb '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Feb '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>378</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/1d388ddecdb9cc9d6ba82af4f64dc6f8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/4775/pheromix" class="user-moderator-N"><span itemprop="name">pheromix</span></a></span>
+                <span class="karma">7.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C10505" href="#C10505">
+        <time class="action-date">Feb '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>The Phalcon version is 2.0.8</p>
+<p>I set the session service in the public index.php file :</p>
+<p>use Phalcon\Session\Adapter\Files as SessionFiles;
+try {
+...
+$di = new FactoryDefault();</p>
+<pre><code>// Start the session the first time when some component request the session service
+$di-&gt;setShared('session', function () {
+    $session = new SessionFiles();
+    $session-&gt;start();
+    return $session;
+});
+....</code></pre>
+<p>}</p>
+<p>When I set a Phalcon session variable then I cannot get the equivalent $_SESSION PHP variable unless I write this code :</p>
+<p>$di = \Phalcon\DI::getDefault();
+$session = $di-&gt;getSession();</p>
+<p>So Why should I call this code to synchronize Phalcon sessions and PHP sessions ?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-acc1aab08aefc19d4f4c14cf-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-acc1aab08aefc19d4f4c14cf-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/509052acbb1e409637d9e18f07e2fbec?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1944/maurits150" class="user-moderator-N"><span itemprop="name">Maurits</span></a>        </span>
+        <br>
+
+        <span class="karma">3.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="30075" data-toggle="modal" data-target="#historyModal">
+                edited <span>Feb '16</span>
+              </span><br/><a name="C30075" href="#C30075">
+                <time itemprop="dateCreated" datetime="2016-02-18T14:15:27-07:00" class="action-date">Feb '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>When you place something in the dependency injection container, it is not actually used until you retrieve that specific item from the container.
+We call this the 'lazy loading' design pattern and it avoids spending computer time and memory on creating and storing objects that are going unused.
+This means that the function that you added to the container is not executed until you use the session item.</p>
+<p>Once you call getSession() on the DI, it calls the function you added to it which creates the SessionFiles object and calls start() on it, <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/session/adapter.zep#L60">which in turn calls the php function session_start()</a> and enables the $_SESSION variable. </p>
+<p>You might also want to consider to use the <a href="https://docs.phalcon.io/en/latest/api/Phalcon_Session_Adapter_Files.html">session object in your DI</a> directly instead of relying on $_SESSION though.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="30075" data-cf-modified-acc1aab08aefc19d4f4c14cf-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="30075" data-cf-modified-acc1aab08aefc19d4f4c14cf-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="10505" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

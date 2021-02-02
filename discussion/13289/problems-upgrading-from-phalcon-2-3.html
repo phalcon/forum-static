@@ -1,0 +1,346 @@
+---
+layout: default
+title: 'Problems upgrading from Phalcon 2 -&gt; 3 - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Problems upgrading from Phalcon 2 -&gt; 3</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-08-30T12:48:14-07:00">Aug '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-08-30T12:48:14-07:00">Aug '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>530</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/e00a6fdd3e722135512e013b7f1e9693?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a></span>
+                <span class="karma">17.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C13289" href="#C13289">
+        <time class="action-date">Aug '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>What I'm doing is basically ripping off the Vokuro code and changing a couple things, but it's not working for me.  The &quot;default&quot; route is working, but the /login and /pricing routes return a 404.  mod_rewrite is enabled.</p>
+<p>router.php:</p>
+<pre><code class="language-php">    &lt;?php
+    /*
+     * Define custom routes. File gets included in the router service definition.
+     */
+    $router = new Phalcon\Mvc\Router();
+
+    $router-&gt;addGet('/login',[
+        'controller' =&gt; 'noauthpages',
+        'action' =&gt; 'login'
+    ]);
+
+    $router-&gt;addGet('/pricing',[
+    'controller' =&gt; 'noauthpages',
+        'action' =&gt; 'pricing'
+    ]);
+
+    $router-&gt;setDefaults([
+        'controller' =&gt; 'noauthpages',
+        'action'     =&gt; 'index'
+    ]);
+
+    return $router;</code></pre>
+<p>services.php:</p>
+<pre><code class="language-php">    &lt;?php
+    use Phalcon\Mvc\View;
+    use Phalcon\Crypt;
+    use Phalcon\Mvc\Dispatcher;
+    use Phalcon\Mvc\Url as UrlResolver;
+    use Phalcon\Db\Adapter\Pdo\Mysql as DbAdapter;
+    //use Phalcon\Mvc\Model\Metadata\Files as MetaDataAdapter;
+    use Phalcon\Session\Adapter\Files as SessionAdapter;
+    use Phalcon\Logger\Adapter\File as FileLogger;
+    use Phalcon\Logger\Formatter\Line as FormatterLine;
+    /**
+     * Register the global configuration as config
+     */
+    $di-&gt;setShared('config', function () {
+        return include APP_PATH . "/config/config.php";
+    });
+    /**
+     * The URL component is used to generate all kind of urls in the application
+     */
+    $di-&gt;setShared('url', function () {
+        $config = $this-&gt;getConfig();
+        $url = new UrlResolver();
+        $url-&gt;setBaseUri($config-&gt;application-&gt;baseUri);
+        return $url;
+    });
+    /**
+     * Setting up the view component
+     */
+    $di-&gt;set('view', function () {
+        $config = $this-&gt;getConfig();
+        $view = new View();
+        $view-&gt;setViewsDir($config-&gt;application-&gt;viewsDir);
+        return $view;
+    }, true);
+    /**
+     * Database connection is created based in the parameters defined in the configuration file
+     */
+    $di-&gt;set('db', function () {
+        $config = $this-&gt;getConfig();
+        return new DbAdapter([
+            'host' =&gt; $config-&gt;database-&gt;host,
+            'username' =&gt; $config-&gt;database-&gt;username,
+            'password' =&gt; $config-&gt;database-&gt;password,
+            'dbname' =&gt; $config-&gt;database-&gt;dbname
+        ]);
+    });
+    /**
+     * If the configuration specify the use of metadata adapter use it or use memory otherwise
+     */
+    /*
+    $di-&gt;set('modelsMetadata', function () {
+        $config = $this-&gt;getConfig();
+        return new MetaDataAdapter([
+            'metaDataDir' =&gt; $config-&gt;application-&gt;cacheDir . 'metaData/'
+        ]);
+    });
+    */
+    /**
+     * Start the session the first time some component request the session service
+     */
+    $di-&gt;set('session', function () {
+        $session = new SessionAdapter();
+        $session-&gt;start();
+        return $session;
+    });
+    /**
+     * Crypt service
+     */
+    $di-&gt;set('crypt', function () {
+        $config = $this-&gt;getConfig();
+        $crypt = new Crypt();
+        $crypt-&gt;setKey($config-&gt;application-&gt;cryptSalt);
+        return $crypt;
+    });
+    /**
+     * Dispatcher use a default namespace
+     */
+    $di-&gt;set('dispatcher', function () {
+        $dispatcher = new Dispatcher();
+        $dispatcher-&gt;setDefaultNamespace('Zipline\Controllers');
+        return $dispatcher;
+    });
+    /**
+     * Loading routes from the routes.php file
+     */
+    $di-&gt;set('router', function () {
+        return require APP_PATH . '/config/routes.php';
+    });
+    /**
+     * Logger service
+     */
+    $di-&gt;set('logger', function ($filename = null, $format = null) {
+        $config = $this-&gt;getConfig();
+        $format   = $format ?: $config-&gt;get('logger')-&gt;format;
+        $filename = trim($filename ?: $config-&gt;get('logger')-&gt;filename, '\\/');
+        $path     = rtrim($config-&gt;get('logger')-&gt;path, '\\/') . DIRECTORY_SEPARATOR;
+        $formatter = new FormatterLine($format, $config-&gt;get('logger')-&gt;date);
+        $logger    = new FileLogger($path . $filename);
+        $logger-&gt;setFormatter($formatter);
+        $logger-&gt;setLogLevel($config-&gt;get('logger')-&gt;logLevel);
+        return $logger;
+    });</code></pre>
+<p>loader.php:</p>
+<pre><code class="language-php">    &lt;?php
+
+    use Phalcon\Loader;
+
+    $loader = new Loader();
+
+    /**
+     * We're a registering a set of directories taken from the configuration file
+     */
+    $loader-&gt;registerNamespaces([
+        'Zipline\Models' =&gt; $config-&gt;application-&gt;modelsDir,
+        'Zipline\Controllers' =&gt; $config-&gt;application-&gt;controllersDir,
+        //'Zipline\Forms' =&gt; $config-&gt;application-&gt;formsDir,
+        'Zipline' =&gt; $config-&gt;application-&gt;libraryDir
+    ]);
+
+    $loader-&gt;register();
+
+    // Use composer autoloader to load vendor classes
+    require_once BASE_PATH . '/vendor/autoload.php';</code></pre>
+<p>I didn't change anything on the index.php page.</p>
+<p>Anyway, not sure why the default route works, but the others don't.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-136925b5b59688f8a9b18e76-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-136925b5b59688f8a9b18e76-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e00a6fdd3e722135512e013b7f1e9693?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a>        </span>
+        <br>
+
+        <span class="karma">17.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="39473" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '16</span>
+              </span><br/><a name="C39473" href="#C39473">
+                <time itemprop="dateCreated" datetime="2016-08-30T12:53:29-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Also, the .htaccess files in the root and in /public are exactly what are shown in the Vokuro github:</p>
+<pre><code>Options +FollowSymLinks -MultiViews -Indexes
+
+DirectoryIndex index.html index.php
+
+&lt;IfModule mod_rewrite.c&gt;
+    RewriteEngine on
+    RewriteRule  ^$ public/    [L]
+    RewriteRule  (.*) public/$1 [L]
+&lt;/IfModule&gt;</code></pre>
+<p>and</p>
+<pre><code>AddDefaultCharset UTF-8
+
+&lt;IfModule mod_rewrite.c&gt;
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^(.*)$ index.php?_url=/$1 [QSA,L]
+&lt;/IfModule&gt;</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39473" data-cf-modified-136925b5b59688f8a9b18e76-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39473" data-cf-modified-136925b5b59688f8a9b18e76-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e00a6fdd3e722135512e013b7f1e9693?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a>        </span>
+        <br>
+
+        <span class="karma">17.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39475" href="#C39475">
+                <time itemprop="dateCreated" datetime="2016-08-30T13:20:27-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>My controller looks like this... Pretty simple:</p>
+<pre><code class="language-php">    &lt;?php namespace Zipline\Controllers;
+
+    use Phalcon\Http\Response;
+    use Phalcon\Http\Request;
+
+    class NoauthpagesController extends ControllerBase {
+
+        public function initialize() {
+            $this-&gt;view-&gt;setTemplateAfter('layout');
+        }
+
+        public function indexAction() {
+            $user = $this-&gt;session-&gt;get('auth_user');
+            if (!empty($user)) {
+                $this-&gt;view-&gt;pick("auth/zipline");
+            } else {
+                $this-&gt;view-&gt;pick("no_auth/login");
+            }
+        }
+
+        public function loginAction() {
+            $this-&gt;view-&gt;pick("no_auth/login");
+        }
+
+        public function pricingAction() {
+            $this-&gt;view-&gt;pick("no_auth/pricing");
+        }
+
+    }</code></pre>
+<p>ControllerBase.php is empty, but there for future use.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39475" data-cf-modified-136925b5b59688f8a9b18e76-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39475" data-cf-modified-136925b5b59688f8a9b18e76-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e00a6fdd3e722135512e013b7f1e9693?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a>        </span>
+        <br>
+
+        <span class="karma">17.5k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39477" href="#C39477">
+                <time itemprop="dateCreated" datetime="2016-08-30T13:27:14-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Fixed it.  Had to change the the Apache virtual host:</p>
+<pre><code>&lt;VirtualHost *:80&gt;
+    DocumentRoot /var/www/html/zipline/public
+        &lt;Directory /var/www/html/zipline/public&gt;
+                Options Indexes FollowSymLinks
+                AllowOverride All
+                Order allow,deny
+                Allow from all
+        &lt;/Directory&gt;
+    ServerName localhost:3000
+    ServerAlias localhost
+    ErrorLog /var/www/log/zipline_error.log
+    CustomLog /var/www/log/zipline_access.log combined
+&lt;/VirtualHost&gt;</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39477" data-cf-modified-136925b5b59688f8a9b18e76-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39477" data-cf-modified-136925b5b59688f8a9b18e76-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="13289" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

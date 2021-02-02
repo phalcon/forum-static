@@ -1,0 +1,255 @@
+---
+layout: default
+title: 'Captcha using Phalcon GD - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Captcha using Phalcon GD</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/6237/googlle" class="user-moderator-N"><span itemprop="name">Dan</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-03-29T03:11:10-07:00">Mar '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-03-29T03:11:10-07:00">Mar '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>595</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/b6f5b5dc2d9e7810bb5a2ff5f12529b8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/6237/googlle" class="user-moderator-N"><span itemprop="name">Dan</span></a></span>
+                <span class="karma">12.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C10943" href="#C10943">
+        <time class="action-date">Mar '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello everyone.
+I found best captcha extension from zf2.
+But it works not fast. I guess if I use Phalcon GD library - it will be faster.
+I need this code to rewrite using Phalcon GD.</p>
+<pre><code class="language-php">protected function generateImage($id, $word)
+    {
+        $font = $this-&gt;getFont();
+
+        if (empty($font)) {
+            throw new Exception\NoFontProvidedException('Image CAPTCHA requires font');
+        }
+
+        $w     = $this-&gt;getWidth();
+        $h     = $this-&gt;getHeight();
+        $fsize = $this-&gt;getFontSize();
+
+        $imgFile   = $this-&gt;getImgDir() . $id . $this-&gt;getSuffix();
+
+        if (empty($this-&gt;startImage)) {
+            $img = imagecreatetruecolor($w, $h);
+        } else {
+            // Potential error is change to exception
+            ErrorHandler::start();
+            $img   = imagecreatefrompng($this-&gt;startImage);
+            $error = ErrorHandler::stop();
+            if (!$img || $error) {
+                throw new Exception\ImageNotLoadableException(
+                    "Can not load start image '{$this-&gt;startImage}'",
+                    0,
+                    $error
+                );
+            }
+            $w = imagesx($img);
+            $h = imagesy($img);
+        }
+
+        $textColor = imagecolorallocate($img, 0, 0, 0);
+        $bgColor   = imagecolorallocate($img, 255, 255, 255);
+        imagefilledrectangle($img, 0, 0, $w-1, $h-1, $bgColor);
+        $textbox = imageftbbox($fsize, 0, $font, $word);
+        $x = ($w - ($textbox[2] - $textbox[0])) / 2;
+        $y = ($h - ($textbox[7] - $textbox[1])) / 2;
+        imagefttext($img, $fsize, 0, $x, $y, $textColor, $font, $word);
+
+        // generate noise
+        for ($i=0; $i &lt; $this-&gt;dotNoiseLevel; $i++) {
+            imagefilledellipse($img, mt_rand(0, $w), mt_rand(0, $h), 2, 2, $textColor);
+        }
+        for ($i=0; $i &lt; $this-&gt;lineNoiseLevel; $i++) {
+            imageline($img, mt_rand(0, $w), mt_rand(0, $h), mt_rand(0, $w), mt_rand(0, $h), $textColor);
+        }
+
+        // transformed image
+        $img2     = imagecreatetruecolor($w, $h);
+        $bgColor = imagecolorallocate($img2, 255, 255, 255);
+        imagefilledrectangle($img2, 0, 0, $w-1, $h-1, $bgColor);
+
+        // apply wave transforms
+        $freq1 = $this-&gt;randomFreq();
+        $freq2 = $this-&gt;randomFreq();
+        $freq3 = $this-&gt;randomFreq();
+        $freq4 = $this-&gt;randomFreq();
+
+        $ph1 = $this-&gt;randomPhase();
+        $ph2 = $this-&gt;randomPhase();
+        $ph3 = $this-&gt;randomPhase();
+        $ph4 = $this-&gt;randomPhase();
+
+        $szx = $this-&gt;randomSize();
+        $szy = $this-&gt;randomSize();
+
+        for ($x = 0; $x &lt; $w; $x++) {
+            for ($y = 0; $y &lt; $h; $y++) {
+                $sx = $x + (sin($x*$freq1 + $ph1) + sin($y*$freq3 + $ph3)) * $szx;
+                $sy = $y + (sin($x*$freq2 + $ph2) + sin($y*$freq4 + $ph4)) * $szy;
+
+                if ($sx &lt; 0 || $sy &lt; 0 || $sx &gt;= $w - 1 || $sy &gt;= $h - 1) {
+                    continue;
+                } else {
+                    $color   = (imagecolorat($img, $sx, $sy) &gt;&gt; 16)         &amp; 0xFF;
+                    $colorX  = (imagecolorat($img, $sx + 1, $sy) &gt;&gt; 16)     &amp; 0xFF;
+                    $colorY  = (imagecolorat($img, $sx, $sy + 1) &gt;&gt; 16)     &amp; 0xFF;
+                    $colorXY = (imagecolorat($img, $sx + 1, $sy + 1) &gt;&gt; 16) &amp; 0xFF;
+                }
+
+                if ($color == 255 &amp;&amp; $colorX == 255 &amp;&amp; $colorY == 255 &amp;&amp; $colorXY == 255) {
+                    // ignore background
+                    continue;
+                } elseif ($color == 0 &amp;&amp; $colorX == 0 &amp;&amp; $colorY == 0 &amp;&amp; $colorXY == 0) {
+                    // transfer inside of the image as-is
+                    $newcolor = 0;
+                } else {
+                    // do antialiasing for border items
+                    $fracX  = $sx - floor($sx);
+                    $fracY  = $sy - floor($sy);
+                    $fracX1 = 1 - $fracX;
+                    $fracY1 = 1 - $fracY;
+
+                    $newcolor = $color   * $fracX1 * $fracY1
+                              + $colorX  * $fracX  * $fracY1
+                              + $colorY  * $fracX1 * $fracY
+                              + $colorXY * $fracX  * $fracY;
+                }
+
+                imagesetpixel($img2, $x, $y, imagecolorallocate($img2, $newcolor, $newcolor, $newcolor));
+            }
+        }
+
+        // generate noise
+        for ($i=0; $i&lt;$this-&gt;dotNoiseLevel; $i++) {
+            imagefilledellipse($img2, mt_rand(0, $w), mt_rand(0, $h), 2, 2, $textColor);
+        }
+
+        for ($i=0; $i&lt;$this-&gt;lineNoiseLevel; $i++) {
+            imageline($img2, mt_rand(0, $w), mt_rand(0, $h), mt_rand(0, $w), mt_rand(0, $h), $textColor);
+        }
+
+        imagepng($img2, $imgFile);
+        imagedestroy($img);
+        imagedestroy($img2);
+    }</code></pre>
+<p>Who can help to rewrite captcha code using Phalcon GD? I will be very grateful</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-f98ba1d792209a7732c7c688-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-f98ba1d792209a7732c7c688-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1f92c8832155ca96cb3147af3cad27b0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6311/davihu" class="user-moderator-N"><span itemprop="name">David Hübner</span></a>        </span>
+        <br>
+
+        <span class="karma">9.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="31651" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '16</span>
+              </span><br/><a name="C31651" href="#C31651">
+                <time itemprop="dateCreated" datetime="2016-03-29T03:33:37-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Man, you can for sure use this code, it will not be much slower than code written in PHP using Phalcon. Dont care about that 1-2 ms slowness and take the profit of finished  code which is maintained by the community.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="31651" data-cf-modified-f98ba1d792209a7732c7c688-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="31651" data-cf-modified-f98ba1d792209a7732c7c688-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b6f5b5dc2d9e7810bb5a2ff5f12529b8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6237/googlle" class="user-moderator-N"><span itemprop="name">Dan</span></a>        </span>
+        <br>
+
+        <span class="karma">12.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C31659" href="#C31659">
+                <time itemprop="dateCreated" datetime="2016-03-29T04:09:52-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Why do you think that Phalcon GD will have almost equal speed as PHP?
+Phalcon GD invokes C methods directly, if I'm not mistaken</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="31659" data-cf-modified-f98ba1d792209a7732c7c688-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="31659" data-cf-modified-f98ba1d792209a7732c7c688-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1f92c8832155ca96cb3147af3cad27b0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6311/davihu" class="user-moderator-N"><span itemprop="name">David Hübner</span></a>        </span>
+        <br>
+
+        <span class="karma">9.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C31667" href="#C31667">
+                <time itemprop="dateCreated" datetime="2016-03-29T06:30:55-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>And how many images do you want to generate per page? Hundreds or thousands? Probably not and thats it, for one captcha image per page the speed benefit will be almost non existent and its much better to use good maintained and tested code than make your own.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="31667" data-cf-modified-f98ba1d792209a7732c7c688-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="31667" data-cf-modified-f98ba1d792209a7732c7c688-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="10943" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

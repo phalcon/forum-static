@@ -1,0 +1,188 @@
+---
+layout: default
+title: 'hasManyToMany save again - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">hasManyToMany save again</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/374/romanlex" class="user-moderator-N"><span itemprop="name">Roman O</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-01-29T04:57:03-07:00">Jan '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-01-29T04:57:03-07:00">Jan '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Feb '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>662</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9460ad04f394aa29d5c99e5f462ba481?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/374/romanlex" class="user-moderator-N"><span itemprop="name">Roman O</span></a></span>
+                <span class="karma">13.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4623" href="#C4623">
+        <time class="action-date">Jan '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>3 tables, 3 models: Sections, Lectures, SectionsHasLectures
+Relation is saved, Section is saved, Lectures is updated and set all values to NULL. What am I doing wrong? Thank you.</p>
+<pre><code class="language-php">&lt;?php
+    class Sections extends Model  {
+      public function beforeValidationOnCreate()
+      {
+          // Timestamp the confirmaton
+          $this-&gt;publishdon = time();
+      }
+
+      public function initialize()
+      {
+          $this-&gt;hasManyToMany(
+              "id",
+              "Models\SectionsHasLectures",
+              "sectionId", "lectureId",
+              "Models\Lectures",
+              "id",
+              ['alias' =&gt; 'lectures']
+          );
+      }</code></pre>
+<pre><code class="language-php">&lt;?php
+    class Lectures extends Model  {
+      public function beforeValidationOnCreate()
+      {
+          // Timestamp the confirmaton
+          $this-&gt;publishdon = time();
+      }
+
+      public function initialize()
+      {
+          $this-&gt;useDynamicUpdate(true); 
+
+          $this-&gt;hasManyToMany(
+              "id",
+              "Models\SectionsHasLectures",
+              "sectionId",
+              "lectureId",
+              "Models\Sections",
+              "id",
+              ['alias' =&gt; 'sections']
+          );
+
+      }</code></pre>
+<pre><code class="language-php">&lt;?php
+    class SectionsHasLectures extends Model  {
+
+      public $id;
+      public $sectionId;
+      public $lectureId;
+      public $created;
+      public $modified;
+
+      public function beforeValidationOnCreate()
+      {
+          $this-&gt;created = time();
+      }
+
+      public function initialize()
+      {
+          $this-&gt;belongsTo('sectionId', 'Models\Sections', 'id', array(
+              'alias' =&gt; 'section'
+          ));
+          $this-&gt;belongsTo('lectureId', 'Models\Lectures', 'id', array(
+              'alias' =&gt; 'lecture'
+          ));
+      }</code></pre>
+<p>Try to keep with the existing Lectures (in the form select the existing lectures):</p>
+<pre><code class="language-php">&lt;?php
+    $section = new Sections();
+    $lectures = $this-&gt;request-&gt;getPost('lectures');
+    $_lectures = array();
+    Lectures::setup(array('notNullValidations' =&gt; false));
+    foreach ($lectures as $lectureId) {
+      $lecture = new Lectures();
+      $lecture-&gt;id = $lectureId;
+      $_lectures[] = $lecture;
+    }
+
+    $section-&gt;assign(array(
+      'title' =&gt; $this-&gt;request-&gt;getPost('title', 'striptags'),
+      'speakerId' =&gt; $this-&gt;request-&gt;getPost('speakerId', 'int'),
+      'desc' =&gt; $this-&gt;request-&gt;getPost('desc'),
+      'published' =&gt; $published,
+      'pubDate' =&gt; strtotime($this-&gt;request-&gt;getPost('pubDate')),
+      'unpubDate' =&gt; strtotime($this-&gt;request-&gt;getPost('unpubDate')),
+    ));
+
+    if (!$section-&gt;save()) {
+      foreach ($section-&gt;getMessages() as $message) {
+        $this-&gt;flashSession-&gt;error($message);
+      }
+    } else {
+      $section-&gt;lectures = $_lectures;
+      $section-&gt;update(); 
+      $this-&gt;flashSession-&gt;success("Секция успешно добавлена");
+    }</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-62b7010de2b46d545d45afbd-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-62b7010de2b46d545d45afbd-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9d7c285c0b42b5034b78cf9762d96f63?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3118/bbassett" class="user-moderator-N"><span itemprop="name">Brandon Bassett</span></a>        </span>
+        <br>
+
+        <span class="karma">66</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C15562" href="#C15562">
+                <time itemprop="dateCreated" datetime="2015-02-01T14:57:33-07:00" class="action-date">Feb '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Check your definition in your hasManyToMany in your lecture class.</p>
+<p>I think that &quot;lectureId&quot; and &quot;sectionId&quot; need to be reversed.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="15562" data-cf-modified-62b7010de2b46d545d45afbd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="15562" data-cf-modified-62b7010de2b46d545d45afbd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4623" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

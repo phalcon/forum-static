@@ -1,0 +1,314 @@
+---
+layout: default
+title: 'Annotations is trying to access almost any file even when they are empty (REALLY ANNOYING) - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/14/annotations">Annotations</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Annotations is trying to access almost any file even when they are empty (REALLY ANNOYING)</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/889/zyxep" class="user-moderator-N"><span itemprop="name">zyxep</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-11-03T17:21:07-07:00">Nov '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-11-03T17:21:07-07:00">Nov '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>508</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/7ffb0f8e96c882de47c169a83d9dfa7f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/889/zyxep" class="user-moderator-N"><span itemprop="name">zyxep</span></a></span>
+                <span class="karma">21.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C9287" href="#C9287">
+        <time class="action-date">Nov '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi guys,</p>
+<p>i'm trying to work with annotations and we are couple of developers that is pulling our hair off!</p>
+<p>This is my code
+public/index.php</p>
+<pre><code class="language-php">&lt;?php
+namespace Clive;
+
+error_reporting(E_ALL);
+define('BASE_DIR', dirname(__DIR__));
+define('APP_DIR', BASE_DIR . '/app');
+require_once BASE_DIR . '/vendor/autoload.php';
+
+use Tracy\Debugger,
+    Illuminate\Database\Capsule\Manager as Capsule,
+    \Phalcon\Debug,
+    \Phalcon\Loader,
+    Phalcon\Mvc\Application as BaseApplication,
+    Phalcon\Mvc\Dispatcher,
+    Phalcon\DI\FactoryDefault,
+    Phalcon\Mvc\View,
+    Phalcon\Mvc\View\Engine\Volt,
+    Phalcon\Db\Adapter\Pdo\Mysql,
+    Phalcon\Http\Response,
+    Phalcon\Http\Request,
+    Phalcon\Config\Adapter\Php as Config,
+    Phalcon\Mvc\Router\Annotations,
+    Phalcon\Security,
+    \League\Fractal\Manager as FractalManager;
+
+class Application extends BaseApplication {
+
+    private function debugger() {
+        Debugger::enable(Debugger::DEVELOPMENT);
+
+        /**
+         * Define some useful constants
+         */
+        $debug = new Debug();
+        $debug-&gt;listen();
+    }
+
+    private function registerAutoLoaders() {
+        $loader = new Loader();
+        $loader-&gt;registerNamespaces([
+            'Clive\Controllers' =&gt; APP_DIR . '/Controllers/',
+            'Clive\Models' =&gt; APP_DIR . '/Models/',
+            'Jowy\Phrest\Core' =&gt; APP_DIR . '/Core/'
+        ])-&gt;register();
+    }
+
+    private function registerServices($di) {
+        $di-&gt;set('response', function(){
+            return new Response();
+        });
+        //Registering a Http\Request
+        $di-&gt;set('request', function(){
+            return new Request();
+        });
+
+        $di-&gt;set('dispatcher', function() use ($di) {
+            $eventsManager = $di-&gt;getShared('eventsManager');
+            $dispatcher = new Dispatcher();
+            $dispatcher-&gt;setEventsManager($eventsManager);
+            return $dispatcher;
+        });
+
+        $di-&gt;setShared(
+            "apiResponse",
+            function () {
+                $response = new \Jowy\Phrest\Core\Response(new FractalManager());
+                $response-&gt;setPhalconResponse(new Response());
+                return $response;
+            }
+        );
+    }
+
+    private function registerView($di) {
+
+        $view = function () {
+            $view = new View();
+            return  $view-&gt;disable();
+        };
+        $di-&gt;set('view', $view);
+    }
+
+    private function registerSecurity($di) {
+        $di-&gt;setShared(
+            "security",
+            function () {
+                $security = new Security();
+                $security-&gt;setWorkFactor(12);
+                return $security;
+            }
+        );
+    }
+
+    private function registerRoutes($di) {
+        $di-&gt;set('router', function(){
+            $router = new Annotations(false);
+            $files = array_diff(scandir(APP_DIR . "/Controllers/"), array('..', '.'));
+            foreach ($files as $file) {
+                $file = array_slice(preg_split('/(?=[A-Z])/', $file), 1);
+                $router-&gt;addResource("Clive\\Controllers\\" . $file[0]);
+            }
+            return $router;
+        });
+    }
+
+    public function main() {
+        $this-&gt;debugger();
+        $config = new Config(BASE_DIR . '/config/config.php');
+        $di = new FactoryDefault();
+        $capsule = new Capsule();
+        $capsule-&gt;addConnection(
+            $config-&gt;database-&gt;toArray()
+        );
+        $capsule-&gt;bootEloquent();
+        $di-&gt;set('config', $config);
+        $this-&gt;registerAutoLoaders();
+        $this-&gt;registerServices($di);
+        $this-&gt;registerRoutes($di);
+        $this-&gt;registerSecurity($di);
+        $this-&gt;registerView($di);
+
+        $this-&gt;setDI($di);
+        echo $this-&gt;handle()-&gt;getContent();
+    }
+}
+
+$application = new Application();
+$application-&gt;main();</code></pre>
+<p>my /app/Controllers/IndexController.php</p>
+<pre><code class="language-php">&lt;?php
+namespace Clive\Controllers;
+
+Use Phalcon\Mvc\Controller;
+
+/**
+ * RoutePrefix("/v1")
+ */
+class IndexController extends Controller
+{
+    /**
+     * @Get("/")
+     */
+    public function indexAction()
+    {
+        echo "hi, api code here...";
+    }
+}</code></pre>
+<p>Random Controller for testing: /app/Controllers/GoogleController.php</p>
+<pre><code class="language-php">&lt;?php
+use Phalcon\Mvc\Controller;
+
+/**
+ * RoutePrefix("/google")
+ */
+class GoogleController extends Controller
+{
+    /**
+     * @Get("/google")
+     */
+    public function indexAction()
+    {
+
+    }
+}</code></pre>
+<p>When i go to / i get </p>
+<pre><code>ReflectionException: Class Clive\Controllers\GoogleController does not exist</code></pre>
+<p>And i get that on /v1 too.
+What am i doing wrong ?</p>
+<p>Because this is really annoying.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-80153f36bfe2c1849505f130-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-80153f36bfe2c1849505f130-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C25753" href="#C25753">
+                <time itemprop="dateCreated" datetime="2015-11-04T01:05:10-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well in router you added:</p>
+<p>$router-&gt;addResource(&quot;Clive\Controllers\&quot; . $file[0]);</p>
+<p>So its looking for Clive\Controllers\ namespace and then GoogleController, just put GoogleController in right namespace and it should be okay.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="25753" data-cf-modified-80153f36bfe2c1849505f130-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="25753" data-cf-modified-80153f36bfe2c1849505f130-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/7ffb0f8e96c882de47c169a83d9dfa7f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/889/zyxep" class="user-moderator-N"><span itemprop="name">zyxep</span></a>        </span>
+        <br>
+
+        <span class="karma">21.1k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C25753"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C25891" href="#C25891">
+                <time itemprop="dateCreated" datetime="2015-11-05T08:31:37-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>any good idea to automate it ?
+I guess it's because we loop in all files and when they don't have a namespace that match, it fucks up ?</p>
+<p>But anyway i switched to normal routing.</p>
+<blockquote>
+<p>Well in router you added:</p>
+<p>$router-&gt;addResource(&quot;Clive\Controllers\&quot; . $file[0]);</p>
+<p>So its looking for Clive\Controllers\ namespace and then GoogleController, just put GoogleController in right namespace and it should be okay.</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="25891" data-cf-modified-80153f36bfe2c1849505f130-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="25891" data-cf-modified-80153f36bfe2c1849505f130-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C25901" href="#C25901">
+                <time itemprop="dateCreated" datetime="2015-11-05T16:31:29-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>What you mean automate ? You cant automating adding namespace to class, you have to add it yourself.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="25901" data-cf-modified-80153f36bfe2c1849505f130-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="25901" data-cf-modified-80153f36bfe2c1849505f130-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="9287" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

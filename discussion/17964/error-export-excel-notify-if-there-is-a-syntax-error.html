@@ -1,0 +1,238 @@
+---
+layout: default
+title: 'Error export Excel!! Notify if there is a syntax error - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Error export Excel!! Notify if there is a syntax error</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10922/WDusss" class="user-moderator-N"><span itemprop="name">WDusss</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-03-22T18:46:36-07:00">Mar '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-03-22T18:46:36-07:00">Mar '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>May '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>328</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/d827f5fa24049f08c747bf141543b33c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10922/WDusss" class="user-moderator-N"><span itemprop="name">WDusss</span></a></span>
+                <span class="karma">1.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17964" href="#C17964">
+        <time class="action-date">Mar '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Why export when the selected date of data is not in excel.
+But if the date period is not selected data appears.</p>
+<p><strong>Index</strong></p>
+<blockquote>
+<p><strong> function xlsExport()</strong>
+{</p>
+<pre><code>            var data = {
+                    criteria: $("#select-filter-contact").val(),
+                    value: $("#string-input-contact").val(),
+                    period: $("#select-filter-contact-period").val(),
+                    start: $("#contact-date-start").val(),
+                    end: $("#contact-date-end").val()
+            };
+
+            strXlsExportUrl = "{% raw %}{{{% endraw %} url('Contact/exportListContact') {% raw %}}}{% endraw %}?" + $.param(data);
+
+            window.location.assign(strXlsExportUrl);
+    }</code></pre>
+</blockquote>
+<p><strong>Controller</strong></p>
+<blockquote>
+<pre><code>public function exportListContactAction(){
+  $criteria = $this-&gt;request-&gt;getQuery('criteria');
+  $value = $this-&gt;request-&gt;getQuery('value');
+  $period = $this-&gt;request-&gt;getQuery('period');
+  $start = $this-&gt;request-&gt;getQuery('start');
+  $end = $this-&gt;request-&gt;getQuery('end');
+
+  $map = [
+      "1" =&gt; "Name", 
+      "2" =&gt; "Email",
+      "3" =&gt; "Phone",
+      "4" =&gt; "Mobile",
+      "5" =&gt; "MediaId",
+      "6" =&gt; "TypeId",
+      "7" =&gt; "OccupationId"];
+
+      $criteria = $map[$criteria];
+
+      $map2 = [
+          "1" =&gt; "CreateDate",
+          "2" =&gt; "LastContact"
+      ];
+
+      $period = $map2[$period];
+
+      $siteId = $this-&gt;getSite();
+
+      $options = $this-&gt;config-&gt;database;
+
+      $dsn = "mysql:host={$options-&gt;host};dbname={$options-&gt;dbname};charset=utf8";
+      $opt = [
+          PDO::ATTR_ERRMODE            =&gt; PDO::ERRMODE_EXCEPTION,
+          PDO::ATTR_DEFAULT_FETCH_MODE =&gt; PDO::FETCH_ASSOC,
+          PDO::ATTR_EMULATE_PREPARES   =&gt; false,
+          PDO::MYSQL_ATTR_USE_BUFFERED_QUERY =&gt; false
+      ];
+
+      $db = new PDO($dsn, $options-&gt;username, $options-&gt;password, $opt);
+      $db-&gt;setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
+
+      $db-&gt;query("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED ;");
+
+      $sql = "
+      select c.*, r1.Description from Contact c left join Reference r1 on c.TypeId=r1.Id where c.SiteId=$siteId and c.ExpireDate='3000-01-01 00:00:00'";
+
+      if ($criteria) {
+          $sql .= " and c.`$criteria` like '%$value%' ";
+      }
+
+      if ($period) {
+          $sql .= " and c.`$period` between '$start' and '$end'";
+      }
+
+      $sql .= " ";
+
+      $query = $db-&gt;prepare($sql, array(      
+          \PDO::ATTR_CURSOR =&gt; PDO::CURSOR_FWDONLY
+      ));
+
+      $db-&gt;query("COMMIT ;");
+
+      $query-&gt;execute();
+
+  $fileName = 'Contact-'.Date('YmdGis').'.xls';
+  header("Content-type: application/vnd-ms-excel");
+  header("Content-Disposition: attachment; filename=".$fileName);
+  echo '&lt;table border="1" width="100%"&gt;
+  &lt;thead&gt;
+  &lt;tr&gt;                    
+  &lt;th&gt;No.&lt;/th&gt;
+  &lt;th&gt;Name&lt;/th&gt;
+  &lt;th&gt;Reference Id&lt;/th&gt;
+  &lt;th&gt;ShortName&lt;/th&gt;
+  &lt;th&gt;PrintName&lt;/th&gt;
+  &lt;th&gt;Phone&lt;/th&gt;
+  &lt;th&gt;Fax&lt;/th&gt;
+  &lt;th&gt;Email&lt;/th&gt;
+  &lt;th&gt;Url&lt;/th&gt;
+  &lt;th&gt;Mobile&lt;/th&gt;
+  &lt;th&gt;TwitterId&lt;/th&gt;
+  &lt;th&gt;FacebookId&lt;/th&gt;
+  &lt;th&gt;Type&lt;/th&gt;
+  &lt;th&gt;Remarks&lt;/th&gt;
+  &lt;th&gt;CreateDate&lt;/th&gt;                 
+  &lt;/tr&gt;
+  &lt;/thead&gt;';
+  $no = 1;
+  while ($row = $query-&gt;fetch(PDO::FETCH_ASSOC, PDO::FETCH_ORI_NEXT)) {
+
+  ob_end_flush();
+
+  echo '
+  &lt;tr&gt;
+  &lt;td&gt;'.$no.'&lt;/td&gt;
+  &lt;td&gt;'.$row['Name'].'&lt;/td&gt;
+  &lt;td&gt;'.$row['ReferenceId'].'&lt;/td&gt;
+  &lt;td&gt;'.$row['ShortName'].'&lt;/td&gt;
+  &lt;td&gt;'.$row['PrintName'].'&lt;/td&gt;
+  &lt;td&gt;'.$row['Phone'].'&lt;/td&gt;
+  &lt;td&gt;'.$row['Fax'].'&lt;/td&gt;
+  &lt;td&gt;'.$row['Email'].'&lt;/td&gt;
+  &lt;td&gt;'.$row['Url'].'&lt;/td&gt;
+  &lt;td&gt;'.$row['Mobile'].'&lt;/td&gt;
+  &lt;td&gt;'.$row['TwitterId'].'&lt;/td&gt;
+  &lt;td&gt;'.$row['FacebookId'].'&lt;/td&gt;
+  &lt;td&gt;'.$row['LineId'].'&lt;/td&gt;
+  &lt;td&gt;'.$row['Type'].'&lt;/td&gt;
+  &lt;td&gt;'.$row['Remarks'].'&lt;/td&gt;
+  &lt;td&gt;'.$row['CreateDate'].'&lt;/td&gt;
+  &lt;/tr&gt;
+  ';
+
+  ob_start();
+
+  $no++;
+  }
+  echo '&lt;/table&gt;';
+
+  $db-&gt;query("COMMIT ;");</code></pre>
+<p>}   </p>
+</blockquote></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-86ed331b7f7761e1d20ca1c9-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-86ed331b7f7761e1d20ca1c9-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c0ce8f5e133750a4dfea4712e533a178?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/15/le51" class="user-moderator-N"><span itemprop="name">le51</span></a>        </span>
+        <br>
+
+        <span class="karma">43.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C55201" href="#C55201">
+                <time itemprop="dateCreated" datetime="2018-05-04T07:17:01-07:00" class="action-date">May '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>hi,</p>
+<p>I would say,</p>
+<ol>
+<li>you're not returning a valid vnd-ms-excel file, but a html document with a table presentation.</li>
+<li>why don't you use all the full phalcon mvc features (shared database connection and configuration file, mvc paradigm, ...) ?</li>
+<li>I think you'll we be able to find some third party library to help you to build a valid ms-excel file</li>
+</ol></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55201" data-cf-modified-86ed331b7f7761e1d20ca1c9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55201" data-cf-modified-86ed331b7f7761e1d20ca1c9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17964" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

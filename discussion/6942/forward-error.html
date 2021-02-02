@@ -1,0 +1,214 @@
+---
+layout: default
+title: 'Forward Error - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Forward Error</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3082/master355" class="user-moderator-N"><span itemprop="name">Luis Eduardo</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-05-30T15:11:50-07:00">May '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-05-30T15:11:50-07:00">May '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>504</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/493a268b0646434a87dc574cee0da793?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3082/master355" class="user-moderator-N"><span itemprop="name">Luis Eduardo</span></a></span>
+                <span class="karma">7.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6942" href="#C6942">
+        <time class="action-date">May '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,</p>
+<p>I have a little problem with method forward Dispatcher between two Controllers (so I have more controllers but the problem is with LlamadaSv Controller when I use forward method from other Controller).</p>
+<p>First I must say which I'm using routes annotations, I displayed my routes.php:</p>
+<pre><code class="language-php">
+     //Use the annotations router
+    $router = new \Phalcon\Mvc\Router\Annotations(false);
+
+    $router-&gt;removeExtraSlashes(true);
+    $router-&gt;setUriSource(\Phalcon\Mvc\Router::URI_SOURCE_SERVER_REQUEST_URI);
+
+    // Contrato - Controller 1
+    $router-&gt;addResource('Contrato', '/contrato');
+    // LlamadaSv - Controller 2
+    $router-&gt;addResource('LlamadaSv', '/llamada_servidores');
+
+    // ... Other routes
+
+    $router-&gt;notFound([
+        "controller"    =&gt; "error",
+        "action"        =&gt; "show404Action"
+    ]);
+
+    return $router;
+</code></pre>
+<p>In my services file:</p>
+<pre><code class="language-php">
+// Dispatcher
+$di-&gt;set('dispatcher',function() use ($di) 
+{
+    $evManager = $di-&gt;getShared('eventsManager');
+    $evManager-&gt;attach
+    (
+        "dispatch:beforeException",
+        function($event, $dispatcher, $exception)
+        {
+            switch ($exception-&gt;getCode()) 
+            {
+                case PhDispatcher::EXCEPTION_HANDLER_NOT_FOUND:
+                case PhDispatcher::EXCEPTION_ACTION_NOT_FOUND:
+                $dispatcher-&gt;forward(
+                    array(
+                        'controller' =&gt; 'Error',
+                        'action'     =&gt; 'show404',
+                        )
+                    );
+                return false;
+            }
+        }
+        );
+    $dispatcher = new PhDispatcher();
+    $dispatcher-&gt;setEventsManager($evManager);
+    return $dispatcher;
+},
+true
+);
+
+/**
+ * Loading routes from the routes.php file - Routing Anottations
+ */
+$di-&gt;set('router', function () {
+    return include __DIR__ . '/routes.php';   
+}, true);
+</code></pre>
+<p>So my controllers:</p>
+<pre><code class="language-php">
+class ControllerBase extends Controller
+{
+
+    protected function initialize()
+    {
+        $this-&gt;tag-&gt;prependTitle('SIPV | '); // Title Page
+
+    }
+
+}   
+</code></pre>
+<pre><code class="language-php">
+use Phalcon\Mvc\Model\Criteria;
+use Phalcon\Paginator\Adapter\Model as Paginator;
+
+/**
+ * @RoutePrefix("/llamada_servidores")
+ */
+class LlamadaSvController extends ControllerBase
+{
+
+    public function initialize(){
+        $this-&gt;tag-&gt;setTitle('Llamada');
+        parent::initialize();
+        $this-&gt;view-&gt;setTemplateAfter("sipv");
+    }
+
+    /**
+     * @Route("/inicio")
+     */
+    public function inicioAction(){
+        // foo code
+    }
+
+    /**
+     * @Route("/validar")
+     */
+    public function validarAction(){
+        //This Action is a test, work well
+        $this-&gt;dispatcher-&gt;forward(array(
+                        'controller' =&gt; 'LlamadaSv', 
+                        'action' =&gt; 'inicio' 
+                    )); 
+    }
+
+    // ... others acctions
+
+}
+</code></pre>
+<pre><code class="language-php">
+/**
+ * @RoutePrefix("/contrato")
+ */
+class ContratoController extends ControllerBase
+{
+
+    public function initialize(){
+        $this-&gt;tag-&gt;setTitle('Contrato');
+        parent::initialize();
+        $this-&gt;view-&gt;setTemplateAfter("sipv");
+    }
+
+    /**
+     * @Route("/prueba")
+     */
+    public function pruebaAction(){
+        // Don't work 
+        $this-&gt;dispatcher-&gt;forward(array(
+                        'controller' =&gt; 'LlamadaSv', 
+                        'action' =&gt; 'inicio' 
+                    )); 
+    }
+
+    // ... others acctions
+
+}   
+</code></pre>
+<p>On the other hand, inside LlamadaSv Controller the forward method to same Controller work fine (Action Validar). But when I use forward method to LlamadaSv Controller from a diferent Controller, It display the exception 404 not found. </p>
+<p>I hope anybody can help me, thanks!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-f1614ab269961405e0027c91-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-f1614ab269961405e0027c91-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6942" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

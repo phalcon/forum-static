@@ -1,0 +1,252 @@
+---
+layout: default
+title: 'index by default not load on multi module project - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">index by default not load on multi module project</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1624/hardlick" class="user-moderator-N"><span itemprop="name">Hugo Casanova</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-04-16T16:14:38-07:00">Apr '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-04-16T16:14:38-07:00">Apr '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Apr '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>714</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/693a279f4545cdb52e27c51a66b2af29?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1624/hardlick" class="user-moderator-N"><span itemprop="name">Hugo Casanova</span></a></span>
+                <span class="karma">25.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6420" href="#C6420">
+        <time class="action-date">Apr '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi!, i have a little problem,</p>
+<p><img src="http://mcets-inc.com/Selecci%C3%B3n_376.png" alt="http://mcets-inc.com/Selecci%C3%B3n_376.png" /></p>
+<p>i configured my project, with multi module structure,
+when i try to access to:
+<a href="http://feedback/public/index">http://feedback/public/index</a>
+the error page load,
+but if i try with:
+<a href="http://feedback/public/index/index">http://feedback/public/index/index</a>
+the real page load,
+so, what is the problem?
+this is my bootstrap conf:</p>
+<pre><code>&lt;?php
+
+error_reporting(E_ALL);
+
+try {
+        define('SITE_DOMAIN', $_SERVER['HTTP_HOST']);
+
+    /**
+     * Read the configuration
+     */
+    $config = include(__DIR__.'/../app/config/'.SITE_DOMAIN.'_db.php');
+
+    /**
+     * The FactoryDefault Dependency Injector automatically register the right services providing a full stack framework
+     */
+    $di = new \Phalcon\DI\FactoryDefault();
+
+    /**
+     * The URL component is used to generate all kind of urls in the application
+     */
+    $di-&gt;set('url', function() use ($config) {
+        $url = new \Phalcon\Mvc\Url();
+        $url-&gt;setBaseUri($config-&gt;application-&gt;baseUri);
+        return $url;
+    });
+
+        /**
+     * Database connection is created based in the parameters defined in the configuration file
+     */
+    $di-&gt;set('db', function() use ($config) {
+        return new \Phalcon\Db\Adapter\Pdo\Mysql(array(
+            "host" =&gt; $config-&gt;database-&gt;host,
+            "username" =&gt; $config-&gt;database-&gt;username,
+            "password" =&gt; $config-&gt;database-&gt;password,
+            "dbname" =&gt; $config-&gt;database-&gt;name
+        ));
+    });
+
+    /**
+     * If the configuration specify the use of metadata adapter use it or use memory otherwise
+     */
+    $di-&gt;set('modelsMetadata', function() use ($config) {
+        if (isset($config-&gt;models-&gt;metadata)) {
+            $metadataAdapter = 'Phalcon\Mvc\Model\Metadata\\'.$config-&gt;models-&gt;metadata-&gt;adapter;
+            return new $metadataAdapter();
+        } else {
+            return new \Phalcon\Mvc\Model\Metadata\Memory();
+        }
+    });
+
+    /**
+     * Start the session the first time some component request the session service
+     */
+    $di-&gt;set('session', function() {
+        $session = new \Phalcon\Session\Adapter\Files();
+        $session-&gt;start();
+        return $session;
+    });
+
+        //Specify routes for modules
+        $di-&gt;set('router', function () {
+            $router = new \Phalcon\Mvc\Router(false);
+            $router-&gt;setDefaultModule("backend");
+            $router-&gt;setDefaultAction('index');
+            $router-&gt;notFound(array(
+            'module' =&gt; 'backend',
+            'controller' =&gt; 'error',
+            'action' =&gt; 'index'
+            ));
+           $router-&gt;add('/:module/:controller/:action/:params', array(
+            'module' =&gt; 1,
+            'controller' =&gt; 2,
+            'action' =&gt; 3,
+            'params' =&gt; 4
+            ));            
+            return $router;
+        });
+    /**
+     * Handle the request
+     */
+    $application = new \Phalcon\Mvc\Application();
+    $application-&gt;setDI($di);
+        // Register the installed modules
+        $application-&gt;registerModules(
+            array(
+                'public' =&gt; array(
+                    'className' =&gt; 'Frontend\Module',
+                    'path'      =&gt; '../app/frontend/Module.php',
+                ),
+                'backend'  =&gt; array(
+                    'className' =&gt; 'Backend\Module',
+                    'path'      =&gt; '../app/backend/Module.php',
+                )
+            )
+        );
+
+    echo $application-&gt;handle()-&gt;getContent();
+
+} catch (Phalcon\Exception $e) {
+    echo $e-&gt;getMessage();
+} catch (PDOException $e){
+    echo $e-&gt;getMessage();
+}</code></pre>
+<p>Any Help please!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-95dec867554eb3e6ff3d5344-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-95dec867554eb3e6ff3d5344-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e984ca5d22935b577e77fcbb53edb3e2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1653/stefanchiriac" class="user-moderator-N"><span itemprop="name">Stefan Chiriac</span></a>        </span>
+        <br>
+
+        <span class="karma">16.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="17341" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '15</span>
+              </span><br/><a name="C17341" href="#C17341">
+                <time itemprop="dateCreated" datetime="2015-04-17T01:26:16-07:00" class="action-date">Apr '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hello,</p>
+<p>The only problem is that phalcon doesn't know to get the default controller, action on multimodule applications. In this case you have to define a route for each. So in your routes add this too</p>
+<pre><code>// for http://feedback/public/index
+$router-&gt;add('/:module/:controller', array(
+        'module' =&gt; 1,
+        'controller' =&gt; 2,
+        'action' =&gt; 'index',
+));
+
+// for http://feedback/public
+$router-&gt;add('/:module/:controller', array(
+        'module' =&gt; 1,
+        'controller' =&gt; 'index',
+        'action' =&gt; 'index',
+));</code></pre>
+<p>You could also try adding a default Controller</p>
+<pre><code>$router-&gt;setDefaultController('index');</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17341" data-cf-modified-95dec867554eb3e6ff3d5344-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17341" data-cf-modified-95dec867554eb3e6ff3d5344-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/693a279f4545cdb52e27c51a66b2af29?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1624/hardlick" class="user-moderator-N"><span itemprop="name">Hugo Casanova</span></a>        </span>
+        <br>
+
+        <span class="karma">25.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C17349" href="#C17349">
+                <time itemprop="dateCreated" datetime="2015-04-17T07:23:46-07:00" class="action-date">Apr '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks a Lot! , this works for me!.
+// for <a href="http://feedback/public/index">http://feedback/public/index</a>
+$router-&gt;add('/:module/:controller', array(
+'module' =&gt; 1,
+'controller' =&gt; 2,
+'action' =&gt; 'index',
+));</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17349" data-cf-modified-95dec867554eb3e6ff3d5344-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17349" data-cf-modified-95dec867554eb3e6ff3d5344-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6420" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

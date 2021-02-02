@@ -1,0 +1,206 @@
+---
+layout: default
+title: 'Strange bytes is added to the end of string when using cookie encryption - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/16/security">Security</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Strange bytes is added to the end of string when using cookie encryption</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3678/elcreator" class="user-moderator-N"><span itemprop="name">Artur Kyryliuk</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-08-31T15:32:04-07:00">Aug '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-08-31T15:32:04-07:00">Aug '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>429</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/efd7d9a9ed8c97d06d8db1c869cf7286?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3678/elcreator" class="user-moderator-N"><span itemprop="name">Artur Kyryliuk</span></a></span>
+                <span class="karma">12.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C8295" href="#C8295">
+        <time class="action-date">Aug '15</time>
+    </a>
+</div>
+<div class="post-content"><div><pre><code class="language-php">// bootstrap.php
+    $di-&gt;setShared('crypt', function()
+    {
+        $crypt = new \Phalcon\Crypt;
+        $crypt-&gt;setKey('asasasasasasasas'); // 16 bytes, it's no matter what symbols are used
+        return $crypt;
+    });
+    $di-&gt;setShared('cookies', function ()
+    {
+        $cookies = new \Phalcon\Http\Response\Cookies();
+        $cookies-&gt;useEncryption(true); // if false, bug is not reproduces
+        return $cookies;
+    });</code></pre>
+<pre><code class="language-php">class LoginController extends \Phalcon\Mvc\Controller
+{
+    public function indexAction() 
+    {
+        $token = $this-&gt;security-&gt;getSaltBytes(50);
+        $this-&gt;cookies-&gt;set('token', $token, time() + 31536000);
+        $result = base64_encode($token); // bTRscnRXTmlGUU1aZ3h6OEVyWGh5UQ==
+    ...</code></pre>
+<pre><code class="language-php">class ProfileController extends \Phalcon\Mvc\Controller
+{
+    public function indexAction() 
+    {
+        $token = $this-&gt;cookies-&gt;get('token')-&gt;getValue();
+        $result = base64_encode($token); // bTRscnRXTmlGUU1aZ3h6OEVyWGh5UQAAAAAAAAAAAAA=
+    ...</code></pre>
+<p>There are two separate pages, login and profile. Why extra bytes are added in decoded token?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-aa3679817689d3dbb4a14587-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-aa3679817689d3dbb4a14587-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/210/andresgutierrez" class="user-moderator-Y"><span itemprop="name">Andres Gutierrez</span></a>        </span>
+        <br>
+
+        <span class="karma">34.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="22643" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '15</span>
+              </span><br/><a name="C22643" href="#C22643">
+                <time itemprop="dateCreated" datetime="2015-08-31T16:26:31-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This is not a bug, that's caused because of padding, you can change the padding this way:</p>
+<pre><code class="language-php">$di-&gt;setShared('crypt', function()
+{
+        $crypt = new \Phalcon\Crypt;
+        $crypt-&gt;setMode(MCRYPT_MODE_CFB);
+        $crypt-&gt;setKey('asasasasasasasas'); // 16 bytes, it's no matter what symbols are used
+        return $crypt;
+});</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="22643" data-cf-modified-aa3679817689d3dbb4a14587-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="22643" data-cf-modified-aa3679817689d3dbb4a14587-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/efd7d9a9ed8c97d06d8db1c869cf7286?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3678/elcreator" class="user-moderator-N"><span itemprop="name">Artur Kyryliuk</span></a>        </span>
+        <br>
+
+        <span class="karma">12.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="22645" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '15</span>
+              </span><br/><a name="C22645" href="#C22645">
+                <time itemprop="dateCreated" datetime="2015-08-31T17:12:53-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Phalcon throws exception &quot;Parameter 'scheme' must be a long/integer&quot;.
+I see in PHPStorm that in the internal representation of mcrypt this constant have string value: </p>
+<pre><code class="language-php">   define ('MCRYPT_MODE_CFB', "cfb");</code></pre>
+<p>The same is described in comment here <a href="http://php.net/manual/ru/mcrypt.constants.php">http://php.net/manual/ru/mcrypt.constants.php</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="22645" data-cf-modified-aa3679817689d3dbb4a14587-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="22645" data-cf-modified-aa3679817689d3dbb4a14587-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/210/andresgutierrez" class="user-moderator-Y"><span itemprop="name">Andres Gutierrez</span></a>        </span>
+        <br>
+
+        <span class="karma">34.6k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C22683" href="#C22683">
+                <time itemprop="dateCreated" datetime="2015-09-01T07:09:17-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I've fixed the example</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="22683" data-cf-modified-aa3679817689d3dbb4a14587-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="22683" data-cf-modified-aa3679817689d3dbb4a14587-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/efd7d9a9ed8c97d06d8db1c869cf7286?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3678/elcreator" class="user-moderator-N"><span itemprop="name">Artur Kyryliuk</span></a>        </span>
+        <br>
+
+        <span class="karma">12.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="22937" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '15</span>
+              </span><br/><a name="C22937" href="#C22937">
+                <time itemprop="dateCreated" datetime="2015-09-05T04:28:50-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you! I think that it would be useful for beginners to see it here <a href="https://docs.phalcon.io/en/latest/reference/cookies.html">https://docs.phalcon.io/en/latest/reference/cookies.html</a> because default behavior, described in docs </p>
+<pre><code class="language-php">use Phalcon\Crypt;
+
+$di-&gt;set('crypt', function () {
+    $crypt = new Crypt();
+    $crypt-&gt;setKey('#1dj8$=dp?.ak//j1V$'); // Use your own key!
+    return $crypt;
+});</code></pre>
+<p>leads to confusing results. </p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="22937" data-cf-modified-aa3679817689d3dbb4a14587-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="22937" data-cf-modified-aa3679817689d3dbb4a14587-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="8295" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

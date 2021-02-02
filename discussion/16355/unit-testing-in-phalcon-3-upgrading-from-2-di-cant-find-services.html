@@ -1,0 +1,220 @@
+---
+layout: default
+title: 'Unit Testing in Phalcon 3 (upgrading from 2), DI can&#039;t find services - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/27/external-tools">External Tools</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Unit Testing in Phalcon 3 (upgrading from 2), DI can&#039;t find services</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2063/Knallcharge" class="user-moderator-N"><span itemprop="name">Knallcharge</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-06-19T00:14:20-07:00">Jun '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-06-19T00:14:20-07:00">Jun '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>611</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/bdc94354616a420014ce89b07801cdd4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2063/Knallcharge" class="user-moderator-N"><span itemprop="name">Knallcharge</span></a></span>
+                <span class="karma">3.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C16355" href="#C16355">
+        <time class="action-date">Jun '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm having trouble migrating an old project from Phalcon 2 (2.0.9) to Phalcon 3 (3.1.2). The code itself seems to run ok (first look), but the unit-tests just won't work.
+I've been through the documentation (<a href="https://docs.phalcon.io/en/3.0.1/reference/unit-testing.html">https://docs.phalcon.io/en/3.0.1/reference/unit-testing.html</a>) and even rebuild my TestHelper and UnitTestCase from scratch just to make sure that everything's in place, but especially the DI-container seems to work a lot differently in Phalcon 3 compared to Phalcon 2 in the tests.</p>
+<p>For example:</p>
+<ul>
+<li>&quot;parent::setUp()&quot; needs to be run at the beginnig of &quot;setUp()&quot; in UnitTestCase.</li>
+<li>&quot;parent::setUp()&quot; at the end of UnitTestCase needs to be changed to &quot;$this-&gt;setDi($di)&quot;</li>
+<li>The config is unknown in all tests unless you explicitely use &quot;$this-&gt;setConfig($config)&quot; in UnitTestCase (took me hours just to figure that out).</li>
+<li>It seems I need to register &quot;request&quot; and &quot;response&quot; (as shared) in my DI to run any unit-test that needs the request- or response-object. This was not necessary before. Still the tests won't work, but at least the warning that the services &quot;request/response&quot; are unknown went away.</li>
+<li>The &quot;modelsManager&quot; is now unknown to the DI, also I need to register &quot;modelsMetadata&quot; in the DI to get the unit-tests to work. This also was not necessary with Phalcon 2.</li>
+</ul>
+<p>And it still won't work (although I fixed hundreds of warnings with the above fixes), right now I'm getting the message &quot;<em>Phalcon\Di\Exception: Service 'filter' wasn't found in the dependency injection container</em>&quot; when running a unit-test which tries to validate a form using &quot;$form-&gt;isValid($post)&quot; which was working fine this way with Phalcon 2.</p>
+<p>I've been struggling with this for a couple of days now and starting to plan <strong>not</strong> to upgrade to Phalcon 3 at all but to keep an old server with Phalcon 2 running for legacy projects, even though this feels like failure ... is anyone experiencing the same problems and is this really the - hard to believe - way to go to upgrade to Phalcon 3?</p>
+<p>Here's some of my code, TestHelper:</p>
+<pre><code>include __DIR__ . '/../../../vendor/autoload.php';
+$loader = new \Phalcon\Loader();
+$loader-&gt;registerDirs([ROOT_PATH]));
+$loader-&gt;registerNamespaces( ... );
+$loader-&gt;register();
+$di = new FactoryDefault();
+Di::reset();
+Di::setDefault($di);</code></pre>
+<p>UnitTestCase (for each module):</p>
+<pre><code>abstract class UnitTestCase extends PhalconTestCase
+{
+    public function setUp()
+    {
+        parent::setUp();
+        $di = Di::getDefault();
+        (... setting my services as well as Request/Response here...)
+       $this-&gt;setDi($di);
+    }
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-acd6c2563228a3c23d5f6809-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-acd6c2563228a3c23d5f6809-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C48857" href="#C48857">
+                <time itemprop="dateCreated" datetime="2017-06-19T07:32:09-07:00" class="action-date">Jun '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Do you have tearDown? As i remember by defaul there is <code>Di::reset()</code>? Remove this line most likely.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48857" data-cf-modified-acd6c2563228a3c23d5f6809-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48857" data-cf-modified-acd6c2563228a3c23d5f6809-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bdc94354616a420014ce89b07801cdd4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2063/Knallcharge" class="user-moderator-N"><span itemprop="name">Knallcharge</span></a>        </span>
+        <br>
+
+        <span class="karma">3.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C48857"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="48911" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '17</span>
+              </span><br/><a name="C48911" href="#C48911">
+                <time itemprop="dateCreated" datetime="2017-06-20T06:41:48-07:00" class="action-date">Jun '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Do you have tearDown? As i remember by defaul there is <code>Di::reset()</code>? Remove this line most likely.</p>
+</blockquote>
+<p>I don't have tearDown() (and never had it in Phalcon 2) but added it right now: no change to the behaviour, even if I delete the line &quot;parent::tearDown();&quot; (where DI:reset() is called), so tearDown() won't do anything, but still the errors are the same.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48911" data-cf-modified-acd6c2563228a3c23d5f6809-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48911" data-cf-modified-acd6c2563228a3c23d5f6809-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="48913" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '17</span>
+              </span><br/><a name="C48913" href="#C48913">
+                <time itemprop="dateCreated" datetime="2017-06-20T07:21:45-07:00" class="action-date">Jun '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://github.com/phalcon/incubator/blob/master/Library/Phalcon/Test/UnitTestCase.php">https://github.com/phalcon/incubator/blob/master/Library/Phalcon/Test/UnitTestCase.php</a> you use this class or not?</p>
+<p>If yes then i had exactly same problem, i just needed to comment out <code>Di::reset()</code> and it works fine.</p>
+<p>When lastly running tests for my project - i had everything fine with di.</p>
+<p>If you can't figure it out then try to use xdebug to check what happens and where Di is reseted.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48913" data-cf-modified-acd6c2563228a3c23d5f6809-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48913" data-cf-modified-acd6c2563228a3c23d5f6809-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bdc94354616a420014ce89b07801cdd4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2063/Knallcharge" class="user-moderator-N"><span itemprop="name">Knallcharge</span></a>        </span>
+        <br>
+
+        <span class="karma">3.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C49065" href="#C49065">
+                <time itemprop="dateCreated" datetime="2017-06-23T01:53:02-07:00" class="action-date">Jun '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Commenting out Di::reset() didn't help, I got the same errors as before, when I don't register request/response/filter (and more) by myself.
+Phalcon 3.2.0 even made this worse (using 3.1.2 before), the line &quot;use Phalcon\Config;&quot; ist missing in the UnitTestCase.php in the incubator, so the Test will try to find &quot;Phalcon\Test\Config&quot; which doesn't exist ...</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49065" data-cf-modified-acd6c2563228a3c23d5f6809-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49065" data-cf-modified-acd6c2563228a3c23d5f6809-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="49067" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '17</span>
+              </span><br/><a name="C49067" href="#C49067">
+                <time itemprop="dateCreated" datetime="2017-06-23T01:55:59-07:00" class="action-date">Jun '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Oh, you are right. Good to know this.</p>
+<p>Then use xdebug to figure out why your services are removed or why you have diffrent DI instance.</p>
+<p>I use Phalcon 3 and when was running last time tests for my project everything was fine, but it was loooong time ago.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49067" data-cf-modified-acd6c2563228a3c23d5f6809-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49067" data-cf-modified-acd6c2563228a3c23d5f6809-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="16355" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

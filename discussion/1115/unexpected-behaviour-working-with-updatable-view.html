@@ -1,0 +1,245 @@
+---
+layout: default
+title: 'Unexpected behaviour working with updatable view - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Unexpected behaviour working with updatable view</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/254/atelgero" class="user-moderator-N"><span itemprop="name">Alexey Telgerov</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-11-01T04:04:59-07:00">Nov '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-11-01T04:04:59-07:00">Nov '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1424</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/4305ed7ad67c27564933268feeb34191?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/254/atelgero" class="user-moderator-N"><span itemprop="name">Alexey Telgerov</span></a></span>
+                <span class="karma">2.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1115" href="#C1115">
+        <time class="action-date">Nov '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi all.
+I've got a &quot;create&quot; action instead of update trying iterate an updatable view:</p>
+<pre><code class="language-sql">CREATE or replace VIEW wide_exchange_rates AS
+ SELECT R.id, R.source_currency_name, C.real_currency AS source_real,
+  R.target_currency_name, D.real_currency AS target_real, R.rate, R.refresh_date
+ FROM `exchange_rates` AS R
+  LEFT JOIN currencies AS C ON (R.source_currency_name = C.name)
+  LEFT JOIN currencies AS D ON (R.target_currency_name = D.name)</code></pre>
+<p>And neither model operations nor modelManager dont work as I want: </p>
+<pre><code class="language-php">$concurrentPairs = WideExchangeRates::find();
+        foreach ($concurrentPairs as $pair) {
+            if ($pair-&gt;source_real == $pair-&gt;target_real) {
+                $pair-&gt;rate = 1;
+                $pair-&gt;update();
+            }</code></pre>
+<p>throws exception: </p>
+<pre><code class="language-sh">PHP Fatal error:  Uncaught exception 'PDOException' with message 'SQLSTATE[HY000]: General error: 1471 The target table wide_exchange_rates of the INSERT is not insertable-into' in tasks/CurrenciesTask.php:75
+Stack trace:
+#0 [internal function]: PDOStatement-&gt;execute()
+#1 [internal function]: Phalcon\Db\Adapter\Pdo-&gt;executePrepared(Object(PDOStatement), Array, Array)
+#2 [internal function]: Phalcon\Db\Adapter\Pdo-&gt;execute('INSERT INTO `wi...', Array, Array)
+#3 [internal function]: Phalcon\Db\Adapter-&gt;insert('wide_exchange_r...', Array, Array, Array)
+#4 [internal function]: Phalcon\Mvc\Model-&gt;_doLowInsert(Object(Phalcon\Mvc\Model\MetaData\Memory), Object(Phalcon\Db\Adapter\Pdo\Mysql), 'wide_exchange_r...', false)
+#5 [internal function]: Phalcon\Mvc\Model-&gt;save()
+#6 ... tasks/CurrenciesTask.php(75): Phalcon\Mvc\Model-&gt;update()
+#7 [internal function]: CurrenciesTask-&gt;loadRateAction()</code></pre>
+<p>The same I've got with modelsManager:</p>
+<pre><code class="language-php">$this-&gt;modelsManager-&gt;executeQuery("update WideExchangeRates set rate = 1 where source_real = target_real");</code></pre>
+<p>Obviously, Phalcon tries to insert record, even the update method is used directly. But why? I didn't overwrite any standart Model methods..</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-3eefeb5dfb52b5bd0907d603-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-3eefeb5dfb52b5bd0907d603-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4305ed7ad67c27564933268feeb34191?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/254/atelgero" class="user-moderator-N"><span itemprop="name">Alexey Telgerov</span></a>        </span>
+        <br>
+
+        <span class="karma">2.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4090" href="#C4090">
+                <time itemprop="dateCreated" datetime="2013-11-01T04:07:19-07:00" class="action-date">Nov '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>And what's wrong with sql and sh highlighter?:)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4090" data-cf-modified-3eefeb5dfb52b5bd0907d603-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4090" data-cf-modified-3eefeb5dfb52b5bd0907d603-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4096" href="#C4096">
+                <time itemprop="dateCreated" datetime="2013-11-01T11:29:20-07:00" class="action-date">Nov '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It seems that the ORM cannot identity which column (or columns) are the primary key of the table. Without a primary key it can't know if an update or an insert must be performed. You can try to implement a custom meta-data for this model so this way the ORM can know which columns are the primary key.</p>
+<p><a href="http://docs.phalcon.io/en/latest/reference/models.html#manual-meta-data">http://docs.phalcon.io/en/latest/reference/models.html#manual-meta-data</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4096" data-cf-modified-3eefeb5dfb52b5bd0907d603-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4096" data-cf-modified-3eefeb5dfb52b5bd0907d603-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4305ed7ad67c27564933268feeb34191?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/254/atelgero" class="user-moderator-N"><span itemprop="name">Alexey Telgerov</span></a>        </span>
+        <br>
+
+        <span class="karma">2.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4112" href="#C4112">
+                <time itemprop="dateCreated" datetime="2013-11-04T08:02:38-07:00" class="action-date">Nov '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I'm sorry, but I haven't found out how to set primary key for the MySQL view manually.
+In simplest case I've created a table and derived view:</p>
+<pre><code class="language-sql">CREATE TABLE IF NOT EXISTS `test` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `value` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8;
+
+CREATE VIEW `test_view` AS select `test`.`id` AS `id`,`test`.`value` AS `value` from `test`;</code></pre>
+<p>Manual meta-data:</p>
+<pre><code class="language-php">    public function metaData()
+    {
+        return array(
+            //Every column in the mapped table
+            MetaData::MODELS_ATTRIBUTES =&gt; [
+                'id', 'value'
+            ],
+
+            //Every column part of the primary key
+            MetaData::MODELS_PRIMARY_KEY =&gt; [
+                'id'
+            ],
+
+            //Every column and their data types
+            MetaData::MODELS_DATA_TYPES =&gt; array(
+                'id' =&gt; Column::TYPE_INTEGER,
+                'value' =&gt; Column::TYPE_INTEGER,
+            ),
+        );
+    }</code></pre>
+<p>Trying to update my view...</p>
+<pre><code class="language-php">    public function testAction()    {
+        $view =  TestView::find();
+        foreach ($view as $row) {
+            if ($row-&gt;id == 1) 
+                $row-&gt;update(['value' =&gt; 50]);
+        }
+    }</code></pre>
+<p>I see the message:</p>
+<pre><code class="language-sh">php cli.php currencies test
+PHP Notice:  Undefined index: 9 in app/tasks/CurrenciesTask.php on line 90
+The meta-data is invalid or is corrupt</code></pre>
+<p>Is there any way to do it with Phalcon ORM? May be I should add in metaData something else?  Pure SQL-queries and PDO-execute work fine. Thanks.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4112" data-cf-modified-3eefeb5dfb52b5bd0907d603-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4112" data-cf-modified-3eefeb5dfb52b5bd0907d603-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/7d478f4344b389c0d0fbeba556ce43fb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/869/yokz" class="user-moderator-N"><span itemprop="name">Herdian Yoki</span></a>        </span>
+        <br>
+
+        <span class="karma">10</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4801" href="#C4801">
+                <time itemprop="dateCreated" datetime="2013-12-30T23:10:51-07:00" class="action-date">Dec '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I have a same issue here when I'm trying to use manual meta-data.
+When I retrieve the data is not a problem, but when i create/update data it show the error 'The meta-data is invalid or is corrupt'.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4801" data-cf-modified-3eefeb5dfb52b5bd0907d603-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4801" data-cf-modified-3eefeb5dfb52b5bd0907d603-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c0ce8f5e133750a4dfea4712e533a178?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/15/le51" class="user-moderator-N"><span itemprop="name">le51</span></a>        </span>
+        <br>
+
+        <span class="karma">43.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4810" href="#C4810">
+                <time itemprop="dateCreated" datetime="2014-01-01T13:51:44-07:00" class="action-date">Jan '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi,</p>
+<p>just a noob question:
+you are using a mysql VIEW, wich is, from my point of view, just a sql SELECT statement. I know that you can build a Model from a VIEW but I ask myself if some kind of CRUD operations on that Model are possible (because of the SELECT nature of the view definition) ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4810" data-cf-modified-3eefeb5dfb52b5bd0907d603-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4810" data-cf-modified-3eefeb5dfb52b5bd0907d603-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1115" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

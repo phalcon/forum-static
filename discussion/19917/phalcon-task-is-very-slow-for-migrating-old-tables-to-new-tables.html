@@ -1,0 +1,299 @@
+---
+layout: default
+title: 'Phalcon Task is very slow for migrating old tables to new tables? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/25/configuration">Configuration</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Phalcon Task is very slow for migrating old tables to new tables?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10073/iftikharuddin" class="user-moderator-N"><span itemprop="name">Iftikhar uddin</span></a></span>
+            <time itemprop="dateCreated" datetime="2019-08-05T09:55:10-07:00">Aug '19</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2019-08-05T09:55:10-07:00">Aug '19</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '19</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>256</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/d3b07acb440fe79976cb95ea365d0054?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10073/iftikharuddin" class="user-moderator-N"><span itemprop="name">Iftikhar uddin</span></a></span>
+                <span class="karma">5.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C19917" href="#C19917">
+        <time class="action-date">Aug '19</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm trying to migrate OLD database tables to my new database. New database have fresh and optimized structure. </p>
+<p>I have an old table having 300k+ records and size is 11 GB.  So now I have created a phalcon task which contain the below function for the mentioned table: This function in the task is taking almost 40+ hours to migrate the old data to new table. How can we optimize this task?  I want to speedup the process!</p>
+<pre><code class="language-php">    private function migrateEvaluationClients(){
+    $this-&gt;writeLogInfo("Starting Evaluation Clients migration.", true);
+
+    $progress = 0;
+    $errors = 0;
+    $total = $this-&gt;getEvaluationClientsTotal();
+    $skipped = $this-&gt;getEvaluationClientsMigratedCount();
+    $migrated = 0;
+
+    $query = $this-&gt;getMySqlConnection()-&gt;query("SELECT * FROM old_evaluation_client_migration WHERE migrated = 0");
+    if($query-&gt;num_rows == 0){
+        $this-&gt;writeLogWarning("No Evaluation Clients found for migration.");
+        return;
+    }
+
+    while($oldEvaluationClient = $query-&gt;fetch_assoc()){
+        // Get the old evaluation client id
+        $oldEvaluationClientId = $oldEvaluationClient['id'];
+        $progress++;
+        try{
+            $EbEvaluationClient = EbEvaluationClient::getByExternalRefKeyAndValue('evaluation_client', $oldEvaluationClientId);
+            // Check if the client data was already migrated before
+            if($EbEvaluationClient){
+                $skipped++;
+            } else {
+                $EvaluationClientUserGroup = CxUserGroup::findFirstByName(self::EB_EVALUATION_CLIENT_USER_GROUP_NAME);
+
+                // Get the old record email and check if it is valid
+                $emailAddress = CxHelper::arrayGetValueByKey($oldEvaluationClient, 'email');
+                if(!$emailAddress || !filter_var($emailAddress, FILTER_VALIDATE_EMAIL)){
+                    $this-&gt;writeLogError("Evaluation Client (ID: $oldEvaluationClientId): skipped because of missing or invalid email ($emailAddress)", true);
+                    $errors++;
+                } else {
+                    // Get existing CX User with specified email (if any)
+                    $extendedUser = CxUserExtension::findFirstByEmail($emailAddress);
+                    if($extendedUser){
+                        // Add external reference if not already set
+                        $extendedUser-&gt;save();
+                        $this-&gt;writeLogWarning("Evaluation Client (ID: $oldEvaluationClientId): skipping CX User creation because already exists");
+                    }else{
+                        $this-&gt;writeLogInfo("Evaluation Client (ID: $oldEvaluationClientId): creating new CxUser record");
+                        $extendedUser = new CxUserExtension();
+                        $userAuthProvider-&gt;save();
+                    }
+                    // Add the Evaluation Client user group (if not already added)
+                    if(!$extendedUser-&gt;isMemberOfGroups(array($EvaluationClientUserGroup-&gt;getId()))){
+                        $extendedUser-&gt;addCxUserGroup($EvaluationClientUserGroup);
+                        $extendedUser-&gt;save();
+                    }
+                    $EvaluationClient = new EbEvaluationClient();
+                    $EvaluationClient-&gt;setAge($oldEvaluationClient['age']);
+                    switch($oldEvaluationClient['gender']){
+                        case 'male':
+                            $EvaluationClient-&gt;setGender(new CxGender(CxGender::MALE));
+                            break;
+                        case 'female':
+                            $EvaluationClient-&gt;setGender(new CxGender(CxGender::FEMALE));
+                            break;
+                        default:
+                            $EvaluationClient-&gt;setGender(new CxGender(CxGender::UNKNOWN));
+                    }
+                    switch($oldEvaluationClient['call_option']) {
+                        case 'Not Contacted':
+                            $EvaluationClient-&gt;setCallStatus(new EbEvaluationCallStatus(EbEvaluationCallStatus::NOT_CONTACTED));
+                            break;
+                        case 'Sale':
+                            $EvaluationClient-&gt;setCallStatus(new EbEvaluationCallStatus(EbEvaluationCallStatus::SALE));
+                            break;
+                        case 'Unqualified/Bad':
+                            $EvaluationClient-&gt;setCallStatus(new EbEvaluationCallStatus(EbEvaluationCallStatus::UNQUALIFIED_BAD));
+                            break;
+                        case 'Pending':
+                            $EvaluationClient-&gt;setCallStatus(new EbEvaluationCallStatus(EbEvaluationCallStatus::PENDING));
+                            break;
+                        case 'Not interested at this time':
+                            $EvaluationClient-&gt;setCallStatus(new EbEvaluationCallStatus(EbEvaluationCallStatus::NOT_INTERESTED));
+                            break;
+                    }
+                    $EvaluationClient-&gt;setEvaluationStatus($oldEvaluationClient['evaluation_status'] == '1');
+                    $EvaluationClient-&gt;setPendingResponse($oldEvaluationClient['pending_response'] == '1');
+                    if($oldEvaluationClient['created_at']){
+                        $dateCreated = CxDateTime::createFromFormat('Y-m-d H:i:s', $oldEvaluationClient['created_at']);
+                        $EvaluationClient-&gt;setDateCreated($dateCreated-&gt;getTimestamp());
+                    }
+                    if($oldEvaluationClient['updated_at']){
+                        $dateUpdated = CxDateTime::createFromFormat('Y-m-d H:i:s', $oldEvaluationClient['updated_at']);
+                        $EvaluationClient-&gt;setDateUpdated($dateUpdated-&gt;getTimestamp());
+                    }
+                    $token = md5($EvaluationClient-&gt;getDateUpdated() . $emailAddress);
+                    $EvaluationClient-&gt;setToken($token);
+                    $EvaluationClient-&gt;setExternalRefValue('evaluation_client_id', $oldEvaluationClientId);
+                    $this-&gt;db-&gt;begin();
+                    $EvaluationClient-&gt;save();
+                    $resultJson = $this-&gt;getEvaluationClientResultJson($oldEvaluationClientId);
+                    if($resultJson){
+                        $result = new EbEvaluationClientResult();
+                        $result-&gt;setResultJson($resultJson);
+                        $result-&gt;setEbEvaluationClient($EvaluationClient);
+                        $result-&gt;save();
+                    }
+                    $this-&gt;db-&gt;commit();
+
+                    $this-&gt;setEvaluationClientMigratedStatus($oldEvaluationClientId, true);
+                    $migrated++;
+                }
+            }
+
+            // Cleanup memory
+            unset($EvaluationClient);
+            unset($healthCoachId);
+
+        }catch(\Exception $ex){
+            // Undo any pending transaction (needed because of Phalcon bug not undoing transaction after exception)
+            while($this-&gt;db-&gt;isUnderTransaction()){
+                $this-&gt;db-&gt;rollback();
+            }
+            $this-&gt;writeLogError("Evaluation Client (ID: $oldEvaluationClientId): ERROR - " . $ex-&gt;getMessage(), true);
+            $errors++;
+        }
+
+        $this-&gt;writeMigrationStats("Migrating Evaluation Clients", $total,$progress+$skipped, $migrated, $skipped, $errors);
+    }
+    }</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-9e8f2833b9957e781305762c-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-9e8f2833b9957e781305762c-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d01ce04a6be1a8b86c3546969d241bd2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1632/ruudboon" class="user-moderator-N"><span itemprop="name">Ruud Boon</span></a>        </span>
+        <br>
+
+        <span class="karma">10.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C60629" href="#C60629">
+                <time itemprop="dateCreated" datetime="2019-08-05T13:27:37-07:00" class="action-date">Aug '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Can you measure some stuff too check where the delay happens?
+Don’t see really weird stuff. Does your name field have an index?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60629" data-cf-modified-9e8f2833b9957e781305762c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60629" data-cf-modified-9e8f2833b9957e781305762c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d3b07acb440fe79976cb95ea365d0054?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10073/iftikharuddin" class="user-moderator-N"><span itemprop="name">Iftikhar uddin</span></a>        </span>
+        <br>
+
+        <span class="karma">5.8k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C60629"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/d01ce04a6be1a8b86c3546969d241bd2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Ruud Boon                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C60635" href="#C60635">
+                <time itemprop="dateCreated" datetime="2019-08-05T21:32:12-07:00" class="action-date">Aug '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Can you measure some stuff too check where the delay happens?
+Don’t see really weird stuff. Does your name field have an index?</p>
+</blockquote>
+<p>Which name field mate? You mean findFirstByName?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60635" data-cf-modified-9e8f2833b9957e781305762c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60635" data-cf-modified-9e8f2833b9957e781305762c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d01ce04a6be1a8b86c3546969d241bd2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1632/ruudboon" class="user-moderator-N"><span itemprop="name">Ruud Boon</span></a>        </span>
+        <br>
+
+        <span class="karma">10.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C60637" href="#C60637">
+                <time itemprop="dateCreated" datetime="2019-08-05T22:20:44-07:00" class="action-date">Aug '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes, I assume name is mapped on the column name on your database. If you have don't have an index on name, depening on your database, it could be a bit bit slower.
+But please start with some measurements. For example using microtime.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60637" data-cf-modified-9e8f2833b9957e781305762c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60637" data-cf-modified-9e8f2833b9957e781305762c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C60699" href="#C60699">
+                <time itemprop="dateCreated" datetime="2019-08-12T09:01:17-07:00" class="action-date">Aug '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If you're going with speed, ORM should be avoided.  ORM trades off speed for ease of use - but in this case speed is what you want.  I'd consider writing the queries by hand.</p>
+<p>Line 43: <code>$userAuthProvider-&gt;save()</code>.  <code>$userAuthProvider</code> doesn't exist - that save might be causing some slowdown.
+It also looks like you're wrapping <code>$EvaluationClient-&gt;save()</code> in a transaction.  Why?  You're doing a bunch of other stuff outside a transaction.</p>
+<p>Might it be possible to do a lot of this stuff without PHP code?  For example, could you just do something like:</p>
+<pre><code class="language-sql">INSERT
+INTO
+    newdatabase.evaluation_client
+SELECT
+ *
+FROM
+    olddatabase.evaluation_client</code></pre>
+<p>Then modify like:</p>
+<pre><code class="language-sql">UPDATE
+    olddatabase.evaluation_client
+SET
+    gender = 'm' where gender = 'male'</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60699" data-cf-modified-9e8f2833b9957e781305762c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60699" data-cf-modified-9e8f2833b9957e781305762c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="19917" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

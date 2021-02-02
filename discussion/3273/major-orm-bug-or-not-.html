@@ -1,0 +1,293 @@
+---
+layout: default
+title: 'Major ORM bug or not? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Major ORM bug or not?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1986/goors" class="user-moderator-N"><span itemprop="name">Nikola</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-08-27T10:48:21-07:00">Aug '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-08-27T10:48:21-07:00">Aug '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>571</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/8ceab1df9b9083d662c34efd1b7c7868?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1986/goors" class="user-moderator-N"><span itemprop="name">Nikola</span></a></span>
+                <span class="karma">7.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3273" href="#C3273">
+        <time class="action-date">Aug '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>This code:</p>
+<pre><code>    $booking = Booking::findFirst(3278);
+    $booking-&gt;BookingStatus = Booking::STATUS_CANCELLED;
+    $booking-&gt;update();</code></pre>
+<p>Produce this sql:</p>
+<pre><code>UPDATE `Booking` SET `QrCode` = '', `isOnSchedule` = 0 WHERE `Id` = 3278 AND `Route` = 2 AND `UBR` = 'UBR-58974' AND `CreatedAt` = '2014-06-13 21:22:35' AND `SlotTime` = '11:00' AND `FlightDate` = '2014-08-02' AND `BookingStatus` = '0'</code></pre>
+<p>That is totaly wrong!!!!  Who this can be?</p>
+<p>1) Why QrCode and isOnSchedule is updated?</p>
+<p>2) Why BookingStatus is not updated?</p>
+<p>I notice this problem on several ocasions. Booking table have one foreign key. I noticed that all tbales with forwign keys have same problem.
+This is big issue.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-77bf5b26feb8125877b29516-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-77bf5b26feb8125877b29516-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fcae2565ce4d1ed7240231932dec115a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/659/oleg578" class="user-moderator-N"><span itemprop="name">Oleg</span></a>        </span>
+        <br>
+
+        <span class="karma">8.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="10756" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '14</span>
+              </span><br/><a name="C10756" href="#C10756">
+                <time itemprop="dateCreated" datetime="2014-08-27T11:29:32-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>work code</p>
+<pre><code class="language-php">        $discuss = Discussions::findFirst(3);
+        $newTitle = $discuss-&gt;getTitle() . ' new';
+        $discuss-&gt;setTitle($newTitle);
+        $discuss-&gt;update();
+        $discuss = Discussions::findFirst(3);
+        var_dump($discuss-&gt;toArray());</code></pre>
+<p>sql log</p>
+<pre><code class="language-php">[Wed, 27 Aug 14 21:17:52 +0300][INFO] SELECT `discussions`.`id`, `discussions`.`title`, `discussions`.`topic`, `discussions`.`categories_id`, `discussions`.`users_id`, `discussions`.`created_at`, `discussions`.`slug` FROM `discussions` WHERE `discussions`.`id` = 3 LIMIT :1
+[Wed, 27 Aug 14 21:17:52 +0300][INFO] UPDATE `discussions` SET `title` = ?, `topic` = ?, `categories_id` = ?, `users_id` = ?, `created_at` = ?, `slug` = ? WHERE `id` = ?
+[Wed, 27 Aug 14 21:17:52 +0300][INFO] SELECT `discussions`.`id`, `discussions`.`title`, `discussions`.`topic`, `discussions`.`categories_id`, `discussions`.`users_id`, `discussions`.`created_at`, `discussions`.`slug` FROM `discussions` WHERE `discussions`.`id` = 3 LIMIT :1</code></pre>
+<p>output</p>
+<pre><code class="language-php">array(7) { ["id"]=&gt; string(1) "3" ["title"]=&gt; string(17) "Discussions 3 new" ["topic"]=&gt; string(22) "Topic of discussions 3" ["categories_id"]=&gt; string(1) "2" ["users_id"]=&gt; string(1) "7" ["created_at"]=&gt; string(10) "1409163472" ["slug"]=&gt; string(17) "discussions_3_new" }</code></pre>
+<p>Code of model Discusiions you can find at <a href="https://github.com/oleg578/PhalconForumSample/blob/master/Apps/Models/Discussions.php">https://github.com/oleg578/PhalconForumSample/blob/master/Apps/Models/Discussions.php</a></p>
+<p>P.S.
+You don't need foreign key usually. See MySQL documentation. And check your foreign keys, or delete it :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10756" data-cf-modified-77bf5b26feb8125877b29516-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10756" data-cf-modified-77bf5b26feb8125877b29516-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8ceab1df9b9083d662c34efd1b7c7868?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1986/goors" class="user-moderator-N"><span itemprop="name">Nikola</span></a>        </span>
+        <br>
+
+        <span class="karma">7.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="10757" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '14</span>
+              </span><br/><a name="C10757" href="#C10757">
+                <time itemprop="dateCreated" datetime="2014-08-27T11:37:00-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I do not see how this answers my question?</p>
+<p>This is working but I do no want to use sql:</p>
+<pre><code>    $this-&gt;db-&gt;update(
+        "Booking",
+        array("BookingStatus"),
+        array("0"),
+        "Id=".$id
+   );</code></pre>
+<blockquote>
+<p>P.S. You don't need foreign key usually. See MySQL documentation. And check your foreign keys, or delete it :)</p>
+</blockquote>
+<p>Really? I pretend that i did not hear this.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10757" data-cf-modified-77bf5b26feb8125877b29516-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span><span itemprop="downvoteCount">1</span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10757" data-cf-modified-77bf5b26feb8125877b29516-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fcae2565ce4d1ed7240231932dec115a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/659/oleg578" class="user-moderator-N"><span itemprop="name">Oleg</span></a>        </span>
+        <br>
+
+        <span class="karma">8.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="10758" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '14</span>
+              </span><br/><a name="C10758" href="#C10758">
+                <time itemprop="dateCreated" datetime="2014-08-27T12:02:02-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>What storage engine are you use?</p>
+<p>I don't undestand.
+If you want change any properites of object (result of find) - you can use this object with new properties only in life circle of application ( in one request).
+Then you can't use update.
+If you want update row in table - you have to update row...</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10758" data-cf-modified-77bf5b26feb8125877b29516-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10758" data-cf-modified-77bf5b26feb8125877b29516-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8ceab1df9b9083d662c34efd1b7c7868?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1986/goors" class="user-moderator-N"><span itemprop="name">Nikola</span></a>        </span>
+        <br>
+
+        <span class="karma">7.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C10759" href="#C10759">
+                <time itemprop="dateCreated" datetime="2014-08-27T12:35:30-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>What do you mean by: </p>
+<blockquote>
+<p>you can use this object with new properties only in life circle of application ( in one request). Then you can't use update.</p>
+</blockquote>
+<p>I use innodb.</p>
+<blockquote>
+<p>What storage engine are you use?</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10759" data-cf-modified-77bf5b26feb8125877b29516-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10759" data-cf-modified-77bf5b26feb8125877b29516-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C10761" href="#C10761">
+                <time itemprop="dateCreated" datetime="2014-08-27T12:44:28-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Are <code>Id</code>, <code>Route</code>, <code>UBR</code>, <code>CreatedAt</code>, <code>SlotTime</code>, <code>FlightDate</code>, and <code>BookingStatus</code> marked as primary keys?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10761" data-cf-modified-77bf5b26feb8125877b29516-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10761" data-cf-modified-77bf5b26feb8125877b29516-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8ceab1df9b9083d662c34efd1b7c7868?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1986/goors" class="user-moderator-N"><span itemprop="name">Nikola</span></a>        </span>
+        <br>
+
+        <span class="karma">7.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C10762" href="#C10762">
+                <time itemprop="dateCreated" datetime="2014-08-27T13:09:49-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Are Id, Route, UBR, CreatedAt, SlotTime, FlightDate, and BookingStatus marked as primary keys?</p>
+</blockquote>
+<p>YES</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10762" data-cf-modified-77bf5b26feb8125877b29516-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10762" data-cf-modified-77bf5b26feb8125877b29516-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C10763" href="#C10763">
+                <time itemprop="dateCreated" datetime="2014-08-27T13:11:00-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>THAT'S WHY</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10763" data-cf-modified-77bf5b26feb8125877b29516-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10763" data-cf-modified-77bf5b26feb8125877b29516-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8ceab1df9b9083d662c34efd1b7c7868?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1986/goors" class="user-moderator-N"><span itemprop="name">Nikola</span></a>        </span>
+        <br>
+
+        <span class="karma">7.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="10764" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '14</span>
+              </span><br/><a name="C10764" href="#C10764">
+                <time itemprop="dateCreated" datetime="2014-08-27T13:11:29-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>THis mysql work banch is so stupid. I did not release that mysql workbanch will export indexes as composite keys. </p>
+<p>Thank you Phalcon.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10764" data-cf-modified-77bf5b26feb8125877b29516-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10764" data-cf-modified-77bf5b26feb8125877b29516-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3273" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

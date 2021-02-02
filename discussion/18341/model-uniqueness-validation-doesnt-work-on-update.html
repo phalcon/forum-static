@@ -1,0 +1,321 @@
+---
+layout: default
+title: 'Model uniqueness validation doesn&#039;t work on update - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Model uniqueness validation doesn&#039;t work on update</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/11251/JetA2" class="user-moderator-N"><span itemprop="name">JetA2</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-06-01T01:14:33-07:00">Jun '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-06-01T01:14:33-07:00">Jun '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>835</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/720e489849269b5d1b68ae18a71d77a2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/11251/JetA2" class="user-moderator-N"><span itemprop="name">JetA2</span></a></span>
+                <span class="karma">1.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C18341" href="#C18341">
+        <time class="action-date">Jun '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have a Uniqueness validator on a text field in my model. When I try to insert a new record with the same text as a previous record, the validations works and the new record does not get inserted. However, when I update an existing record with a text that is not unique, the validation does not seem to execute since the record gets updated with the non-unique text.</p>
+<p>Am I doing something wrong here?</p>
+<p>Sample code to reproduce:</p>
+<pre><code class="language-php">&lt;?php
+
+$di = new Phalcon\DI\FactoryDefault();
+
+$di-&gt;setShared('db', function () {
+    return new \Phalcon\Db\Adapter\PDO\Sqlite(array(
+        'dbname'   =&gt; ':memory:'
+    ));
+});
+
+class Test extends \Phalcon\Mvc\Model
+{
+    public $mappedPrimaryKey;
+    public $mappedData;
+
+    public function columnMap()
+    {
+        // Keys are the real names in the table and
+        // the values their names in the application
+        //
+        return array(
+            "primaryKey"    =&gt; "mappedPrimaryKey",  
+            "data"          =&gt; "mappedData"
+        );
+    }
+
+    public function validation()
+    {
+        $validator = new Phalcon\Validation();          
+
+            $validator-&gt;add( "mappedData",
+                new Phalcon\Validation\Validator\Uniqueness( array(
+                    "message" =&gt; "Data must be unique"
+         )));
+
+        return $this-&gt;validate( $validator );
+    }
+}
+
+use \Phalcon\Db\Column as Column;
+
+$di['db']-&gt;createTable(
+    'test',
+    null,
+    [
+       'columns' =&gt; [
+            new Column(
+                'primaryKey',
+                [
+                    'type'          =&gt; Column::TYPE_INTEGER,
+                    'notNull'       =&gt; true,
+                    'autoIncrement' =&gt; true,
+                    'primary'       =&gt; true,
+                ]
+            ),
+            new Column(
+                'data',
+                [
+                    'type'    =&gt; Column::TYPE_TEXT,
+                    'notNull' =&gt; true,
+                ]
+            )
+        ]
+    ]
+);
+
+$testObject1 = new Test;
+$testObject1-&gt;mappedPrimaryKey = 1;
+$testObject1-&gt;mappedData = "Object 1";
+
+$testObject1-&gt;save();
+
+$testObject2 = new Test;
+$testObject2-&gt;mappedPrimaryKey = 2;
+$testObject2-&gt;mappedData = "Object 2";
+
+$testObject2-&gt;save();
+
+$allRecords = Test::find();
+foreach ( $allRecords as $record )
+{
+    echo $record-&gt;mappedPrimaryKey . ": " . $record-&gt;mappedData . "\n";
+}
+echo "\n";
+
+$result = Test::findFirst( "mappedPrimaryKey = 1" );
+$result-&gt;mappedData = "Object 2";   // Not unique
+$result-&gt;save();
+
+$allRecords = Test::find();
+foreach ( $allRecords as $record )
+{
+    echo $record-&gt;mappedPrimaryKey . ": " . $record-&gt;mappedData . "\n";
+}
+
+echo "\nPhalcon Version: ", Phalcon\Version::get(), "\n";</code></pre>
+<p>My output:</p>
+<pre><code>1: Object 1
+2: Object 2
+
+1: Object 2
+2: Object 2
+
+Phalcon Version: 3.4.0</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-27ca2a6b1afed314ebbf94c3-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-27ca2a6b1afed314ebbf94c3-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fe8d1ddba724cf63c1e4e852b40a12ef?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11147/mateoagudelo" class="user-moderator-N"><span itemprop="name">Mateo Agudelo</span></a>        </span>
+        <br>
+
+        <span class="karma">959</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C55917" href="#C55917">
+                <time itemprop="dateCreated" datetime="2018-06-01T15:02:35-07:00" class="action-date">Jun '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I also have problems with the ORM to insert records. :/</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55917" data-cf-modified-27ca2a6b1afed314ebbf94c3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55917" data-cf-modified-27ca2a6b1afed314ebbf94c3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/720e489849269b5d1b68ae18a71d77a2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11251/JetA2" class="user-moderator-N"><span itemprop="name">JetA2</span></a>        </span>
+        <br>
+
+        <span class="karma">1.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="55929" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '18</span>
+              </span><br/><a name="C55929" href="#C55929">
+                <time itemprop="dateCreated" datetime="2018-06-02T12:13:32-07:00" class="action-date">Jun '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I checked the query log and this is the statement generated by the validation for an UPDATE (SQL variables in brackets):</p>
+<pre><code>SELECT COUNT(*) AS "rowcount" FROM "test" WHERE "test"."data" = :0 AND "test"."primaryKey" &lt;&gt; :1 [Object 2, ]</code></pre>
+<p>The primary key variable is missing (should be 1). It seems that the statement after AND always evaluates to false because of this and no rows are returned. What can be the cause of this?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55929" data-cf-modified-27ca2a6b1afed314ebbf94c3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55929" data-cf-modified-27ca2a6b1afed314ebbf94c3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C55935" href="#C55935">
+                <time itemprop="dateCreated" datetime="2018-06-03T07:35:18-07:00" class="action-date">Jun '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>How your database looks like? Provide schema best, not what is in creatTable, also why you even set primaryKey if you have autoincrement? Try to remove all <code>$testObject1-&gt;mappedPrimaryKey</code> setting.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55935" data-cf-modified-27ca2a6b1afed314ebbf94c3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55935" data-cf-modified-27ca2a6b1afed314ebbf94c3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/720e489849269b5d1b68ae18a71d77a2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11251/JetA2" class="user-moderator-N"><span itemprop="name">JetA2</span></a>        </span>
+        <br>
+
+        <span class="karma">1.3k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C55935"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C55937" href="#C55937">
+                <time itemprop="dateCreated" datetime="2018-06-03T11:33:19-07:00" class="action-date">Jun '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>How your database looks like? Provide schema best, not what is in creatTable, also why you even set primaryKey if you have autoincrement? Try to remove all <code>$testObject1-&gt;mappedPrimaryKey</code> setting.</p>
+</blockquote>
+<p>Hi Wojciech, thanks for your reply.</p>
+<p>Here's the output of the sqlite .schema command:</p>
+<pre><code>sqlite&gt; .schema test
+CREATE TABLE IF NOT EXISTS "test" (
+    `primaryKey` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    `data` TEXT NOT NULL
+);</code></pre>
+<p>You're right about setting the primary key, I had another issue when I was letting autoincrement do it's job but can't remember what. Anyway, I removed the lines where I set the primary key but this did not change anything.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55937" data-cf-modified-27ca2a6b1afed314ebbf94c3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55937" data-cf-modified-27ca2a6b1afed314ebbf94c3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="55939" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '18</span>
+              </span><br/><a name="C55939" href="#C55939">
+                <time itemprop="dateCreated" datetime="2018-06-03T15:40:01-07:00" class="action-date">Jun '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/validation/validator/uniqueness.zep#L293">https://github.com/phalcon/cphalcon/blob/master/phalcon/validation/validator/uniqueness.zep#L293</a></p>
+<p>Here you can fidn a code which gets primary key value. You can try test it yourself and post here results, don't have really idea why it's not added correctly.</p>
+<p>Maybe it's actually more about SQLite adapter in phalcon, not Uniqueness validator itself? I don't know really. There are many tests in project for this.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55939" data-cf-modified-27ca2a6b1afed314ebbf94c3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55939" data-cf-modified-27ca2a6b1afed314ebbf94c3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/720e489849269b5d1b68ae18a71d77a2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11251/JetA2" class="user-moderator-N"><span itemprop="name">JetA2</span></a>        </span>
+        <br>
+
+        <span class="karma">1.3k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C55943" href="#C55943">
+                <time itemprop="dateCreated" datetime="2018-06-04T05:40:40-07:00" class="action-date">Jun '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I believe I found the issue, bug report filed: [<a href="https://github.com/phalcon/cphalcon/issues/13398">https://github.com/phalcon/cphalcon/issues/13398</a>]</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="55943" data-cf-modified-27ca2a6b1afed314ebbf94c3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="55943" data-cf-modified-27ca2a6b1afed314ebbf94c3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="18341" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

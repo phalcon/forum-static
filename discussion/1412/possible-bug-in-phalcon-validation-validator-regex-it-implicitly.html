@@ -1,0 +1,182 @@
+---
+layout: default
+title: 'Possible bug in Phalcon\Validation\Validator\Regex - it implicitly adds the $ anchor - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/20/internals">Internals</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Possible bug in Phalcon\Validation\Validator\Regex - it implicitly adds the $ anchor</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/902/mark34" class="user-moderator-N"><span itemprop="name">mark34</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-01-08T04:30:18-07:00">Jan '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-01-08T04:30:18-07:00">Jan '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1076</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/5fcbe5a28d4c35d72ad0d95e56455d3b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/902/mark34" class="user-moderator-N"><span itemprop="name">mark34</span></a></span>
+                <span class="karma">1.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1412" href="#C1412">
+        <time class="action-date">Jan '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm starting to use Phalcon and so far have found it to be really good, and very intuitive to use. </p>
+<p>My issue is that I've found a very specific problem with the Phalcon\Validation regex parser</p>
+<p>The (very simple example) regex '/^(https?:\/\/)?[^.]+.[^.]+/' is being actually interpreted as '/^(https?:\/\/)?[^.]+.[^.]+$/'</p>
+<p>--- my code &amp; tests ---</p>
+<p>I've created a class to handle validation for form submission like this: </p>
+<pre><code class="language-php">use Phalcon\Validation\Validator\PresenceOf,
+    Phalcon\Validation\Validator\Email,
+    Phalcon\Validation\Validator\Regex as PhalconRegex,
+    Phalcon\Validation,
+    Phalcon\Validation\Validator\Confirmation;
+
+class ClientAccountValidator extends Validation
+{
+
+    public function initialize()
+    {
+        ... adding several elements, that all work as expected....
+
+        // now I want to do VERY simple validation that a field is *something like* a url, which might or might not start 
+        // with http:// or https:// then carry on with *some* characters: 
+         $this-&gt;add('url', new PhalconRegex(array(
+            'pattern' =&gt; '/^(https?:\/\/)?[^\.]+\.[^\.]+/',
+            'message' =&gt; 'Website url is not valid'
+        )));
+    }
+}</code></pre>
+<p>then I call it from the controller on submission of the form:
+$validation = new ClientAccountValidator();
+$messages = $validation-&gt;validate($_POST);</p>
+<p>Everything is fine with all the other fields (including one doing basic validation on a landline number, using '/^+?[0-9 -]{8,}/' ).</p>
+<p>Problem is that this url regex should totally do the job for all conceivable urls, but it's behaving in an incorrect way. </p>
+<p>to test this url regex, I created this standalone php script: </p>
+<pre><code class="language-php">&lt;?php
+$regex = '/^(https?:\/\/)?[^\.]+\.[^\.]+/';
+$str = $argv[1];
+print 'working on: ' . $str . "\n";
+if( preg_match( $regex, $str ) ) print 'OK!';
+else print 'FAILED!!';
+print "\n\n";
+?&gt;</code></pre>
+<p>and this works exactly as I would expect: </p>
+<p>php /tmp/regex.php '<a href="http://www.my.com">http://www.my.com</a>'
+working on: <a href="http://www.my.com">http://www.my.com</a>
+OK!</p>
+<p>php /tmp/regex.php '<a href="https://www.my.com">https://www.my.com</a>'
+working on: <a href="https://www.my.com">https://www.my.com</a>
+OK!</p>
+<p>php /tmp/regex.php '<a href="https://www">https://www</a>'
+working on: <a href="https://www">https://www</a>
+FAILED!!</p>
+<p>php /tmp/regex.php 'my.com'
+working on: my.com
+OK!</p>
+<p>php /tmp/regex.php 'www.my.com'
+working on: www.my.com
+OK!</p>
+<p>php /tmp/regex.php 'hello'
+working on: hello
+FAILED!!</p>
+<p>Submitting the same values with the web form using my Phalcon validation I get these results: </p>
+<pre><code>value: http://www.my.com  FAILS VALIDATION (wrong)
+value: https://www.my.com FAILS VALIDATION (wrong)
+value: https://www FAILS VALIDATION (correct)
+value: my.com PASSES OK (correct)
+value: www.my.com FAILS VALIDATION (wrong)
+value: hello FAILS VALIDATION (correct)</code></pre>
+<p>Hence my conclusion - the regex validator is adding its own &amp; at the end of the regex pattern.</p>
+<p>Can this be fixed please?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-c0d84b41075c5932c12db736-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-c0d84b41075c5932c12db736-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4891" href="#C4891">
+                <time itemprop="dateCreated" datetime="2014-01-08T09:11:36-07:00" class="action-date">Jan '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Pattern is got from 'pattern' option passed to the validator:
+<a href="https://github.com/phalcon/cphalcon/blob/1.3.0/ext/validation/validator/regex.c#L96">https://github.com/phalcon/cphalcon/blob/1.3.0/ext/validation/validator/regex.c#L96</a></p>
+<p>Then, it's passed as it to preg_match:
+<a href="https://github.com/phalcon/cphalcon/blob/1.3.0/ext/validation/validator/regex.c#L104">https://github.com/phalcon/cphalcon/blob/1.3.0/ext/validation/validator/regex.c#L104</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4891" data-cf-modified-c0d84b41075c5932c12db736-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4891" data-cf-modified-c0d84b41075c5932c12db736-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5fcbe5a28d4c35d72ad0d95e56455d3b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/902/mark34" class="user-moderator-N"><span itemprop="name">mark34</span></a>        </span>
+        <br>
+
+        <span class="karma">1.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4894" href="#C4894">
+                <time itemprop="dateCreated" datetime="2014-01-08T09:58:35-07:00" class="action-date">Jan '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes, looking at the code I can't see where this error is introduced either. I'm definitely not qualified to go through your source code though - just happy to use it ;-)</p>
+<p>If you have unit tests for this component could you add one based on a regex like this? You will see a difference between phalcon and php's 'raw' preg_match functionality when there is no terminating $ character.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4894" data-cf-modified-c0d84b41075c5932c12db736-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4894" data-cf-modified-c0d84b41075c5932c12db736-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1412" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

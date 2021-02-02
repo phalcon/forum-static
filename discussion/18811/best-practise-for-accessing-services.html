@@ -1,0 +1,266 @@
+---
+layout: default
+title: 'Best practise for accessing services - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/10/di-ioc">DI/IoC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Best practise for accessing services</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/11481/mohahn" class="user-moderator-N"><span itemprop="name">mohahn</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-09-16T22:30:04-07:00">Sep '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-09-16T22:30:04-07:00">Sep '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>489</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/8670ebfe548c6e16dd94250dd2239921?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/11481/mohahn" class="user-moderator-N"><span itemprop="name">mohahn</span></a></span>
+                <span class="karma">4.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C18811" href="#C18811">
+        <time class="action-date">Sep '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm going to write a complex application (backend) with a bunch of custom services. I know that there are <a href="https://docs.phalcon.io/en/3.4/controllers#injecting-services">different methods</a> for accessing these services from controllers, forms, components and so on, but I want to ask you, which approach do you use, and why?</p>
+<p>I.e. at the beginning of writing my code, I've used</p>
+<blockquote>
+<p>$cookies = $this-&gt;di-&gt;get('cookies');</p>
+<p>$cookie = $cookies-&gt;get('mycookie')-&gt;getValue();</p>
+</blockquote>
+<p>But as I'm using cookies and other services from inside Volt like</p>
+<blockquote>
+<p>{% raw %}{{{% endraw %} cookies.get('mycookie') == 'active' ? ... {% raw %}}}{% endraw %}</p>
+</blockquote>
+<p>To make it more solid, I decided to access services directly from inside controllers, forms and components like</p>
+<blockquote>
+<p>$cookie = $this-&gt;cookies-&gt;get('mycookie')-&gt;getValue();</p>
+</blockquote>
+<p>But I don't feel very comfortable with that, because it seems to me, that this way of accessing services involves magic getters. So, I always have to pay attention that I do not overload or overwrite a class variable which could be service name. So, how do <strong>you</strong> do it?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-7ddbcdc5fee9a417ccd5b842-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-7ddbcdc5fee9a417ccd5b842-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C57333" href="#C57333">
+                <time itemprop="dateCreated" datetime="2018-09-17T08:06:41-07:00" class="action-date">Sep '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I prefere <code>$this-&gt;di-&gt;getShared('cookies');</code> or <code>Phalcon\Di::getDefault()-&gt;getShared('cookies')</code> be careful with <code>get()</code> and <code>getShared()</code></p>
+<p>For more organization you can have <a href="https://docs.phalcon.io/en/3.3/di#service-provider">service providers</a></p>
+<pre><code class="language-php">use Phalcon\Di\ServiceProviderInterface;
+use Phalcon\DiInterface;
+use Phalcon\Di;
+use Phalcon\Config\Adapter\Ini;
+
+class SomeServiceProvider implements ServiceProviderInterface
+{
+    public function register(DiInterface $di)
+    {
+        $di-&gt;setShared(
+            __CLASS__, 
+            function () {
+                return new Ini('config.ini');
+            }
+        );
+    }
+}
+
+$di = new Di();
+$di-&gt;register(new SomeServiceProvider());
+var_dump($di-&gt;getShared(SomeServiceProvider::class)); // will return properly our config</code></pre>
+<p>Good luck</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57333" data-cf-modified-7ddbcdc5fee9a417ccd5b842-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57333" data-cf-modified-7ddbcdc5fee9a417ccd5b842-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8670ebfe548c6e16dd94250dd2239921?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11481/mohahn" class="user-moderator-N"><span itemprop="name">mohahn</span></a>        </span>
+        <br>
+
+        <span class="karma">4.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C57351" href="#C57351">
+                <time itemprop="dateCreated" datetime="2018-09-18T04:10:56-07:00" class="action-date">Sep '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Oh, thanks for pointing me to service providers. I use a bootstrap class similar to Phalcons website, that is fine for me now. But I'll keep service providers in mind. I think, when the app is growing it's not too late for switching from bootstrap class to more well-organized service providers.</p>
+<p>Hum, using <code>$this-&gt;di-&gt;getShared('cookies');</code> is more clean, but when I'm looking into compiled Volt templates then I can see that built-in methods like <code>{% raw %}{{{% endraw %} javascript_include() {% raw %}}}{% endraw %}</code> compile to <code>&lt;?= $this-&gt;tag-&gt;javascriptInclude() ?&gt;</code>.  So even Volt is using this simple notation for accessing services.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57351" data-cf-modified-7ddbcdc5fee9a417ccd5b842-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57351" data-cf-modified-7ddbcdc5fee9a417ccd5b842-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C57351"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8670ebfe548c6e16dd94250dd2239921?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        mohahn                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C57355" href="#C57355">
+                <time itemprop="dateCreated" datetime="2018-09-18T08:36:03-07:00" class="action-date">Sep '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Hum, using <code>$this-&gt;di-&gt;getShared('cookies');</code> is more clean, but when I'm looking into compiled Volt templates then I can see that built-in methods like <code>{% raw %}{{{% endraw %} javascript_include() {% raw %}}}{% endraw %}</code> compile to <code>&lt;?= $this-&gt;tag-&gt;javascriptInclude() ?&gt;</code>.  So even Volt is using this simple notation for accessing services.</p>
+</blockquote>
+<p>By default magic method <code>__get()</code> use <code>getShared()</code> <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/di/injectable.zep#L119">souce</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57355" data-cf-modified-7ddbcdc5fee9a417ccd5b842-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57355" data-cf-modified-7ddbcdc5fee9a417ccd5b842-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C57371" href="#C57371">
+                <time itemprop="dateCreated" datetime="2018-09-18T09:40:01-07:00" class="action-date">Sep '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>All depends on performance pretty much. If you will for example do <code>$this-&gt;di-&gt;get('cookies');</code> multiple times it will be slower than <code>$this-&gt;cookies</code> because once you will access it it will be added as property to object and next calls will be just call directly to property with avoiding di at all. Of course assigning it to variable is good choice and performance should be the same.</p>
+<p>Indeed you need to make sure you don't create property with name of service.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57371" data-cf-modified-7ddbcdc5fee9a417ccd5b842-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57371" data-cf-modified-7ddbcdc5fee9a417ccd5b842-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8670ebfe548c6e16dd94250dd2239921?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11481/mohahn" class="user-moderator-N"><span itemprop="name">mohahn</span></a>        </span>
+        <br>
+
+        <span class="karma">4.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C57379" href="#C57379">
+                <time itemprop="dateCreated" datetime="2018-09-19T06:04:44-07:00" class="action-date">Sep '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Great, thanks for your ideas and knowledge. As I mentioned already, Volt compiles to <code>$this-&gt;cookies</code>, so I'll just do the same and access services directly. I take care with object methods and properties, where properties get prefixed with underscore.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57379" data-cf-modified-7ddbcdc5fee9a417ccd5b842-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57379" data-cf-modified-7ddbcdc5fee9a417ccd5b842-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a289e536a2d0d975110e320729ee811e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11661/manaphp" class="user-moderator-N"><span itemprop="name">ManaPHP framework</span></a>        </span>
+        <br>
+
+        <span class="karma">323</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="57477" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '18</span>
+              </span><br/><a name="C57477" href="#C57477">
+                <time itemprop="dateCreated" datetime="2018-09-27T07:02:52-07:00" class="action-date">Sep '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>you  can write a helper function <code>di</code> as follows:</p>
+<pre><code class="language-php">&lt;?php
+if (!function_exists('di')) {
+    /**
+     * @param string $name
+     * @param array  $params
+     *
+     * @return mixed
+     */
+    function di($name = null, $params = null)
+    {
+        static $di;
+        if (!$di) {
+            $di = Di::getDefault();
+        }
+        if ($name === null || $name === 'di') {
+            return $di;
+        } elseif ($params) {
+            return $di-&gt;getInstance($name, $params);
+        } else {
+            return $di-&gt;getShared($name);
+        }
+    }
+}</code></pre>
+<p>ManaPHP implements many helper functions you can as a reference: <a href="https://github.com/manaphp/manaphp/blob/develop/ManaPHP/helpers.php">https://github.com/manaphp/manaphp/blob/develop/ManaPHP/helpers.php</a></p>
+<p>if you use phpstorm and like code completion you can create a <code>.phpstorm.meta.php</code> file as <a href="https://github.com/manaphp/manaphp/blob/develop/ManaPHP/.phpstorm.meta.php#L73">https://github.com/manaphp/manaphp/blob/develop/ManaPHP/.phpstorm.meta.php#L73</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57477" data-cf-modified-7ddbcdc5fee9a417ccd5b842-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57477" data-cf-modified-7ddbcdc5fee9a417ccd5b842-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="18811" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

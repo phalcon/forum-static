@@ -1,0 +1,385 @@
+---
+layout: default
+title: 'Single column isn&#039;t updating after save. Relational Models seems to be the culprit - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Single column isn&#039;t updating after save. Relational Models seems to be the culprit</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3945/christianallred" class="user-moderator-N"><span itemprop="name">Christian Allred</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-03-10T17:33:44-07:00">Mar '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-03-10T17:33:44-07:00">Mar '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>353</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/3a303b625f8d3aa02e7b69d28a13870e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3945/christianallred" class="user-moderator-N"><span itemprop="name">Christian Allred</span></a></span>
+                <span class="karma">18.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C10745" href="#C10745">
+        <time class="action-date">Mar '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>So I have a really odd problem that i can't figure out. This one column won't update on -&gt;save().</p>
+<p>I have tested it like this.
+this is in my edit action. </p>
+<pre><code class="language-php">  $account = Accounts::findFirstById($id);
+  //...... some logic here
+  $edit = $this-&gt;request-&gt;getPost();
+  $update = array();
+  foreach($edit as $k =&gt; $v){
+      $update[$k] = htmlspecialchars($v);
+  }   
+  // First output below. 
+  $account-&gt;assign($update);
+  // second output below, notice the userId has changed as the asignment should have done it. 
+  if (!$account-&gt;save()) {
+      $this-&gt;flash-&gt;error($account-&gt;getMessages());
+  } else {
+      // Third output here. So no error happend, but the userId is now back to its original value....
+      $this-&gt;flashSession-&gt;success("User was updated successfully");
+      $this-&gt;response-&gt;redirect('accounts/view/'.$account-&gt;id);
+  }</code></pre>
+<p>FIRST DUMP - befor ethe assign.</p>
+<pre><code class="language-php">Array
+(
+    [id] =&gt; 83
+    [name] =&gt; this is insaneasdfasdfasdf
+    [phone] =&gt; xxx-xxx-xxxx
+    [email] =&gt; <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ceafbdaaa8afbda5aaa88ea5afa6aabda8a5a2a6afbda8e0ada1a3">[email&#160;protected]</a>
+    [accountId] =&gt; 
+    [userId] =&gt; 6
+)</code></pre>
+<p>SECOND DUMP - after the assign. </p>
+<pre><code class="language-php">Array
+(
+    [id] =&gt; 83
+    [name] =&gt; this is insaneasdfasdfasdf
+    [phone] =&gt; xxx-xxx-xxxx
+    [email] =&gt; <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="cdacbea9abacbea6a9ab8da6aca5a9beaba6a1a5acbeabe3aea2a0">[email&#160;protected]</a>
+    [accountId] =&gt; 
+    [userId] =&gt; 8
+)</code></pre>
+<p>THIRD DUMP - after save</p>
+<pre><code class="language-php">Array
+(
+    [id] =&gt; 83
+    [name] =&gt; this is insaneasdfasdfasdf
+    [phone] =&gt; xxx-xxx-xxxx
+    [email] =&gt; <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="8feefcebe9eefce4ebe9cfe4eee7ebfce9e4e3e7eefce9a1ece0e2">[email&#160;protected]</a>
+    [accountId] =&gt; 
+    [userId] =&gt; 6
+)</code></pre>
+<p>So i was curious if it had something to do wtih my relationals listed on the account or user model. </p>
+<p>To test this i changed the ID of userId, to a user that disnt' exist. in my case id 7.
+Doing this makes it so that i can change value. When the alvue is set to an existing user i have this extra bit in the dump
+the id being the same as the id that won't change seemd suspicious. </p>
+<pre><code class="language-php">[_uniqueKey:protected] =&gt; `id` = ?
+[_uniqueParams:protected] =&gt; Array
+(
+    [0] =&gt; 6
+)
+
+[_uniqueTypes:protected] =&gt; Array
+(
+    [0] =&gt; 6
+)</code></pre>
+<p>here is my instantiation in account model </p>
+<pre><code class="language-php">public function initialize()
+    {
+        $this-&gt;belongsTo("userId", "Nova\Models\Users", "id", array(
+             'alias' =&gt; 'accountOwner'
+        ));  
+        $this-&gt;belongsTo("createdBy", "Nova\Models\Users", "id", array(
+            'alias' =&gt; 'createdName'
+        ));
+        $this-&gt;hasMany('id', 'Nova\Models\AccountingLineItems','accountId', array(
+            'alias' =&gt; 'accountingLineItems'
+        ));
+        $this-&gt;hasMany("id", "Nova\Models\Payments", "accountId", array(
+            'alias' =&gt; 'payments',
+            'foreignKey' =&gt; array(
+                'message' =&gt; 'This account cannot be deleted because it has payments'
+        )));
+        $this-&gt;hasMany('id','Nova\Models\AccountStatus','accountId',array(
+            'alias' =&gt; 'accountStatus'
+        ));
+        $this-&gt;hasMany('id','Nova\Models\Notes','accountId', array(
+            'alias' =&gt; 'notes'
+        ));
+        $this-&gt;hasMany('id', 'Nova\Models\Tasks', 'accountId', array(
+            'alias' =&gt; 'tasks'
+        ));
+        $this-&gt;hasMany('id','Nova\Models\Files','objectId', array(
+            'alias' =&gt; 'files',
+            'params' =&gt; array(
+                'conditions' =&gt; "type = 'account'"
+        )));
+        $this-&gt;hasMany('id','Nova\Models\AccountSettings','accountId',array(
+            'alias'=&gt;'accountSettings'
+        ));
+    }</code></pre>
+<p>And here is hte user. its large :P</p>
+<pre><code class="language-php">public function initialize(){
+
+        $this-&gt;belongsTo('userRegionalId', 'Nova\Models\Users', 'id', 
+            array('alias' =&gt; 'regional'
+        ));
+
+        $this-&gt;belongsTo('userManagerId', 'Nova\Models\Users', 'id', 
+            array('alias' =&gt; 'manager'
+        ));    
+
+        $this-&gt;belongsTo('userRecruiterId', 'Nova\Models\Users', 'id', 
+            array('alias' =&gt; 'recruiter'
+        ));    
+
+        $this-&gt;hasMany('id', 'Nova\Models\Users', 'userRegionalId',
+            array('alias' =&gt; 'regionalSubs'
+        ));
+
+        $this-&gt;hasMany('id', 'Nova\Models\Users', 'userManagerId',
+            array('alias' =&gt; 'managerSubs'
+        ));
+        $this-&gt;hasMany('id', 'Nova\Models\Users', 'userRecruiterId',
+            array('alias' =&gt; 'recruiterSubs'
+        ));    
+
+        $this-&gt;belongsTo('profilesId', 'Nova\Models\Profiles', 'id', array(
+            'alias' =&gt; 'profile',
+            'reusable' =&gt; true
+        ));
+
+        $this-&gt;hasMany("id", "Nova\Models\Accounts", "userId", array(
+            'alias' =&gt; 'accounts',
+            'reusable' =&gt; true
+        ));
+
+        $this-&gt;hasMany('id', 'Nova\Models\SuccessLogins', 'usersId', array(
+            'alias' =&gt; 'successLogins',
+            'foreignKey' =&gt; array(
+                'message' =&gt; 'User cannot be deleted because he/she has activity in the system'
+            )
+        ));
+
+        $this-&gt;hasMany('id', 'Nova\Models\PasswordChanges', 'usersId', array(
+            'alias' =&gt; 'passwordChanges',
+            'foreignKey' =&gt; array(
+                'message' =&gt; 'User cannot be deleted because he/she has activity in the system'
+            )
+        ));
+
+        $this-&gt;hasMany('id', 'Nova\Models\ResetPasswords', 'usersId', array(
+            'alias' =&gt; 'resetPasswords',
+            'foreignKey' =&gt; array(
+                'message' =&gt; 'User cannot be deleted because he/she has activity in the system'
+            )
+        ));
+
+        $this-&gt;hasMany('id', 'Nova\Models\Payments', 'accountUserId', array(
+            'alias' =&gt; 'payments',
+            'foreignKey' =&gt; array(
+                'message' =&gt; "user cannot be dleted because he has payments assigned to him"
+        )));
+
+        $this-&gt;hasMany('id', 'Nova\Models\Draws', 'userId', array(
+            'alias' =&gt; 'draws',
+            'foreignKey' =&gt; array(
+                'message' =&gt; 'user cannat be deleted because he/she has draws'
+        )));
+
+        $this-&gt;hasMany('id', 'Nova\Models\Accounts', 'userId', array(
+            'alias' =&gt; 'accounts',
+            'foreignKey' =&gt; array(
+                'message'=&gt; 'This user still has accounts assigned to it'
+        )));
+
+        // FILES HERE
+        $this-&gt;hasMany('id','Nova\Models\Files','objectId', array(
+            'alias' =&gt; 'files',
+            'params' =&gt; array(
+                'conditions' =&gt; "type = 'user'"
+        )));
+        $this-&gt;hasOne('id','Nova\Models\Files', 'objectId', array(
+            'alias' =&gt; 'userImage',
+            'params' =&gt; array(
+                'conditions' =&gt; "type = 'userImage'"
+        )));
+        $this-&gt;hasMany('id','Nova\Models\Files', 'objectId',array(
+            'alias' =&gt; 'userIdImages',
+            'params' =&gt; array(
+                'conditions' =&gt; "type = 'userIdImages'" 
+        )));
+        $this-&gt;hasMany('id','Nova\Models\Files', 'objectId', array(
+            'alias' =&gt; 'userAgreementFiles',
+            'params' =&gt; array(
+                'conditions' =&gt; "type = 'userAgreementFiles'"
+        )));
+
+        $this-&gt;hasMany('id', 'Nova\Models\UsersCompliance','userId',array(
+            'alias' =&gt; 'usersCompliance',
+            'foreignKey' =&gt; array(
+                'action' =&gt; Relation::ACTION_CASCADE
+        )));
+    }</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-31f5503f377c3a5874deb7fb-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-31f5503f377c3a5874deb7fb-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3a303b625f8d3aa02e7b69d28a13870e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3945/christianallred" class="user-moderator-N"><span itemprop="name">Christian Allred</span></a>        </span>
+        <br>
+
+        <span class="karma">18.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="30815" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '16</span>
+              </span><br/><a name="C30815" href="#C30815">
+                <time itemprop="dateCreated" datetime="2016-03-10T17:40:47-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>quick update.
+the lines from the account model... when commented out the save goes through just fine. </p>
+<pre><code class="language-php">$this-&gt;belongsTo("userId", "Nova\Models\Users", "id", array(
+    'alias' =&gt; 'accountOwner',
+)); </code></pre>
+<p>this breaks a lot of other functionality not having this relation...</p>
+<p>It ssomethign with the user to account rleation that is breaking it.. ther eare lots of items inter-related in the system. I don't know why this ouwld cause the problem though? any ideas? </p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="30815" data-cf-modified-31f5503f377c3a5874deb7fb-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="30815" data-cf-modified-31f5503f377c3a5874deb7fb-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3a303b625f8d3aa02e7b69d28a13870e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3945/christianallred" class="user-moderator-N"><span itemprop="name">Christian Allred</span></a>        </span>
+        <br>
+
+        <span class="karma">18.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="30877" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '16</span>
+              </span><br/><a name="C30877" href="#C30877">
+                <time itemprop="dateCreated" datetime="2016-03-11T09:38:55-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I found the culprit code but i am not sure why it caused the single column to not update. It must be somethign with the relation between the Account, the user, and the suese other information. </p>
+<p>here is the suspect code</p>
+<p>This is the in teh account afterFetch() function. </p>
+<p>It has something to dow tih the @ i am sure. suppressing the error messages are probably causing the issue for whatever reason. I am going to rewrite it and be back.
+the commented blocks are the old values before i patched it to work overnight. </p>
+<pre><code class="language-php">$commissionsDetails = array(
+            'rep' =&gt; array(
+                'paid' =&gt; 0,
+                'esti' =&gt; 0),// ($this-&gt;accountOwner) ? $this-&gt;systemSize * (($this-&gt;accountOwner-&gt;basePayOveride == 0) ? 220 : $this-&gt;accountOwner-&gt;basePayOveride) : 0),
+            'man' =&gt; array(
+                'paid' =&gt; 0,
+                'esti' =&gt; 0),//($this-&gt;accountOwner-&gt;manager) ? $this-&gt;systemSize * (($this-&gt;accountOwner-&gt;manager-&gt;regOverride == 0) ? 30 : $this-&gt;accountOwner-&gt;manager-&gt;manOverride) : 0),
+            'reg' =&gt; array(
+                'paid' =&gt; 0,
+                'esti' =&gt; 0), //(@$this-&gt;accountOwner-&gt;regional) ? $this-&gt;systemSize * (($this-&gt;accountOwner-&gt;regional-&gt;regOverride == 0) ? 16 : $this-&gt;accountOwner-&gt;regional-&gt;regOverride) : 0),
+            'rec' =&gt; array(
+                'paid' =&gt; 0,
+                'esti' =&gt; 0),//(@$this-&gt;accountOwner-&gt;recruiter) ? $this-&gt;accountOwner-&gt;recruiter-&gt;recruitPay : 0)
+        );
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="30877" data-cf-modified-31f5503f377c3a5874deb7fb-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="30877" data-cf-modified-31f5503f377c3a5874deb7fb-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3a303b625f8d3aa02e7b69d28a13870e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3945/christianallred" class="user-moderator-N"><span itemprop="name">Christian Allred</span></a>        </span>
+        <br>
+
+        <span class="karma">18.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="30881" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '16</span>
+              </span><br/><a name="C30881" href="#C30881">
+                <time itemprop="dateCreated" datetime="2016-03-11T09:58:40-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>So rewrote it to handle errors better but it turned out hat wasn't the issue. </p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="30881" data-cf-modified-31f5503f377c3a5874deb7fb-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="30881" data-cf-modified-31f5503f377c3a5874deb7fb-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3a303b625f8d3aa02e7b69d28a13870e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3945/christianallred" class="user-moderator-N"><span itemprop="name">Christian Allred</span></a>        </span>
+        <br>
+
+        <span class="karma">18.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="30885" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '16</span>
+              </span><br/><a name="C30885" href="#C30885">
+                <time itemprop="dateCreated" datetime="2016-03-11T10:19:25-07:00" class="action-date">Mar '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It would appear that any access to the accountOwner relation in my afterFetch() breaks the save of that relation change.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="30885" data-cf-modified-31f5503f377c3a5874deb7fb-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="30885" data-cf-modified-31f5503f377c3a5874deb7fb-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="10745" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

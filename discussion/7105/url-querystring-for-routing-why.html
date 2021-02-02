@@ -1,0 +1,200 @@
+---
+layout: default
+title: '_url &amp; QUERY_STRING for routing, why? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">_url &amp; QUERY_STRING for routing, why?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3944/attozk" class="user-moderator-N"><span itemprop="name">attozk</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-06-11T08:14:16-07:00">Jun '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-06-11T08:14:16-07:00">Jun '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>856</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/12dc9e5f97ea8e3cba415ec471c2346b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3944/attozk" class="user-moderator-N"><span itemprop="name">attozk</span></a></span>
+                <span class="karma">4.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C7105" href="#C7105">
+        <time class="action-date">Jun '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'll state my questions first and then do the explanition later on.</p>
+<p><strong>Questions:</strong></p>
+<ol>
+<li>Why is Phalcon adding <code>_url</code> to <code>QUERY_STRING</code> and using it for routing as opposed to using <code>REQUEST_URI</code> and stripping query params from it?</li>
+<li>If above is how routing is done when why is it not the behavior of Phalcon 2, should I report it as a bug?</li>
+<li>I am also interested in knowing what else is being modified in global vars by Phalcon?</li>
+</ol>
+<p><strong>Scenario</strong></p>
+<p>I have setup Phalcon2, php56 (from remi) and nginx using php-fpm and first thing I noticed that none of the routes were working. After comparision of <code>$_SERVER</code> with phalcon 1.3.4 that I had running on another box, I found that Phalcon 1.3.4. modifies <code>QUERY_STRING</code> by adding <code>_url</code> which is then used for routing.</p>
+<p>To demonstrate this consider the following urls and <code>QUERY_STRING</code> values:</p>
+<ul>
+<li><a href="http://domain.com/">http://domain.com/</a>    -&gt; <code>QUERY_STRING</code> = <code>_url=/</code></li>
+<li><a href="http://domain.com/controller/action/params1">http://domain.com/controller/action/params1</a>    -&gt; <code>QUERY_STRING</code> = <code>_url=/controller/action/params1</code></li>
+<li><a href="http://domain.com/controller/action/params1?get=1">http://domain.com/controller/action/params1?get=1</a>    -&gt; <code>QUERY_STRING</code> = <code>_url=/controller/action/params1&amp;get=1</code></li>
+</ul>
+<p>So I had to hack my nginx config to modifity <code>QUERY_STRING</code> as following and I am back in business</p>
+<pre><code>    location / {
+        include fastcgi_params;
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_index index.php;
+        fastcgi_param PHP_SELF index.php;
+        fastcgi_param KAPI_ENV prod;
+        # This is required for Phalcon Routing..
+        fastcgi_param QUERY_STRING _url=$document_uri&amp;$query_string;
+        fastcgi_param SCRIPT_FILENAME $document_root/index.php;
+    }</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-4708654872dd7cd917614361-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-4708654872dd7cd917614361-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/210/andresgutierrez" class="user-moderator-Y"><span itemprop="name">Andres Gutierrez</span></a>        </span>
+        <br>
+
+        <span class="karma">34.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C19373" href="#C19373">
+                <time itemprop="dateCreated" datetime="2015-06-11T09:06:40-07:00" class="action-date">Jun '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You can use REQUEST_URI instead of _url if you want: <a href="https://docs.phalcon.io/en/latest/reference/routing.html#uri-sources">https://docs.phalcon.io/en/latest/reference/routing.html#uri-sources</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="19373" data-cf-modified-4708654872dd7cd917614361-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="19373" data-cf-modified-4708654872dd7cd917614361-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/12dc9e5f97ea8e3cba415ec471c2346b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3944/attozk" class="user-moderator-N"><span itemprop="name">attozk</span></a>        </span>
+        <br>
+
+        <span class="karma">4.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C19379" href="#C19379">
+                <time itemprop="dateCreated" datetime="2015-06-11T10:13:33-07:00" class="action-date">Jun '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Awesome!</p>
+<p>Thanks for your prompot response.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="19379" data-cf-modified-4708654872dd7cd917614361-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="19379" data-cf-modified-4708654872dd7cd917614361-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/12dc9e5f97ea8e3cba415ec471c2346b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3944/attozk" class="user-moderator-N"><span itemprop="name">attozk</span></a>        </span>
+        <br>
+
+        <span class="karma">4.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C19381" href="#C19381">
+                <time itemprop="dateCreated" datetime="2015-06-11T10:58:51-07:00" class="action-date">Jun '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It solved half of the problem, now the issue is with url encoding of <code>REQUEST_URI</code>. Its works fine for ASCI chars in your URL, but messes up on other chars.</p>
+<p>So a valid param1 = <code>é</code> in the is passsed as <code>%C3%A9</code> in the URL <a href="http://domain/controller/action/é/param2">http://domain/controller/action/é/param2</a>  </p>
+<p>Any work arounds for this?</p>
+<p>Support code:</p>
+<pre><code class="language-php">       # route
+       // typical mvc url pattern
+        $router-&gt;add('/:controller/:action/:params', array(
+            'controller' =&gt; 1,
+            'action' =&gt; 2,
+            'params' =&gt; 3
+        ));
+
+      $router-&gt;setUriSource(\Phalcon\Mvc\Router::URI_SOURCE_SERVER_REQUEST_URI);
+
+      # controller
+      #URL: http://domain/controller/action/é/param2
+      public function suggestAction($param1, $param2)
+      {
+           echo $param1 . ' should be ' . urldecode($param1);
+      }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="19381" data-cf-modified-4708654872dd7cd917614361-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="19381" data-cf-modified-4708654872dd7cd917614361-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fcae2565ce4d1ed7240231932dec115a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/659/oleg578" class="user-moderator-N"><span itemprop="name">Oleg</span></a>        </span>
+        <br>
+
+        <span class="karma">8.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="19383" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '15</span>
+              </span><br/><a name="C19383" href="#C19383">
+                <time itemprop="dateCreated" datetime="2015-06-11T13:06:08-07:00" class="action-date">Jun '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><pre><code class="language-bash">fastcgi_param QUERY_STRING _url=$document_uri&amp;$query_string;</code></pre>
+<p>Phalcon didn't modified any server parameters .
+You modified it</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="19383" data-cf-modified-4708654872dd7cd917614361-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="19383" data-cf-modified-4708654872dd7cd917614361-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="7105" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

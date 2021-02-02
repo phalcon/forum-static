@@ -1,0 +1,298 @@
+---
+layout: default
+title: 'Model::findFirst() with conditions and always getting 0 result on Oracle - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Model::findFirst() with conditions and always getting 0 result on Oracle</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/4893/MLukman" class="user-moderator-N"><span itemprop="name">Muhammad Lukman Nasaruddin</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-09-08T03:41:11-07:00">Sep '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-09-08T03:41:11-07:00">Sep '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>977</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/ac3e559ed68f6ac290116c629934a91d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/4893/MLukman" class="user-moderator-N"><span itemprop="name">Muhammad Lukman Nasaruddin</span></a></span>
+                <span class="karma">2.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C8411" href="#C8411">
+        <time class="action-date">Sep '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm using PhalconPHP 2.0.7's \Phalcon\Mvc\Model::findFirst() with conditions on Oracle database and always getting 0 result. When I attached event manager to log SQL to a file, it seems that PhalconPHP adds &quot;ROWNUM &lt;= 0&quot; to the SQL, which is of course means 0 result. Adding <code>limit</code> parameter doesn't help. </p>
+<p>Sample SQL (table structure omitted):</p>
+<pre><code>SELECT * FROM (SELECT Z1.*, ROWNUM PHALCON_RN FROM (/***** effective SQL *****/) Z1 WHERE ROWNUM &lt;= 0)</code></pre>
+<p>PHP statement:</p>
+<pre><code>Resource::findFirst(array(
+    'STAFF_NO = :staff:',
+    'bind' =&gt; array(
+        'staff' =&gt; $staffNo
+    )
+));</code></pre>
+<p>How to fix this? Is this a bug that I need to lodge somewhere? TQ</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-d8c42d334fc8b66617bbead9-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-d8c42d334fc8b66617bbead9-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ac3e559ed68f6ac290116c629934a91d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4893/MLukman" class="user-moderator-N"><span itemprop="name">Muhammad Lukman Nasaruddin</span></a>        </span>
+        <br>
+
+        <span class="karma">2.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C23035" href="#C23035">
+                <time itemprop="dateCreated" datetime="2015-09-08T06:57:23-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think I might have found the bug. It's in query builder's limit() method because when I changed to using query builder, the following works:</p>
+<pre><code>Resource::query()
+            -&gt;where('STAFF_NO = :staff:', array( 'staff' =&gt; $staffNo ))
+            -&gt;execute()
+            -&gt;getFirst();</code></pre>
+<p>But the following doesn't:</p>
+<pre><code>Resource::query()
+            -&gt;where('STAFF_NO = :staff:', array( 'staff' =&gt; $staffNo ))
+            -&gt;limit(1)
+            -&gt;execute()
+            -&gt;getFirst();</code></pre>
+<p>And neither does the following:</p>
+<pre><code>Resource::query()
+            -&gt;where('STAFF_NO = :staff:', array( 'staff' =&gt; $staffNo ))
+            -&gt;limit(100)
+            -&gt;execute()
+            -&gt;getFirst();</code></pre>
+<p>Both the 2nd and 3rd statements produce &quot;ROWNUM &lt;= 0&quot; which means the limit() method might be hard-coded to use 0, ignoring the parameter.</p>
+<p>Please assist.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23035" data-cf-modified-d8c42d334fc8b66617bbead9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23035" data-cf-modified-d8c42d334fc8b66617bbead9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ac3e559ed68f6ac290116c629934a91d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4893/MLukman" class="user-moderator-N"><span itemprop="name">Muhammad Lukman Nasaruddin</span></a>        </span>
+        <br>
+
+        <span class="karma">2.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C24547" href="#C24547">
+                <time itemprop="dateCreated" datetime="2015-10-15T08:45:05-07:00" class="action-date">Oct '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Anyone please assist?</p>
+<p>I'm suspecting the use of <code>int</code> combined with <code>trim</code> in the <code>limit</code> function in <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/db/dialect/oracle.zep">https://github.com/phalcon/cphalcon/blob/master/phalcon/db/dialect/oracle.zep</a> is causing the provided number to be parsed to 0 but that should only happen if I simply call <code>-&gt;limit(1)</code>.</p>
+<p>I wish I could try and remove the <code>(int)</code> part and test but I'm developing on Windows.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="24547" data-cf-modified-d8c42d334fc8b66617bbead9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="24547" data-cf-modified-d8c42d334fc8b66617bbead9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/082d639000dca8bb30d9bf7cc12698ac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4945/jeiel" class="user-moderator-N"><span itemprop="name">jeiel</span></a>        </span>
+        <br>
+
+        <span class="karma">81.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C24559" href="#C24559">
+                <time itemprop="dateCreated" datetime="2015-10-15T13:40:45-07:00" class="action-date">Oct '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I have the same problem but I'm developing on Linux platform so I do not think the problem is the operating system platform, and have the problem with the code generated with the developer tools so it's no problem writing or something</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="24559" data-cf-modified-d8c42d334fc8b66617bbead9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="24559" data-cf-modified-d8c42d334fc8b66617bbead9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ac3e559ed68f6ac290116c629934a91d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4893/MLukman" class="user-moderator-N"><span itemprop="name">Muhammad Lukman Nasaruddin</span></a>        </span>
+        <br>
+
+        <span class="karma">2.9k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C24559"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/082d639000dca8bb30d9bf7cc12698ac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        jeiel                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C24581" href="#C24581">
+                <time itemprop="dateCreated" datetime="2015-10-16T02:33:41-07:00" class="action-date">Oct '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>No, I mean I want to help fix the code and test, but since I'm running on Windows it's hard for me to recompile phalcon.</p>
+<p>Since you are using linux, can you please try fixing the code (remove the <code>(int)</code> casting), recompile and test.</p>
+<blockquote>
+<p>I have the same problem but I'm developing on Linux platform so I do not think the problem is the operating system platform, and have the problem with the code generated with the developer tools so it's no problem writing or something</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="24581" data-cf-modified-d8c42d334fc8b66617bbead9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="24581" data-cf-modified-d8c42d334fc8b66617bbead9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/082d639000dca8bb30d9bf7cc12698ac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4945/jeiel" class="user-moderator-N"><span itemprop="name">jeiel</span></a>        </span>
+        <br>
+
+        <span class="karma">81.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C24623" href="#C24623">
+                <time itemprop="dateCreated" datetime="2015-10-17T07:18:38-07:00" class="action-date">Oct '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Edit this part of the code and recompile</p>
+<pre><code>public function limit(string! sqlQuery, var number) -&gt; string
+    {
+        var limit, offset = 0;
+
+        if typeof number == "array" {
+
+            if isset number[1] {
+                let offset = (int) trim(number[1], "'");
+            }
+
+            let limit = (int)trim(number[0], "'") + offset;
+        } else {
+            let limit = (int)trim(number, "'");
+        }
+
+        let sqlQuery = "SELECT * FROM (SELECT Z1.*, ROWNUM PHALCON_RN FROM (" . sqlQuery . ") Z1 WHERE ROWNUM &lt;= " . limit . ")";
+
+        if offset != 0 {
+            let sqlQuery .= " WHERE PHALCON_RN &gt;= " . offset;
+        }
+
+        return sqlQuery;
+    }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="24623" data-cf-modified-d8c42d334fc8b66617bbead9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="24623" data-cf-modified-d8c42d334fc8b66617bbead9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ac3e559ed68f6ac290116c629934a91d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4893/MLukman" class="user-moderator-N"><span itemprop="name">Muhammad Lukman Nasaruddin</span></a>        </span>
+        <br>
+
+        <span class="karma">2.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C24695" href="#C24695">
+                <time itemprop="dateCreated" datetime="2015-10-19T02:58:24-07:00" class="action-date">Oct '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Does it fix the issue? I can't find the difference between the code you posted and the one in github .. </p>
+<p>Like I mentioned, I can't recompiled nor test any phalcon source code modification because I'm developing on Windows, using the pre-compiled DLL file from Phalcon download page.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="24695" data-cf-modified-d8c42d334fc8b66617bbead9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="24695" data-cf-modified-d8c42d334fc8b66617bbead9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/082d639000dca8bb30d9bf7cc12698ac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4945/jeiel" class="user-moderator-N"><span itemprop="name">jeiel</span></a>        </span>
+        <br>
+
+        <span class="karma">81.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C24965" href="#C24965">
+                <time itemprop="dateCreated" datetime="2015-10-23T22:12:25-07:00" class="action-date">Oct '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>No, I edited, downloaded and compiled twice followed by eliminating the source code of the int but still have the same problem that I find information</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="24965" data-cf-modified-d8c42d334fc8b66617bbead9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="24965" data-cf-modified-d8c42d334fc8b66617bbead9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/082d639000dca8bb30d9bf7cc12698ac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4945/jeiel" class="user-moderator-N"><span itemprop="name">jeiel</span></a>        </span>
+        <br>
+
+        <span class="karma">81.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="27581" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '15</span>
+              </span><br/><a name="C27581" href="#C27581">
+                <time itemprop="dateCreated" datetime="2015-12-13T20:49:08-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>In the current version already they got this problem solving</p>
+<pre><code>git clone  git://github.com/phalcon/cphalcon.git
+cd cphalcon/ext
+git checkout 2.0.x
+sudo ./install(edited)</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27581" data-cf-modified-d8c42d334fc8b66617bbead9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27581" data-cf-modified-d8c42d334fc8b66617bbead9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="8411" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

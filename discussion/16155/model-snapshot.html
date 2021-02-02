@@ -1,0 +1,408 @@
+---
+layout: default
+title: 'Model snapshot - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Model snapshot</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/9437/kumy" class="user-moderator-N"><span itemprop="name">kumy</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-05-19T17:52:09-07:00">May '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-05-19T17:52:09-07:00">May '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>May '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1003</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/93324bf1559733610493a890c6eccfb8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/9437/kumy" class="user-moderator-N"><span itemprop="name">kumy</span></a></span>
+                <span class="karma">1.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C16155" href="#C16155">
+        <time class="action-date">May '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>I can't find why the <code>subscribed</code> value is not detected as changed by <code>getChangedFields()</code>.</p>
+<p>Here is the relevant code:</p>
+<pre><code class="language-php">$subscription = GkNewsCommentsAccess::findFirst([
+    'conditions' =&gt; 'news_id = ?1 and user_id=?2',
+    'bind' =&gt; [1 =&gt; $newsid, 2 =&gt; $userid]
+]);
+
+$this-&gt;logger-&gt;debug('isSubscribed: '. $subscription-&gt;subscribed);
+$this-&gt;logger-&gt;debug('getSnapshotData before: '. print_r($subscription-&gt;getSnapshotData(), TRUE));
+$this-&gt;logger-&gt;debug('getChangedFields before: '. print_r($subscription-&gt;getChangedFields(), TRUE));
+
+$subscription-&gt;subscribed = $subscribe; // changing value
+$subscription-&gt;save();
+
+$this-&gt;logger-&gt;debug('isSubscribed: '. $subscription-&gt;subscribed);
+$this-&gt;logger-&gt;debug('getSnapshotData after: '. print_r($subscription-&gt;getSnapshotData(), TRUE));
+$this-&gt;logger-&gt;debug('getChangedFields after: '. print_r($subscription-&gt;getChangedFields(), TRUE));</code></pre>
+<p>The debug output is as:</p>
+<pre><code>DEBUG isSubscribed: 1
+DEBUG getSnapshotData before: Array ( [news_id] =&gt; 177 [user_id] =&gt; 26422 [read] =&gt; 2017-05-20 02:28:24 [post] =&gt; [subscribed] =&gt; 1 )
+DEBUG getChangedFields before: Array ( )
+DEBUG isSubscribed: 0
+DEBUG getSnapshotData after: Array ( [news_id] =&gt; 177 [user_id] =&gt; 26422 [read] =&gt; 2017-05-20T02:29:08+02:00 [post] =&gt; [subscribed] =&gt; 0 )
+DEBUG getChangedFields after: Array ( )</code></pre>
+<p>I expect the <code>getChangedFields after</code> to be as <code>Array ( [0] =&gt; read, [1] =&gt; subscribed )</code></p>
+<p>However, if I change value of <code>user_id</code> or <code>news_id</code>this  <em>is</em> detected as changed by <code>getChangedFields()</code></p>
+<p>Am I doing something wrong? Reading from <code>model.zep</code>, I expect it to work.</p>
+<p>Thanks for your help.</p>
+<ul>
+<li>PHALCON_VERSION=3.1.2</li>
+<li>I have <code>$this-&gt;keepSnapshots(true);</code> in Model <code>initialize()</code></li>
+</ul>
+<p>My actual function is:</p>
+<pre><code class="language-php">    protected function updateSubscription(bool $subscribe) {
+        $subscription = new GkNewsCommentsAccess();
+        $subscription-&gt;news_id = $this-&gt;dispatcher-&gt;getParam('news_id');
+        $subscription-&gt;user_id = $this-&gt;session-&gt;user_id;
+        $subscription-&gt;subscribed = ($subscribe?'1':'0');
+
+        if (!$subscription-&gt;save()) {
+            $this-&gt;flashSession-&gt;warning($this-&gt;di-&gt;getTranslation()
+                -&gt;_('news_comment_failed_save_subscription'));
+            foreach ($subscription-&gt;getMessages() as $message) {
+                $this-&gt;flashSession-&gt;error($message);
+            }
+            return;
+        }
+
+        if ($subscription-&gt;hasSnapshotData() &amp;&amp; !$subscription-&gt;hasChanged('subscribed')) {
+            return;
+        }
+
+        if ($subscribe) {
+            $this-&gt;flashSession-&gt;success($this-&gt;di-&gt;getTranslation()
+                -&gt;_('news_comment_you_are_successfully_subscribed'));
+        } else {
+            $this-&gt;flashSession-&gt;success($this-&gt;di-&gt;getTranslation()
+                -&gt;_('news_comment_you_are_successfully_un_subscribed'));
+        }
+    }</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-fd877406005d5d27b7f3ea82-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-fd877406005d5d27b7f3ea82-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/93324bf1559733610493a890c6eccfb8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9437/kumy" class="user-moderator-N"><span itemprop="name">kumy</span></a>        </span>
+        <br>
+
+        <span class="karma">1.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C48233" href="#C48233">
+                <time itemprop="dateCreated" datetime="2017-05-19T18:23:08-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If I also print the status before saving I see the expected result, but after save results, are bad (from my point of view)</p>
+<pre><code class="language-php">$subscription = GkNewsCommentsAccess::findFirst([
+    'conditions' =&gt; 'news_id = ?1 and user_id=?2',
+    'bind' =&gt; [1 =&gt; $newsid, 2 =&gt; $userid]
+]);
+
+$this-&gt;logger-&gt;debug('isSubscribed: '. $subscription-&gt;subscribed);
+$this-&gt;logger-&gt;debug('getSnapshotData before: '. print_r($subscription-&gt;getSnapshotData(), TRUE));
+$this-&gt;logger-&gt;debug('getChangedFields before: '. print_r($subscription-&gt;getChangedFields(), TRUE));
+
+$subscription-&gt;subscribed = $subscribe; // changing value
+$subscription-&gt;user_id = 99999;
+
+$this-&gt;logger-&gt;debug('getSnapshotData after1: '. print_r($subscription-&gt;getSnapshotData(), TRUE));
+$this-&gt;logger-&gt;debug('getChangedFields after1: '. print_r($subscription-&gt;getChangedFields(), TRUE));
+
+$subscription-&gt;save();
+
+$this-&gt;logger-&gt;debug('isSubscribed: '. $subscription-&gt;subscribed);
+$this-&gt;logger-&gt;debug('getSnapshotData after2: '. print_r($subscription-&gt;getSnapshotData(), TRUE));
+$this-&gt;logger-&gt;debug('getChangedFields after2: '. print_r($subscription-&gt;getChangedFields(), TRUE));</code></pre>
+<p>The debug output is as:</p>
+<pre><code>
+DEBUG isSubscribed: 0
+DEBUG getSnapshotData before: Array ( [news_id] =&gt; 177 [user_id] =&gt; 26422 [read] =&gt; 2017-05-20 02:29:08 [post] =&gt; [subscribed] =&gt; 0 )
+DEBUG getChangedFields before: Array ( )
+DEBUG isSubscribed: 1
+DEBUG getSnapshotData after1: Array ( [news_id] =&gt; 177 [user_id] =&gt; 26422 [read] =&gt; 2017-05-20 02:29:08 [post] =&gt; [subscribed] =&gt; 0 )
+DEBUG getChangedFields after1: Array ( [0] =&gt; user_id [1] =&gt; subscribed )
+DEBUG isSubscribed: 1
+DEBUG getSnapshotData after2: Array ( [news_id] =&gt; 177 [user_id] =&gt; 26422 [read] =&gt; 2017-05-20T03:16:39+02:00 [post] =&gt; [subscribed] =&gt; 1 )
+DEBUG getChangedFields after2: Array ( [0] =&gt; user_id )
+</code></pre>
+<p>What's strange is that <code>user_id</code> is still detected as changed after <code>save</code>, wheras it's not the case for <code>subscribed</code>.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48233" data-cf-modified-fd877406005d5d27b7f3ea82-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48233" data-cf-modified-fd877406005d5d27b7f3ea82-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/93324bf1559733610493a890c6eccfb8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9437/kumy" class="user-moderator-N"><span itemprop="name">kumy</span></a>        </span>
+        <br>
+
+        <span class="karma">1.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C48235" href="#C48235">
+                <time itemprop="dateCreated" datetime="2017-05-19T18:28:37-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hum only primary keys are keeped showed in <code>getChangedFields()</code> :(</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48235" data-cf-modified-fd877406005d5d27b7f3ea82-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48235" data-cf-modified-fd877406005d5d27b7f3ea82-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/93324bf1559733610493a890c6eccfb8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9437/kumy" class="user-moderator-N"><span itemprop="name">kumy</span></a>        </span>
+        <br>
+
+        <span class="karma">1.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C48237" href="#C48237">
+                <time itemprop="dateCreated" datetime="2017-05-19T18:52:15-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>FTR, here is my current full function.</p>
+<pre><code class="language-php">    protected function updateSubscription(bool $subscribe) {
+        $newsid = $this-&gt;dispatcher-&gt;getParam('news_id');
+        $userid = $this-&gt;session-&gt;user_id;
+        $changed = FALSE;
+
+        $subscription = GkNewsCommentsAccess::findFirst(['conditions' =&gt; 'news_id = ?1 and user_id=?2', 'bind' =&gt; [1 =&gt; $newsid, 2 =&gt; $userid]]);
+        if (!$subscription) {
+            $subscription = new GkNewsCommentsAccess();
+            $subscription-&gt;news_id = $newsid;
+            $subscription-&gt;user_id = $userid;
+            $changed = TRUE;
+        }
+        $subscription-&gt;subscribed = ($subscribe?'1':'0');
+
+        if ($subscription-&gt;hasSnapshotData() &amp;&amp; $subscription-&gt;hasChanged('subscribed')) {
+            $changed = TRUE;
+        }
+
+        if (!$subscription-&gt;save()) {
+            $this-&gt;flashSession-&gt;warning($this-&gt;di-&gt;getTranslation()
+                -&gt;_('news_comment_failed_save_subscription'));
+            foreach ($subscription-&gt;getMessages() as $message) {
+                $this-&gt;flashSession-&gt;error($message);
+            }
+            return;
+        }
+
+        if (!$changed) {
+            return;
+        }
+
+        if ($subscribe) {
+            $this-&gt;flashSession-&gt;success($this-&gt;di-&gt;getTranslation()
+                -&gt;_('news_comment_you_are_successfully_subscribed'));
+        } else {
+            $this-&gt;flashSession-&gt;success($this-&gt;di-&gt;getTranslation()
+                -&gt;_('news_comment_you_are_successfully_un_subscribed'));
+        }
+    }</code></pre>
+<p>or, whithout Snapshot</p>
+<pre><code class="language-php">    protected function updateSubscription(bool $subscribe) {
+        $newsid = $this-&gt;dispatcher-&gt;getParam('news_id');
+        $userid = $this-&gt;session-&gt;user_id;
+
+        $subscription = GkNewsCommentsAccess::findFirst(['conditions' =&gt; 'news_id = ?1 and user_id=?2', 'bind' =&gt; [1 =&gt; $newsid, 2 =&gt; $userid]]);
+        if (!$subscription) {
+            $subscription = new GkNewsCommentsAccess();
+            $subscription-&gt;news_id = $newsid;
+            $subscription-&gt;user_id = $userid;
+        }
+        $oldSubscribed = $subscription-&gt;subscribed;
+        $subscription-&gt;subscribed = ($subscribe?'1':'0');
+
+        if (!$subscription-&gt;save()) {
+            $this-&gt;flashSession-&gt;warning($this-&gt;di-&gt;getTranslation()
+                -&gt;_('news_comment_failed_save_subscription'));
+            foreach ($subscription-&gt;getMessages() as $message) {
+                $this-&gt;flashSession-&gt;error($message);
+            }
+            return;
+        }
+
+        if ($oldSubscribed === $subscription-&gt;subscribed) {
+            return;
+        }
+
+        if ($subscribe) {
+            $this-&gt;flashSession-&gt;success($this-&gt;di-&gt;getTranslation()
+                -&gt;_('news_comment_you_are_successfully_subscribed'));
+        } else {
+            $this-&gt;flashSession-&gt;success($this-&gt;di-&gt;getTranslation()
+                -&gt;_('news_comment_you_are_successfully_un_subscribed'));
+        }
+    }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48237" data-cf-modified-fd877406005d5d27b7f3ea82-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48237" data-cf-modified-fd877406005d5d27b7f3ea82-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C48239" href="#C48239">
+                <time itemprop="dateCreated" datetime="2017-05-20T02:09:55-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><ol>
+<li>Snapshots to version 3.1 were bugged and not working as should be causing other bugs(for example in dynamic update and some other things), from 3.1 to fix other issues after save snapshots are updated, if you don't want this use 3.0(or install 3.2.x using zephir), in phalcon 3.2 there will be added option to disable snapshot update or there will be new methods to check if field was updated(hasUpdated/getUpdatedFields).</li>
+<li>Phalcon doesn't allow to change primary keys by design, this is why you have <code>user_id</code> all the time in getChangedFields because in model it's changed but not saved to database meaning not updated in snapshot.</li>
+</ol></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48239" data-cf-modified-fd877406005d5d27b7f3ea82-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48239" data-cf-modified-fd877406005d5d27b7f3ea82-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/93324bf1559733610493a890c6eccfb8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9437/kumy" class="user-moderator-N"><span itemprop="name">kumy</span></a>        </span>
+        <br>
+
+        <span class="karma">1.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="48249" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '17</span>
+              </span><br/><a name="C48249" href="#C48249">
+                <time itemprop="dateCreated" datetime="2017-05-20T07:40:21-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks Wojciech Ślawski you set me on the way.</p>
+<p>Phalcon 3.2 has new function <code>hasUpdated()</code> which correspond to the behavior I was expecting in my first post. Only difference from my first implementation is the &quot;UpdateOrCreate&quot; pattern to have the snapshot defined.</p>
+<ul>
+<li>Any idea on 3.2.x branch stability and expected release?</li>
+</ul>
+<p>Thanks a lot!</p>
+<pre><code class="language-php">    protected function updateSubscription(bool $subscribe) {
+        $newsid = $this-&gt;dispatcher-&gt;getParam('news_id');
+        $userid = $this-&gt;session-&gt;user_id;
+
+        $subscription =
+            GkNewsCommentsAccess::findFirst(['conditions' =&gt; 'news_id = ?1 and user_id=?2',
+                'bind' =&gt; [1 =&gt; $newsid, 2 =&gt; $userid]]);
+        if (!$subscription) {
+            $subscription = new GkNewsCommentsAccess();
+            $subscription-&gt;news_id = $newsid;
+            $subscription-&gt;user_id = $userid;
+        }
+        $subscription-&gt;subscribed = ($subscribe?'1':'0');
+
+        if (!$subscription-&gt;save()) {
+            $this-&gt;flashSession-&gt;warning($this-&gt;di-&gt;getTranslation()
+                -&gt;_('news_comment_failed_save_subscription'));
+            foreach ($subscription-&gt;getMessages() as $message) {
+                $this-&gt;flashSession-&gt;error($message);
+            }
+            return;
+        }
+
+        if ((!$subscription-&gt;hasSnapshotData() &amp;&amp; !$subscribe) ||
+            ($subscription-&gt;hasSnapshotData() &amp;&amp; !$subscription-&gt;hasUpdated('subscribed'))
+        ) {
+            return;
+        }
+
+        if ($subscribe) {
+            $this-&gt;flashSession-&gt;success($this-&gt;di-&gt;getTranslation()
+                -&gt;_('news_comment_you_are_successfully_subscribed'));
+        } else {
+            $this-&gt;flashSession-&gt;success($this-&gt;di-&gt;getTranslation()
+                -&gt;_('news_comment_you_are_successfully_un_subscribed'));
+        }
+    }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48249" data-cf-modified-fd877406005d5d27b7f3ea82-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48249" data-cf-modified-fd877406005d5d27b7f3ea82-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C48251" href="#C48251">
+                <time itemprop="dateCreated" datetime="2017-05-20T08:05:36-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I guess 3.2.0 will be relased in near future this or next month.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48251" data-cf-modified-fd877406005d5d27b7f3ea82-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48251" data-cf-modified-fd877406005d5d27b7f3ea82-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="16155" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,328 @@
+---
+layout: default
+title: '[Volt] nested for loop incorrect behavior - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">[Volt] nested for loop incorrect behavior</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/6743/fantua" class="user-moderator-N"><span itemprop="name">fantua</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-05-01T11:43:10-07:00">May '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-05-01T11:43:10-07:00">May '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>May '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>897</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/36ce860c46a3cfabd6ce99f29d331ddb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/6743/fantua" class="user-moderator-N"><span itemprop="name">fantua</span></a></span>
+                <span class="karma">3.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C11369" href="#C11369">
+        <time class="action-date">May '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I create simple for loop:</p>
+<pre><code class="language-php">// controller:
+$properties = Properties::find(['order' =&gt; 'sort_id']);
+$this-&gt;view-&gt;setVar('properties', $properties);
+
+//view:
+{% raw %}{%{% endraw %} for property in properties {% raw %}%}{% endraw %}
+    1st loop index - {% raw %}{{{% endraw %} loop.index {% raw %}}}{% endraw %}
+{% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}
+
+//output:
+1st loop index - 1                         
+1st loop index - 2</code></pre>
+<p>That's ok. Than I added nested loop:</p>
+<pre><code class="language-php">//view:
+{% raw %}{%{% endraw %} for property in properties {% raw %}%}{% endraw %}
+    1st loop index - {% raw %}{{{% endraw %} loop.index {% raw %}}}{% endraw %}
+    {% raw %}{%{% endraw %} for _property in properties {% raw %}%}{% endraw %}
+        2st loop index - {% raw %}{{{% endraw %} loop.index {% raw %}}}{% endraw %}
+    {% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}
+{% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}
+
+//output:
+1st loop index - 1
+    2st loop index - 1                                
+    2st loop index - 2  </code></pre>
+<p>1st loop was executed only 1 time. What I'm doing wrong?</p>
+<p>This dosen't work in controller too: </p>
+<pre><code class="language-php">$properties = Properties::find(['order' =&gt; 'sort_id']);
+
+foreach ($properties as $property) {
+    echo '1st ' . $property-&gt;id . PHP_EOL;
+    foreach ($properties as $p) {
+        echo '2nd ' . $p-&gt;id . PHP_EOL;
+    }
+}
+
+//output:
+1st 4
+2nd 4
+2nd 3</code></pre>
+<p>Fix:</p>
+<pre><code class="language-php">        foreach ($properties as $property) {
+            $key = $properties-&gt;key();
+            echo '1st ' . $property-&gt;id . PHP_EOL;
+            foreach ($properties as $p) {
+                echo '2nd ' . $p-&gt;id . PHP_EOL;
+            }
+            $properties-&gt;seek($key);
+        }
+
+//output:
+1st 4
+2nd 4
+2nd 3
+1st 3
+2nd 4
+2nd 3</code></pre>
+<p>I think it's a bug in Phalcon\Mvc\Model\Resultset\Simple, no?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-6b9aee2ea7adadf592516636-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-6b9aee2ea7adadf592516636-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C33365" href="#C33365">
+                <time itemprop="dateCreated" datetime="2016-05-01T13:56:46-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Phalcon\Mvc\Model\Resultset\Simple introduces his own iterator. The problem is you are iterating same variable in two loops. When doing this here:</p>
+<pre><code class="language-php">foreach ($properties as $property) {
+    echo '1st ' . $property-&gt;id . PHP_EOL;
+    foreach ($properties as $p) {
+        echo '2nd ' . $p-&gt;id . PHP_EOL;
+    }
+}</code></pre>
+<p>In first loop you are selecint item 1 from $properties, then in next loop you are selecting item 2 from $properties, then item erd from properties in parent loop etc. Then i guess loop ends. I woul recommend just to clone result to another variable so you don't have any problem.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="33365" data-cf-modified-6b9aee2ea7adadf592516636-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="33365" data-cf-modified-6b9aee2ea7adadf592516636-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/36ce860c46a3cfabd6ce99f29d331ddb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6743/fantua" class="user-moderator-N"><span itemprop="name">fantua</span></a>        </span>
+        <br>
+
+        <span class="karma">3.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C33365"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="33537" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '16</span>
+              </span><br/><a name="C33537" href="#C33537">
+                <time itemprop="dateCreated" datetime="2016-05-04T15:26:37-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>I woul recommend just to clone result to another variable so you don't have any problem.</p>
+</blockquote>
+<p>Like this?</p>
+<pre><code class="language-php">$this-&gt;view-&gt;setVar('properties', $properties);
+$this-&gt;view-&gt;setVar('_properties', clone $properties);</code></pre>
+<p>Maybe will be better fix own iterator?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="33537" data-cf-modified-6b9aee2ea7adadf592516636-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="33537" data-cf-modified-6b9aee2ea7adadf592516636-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C33541" href="#C33541">
+                <time itemprop="dateCreated" datetime="2016-05-04T21:24:13-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Im not sure if this can be fixed.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="33541" data-cf-modified-6b9aee2ea7adadf592516636-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="33541" data-cf-modified-6b9aee2ea7adadf592516636-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/eff69f4e1760f1b3c652281d4030d3cf?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2503/mraspor" class="user-moderator-N"><span itemprop="name">mraspor</span></a>        </span>
+        <br>
+
+        <span class="karma">12.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C33589" href="#C33589">
+                <time itemprop="dateCreated" datetime="2016-05-05T03:44:46-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This is not a bug in my opinion, just normal behaviour.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="33589" data-cf-modified-6b9aee2ea7adadf592516636-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="33589" data-cf-modified-6b9aee2ea7adadf592516636-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/36ce860c46a3cfabd6ce99f29d331ddb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6743/fantua" class="user-moderator-N"><span itemprop="name">fantua</span></a>        </span>
+        <br>
+
+        <span class="karma">3.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C33589"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/eff69f4e1760f1b3c652281d4030d3cf?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        mraspor                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C33627" href="#C33627">
+                <time itemprop="dateCreated" datetime="2016-05-05T08:30:45-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>This is not a bug in my opinion, just normal behaviour.</p>
+</blockquote>
+<pre><code class="language-php">        $test = (object) [1,2];
+
+        foreach ($test as $i) {
+            var_dump('1st - ' . $i);
+            foreach ($test as $k) {
+                var_dump('2nd - ' . $k);
+            }
+        }
+
+// output:
+string '1st - 1' (length=7)
+string '2nd - 1' (length=7)
+string '2nd - 2' (length=7)
+string '1st - 2' (length=7)
+string '2nd - 1' (length=7)
+string '2nd - 2' (length=7)</code></pre>
+<p>This is normal behaviour.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="33627" data-cf-modified-6b9aee2ea7adadf592516636-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="33627" data-cf-modified-6b9aee2ea7adadf592516636-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/36ce860c46a3cfabd6ce99f29d331ddb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6743/fantua" class="user-moderator-N"><span itemprop="name">fantua</span></a>        </span>
+        <br>
+
+        <span class="karma">3.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C33631" href="#C33631">
+                <time itemprop="dateCreated" datetime="2016-05-05T08:43:08-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Can I create issue on github?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="33631" data-cf-modified-6b9aee2ea7adadf592516636-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="33631" data-cf-modified-6b9aee2ea7adadf592516636-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="33641" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '16</span>
+              </span><br/><a name="C33641" href="#C33641">
+                <time itemprop="dateCreated" datetime="2016-05-06T00:16:19-07:00" class="action-date">May '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>As i wrote earlier. It's not a bug. Resultset introduces own iterator. If you iterating through it uses it, that's why if you iterating the same object in two loops this weird things happens. Here:</p>
+<pre><code>        $test = (object) [1,2];
+
+        foreach ($test as $i) {
+            var_dump('1st - ' . $i);
+            foreach ($test as $k) {
+                var_dump('2nd - ' . $k);
+            }
+        }
+
+// output:
+string '1st - 1' (length=7)
+string '2nd - 1' (length=7)
+string '2nd - 2' (length=7)
+string '1st - 2' (length=7)
+string '2nd - 1' (length=7)
+string '2nd - 2' (length=7)</code></pre>
+<p>You don't have your own iterator, that's why it works.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="33641" data-cf-modified-6b9aee2ea7adadf592516636-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="33641" data-cf-modified-6b9aee2ea7adadf592516636-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="11369" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

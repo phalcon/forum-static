@@ -1,0 +1,502 @@
+---
+layout: default
+title: 'Upgrading to Phalcon 3 broke the existing site - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Upgrading to Phalcon 3 broke the existing site</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3914/watsmyname" class="user-moderator-N"><span itemprop="name">watsmyname</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-08-17T02:24:19-07:00">Aug '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-08-17T02:24:19-07:00">Aug '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>920</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/2593046419168b77c2aa25682cade17b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3914/watsmyname" class="user-moderator-N"><span itemprop="name">watsmyname</span></a></span>
+                <span class="karma">6.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C13099" href="#C13099">
+        <time class="action-date">Aug '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>My problem started right after I upgraded PHP to <code>Version 7</code> and Phalcon to <code>Version 3</code>. </p>
+<p><strong>Problem</strong></p>
+<p>I m getting blank page, no error messages (<code>Error is turned on</code>), no `500 Internal server' error in console. The site used to work flawlessly before.</p>
+<p>Is application made with previous version of phalcon not compatible with Phalcon 3?</p>
+<p>I have following controller <code>IndexController.php</code></p>
+<pre><code class="language-php">namespace RealEstate\Property\Controllers;
+
+use \Phalcon\Mvc\Controller;
+use \Phalcon\Mvc\View;
+use  RealEstate\Common\Models as CommonModels;
+
+class IndexController extends Controller
+{
+   public function initialize(){
+          //Code here
+   }
+
+   public function indexAction(){
+       $this-&gt;view-&gt;setRenderLevel(View::LEVEL_ACTION_VIEW);
+
+       $this-&gt;view-&gt;setVar("total_properties", $this-&gt;utils-&gt;getTotalProperties());    
+       $this-&gt;view-&gt;pick("index");
+       echo "HELLO WORLD";
+   } 
+}</code></pre>
+<p>The <code>index</code> action doesnot render anything, but yes <code>HELLO WORLD</code> is printed, so there seems there is no errors in code above that line.</p>
+<p>My bootstrap <code>index.php</code></p>
+<pre><code class="language-php">namespace RealEstate;
+
+use \Phalcon\Mvc\Application;
+use \Phalcon\DI\FactoryDefault;
+use \Phalcon\Loader;
+use \Phalcon\Mvc\Router;
+use \Phalcon\Mvc\View;
+use \Phalcon\Mvc\Dispatcher;
+use \Phalcon\Events\Manager     as EventManager;
+use \Phalcon\Assets\Manager       as Assets;
+use \Phalcon\Mvc\Url        as UrlProvider;
+use \Phalcon\Db\Adapter\Pdo\Mysql   as DbAdapter;
+use \Phalcon\Flash\Session      as FlashSession;
+use \Phalcon\Session\Adapter\Files  as SessionAdapter;
+use \Phalcon\Http\Response\Cookies; 
+
+//use \Phalcon\Session\Adapter\Files  as Session;
+
+class MyApplication extends Application
+{
+
+  const DEFAULT_MODULE = "property";
+  private $prConfig;
+  /**
+   * Register the services here to make them general or register in the ModuleDefinition to make them module-specific
+   */
+
+  protected function _registerServices()
+  {
+    try{
+      $config = include  "../apps/config/config.php";
+
+      $di = new FactoryDefault();
+
+      $loader = new Loader();
+
+      /**
+       * We're a registering a set of directories taken from the configuration file
+       */
+      $loader-&gt;registerDirs(
+        array(
+          __DIR__ . '/../apps/library/',
+          __DIR__ . '/../apps/plugins/'
+        )
+      );
+
+      $loader-&gt;registerNamespaces(array(
+        'RealEstate\Common\Plugins' =&gt; '../apps/plugins/',
+        'RealEstate\Common\Models' =&gt; '../apps/common/models/',
+        'RealEstate\Library\Pagination' =&gt; '../apps/library/',
+        'Facebook' =&gt;  __DIR__.'/../apps/plugins/FacebookSDK/'
+      ));
+
+      $loader-&gt;registerClasses(array(
+         "FacebookLib"   =&gt;  __DIR__.'/../apps/library/FacebookLib.php',
+         "Facebook" =&gt;  __DIR__.'/../apps/plugins/FacebookSDK/autoload.php',
+         "MobileDetect" =&gt; __DIR__.'/../apps/library/MobileDetect.php'
+      ));
+
+      $loader-&gt;register();
+
+      $di-&gt;set('config', $config, true);
+
+      //Register assets like CSS and JS
+      //ASSETS REGISTRATION RELATED CODE COMES HERE
+
+      $this-&gt;prConfig = $config;
+
+      //register base url
+      $di-&gt;set('baseurl', function() use ($config){
+        $url = $config-&gt;application-&gt;baseUri;
+        return $url;
+      });
+
+      //register CDN url
+
+      //Module Information
+      $di-&gt;set('appconfig', function() use ($config){
+        $appconfig = $config-&gt;application;
+        return $appconfig;
+      });
+
+      //Register URL helper
+      //set base url
+      $di-&gt;set('url', function() use ($config){
+        $url = new UrlProvider();
+        $url-&gt;setBaseUri($config-&gt;application-&gt;baseUri);
+        return $url;
+      });
+
+      //Register dependency for a database connection
+      $di-&gt;setShared('db', function() use ($config){
+        return new DbAdapter(array(
+          "host" =&gt; $config-&gt;database-&gt;host,
+          "username" =&gt; $config-&gt;database-&gt;username,
+          "password" =&gt; $config-&gt;database-&gt;password,
+          "dbname" =&gt; $config-&gt;database-&gt;dbname
+        ));
+      });
+
+      //Register and start session
+      $di-&gt;setShared('session', function() {
+          $session = new SessionAdapter();
+          $session-&gt;start();
+          return $session;
+      });
+
+      //Register custom library Utilities, so that it is available through out the application  
+      $di-&gt;setShared("utils",function(){
+        return new \Utilities();
+      });
+
+      //Registering a router
+      $di-&gt;set('router', function() use ($config){
+
+        $router = new Router(false);
+
+        $controller = "index";
+        /*Backend Routers Configuration Start*/
+
+        $modules = $config-&gt;modules;
+
+        $router-&gt;add('/', array(
+            'module' =&gt; 'property',
+            'namespace' =&gt; 'RealEstate\Property\Controllers\\',
+            'controller' =&gt; 'index',
+            'action' =&gt; 'index'
+        ));
+
+        $router-&gt;add('/:int', array(
+            'module' =&gt; 'property',
+            'namespace' =&gt; 'RealEstate\Property\Controllers\\',
+            'controller' =&gt; 'index',
+            'action' =&gt; 'index',
+            'params' =&gt;1
+        ));
+
+        //other router settings
+        //404 route settings here
+
+        $router-&gt;removeExtraSlashes(true); //ignore trailing slash in urls
+        /*Backend Routers Configuration End*/
+        return $router;
+
+      });
+
+     //partials related setting here
+
+      $this-&gt;setDI($di);
+    }catch(\Phalcon\Exception $e){
+      echo get_class($e), ": ", $e-&gt;getMessage(), "\n";
+        echo " File=", $e-&gt;getFile(), "\n";
+        echo " Line=", $e-&gt;getLine(), "\n";
+        echo $e-&gt;getTraceAsString();
+    }
+
+  }
+
+  public function main()
+  {
+
+    try{
+      if (!extension_loaded('phalcon')) {
+            die("Phalcon extension is not installed or enabled. Please check with host");
+      }
+
+      $this-&gt;_registerServices();
+
+      if($this-&gt;prConfig-&gt;application-&gt;environment=="development" || $_GET["showerrors"]==1){
+        ini_set("display_errors","On");
+        error_reporting(E_ALL ^ E_NOTICE);
+      }
+
+      $arraytemp = json_decode(json_encode($this-&gt;prConfig-&gt;modules), true); //convert Config object to a simple array
+      //$this-&gt;utils-&gt;printr($arraytemp,1);
+      $keys = array_keys($arraytemp);
+      $array = array();
+
+      if(count($keys)&gt;0){
+        foreach($keys as $module){
+          $array[$module]["className"] = "RealEstate\\".ucwords($module)."\Module";
+          $array[$module]["path"] = "../apps/modules/".$module."/Module.php";
+        }
+      }else{
+        die("The entries for modules not found.");
+      }
+
+      $this-&gt;registerModules($array);
+      echo $this-&gt;handle()-&gt;getContent();
+
+    }catch(\Phalcon\Exception $e){
+      echo get_class($e), ": ", $e-&gt;getMessage(), "\n";
+        echo " File=", $e-&gt;getFile(), "\n";
+        echo " Line=", $e-&gt;getLine(), "\n";
+        echo $e-&gt;getTraceAsString();
+    }
+  }
+
+}
+
+$application = new MyApplication();
+$application-&gt;main();</code></pre>
+<ol>
+<li>No errors on Server's error log</li>
+<li>Also have checked on <code>Phalcon 3</code> on <code>PHP 5.6</code>. Same result</li>
+</ol>
+<p>Thanks</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-b8572730dd2d226649c5287f-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-b8572730dd2d226649c5287f-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5915f25e654c4f9e60fe51700cdee683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4769/Izopi4a" class="user-moderator-Y"><span itemprop="name">Izo</span></a>        </span>
+        <br>
+
+        <span class="karma">85.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C38587" href="#C38587">
+                <time itemprop="dateCreated" datetime="2016-08-17T03:12:40-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>double check all error logs you can find in /var/logs/ to see in which one exacly the error is placed.  Cuz sometimes mine are placed at system.log or something like that ( i dont remmember exacltly )</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="38587" data-cf-modified-b8572730dd2d226649c5287f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="38587" data-cf-modified-b8572730dd2d226649c5287f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2593046419168b77c2aa25682cade17b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3914/watsmyname" class="user-moderator-N"><span itemprop="name">watsmyname</span></a>        </span>
+        <br>
+
+        <span class="karma">6.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C38587"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/5915f25e654c4f9e60fe51700cdee683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Izo                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C38591" href="#C38591">
+                <time itemprop="dateCreated" datetime="2016-08-17T04:06:18-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Checked all error logs, no errors at all.</p>
+<blockquote>
+<p>double check all error logs you can find in /var/logs/ to see in which one exacly the error is placed.  Cuz sometimes mine are placed at system.log or something like that ( i dont remmember exacltly )</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="38591" data-cf-modified-b8572730dd2d226649c5287f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="38591" data-cf-modified-b8572730dd2d226649c5287f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5915f25e654c4f9e60fe51700cdee683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4769/Izopi4a" class="user-moderator-Y"><span itemprop="name">Izo</span></a>        </span>
+        <br>
+
+        <span class="karma">85.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C38593" href="#C38593">
+                <time itemprop="dateCreated" datetime="2016-08-17T04:10:43-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>perhaps apache/nginx is screwing with you ? check their logs if everything is fine.</p>
+<p>if its working fine start removing peice by peice the code until it start working and find the code block that fucks it. </p>
+<p>And then we will see. There are too many stuff to copy/paste it in blank app of mine to test it.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="38593" data-cf-modified-b8572730dd2d226649c5287f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="38593" data-cf-modified-b8572730dd2d226649c5287f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4d1384d668711e6153ed4c6f05e29216?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/286/trentramseyer" class="user-moderator-N"><span itemprop="name">Trent Ramseyer</span></a>        </span>
+        <br>
+
+        <span class="karma">22.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C38629" href="#C38629">
+                <time itemprop="dateCreated" datetime="2016-08-17T11:49:17-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Did you try making a micro site to see if Phalcon is even running?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="38629" data-cf-modified-b8572730dd2d226649c5287f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="38629" data-cf-modified-b8572730dd2d226649c5287f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2593046419168b77c2aa25682cade17b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3914/watsmyname" class="user-moderator-N"><span itemprop="name">watsmyname</span></a>        </span>
+        <br>
+
+        <span class="karma">6.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C38629"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/4d1384d668711e6153ed4c6f05e29216?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Trent Ramseyer                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C38703" href="#C38703">
+                <time itemprop="dateCreated" datetime="2016-08-18T20:16:04-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Micro app is working even without changing any previous codes.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="38703" data-cf-modified-b8572730dd2d226649c5287f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="38703" data-cf-modified-b8572730dd2d226649c5287f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2593046419168b77c2aa25682cade17b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3914/watsmyname" class="user-moderator-N"><span itemprop="name">watsmyname</span></a>        </span>
+        <br>
+
+        <span class="karma">6.6k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="38713" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '16</span>
+              </span><br/><a name="C38713" href="#C38713">
+                <time itemprop="dateCreated" datetime="2016-08-19T00:16:13-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think I solved this issue. The issue was in <code>Module.php</code>,  the issue was in method</p>
+<pre><code class="language-php">public function registerServices($di)
+    {
+
+        try{
+            //Registering the view component
+            $di-&gt;set('view', function() {
+                $view = new View();
+                $view-&gt;setViewsDir('../apps/modules/'.$this-&gt;module_name.'/views/');
+                return $view;
+            });
+
+        }catch(\Phalcon\Exception $e){
+            echo get_class($e), ": ", $e-&gt;getMessage(), "\n";
+            echo " File=", $e-&gt;getFile(), "\n";
+            echo " Line=", $e-&gt;getLine(), "\n";
+            echo $e-&gt;getTraceAsString();
+        }
+    }</code></pre>
+<p>Where, <code>$module_name</code> is a property defined in class. </p>
+<p>In above code <code>$this-&gt;module_name</code> was undefined.  so I changed above method to -</p>
+<pre><code class="language-php">public function registerServices($di)
+    {
+        $module = $this-&gt;module_name;
+
+        try{
+            //Registering the view component
+            $di-&gt;set('view', function() use($module) {
+                $view = new View();
+                $view-&gt;setViewsDir('../apps/modules/'.$module.'/views/');
+                return $view;
+            });
+
+        }catch(\Phalcon\Exception $e){
+            echo get_class($e), ": ", $e-&gt;getMessage(), "\n";
+            echo " File=", $e-&gt;getFile(), "\n";
+            echo " Line=", $e-&gt;getLine(), "\n";
+            echo $e-&gt;getTraceAsString();
+        }
+    }</code></pre>
+<p>I wondered why it was working in previous version of Phalcon</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="38713" data-cf-modified-b8572730dd2d226649c5287f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="38713" data-cf-modified-b8572730dd2d226649c5287f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d6143a9ff65d2d5222c30fb0d76664a7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3646/Surt" class="user-moderator-N"><span itemprop="name">Erik Wiesenthal</span></a>        </span>
+        <br>
+
+        <span class="karma">23.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="38771" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '16</span>
+              </span><br/><a name="C38771" href="#C38771">
+                <time itemprop="dateCreated" datetime="2016-08-19T22:32:19-07:00" class="action-date">Aug '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>On previous to 3.0 when you used <code>$this</code>, on the closure used to define the service on the DIC, it was refering to the class where you was working on. Now, when you refer to  <code>$this</code> inside the closure you are refering to the DI itself. Thats why. I had to change all my definitions too :(</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="38771" data-cf-modified-b8572730dd2d226649c5287f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="38771" data-cf-modified-b8572730dd2d226649c5287f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="13099" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

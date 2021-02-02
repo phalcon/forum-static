@@ -1,0 +1,302 @@
+---
+layout: default
+title: 'Route does not work with action and parameter - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Route does not work with action and parameter</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/6813/PrincessOfSecret" class="user-moderator-N"><span itemprop="name">PrincessOfSecret</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-08-31T10:42:01-07:00">Aug '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-08-31T10:42:01-07:00">Aug '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1293</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9d2a088e111edff450834810cc57bc7e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/6813/PrincessOfSecret" class="user-moderator-N"><span itemprop="name">PrincessOfSecret</span></a></span>
+                <span class="karma">3.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C13309" href="#C13309">
+        <time class="action-date">Aug '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>I'd run into a strange problem while I'm trying to set up an error handler controller.</p>
+<p>I have an ErrorController:</p>
+<pre><code class="language-php">
+namespace Main\Controllers;
+
+class ErrorController extends ControllerBase
+{
+
+    public function initialize()
+    {
+        /* some stuff here */
+    }
+
+    public function indexAction()
+    {
+        $code = $this-&gt;dispatcher-&gt;getParam('code');
+        switch($code){
+            case 99: $this-&gt;flash-&gt;error($this-&gt;main_text['error99']); break;
+            case 404: $this-&gt;flash-&gt;error($this-&gt;main_text['error404']); break;
+            default: $this-&gt;flash-&gt;error($this-&gt;main_text['error500']);
+        }
+    }
+}</code></pre>
+<p>I have this at the end of my routing:</p>
+<pre><code class="language-php">
+$router-&gt;add('/error/{code:[0-9]+}', array(
+    'namespace' =&gt; 'Main\\Controllers',
+    'controller' =&gt; 'error',
+    'action' =&gt; 'index'
+));
+</code></pre>
+<p>When I try to reach f.e. <code>/error/404</code>, I got the <code>Object not found</code> error. Same when I try <code>/error/index</code>, <code>/error/index/404</code>  and <code>Access forbidden</code> for <code>/error/</code>. It works only for <code>/error</code>, then it runs the index action.</p>
+<p>I have a forwarding for errors in beforeException event, it also calls this controller and action, but it doesn't work neither for forwarding nor redirecting. I tried to comment this forwarding out, but the result was the same.</p>
+<pre><code class="language-php">
+$eventsManager-&gt;attach("dispatch:beforeException", function($event, $dispatcher, $exception) {
+
+        switch ($exception-&gt;getCode()) {
+            case \Phalcon\Mvc\Dispatcher::EXCEPTION_HANDLER_NOT_FOUND:
+            case \Phalcon\Mvc\Dispatcher::EXCEPTION_ACTION_NOT_FOUND:
+            case \Phalcon\Mvc\Dispatcher::EXCEPTION_INVALID_HANDLER:
+            case \Phalcon\Mvc\Dispatcher::EXCEPTION_INVALID_PARAMS:
+                $dispatcher-&gt;forward(
+                    array(
+                        'controller' =&gt; 'error',
+                        'action'     =&gt; 'index',
+                        'params'     =&gt; 404
+                    )
+                );
+                return false;
+            default:
+                $dispatcher-&gt;forward(
+                    array(
+                        'controller' =&gt; 'error',
+                        'action'     =&gt; 'index',
+                        'params'     =&gt; 500
+                    )
+                );
+                return false;
+        }
+    });</code></pre>
+<p>I have no idea why the routing doesn't work, all other routing patterns works fine, and I don't find other pattern that may conflict with this one. Do I miss some important point?</p>
+<p>I still use Phalcon 2.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-44381824f224c53ac795034c-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-44381824f224c53ac795034c-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="39553" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '16</span>
+              </span><br/><a name="C39553" href="#C39553">
+                <time itemprop="dateCreated" datetime="2016-09-01T02:19:27-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Your approach seems too complex for a simple task to dispatch errors.</p>
+<p>Take a look at my production-proven example. Built on Phalcon 2.0.x.</p>
+<pre><code class="language-php">
+//Dispatcher classes
+use \Phalcon\Dispatcher,
+\Phalcon\Mvc\Dispatcher as MvcDispatcher,
+\Phalcon\Events\Manager as EventsManager;
+
+$di-&gt;setShared('dispatcher', function () {
+
+    // Create an EventsManager
+    $eventsManager = new EventsManager();
+
+    //Triggered before executing the controller/action method. At this point the dispatcher has been initialized the controller and know if the action exist.
+    /*$eventsManager-&gt;attach('dispatch:beforeExecuteRoute', function () {
+        //If we ever need to log all matched routes, even notFound routes
+     });*/
+
+    // Attach a listener
+    $eventsManager-&gt;attach('dispatch:beforeException', function ($event, $dispatcher, $exception) {
+        // Handle 404 exceptions, this is real 404 not found error, it will trigger 404 http status code
+      if ($exception instanceof \Phalcon\Mvc\Dispatcher\Exception) {
+          //TODO if we need to get a code and treat it differently depending on the level of exception
+          //echo $exception-&gt;getCode();
+          $dispatcher-&gt;forward(['controller' =&gt; 'error', 'action' =&gt; 'notFound']);
+
+          return false; //returning false is mandatory
+      }
+
+    });
+
+    $dispatcher = new MvcDispatcher();
+
+    // Bind the EventsManager to the dispatcher
+    $dispatcher-&gt;setEventsManager($eventsManager);
+
+    return $dispatcher;
+});</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39553" data-cf-modified-44381824f224c53ac795034c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39553" data-cf-modified-44381824f224c53ac795034c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9d2a088e111edff450834810cc57bc7e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6813/PrincessOfSecret" class="user-moderator-N"><span itemprop="name">PrincessOfSecret</span></a>        </span>
+        <br>
+
+        <span class="karma">3.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C39559" href="#C39559">
+                <time itemprop="dateCreated" datetime="2016-09-01T05:07:17-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>My first approach was the same as yours, I actually did the same as you do in this script. But I want to make difference between the errors to display different messages. What is not simply a 404 error, I want to display as 500 (or at least a message that refers to that), and I have one more case what I call 99, that is when someone tries to call an ajax request from URL (I handle that case at the beginning of every ajax called action). I tried to use the same error controller for all the cases, but it seems that my solution is not correct this way.</p>
+<p>But what I found strange is why the routing works that way as I wrote. I mean that I have a correct routing and a correctly set up controller and action (or at least I think that they are correct), and it doesn't find the correct handler for that request (when not forwarding, just simply doing an URL request). It works when I call only the controller, but doesn't work when I call it with a parameter. It should not have thrown an exception, while there is a route and handler for the request - but it still does. What may cause it?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39559" data-cf-modified-44381824f224c53ac795034c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39559" data-cf-modified-44381824f224c53ac795034c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9d2a088e111edff450834810cc57bc7e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6813/PrincessOfSecret" class="user-moderator-N"><span itemprop="name">PrincessOfSecret</span></a>        </span>
+        <br>
+
+        <span class="karma">3.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="39587" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '16</span>
+              </span><br/><a name="C39587" href="#C39587">
+                <time itemprop="dateCreated" datetime="2016-09-01T09:29:08-07:00" class="action-date">Sep '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I rearranged the whole error handling and it doing forwards only to the IndexController's error actions without parameters, and now everything works as expected.</p>
+<p>However, I still don't know what exactly was the problem with the previous solution. </p>
+<p>All in all, I reached the desired results.</p>
+<p>In services at dispatcher:</p>
+<pre><code class="language-php">
+$eventsManager-&gt;attach("dispatch:beforeException", function($event, $dispatcher, $exception) {
+
+    switch ($exception-&gt;getCode()) {
+        case \Phalcon\Mvc\Dispatcher::EXCEPTION_HANDLER_NOT_FOUND:
+        case \Phalcon\Mvc\Dispatcher::EXCEPTION_ACTION_NOT_FOUND:
+        case \Phalcon\Mvc\Dispatcher::EXCEPTION_INVALID_HANDLER:
+        case \Phalcon\Mvc\Dispatcher::EXCEPTION_INVALID_PARAMS:
+            $dispatcher-&gt;forward(
+                array(
+                    'controller' =&gt; 'index',
+                     'action'     =&gt; 'notFound'
+                )
+            );
+            return false;
+        default:
+            $dispatcher-&gt;forward(
+                array(
+                    'controller' =&gt; 'index',
+                    'action'     =&gt; 'error'
+                )
+            );
+        return false;
+    }
+
+});
+</code></pre>
+<p>In IndexController:</p>
+<pre><code class="language-php">
+namespace Main\Controllers;
+
+class IndexController extends ControllerBase
+{
+    public function notFoundAction(){
+
+        $this-&gt;loadCustomTrans('error', 'error_text');
+        $this-&gt;view-&gt;pick(["index/error"]);
+        $this-&gt;view-&gt;setVar("code", 404);
+        $this-&gt;view-&gt;setVar("message", $this-&gt;error_text['error404']);
+    }
+
+    public function errorAction(){
+
+        $this-&gt;loadCustomTrans('error', 'error_text');
+        $this-&gt;view-&gt;pick(["index/error"]);
+        $this-&gt;view-&gt;setVar("code", 500);
+        $this-&gt;view-&gt;setVar("message", $this-&gt;error_text['error500']);
+    }
+}
+</code></pre>
+<p>In ControllerBase for ajax actions request tries through URL (now it displays only a flash error message without any forwarding or redirection):</p>
+<pre><code class="language-php">
+namespace Main\Controllers;
+
+class ControllerBase extends \Phalcon\Mvc\Controller
+{
+    public function ajaxError(){
+
+        $this-&gt;loadCustomTrans('error', 'error_text');
+        $this-&gt;flash-&gt;error($this-&gt;error_text['error_ajax']);
+        $this-&gt;view-&gt;pick(["index/ajaxError"]);
+    }
+}
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="39587" data-cf-modified-44381824f224c53ac795034c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="39587" data-cf-modified-44381824f224c53ac795034c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="13309" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

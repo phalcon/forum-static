@@ -1,0 +1,188 @@
+---
+layout: default
+title: 'Redirect adds index.php to the url and redirects to wrong controller / action - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/25/configuration">Configuration</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Redirect adds index.php to the url and redirects to wrong controller / action</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10924/kwedsd" class="user-moderator-N"><span itemprop="name">kwedsd</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-03-28T14:36:58-07:00">Mar '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-03-28T14:36:58-07:00">Mar '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>974</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/81ba6e3855a6f893abd2327e069681c6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10924/kwedsd" class="user-moderator-N"><span itemprop="name">kwedsd</span></a></span>
+                <span class="karma">6.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C18000" href="#C18000">
+        <time class="action-date">Mar '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>I have the following redirect: <code>$this-&gt;response-&gt;redirect('unit/index');</code>
+this redirects to <code>http://dev.example/index.phpunit/index</code> when changing the redirect to: <code>$this-&gt;response-&gt;redirect('/unit/index');</code> the page goes to: <code>http://dev.example/index.php/unit/index</code> basically the redirect is adding index.php (which loads the default IndexController) into the url can anyone advise why this happening? I am using nginx and my host config file is as follows:</p>
+<pre><code>server {
+    # Port 80 will require Nginx to be started with root permissions
+    # Depending on how you install Nginx to use port 80 you will need
+    # to start the server with `sudo` ports about 1000 do not require
+    # root privileges
+    # listen      80;
+
+    listen        80;
+    server_name   dev.example;
+
+    ##########################
+    # In production require SSL
+    # listen 443 ssl default_server;
+
+    # ssl on;
+    # ssl_session_timeout  5m;
+    # ssl_protocols  SSLv2 SSLv3 TLSv1;
+    # ssl_ciphers  ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv2:+EXP;
+    # ssl_prefer_server_ciphers   on;
+
+    # These locations depend on where you store your certs
+    # ssl_certificate        /var/nginx/certs/default.cert;
+    # ssl_certificate_key    /var/nginx/certs/default.key;
+    ##########################
+
+    # This is the folder that index.php is in
+    root /Sites/example/public;
+    index index.php index.html index.htm;
+
+  charset utf-8;
+    client_max_body_size 100M;
+    fastcgi_read_timeout 1800;
+
+    # Represents the root of the domain
+    # http://localhost:8000/[index.php]
+    location / {
+        # Matches URLS `$_GET['_url']`
+        try_files $uri $uri/ /index.php?_url=$uri&amp;$args;
+    }
+
+    # When the HTTP request does not match the above
+    # and the file ends in .php
+    location ~ [^/]\.php(/|$) {
+        # try_files $uri =404;
+
+        # Ubuntu and PHP7.0-fpm in socket mode
+        # This path is dependent on the version of PHP install
+        # fastcgi_pass  unix:/var/run/php/php7.0-fpm.sock;
+
+        # Alternatively you use PHP-FPM in TCP mode (Required on Windows)
+        # You will need to configure FPM to listen on a standard port
+        # https://www.nginx.com/resources/wiki/start/topics/examples/phpfastcgi$
+        fastcgi_pass  127.0.0.1:9000;
+
+        fastcgi_index /index.php;
+
+        include fastcgi_params;
+        fastcgi_split_path_info ^(.+?\.php)(/.*)$;
+        if (!-f $document_root$fastcgi_script_name) {
+            return 404;
+        }
+
+        fastcgi_param PATH_INFO       $fastcgi_path_info;
+        # fastcgi_param PATH_TRANSLATED $document_root$fastcgi_path_info;
+        # and set php.ini cgi.fix_pathinfo=0
+
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico)$ {
+        expires       max;
+        log_not_found off;
+        access_log    off;
+    }
+}</code></pre>
+<p>Thanks</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-e00d20bf3ebf40fab0399ecd-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-e00d20bf3ebf40fab0399ecd-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/644d4a30f650c8b4848a7fe2a41091bb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8445/whoami19" class="user-moderator-N"><span itemprop="name">whoami19</span></a>        </span>
+        <br>
+
+        <span class="karma">90</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="54610" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '18</span>
+              </span><br/><a name="C54610" href="#C54610">
+                <time itemprop="dateCreated" datetime="2018-03-29T11:11:56-07:00" class="action-date">Mar '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi, you need to make changes to your config file:</p>
+<pre><code class="language-code">'baseUri'        =&gt; preg_replace('/public([\/\\\\])index.php$/', '', $_SERVER["PHP_SELF"])</code></pre>
+<p>to</p>
+<pre><code class="language-code">'baseUri'        =&gt; '/'</code></pre>
+<p>or in services.php file</p>
+<pre><code class="language-code">        $di-&gt;set('url',
+            function () {
+                $url = new UrlResolver();
+
+                $url-&gt;setBaseUri("/");
+
+                return $url;
+            }
+        );</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="54610" data-cf-modified-e00d20bf3ebf40fab0399ecd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="54610" data-cf-modified-e00d20bf3ebf40fab0399ecd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="18000" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

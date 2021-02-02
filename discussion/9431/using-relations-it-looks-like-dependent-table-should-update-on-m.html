@@ -1,0 +1,746 @@
+---
+layout: default
+title: 'Using relations, it looks like dependent table should update on model-&gt;save, it does not - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Using relations, it looks like dependent table should update on model-&gt;save, it does not</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/5441/afk4life" class="user-moderator-N"><span itemprop="name">afk4life</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-11-12T20:38:03-07:00">Nov '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-11-12T20:38:03-07:00">Nov '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">6</span>
+                </td>
+                <td>
+                    <label>Views</label><br>471</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/05daf0df82c328ef7216aa71bbc5aac6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/5441/afk4life" class="user-moderator-N"><span itemprop="name">afk4life</span></a></span>
+                <span class="karma">640</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C9431" href="#C9431">
+        <time class="action-date">Nov '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>This is probably very obvious, but I'm having issues. I've got two tables which are using foreign keys</p>
+<pre><code class="language-php">CREATE TABLE `activity_invoice_map` (
+  `activity_invoice_map` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `activity_id` int(10) unsigned NOT NULL,
+  `invoice_id` int(5) unsigned NOT NULL,
+  PRIMARY KEY (`activity_invoice_map`),
+  KEY `activity_id` (`activity_id`),
+  KEY `invoice_id` (`invoice_id`),
+  CONSTRAINT `activity_invoice_map_ibfk_1` FOREIGN KEY (`activity_id`) REFERENCES `activities` (`activity_id`),
+  CONSTRAINT `activity_invoice_map_ibfk_2` FOREIGN KEY (`invoice_id`) REFERENCES `invoices` (`invoice_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1594 DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC
+
+CREATE TABLE `invoices` (
+  `invoice_id` int(5) unsigned NOT NULL AUTO_INCREMENT,
+  `client_id` int(5) unsigned NOT NULL,
+  `invoice_number` varchar(29) NOT NULL,
+  `invoice_description` varchar(255) NOT NULL,
+  `invoice_created` datetime NOT NULL,
+  `invoice_edited` datetime NOT NULL,
+  `invoice_submitted` datetime DEFAULT NULL,
+  `invoice_status` enum('Unpaid','Submitted','Paid','Voided') NOT NULL DEFAULT 'Unpaid',
+  `invoice_paid` datetime DEFAULT NULL,
+  `invoice_due` datetime DEFAULT NULL,
+  `invoice_amount` float DEFAULT NULL,
+  PRIMARY KEY (`invoice_id`),
+  KEY `invoice_number` (`invoice_number`),
+  KEY `invoice_description` (`invoice_description`),
+  KEY `invoice_created` (`invoice_created`),
+  KEY `invoice_submitted` (`invoice_submitted`),
+  KEY `invoice_status` (`invoice_status`),
+  KEY `invoice_paid` (`invoice_paid`),
+  KEY `client_id` (`client_id`),
+  CONSTRAINT `invoices_ibfk_1` FOREIGN KEY (`client_id`) REFERENCES `clients` (`client_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=312 DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC</code></pre>
+<p>In the model for Invoices I have</p>
+<pre><code class="language-php">    public function initialize()
+    {
+        $this-&gt;hasMany('invoice_id', 'ActivityInvoiceMap', 'invoice_id', array('alias' =&gt; 'ActivityInvoiceMap'));
+        $this-&gt;belongsTo('client_id', 'Clients', 'client_id', array('alias' =&gt; 'Clients'));
+    }</code></pre>
+<p>And ActivityInvoiceMap</p>
+<pre><code class="language-php">    public function initialize()
+    {
+        $this-&gt;belongsTo('activity_id', 'Activities', 'activity_id', array('alias' =&gt; 'Activities'));
+        $this-&gt;belongsTo('invoice_id', 'Invoices', 'invoice_id', array('alias' =&gt; 'Invoices'));
+    }</code></pre>
+<p>I tried adding </p>
+<pre><code class="language-php">use App\Models\ActivityInvoiceMap</code></pre>
+<p>To see if that would get model-&gt;save() to save and it says it can't find it despite having namespace App\Models at top of ActivityInvoiceMap and Invoices models, namespace App\Controllers at top of Invoices Controller, and</p>
+<pre><code class="language-php">$loader-&gt;registerNamespaces(
+        [
+                'App\Models' =&gt; $config-&gt;application-&gt;modelsDir,
+                'App\Controllers' =&gt; $config-&gt;application-&gt;controllersDir,
+                'Sendgrid' =&gt; 'vendor/sendgrid/sendgrid/lib/SendGrid',
+                'App\Cli\Tasks' =&gt; $config-&gt;application-&gt;cliTasksDir,
+        ]);</code></pre>
+<p>In loader.php. This just worked with Yii without me doing anything, and it looks as if it should work with Phalcon also, so it must be something obvious. Any help is much appreciated.
+thanks-
+-doug</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="26365" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '15</span>
+              </span><br/><a name="C26365" href="#C26365">
+                <time itemprop="dateCreated" datetime="2015-11-13T05:00:06-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Show us full models. In hasMany first parameter is field in current model, second is model(with namespace if its diffrent forum current model - i just put always with full namespace for sure?), thrid parameter is field in related model, fourth is array for options.</p>
+<p>In belongsTo first parameter is field in current model, second is related model, third is parameter in related model, fourth is for options.</p>
+<p>You have in your relations same field in current and related model, are you sure there are in both models those properties and in database? To be honest it shouldnt be called like this..</p>
+<p>Oh i see it should working. But calling in your table invoices each column with prefix invoice_ its bad idea. Cuz you already know its invoice, you dont have to repeat it.</p>
+<p>Check if there are any errors for related models after -&gt;save, if yes - then its why they not saving.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26365" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26365" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/05daf0df82c328ef7216aa71bbc5aac6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5441/afk4life" class="user-moderator-N"><span itemprop="name">afk4life</span></a>        </span>
+        <br>
+
+        <span class="karma">640</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C26381" href="#C26381">
+                <time itemprop="dateCreated" datetime="2015-11-13T06:38:53-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If I try to save by explicitly creating a new ActivityInvoiceMap (tried this as it does not seem to be doing it &quot;magically&quot;)</p>
+<p>excerpt from InvoicesController.php:</p>
+<pre><code class="language-php">                    $activity_invoice_map = new ActivityInvoiceMap();
+                    $activity_detail = Activities::findFirstByactivity_id($invoice_rows[$n]['activity_id']);
+                    $activity_detail-&gt;activity_state = 'Billed';
+                    if (!$activity_detail-&gt;save()) {
+                        foreach ($activity_detail-&gt;getMessages() as $message) {
+                            $this-&gt;flash-&gt;error($message);
+                        }
+                    }</code></pre>
+<p>and further down:</p>
+<pre><code class="language-php">            $invoice = new Invoices();
+            $activity_invoice_map = new ActivityInvoiceMap();
+            $invoice-&gt;client_id = $details['client_id'];
+            $invoice-&gt;invoice_number = $details['invoice_number'];
+            $invoice-&gt;invoice_description = 'Invoice '.$details['invoice_number'].' - '.date('M j Y');
+            $invoice-&gt;invoice_created = date('Y-m-d H:i:s');
+            $invoice-&gt;invoice_submitted = date('Y-m-d H:i:s');
+            $invoice-&gt;invoice_edited = date('Y-m-d H:i:s');
+            $invoice-&gt;invoice_status = 'Submitted';
+            $invoice-&gt;invoice_due = date('Y-m-d H:i:s', strtotime((date('Y-m-d H:i:s').'+ 5 days')) );
+            $invoice-&gt;invoice_amount = preg_replace("/([^0-9\\.])/i", "", ($details['invoice_detail_total_billable']));
+            if (!$invoice-&gt;create()) {
+                foreach ($invoice-&gt;getMessages() as $message) {
+                    $this-&gt;flash-&gt;error($message);
+                }
+</code></pre>
+<p>If does not like that - it says it can't find the model.  I tried using save(), update(), create() as per docs to no effect.</p>
+<p>The schema was designed to be beyond obvious, e.g. in invoices there's invoice_id and in activities there's activity_id, in the map table it's referred to as exactly the same, activity_id and invoice_id. It's an old schema. Here are the models, a lot of this is just standard generation from Phalcon Tools.</p>
+<p>ActivityInvoiceMap.php</p>
+<pre><code class="language-php">&lt;?php
+
+namespace App\Models;
+
+class ActivityInvoiceMap extends \Phalcon\Mvc\Model
+{
+
+    /**
+     *
+     * @var integer
+     */
+    public $activity_invoice_map;
+
+    /**
+     *
+     * @var integer
+     */
+    public $activity_id;
+
+    /**
+     *
+     * @var integer
+     */
+    public $invoice_id;
+
+    /**
+     * Initialize method for model.
+     */
+    public function initialize()
+    {
+        $this-&gt;belongsTo('activity_id', 'Activities', 'activity_id', array('alias' =&gt; 'Activities'));
+        $this-&gt;belongsTo('invoice_id', 'Invoices', 'invoice_id', array('alias' =&gt; 'Invoices'));
+    }
+
+    /**
+     * Returns table name mapped in the model.
+     *
+     * @return string
+     */
+    public function getSource()
+    {
+        return 'activity_invoice_map';
+    }
+
+    /**
+     * Allows to query a set of records that match the specified conditions
+     *
+     * @param mixed $parameters
+     * @return ActivityInvoiceMap[]
+     */
+    public static function find($parameters = null)
+    {
+        return parent::find($parameters);
+    }
+
+    /**
+     * Allows to query the first record that match the specified conditions
+     *
+     * @param mixed $parameters
+     * @return ActivityInvoiceMap
+     */
+    public static function findFirst($parameters = null)
+    {
+        return parent::findFirst($parameters);
+    }
+
+}</code></pre>
+<p>Invoices.php</p>
+<pre><code class="language-php">
+&lt;?php
+
+namespace App\Models;
+use Phalcon\Mvc\Model;
+use Phalcon\Mvc\Model\Resultset\Simple as Resultset;
+use Phalcon\Mvc\Model\Manager as ModelsManager;
+use App\Models\Activities;
+use App\Models\ActivityInvoiceMap;
+use App\Models\Clients;
+use App\Models\Projects;
+
+class Invoices extends \Phalcon\Mvc\Model
+{
+
+    /**
+     *
+     * @var integer
+     */
+    public $invoice_id;
+
+    /**
+     *
+     * @var integer
+     */
+    public $client_id;
+
+    /**
+     *
+     * @var string
+     */
+    public $invoice_number;
+
+    /**
+     *
+     * @var string
+     */
+    public $invoice_description;
+
+    /**
+     *
+     * @var string
+     */
+    public $invoice_created;
+
+    /**
+     *
+     * @var string
+     */
+    public $invoice_edited;
+
+    /**
+     *
+     * @var string
+     */
+    public $invoice_submitted;
+
+    /**
+     *
+     * @var string
+     */
+    public $invoice_status;
+
+    /**
+     *
+     * @var string
+     */
+    public $invoice_paid;
+
+    /**
+     *
+     * @var string
+     */
+    public $invoice_due;
+
+    /**
+     *
+     * @var double
+     */
+    public $invoice_amount;
+
+    /**
+     * Initialize method for model.
+     */
+    public function initialize()
+    {
+        $this-&gt;hasMany('invoice_id', 'ActivityInvoiceMap', 'invoice_id', array('alias' =&gt; 'ActivityInvoiceMap'));
+        $this-&gt;belongsTo('client_id', 'Clients', 'client_id', array('alias' =&gt; 'Clients'));
+    }
+
+    /**
+     * Returns table name mapped in the model.
+     *
+     * @return string
+     */
+    public function getSource()
+    {
+        return 'invoices';
+    }
+
+    /**
+     * Allows to query a set of records that match the specified conditions
+     *
+     * @param mixed $parameters
+     * @return Invoices[]
+     */
+    public static function find($parameters = null)
+    {
+        return parent::find($parameters);
+    }
+
+    /**
+     * Allows to query the first record that match the specified conditions
+     *
+     * @param mixed $parameters
+     * @return Invoices
+     */
+    public static function findFirst($parameters = null)
+    {
+        return parent::findFirst($parameters);
+    }
+
+    public static function getHourlyBilling($client_id, $params = null)
+    {
+        if (is_numeric($client_id)) {
+            $sql = 'select client_companyname, client_contact_address, client_contact_email, client_id, activity_id, project_id, project_name, project_currency, activity_description, activity_hourly, activity_start,
+                    activity_end, time, round((time * activity_hourly),2) as billable from (
+                    select c.client_companyname as client_companyname, c.client_contact_email as client_contact_email, c.client_id as client_id, activity_id, project_id, p.project_name as project_name,
+                    p.project_currency as project_currency, activity_description, activity_hourly,
+                    concat_ws(\'&lt;br /&gt;\',`client_contact`,`client_billing_street`,`client_billing_city`,`client_billing_state`,`client_billing_postcode`) as client_contact_address,
+                    convert_tz(activity_start,\'UTC\',\'America/New_York\') as activity_start, convert_tz(activity_end,\'UTC\',\'America/New_York\') as activity_end,
+                    (hour(timediff(`activity_end`,`activity_start`))+round((ceil(minute(timediff(`activity_end`,`activity_start`)))*0.016666667),2)) as time
+                    from activities a
+                    join projects p using (project_id)
+                    join clients c using (client_id)
+                    where activity_state = "Unbilled" and activity_type not like "Fixed" and activity_type not like "Subcontractor" and activity_start is not null and activity_end is not null
+                   and c.client_id = '.$client_id.' ) sq1 where time &gt; 0 order by sq1.activity_start';
+            $invoice = new Invoices();
+            $unbilled = (new Resultset(null, $invoice, $invoice-&gt;getReadConnection()-&gt;query($sql,$params)))-&gt;toArray();
+            return $unbilled;
+        } else {
+            return false;
+        }
+    }
+
+    public static function getFixedCostBilling($client_id, $params = null)
+    {
+        if (is_numeric($client_id))
+        {
+            $invoice = new Invoices();
+            $sql = 'select c.client_companyname, c.client_id, c.client_contact_email, activity_id, project_id, p.project_name, p.project_currency, activity_description, activity_fixed_amount as billable,
+                    concat_ws(\'&lt;br /&gt;\',`client_contact`,`client_billing_street`,`client_billing_city`,`client_billing_state`,`client_billing_postcode`) as client_contact_address
+                    from activities a
+                    join projects p using (project_id)
+                    join clients c using (client_id)
+                    where activity_state = "Unbilled" and activity_type like "Fixed" and activity_type not like "Subcontractor" and activity_fixed_amount != 0 and c.client_id='.$client_id.' order by activity_start';
+            $unbilled = (new Resultset(null, $invoice, $invoice-&gt;getReadConnection()-&gt;query($sql,$params)))-&gt;toArray();
+            return $unbilled;
+            }
+            else
+            {
+                return false;
+            }
+
+    }
+
+    public static function getLast()
+    {
+        $invoice = new Invoices();
+        $sql = 'select max(invoice_id) as max from invoices';
+        $params = new \StdClass();
+        $lastId = (new Resultset(null, $invoice, $invoice-&gt;getReadConnection()-&gt;query($sql,$params)))-&gt;toArray();
+        return $lastId;
+    }
+
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26381" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26381" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="26387" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '15</span>
+              </span><br/><a name="C26387" href="#C26387">
+                <time itemprop="dateCreated" datetime="2015-11-13T07:38:15-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>But where are you doing $activity_invoice_map-&gt;save() cuz i dont see it anywhere ? You are not setting anywhere related objects, you are just trying to save/create entity without any related model in it.</p>
+<p>To the loader problem - is the filenames same as class names ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26387" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26387" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/05daf0df82c328ef7216aa71bbc5aac6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5441/afk4life" class="user-moderator-N"><span itemprop="name">afk4life</span></a>        </span>
+        <br>
+
+        <span class="karma">640</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C26391" href="#C26391">
+                <time itemprop="dateCreated" datetime="2015-11-13T08:13:43-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Reading <a href="https://docs.phalcon.io/en/latest/reference/models.html#relationships-between-models">https://docs.phalcon.io/en/latest/reference/models.html#relationships-between-models</a> it says Phalcon uses the magic methods set and get which looking at their examples seems to say that the model definitions would handle that without needing to explicitly save activityinvoicemap. That worked in Yii without me doing anything special, the models handled it and it looks like the same basic setup in the current models. The original files for models and controllers were done with scaffold automatically so that filenames match. Also, since the invoice id is generated at the time of save() it would not be easy to manually set that without going through another round of queries.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26391" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26391" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C26395" href="#C26395">
+                <time itemprop="dateCreated" datetime="2015-11-13T08:51:30-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>What ? But you are not setting ANYWHERE this related models for ActivityInvoiceMap, i dont see anywhere:</p>
+<p>$activityInvoiceMap-&gt;invoice = $invoice.</p>
+<p>You have to do:</p>
+<p>$activityInvoiceMap-&gt;invoice = $invoice.</p>
+<p>and then $activityInvoiceMap-&gt;save or create and it should save/create both invoice and activityInvoiceMap</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26395" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26395" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/05daf0df82c328ef7216aa71bbc5aac6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5441/afk4life" class="user-moderator-N"><span itemprop="name">afk4life</span></a>        </span>
+        <br>
+
+        <span class="karma">640</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C26397" href="#C26397">
+                <time itemprop="dateCreated" datetime="2015-11-13T09:56:35-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>That almost works. This map has to reflect both an activity ID and an invoice ID. It only creates one record, however, and fails to update the activity as Billed. If the loop that updates activities is set to either create or delete it fails </p>
+<pre><code class="language-php">            $invoice = new Invoices();
+            $activityInvoiceMap = new ActivityInvoiceMap();
+            $invoice-&gt;client_id = $details['client_id'];
+            $invoice-&gt;invoice_number = $details['invoice_number'];
+            $invoice-&gt;invoice_description = 'Invoice '.$details['invoice_number'].' - '.date('M j Y');
+            $invoice-&gt;invoice_created = date('Y-m-d H:i:s');
+            $invoice-&gt;invoice_submitted = date('Y-m-d H:i:s');
+            $invoice-&gt;invoice_edited = date('Y-m-d H:i:s');
+            $invoice-&gt;invoice_status = 'Submitted';
+            $invoice-&gt;invoice_due = date('Y-m-d H:i:s', strtotime((date('Y-m-d H:i:s').'+ 5 days')) );
+            $invoice-&gt;invoice_amount = preg_replace("/([^0-9\\.])/i", "", ($details['invoice_detail_total_billable']));
+            if (!$invoice-&gt;create()) {
+                foreach ($invoice-&gt;getMessages() as $message) {
+                    $this-&gt;flash-&gt;error($message);
+                    echo $message." in the invoice loop"; die;
+                }
+            }
+            $activityInvoiceMap-&gt;invoice_id = $invoice-&gt;invoice_id;
+            foreach($checkboxes as $key=&gt;$value) {
+                    $invoice_rows[$n] = unserialize(base64_decode($line_items[$key]));
+                    $activity_detail = Activities::findFirstByactivity_id($invoice_rows[$n]['activity_id']);
+                    $activityInvoiceMap-&gt;activity_id = $activity_detail-&gt;activity_id;
+                    $activity_detail-&gt;activity_state = 'Billed';
+                    if (!$activityInvoiceMap-&gt;create()){
+                        foreach ($activityInvoiceMap-&gt;getMessages() as $message) {
+                            $this-&gt;flash-&gt;error($message);
+                            echo $message; die;
+                        }
+                    }
+                    $invoice_rows[$n]['billable'] = money_format('%2n',$invoice_rows[$n]['billable']);
+                    if ($invoice_rows[$n]['activity_hourly'])
+                        $invoice_rows[$n]['activity_hourly'] = money_format('%2n',$invoice_rows[$n]['activity_hourly']);
+                    $n++;
+            }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26397" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26397" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C26419" href="#C26419">
+                <time itemprop="dateCreated" datetime="2015-11-14T03:01:06-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Maybe change $activityInvoiceMap-&gt;activity_id = $activity_detail-&gt;activity_id try just to  $activityInvoiceMap-&gt;activity_id = $activity_detail and check then, if not working check $activityInvoiceMap-&gt;save() (its create/update in one method)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26419" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26419" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/05daf0df82c328ef7216aa71bbc5aac6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5441/afk4life" class="user-moderator-N"><span itemprop="name">afk4life</span></a>        </span>
+        <br>
+
+        <span class="karma">640</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C26427" href="#C26427">
+                <time itemprop="dateCreated" datetime="2015-11-14T08:58:37-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Does not work. With this logic, it for some reason only saves one item to the activity_invoice_map table despite the fact the loop shows it reading all of the activities. </p>
+<pre><code class="language-php">
+        foreach($checkboxes as $key=&gt;$value) {
+...
+                    $activity_detail = Activities::findFirstByactivity_id($invoice_rows[$n]['activity_id']);
+                    $activity_invoice_map[]-&gt;activity_id = $invoice_rows[$n]['activity_id'];
+                    $activity_detail-&gt;activity_state = 'Billed';
+                    if (!$activity_detail-&gt;save()) {
+                        foreach ($activity_detail-&gt;getMessages() as $message) {
+                            $this-&gt;flash-&gt;error($message);
+                        }
+                    }
+...
+            }
+...
+            $invoice = new Invoices();
+            $activityInvoiceMap = new ActivityInvoiceMap();
+            $invoice-&gt;client_id = $details['client_id'];
+...
+            if (!$invoice-&gt;save()) {
+                foreach ($invoice-&gt;getMessages() as $message) {
+                    $this-&gt;flash-&gt;error($message);
+                    echo $message." in the invoice loop"; die;
+                }
+            } 
+            $invoice_id = $invoice-&gt;invoice_id;
+            $activityInvoiceMap-&gt;invoice_id = $invoice_id;
+            foreach ($activity_invoice_map as $aim) {
+                $activityInvoiceMap-&gt;activity_id = $aim-&gt;activity_id;
+                if (!$activityInvoiceMap-&gt;save()) {
+                    foreach ($activityInvoiceMap-&gt;getMessages() as $message) {
+                        $this-&gt;flash-&gt;error($message);
+                        echo $message." in the activityinvoicemap loop"; die;
+                    }
+                }
+            }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26427" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26427" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C26431" href="#C26431">
+                <time itemprop="dateCreated" datetime="2015-11-14T10:34:41-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>But what is saving only one ? Activity or Invoice ? Is invoice all is fine cuz you setted the same invoice for all activity invoice map.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26431" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26431" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/05daf0df82c328ef7216aa71bbc5aac6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5441/afk4life" class="user-moderator-N"><span itemprop="name">afk4life</span></a>        </span>
+        <br>
+
+        <span class="karma">640</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C26435" href="#C26435">
+                <time itemprop="dateCreated" datetime="2015-11-14T11:13:12-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If I used activityinvoicemap save as before, the activities are not getting marked billed. And in one approach it was creating multiple zero-price invoices. If I do it as above, activityinvoicemap only puts one of the activity ids into activityinvoicemap. Invoices save.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26435" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26435" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/05daf0df82c328ef7216aa71bbc5aac6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5441/afk4life" class="user-moderator-N"><span itemprop="name">afk4life</span></a>        </span>
+        <br>
+
+        <span class="karma">640</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C26437" href="#C26437">
+                <time itemprop="dateCreated" datetime="2015-11-14T11:14:32-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>To clarify - activities belong to invoice invoice, invoices can have and usually do have multiple activities.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26437" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26437" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="26441" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '15</span>
+              </span><br/><a name="C26441" href="#C26441">
+                <time itemprop="dateCreated" datetime="2015-11-14T12:13:30-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Just tell me what is your point and what you want achive cuz its code looks pretty bad its pretty nasty, you are mixing camelCase with underscore etc. Like what you have before and what you want after.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26441" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26441" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/05daf0df82c328ef7216aa71bbc5aac6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5441/afk4life" class="user-moderator-N"><span itemprop="name">afk4life</span></a>        </span>
+        <br>
+
+        <span class="karma">640</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C26445" href="#C26445">
+                <time itemprop="dateCreated" datetime="2015-11-14T13:12:40-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I just figured it out. By explicitly declaring in new ActivityInvoiceMap in the for loop not outside of it, that works. I was just doing camelcase to make it very obvious what was old variables and what was new.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26445" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26445" data-cf-modified-41bf0600ec82a3e90c7df13a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="9431" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,195 @@
+---
+layout: default
+title: 'non db mapped fields, to persist in model,  per instance. - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">non db mapped fields, to persist in model,  per instance.</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2783/gavinb2c" class="user-moderator-N"><span itemprop="name">gavinb2c</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-12-03T11:02:39-07:00">Dec '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-12-03T11:02:39-07:00">Dec '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>642</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/aba61b32aff1793760cb540fc01395f3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2783/gavinb2c" class="user-moderator-N"><span itemprop="name">gavinb2c</span></a></span>
+                <span class="karma">3.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4165" href="#C4165">
+        <time class="action-date">Dec '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>I am fairly new to Phalcon so I am sure I am doing something wrong,  or I have misunderstood somehting, but I have been through the available docs a few times, and I cannot quite figiure out why this is happening.</p>
+<p>I am using Phalcon 1.3.4 on PHP 5.5.11 NTS Windows.</p>
+<p>I have certain data that I would like to store on my entities that inherit from Model.  This data is operational, and not persisted to the database.  In this paticular case I noticed what I deemed as odd behaviour when lazy loading an encryption provider from an object based on model.  This should be a per instance value, and this works fine on intitial creation of the objects, but after calling ::find() the instance fields behave as if statically cached, so that each subsequent object contains the instance value from the first hydrated object.</p>
+<p>I have what I believe to be the most simple example,  using an object hash.</p>
+<p>Please consider the following simple class based on Model :</p>
+<pre><code class="language-php">/*
+ * CREATE TABLE `dumbtest` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `someData` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+ */
+class Simple extends \Phalcon\Mvc\Model
+{
+    protected $_hash = null;
+
+    public function getSource()
+    {
+        return 'dumbtest';  //table based on above sql, does not contain hash
+    }
+
+    public function getPerInstanceHash()
+    {
+       return $this-&gt;_hash;
+    }
+
+    public function onConstruct()
+    {
+        $this-&gt;_hash = uniqid(true);
+    }
+} </code></pre>
+<p>The hash is generated in onConstruct(), and on construction this works fine,  each new object of Simple type contains a unique hash.</p>
+<p>The trouble comes after calling -&gt;create() and then in the same request calling ::find().  Now onConstruct() is not called, so a caching function is smart enough to recognise these objects, but the $_hash member now appears to behave as a singelton.</p>
+<p>Please see following example test to indicate my experience :</p>
+<pre><code class="language-php">class ObjTest  extends UnitTestCase
+{
+    public function testORMStatic()
+    {
+        $firstObj = new Simple();
+        $firstObj-&gt;someData = 'first object';
+        $firstObj-&gt;save();
+
+        $secondObj = new Simple();
+        $secondObj-&gt;someData = 'second object';
+        $secondObj-&gt;save();
+
+        //hash should be different per instance
+        //this test will pass
+        $this-&gt;assertTrue($firstObj-&gt;getPerInstanceHash() != $secondObj-&gt;getPerInstanceHash(), 'The hash should be different for each instance, it is a GUID generated in onConstruct()');
+
+        //now lets fetch the objects through the results set
+        $objects = Simple::find();
+        $this-&gt;assertTrue($objects-&gt;count() == 2); //i.e.  no polluting data
+
+        $firstObj = $objects[0];
+        $secondObj = $objects[1];
+
+        //this time the test will fail, both hashs are identical
+        $this-&gt;assertTrue($firstObj-&gt;getPerInstanceHash() != $secondObj-&gt;getPerInstanceHash(), 'The hash should be different for each instance, it is a GUID generated in onConstruct()');
+
+        $firstObj-&gt;delete();
+        $secondObj-&gt;delete();
+    }
+}</code></pre>
+<p>And the output of the tests (with the last test failing) :</p>
+<blockquote>
+<p>Fail: D:\Source\Repos\App\app\tests\other\ObjTest.php -&gt; ObjTest -&gt; testORMStatic -&gt; The hash should be different for each instance, it is a GUID generated in onConstruct() at [D:\Source\Repos\App\app\tests\other\ObjTest.php line 33]</p>
+</blockquote>
+<p>Could someone please help me understand what the caching mechanism here is, and how I can work around this or better acheive storing a non db persisted value in a model per instance.</p>
+<p>Many thanks.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-196aab11a21485f4f8bcd640-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-196aab11a21485f4f8bcd640-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/aba61b32aff1793760cb540fc01395f3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2783/gavinb2c" class="user-moderator-N"><span itemprop="name">gavinb2c</span></a>        </span>
+        <br>
+
+        <span class="karma">3.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="13873" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '14</span>
+              </span><br/><a name="C13873" href="#C13873">
+                <time itemprop="dateCreated" datetime="2014-12-03T15:55:41-07:00" class="action-date">Dec '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>After some play, I found the afterFetch() method, which I can use as a work around.   </p>
+<pre><code class="language-php">
+    public function afterFetch()
+    {
+        $this-&gt;_hash = spl_object_hash($this); //set to something unique
+    }</code></pre>
+<p>So I can now provide a base with a setUp() method which can be called by onConstruct() and afterFetch(), allowing me to reset any operational state.
+Does this sound like a fair approach, or am I abusing your ORM?</p>
+<p>Incidently, the above mentioned behavior still seems wrong to me,  in so much as it seems dangerous for the same value to be repeated instance to instance, perhaps setting back to null would be safer, at least then a getter could react and reload based on the null value.  I wonder if there is some way I control this behavoir?</p>
+<p>Thanks</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13873" data-cf-modified-196aab11a21485f4f8bcd640-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13873" data-cf-modified-196aab11a21485f4f8bcd640-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c0ce8f5e133750a4dfea4712e533a178?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/15/le51" class="user-moderator-N"><span itemprop="name">le51</span></a>        </span>
+        <br>
+
+        <span class="karma">43.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C14111" href="#C14111">
+                <time itemprop="dateCreated" datetime="2014-12-11T16:31:47-07:00" class="action-date">Dec '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>perhaps setting back to null would be safer, at least then a getter could react and reload based on the null value. I wonder if there is some way I control this behavoir?</p>
+</blockquote>
+<p>this sounds good to me !</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="14111" data-cf-modified-196aab11a21485f4f8bcd640-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="14111" data-cf-modified-196aab11a21485f4f8bcd640-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4165" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

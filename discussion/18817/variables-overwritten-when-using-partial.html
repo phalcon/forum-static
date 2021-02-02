@@ -1,0 +1,326 @@
+---
+layout: default
+title: 'Variables overwritten when using partial - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/3/volt">Volt</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Variables overwritten when using partial</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-09-17T15:46:45-07:00">Sep '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-09-17T15:46:45-07:00">Sep '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>289</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a></span>
+                <span class="karma">125.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C18817" href="#C18817">
+        <time class="action-date">Sep '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have what I think is a bug report, but I'd like a sanity check before filing one.  It seems the inclusion of a partial causes a variable to be overwritten</p>
+<p>This is a snippet of the relevant view code:</p>
+<pre><code class="language-volt">{% raw %}{%{% endraw %} for key,class in [   'complete':'class-complete',
+                        'registered':'class-reg',
+                        'not_registered':'class-not_reg',
+                        'admitted':'class-adm',
+                        'applicant':'class-app',
+                        'waitlisted':'class-wait',
+                        'cancelled':'class-cancel'] {% raw %}%}{% endraw %}
+    &lt;?php dump(array_keys($applicants)); ?&gt;
+    {% raw %}{%{% endraw %} for Applicant in applicants[key] {% raw %}%}{% endraw %}
+        {% raw %}{{{% endraw %} partial('index/partials/applicant',['Applicant':Applicant,'class':class]) {% raw %}}}{% endraw %}
+    {% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}
+{% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}</code></pre>
+<p>Snippet of output</p>
+<pre><code>File: /var/www/htdocs/pfir/app/views/compiled/index/c_index.phtml.php
+Line: 75
+Array
+(
+    [0] =&gt; complete
+    [1] =&gt; applicant
+    [2] =&gt; waitlisted
+    [3] =&gt; cancelled
+    [4] =&gt; admitted
+    [5] =&gt; registered
+    [6] =&gt; not_registered
+)
+
+File: /var/www/htdocs/pfir/app/views/compiled/index/c_index.phtml.php
+Line: 75
+Array
+(
+    [0] =&gt; complete
+    [1] =&gt; applicant
+    [2] =&gt; waitlisted
+    [3] =&gt; cancelled
+    [4] =&gt; admitted
+    [5] =&gt; registered
+    [6] =&gt; not_registered
+)
+
+File: /var/www/htdocs/pfir/app/views/compiled/index/c_index.phtml.php
+Line: 75
+Array
+(
+    [0] =&gt; 1
+    [1] =&gt; 2
+    [2] =&gt; 3
+)</code></pre>
+<p>Partialled <code>applicant.phtml</code></p>
+<pre><code class="language-volt">&lt;tr class = "{% raw %}{{{% endraw %} class {% raw %}}}{% endraw %}" data-applicant-id = "{% raw %}{{{% endraw %} Applicant.id {% raw %}}}{% endraw %}"&gt;
+    &lt;td class = "align-middle {% raw %}{%{% endraw %} if Applicant.diffStatus() == constant('Model\Diff::STATUS_PROGRESS') {% raw %}%}{% endraw %}diff-bg diff-progress{% raw %}{%{% endraw %} elseif Applicant.diffStatus() == constant('Model\Diff::STATUS_COMPLETE') {% raw %}%}{% endraw %}diff-bg diff-complete{% raw %}{%{% endraw %} elseif Applicant.diffStatus() == constant('Model\Diff::STATUS_NEW') {% raw %}%}{% endraw %}diff-bg{% raw %}{%{% endraw %} endif {% raw %}%}{% endraw %}"&gt;
+        &lt;div class = "custom-control custom-checkbox applicant-complete"&gt;
+            &lt;input type = "checkbox" class = "custom-control-input" id = "complete-{% raw %}{{{% endraw %} Applicant.id {% raw %}}}{% endraw %}" /&gt;
+            &lt;label for="complete-{% raw %}{{{% endraw %} Applicant.id {% raw %}}}{% endraw %}" class="custom-control-label"&gt;
+                Complete
+            &lt;/label&gt;
+        &lt;/div&gt;
+    &lt;/td&gt;
+
+    {% raw %}{%{% endraw %} set Diffs = Applicant.getAssociativeDiffs() {% raw %}%}{% endraw %}
+    {% raw %}{%{% endraw %} for field_name,field_title in constant('Model\Applicant::FIELDS') {% raw %}%}{% endraw %}
+        {% raw %}{%{% endraw %} set cell_is_diff = Diffs[field_name] is defined {% raw %}%}{% endraw %}
+        &lt;td {% raw %}{%{% endraw %} if cell_is_diff {% raw %}%}{% endraw %} class = "diff" {% raw %}{%{% endraw %} endif {% raw %}%}{% endraw %}&gt;
+            {% raw %}{{{% endraw %} Applicant.readAttribute(field_name) {% raw %}}}{% endraw %}
+            {% raw %}{%{% endraw %} if cell_is_diff {% raw %}%}{% endraw %}
+                ( {% raw %}{{{% endraw %} Diffs[field_name].prev_value {% raw %}}}{% endraw %} )
+            {% raw %}{%{% endraw %} endif {% raw %}%}{% endraw %}
+        &lt;/td&gt;
+    {% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}
+&lt;/tr&gt;</code></pre>
+<p>You can see there's some raw PHP mixed in there for debugging.  What <em>should</em> happen is the outer loop loops through each &quot;classification&quot;, and the inner loop loops through all the applicants with that classification.</p>
+<p>The outer loop hits the <code>complete</code> classification first, but the inner loop doesn't run because there are no &quot;complete&quot; Applicants (I know this because I checked the array in PHP land), therefore there is no <code>{% raw %}{{{% endraw %} partial {% raw %}}}{% endraw %}</code> called.  The outer loop then goes on to the <code>applicant</code> classification and since there are &quot;applicant&quot; Applicants, <code>{% raw %}{{{% endraw %} partial {% raw %}}}{% endraw %}</code> gets called.  Somehow <code>applicants</code> gets overwritten by the inclusion of the partial.  If I comment out that <code>{% raw %}{{{% endraw %} partial {% raw %}}}{% endraw %}</code> line (and add some other debugging code) the loops work just fine.</p>
+<p>Am I missing something or is this the same problem as <a href="https://github.com/phalcon/cphalcon/issues/12648">https://github.com/phalcon/cphalcon/issues/12648</a></p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-8fd4247e6057885f87a706d9-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-8fd4247e6057885f87a706d9-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C57357" href="#C57357">
+                <time itemprop="dateCreated" datetime="2018-09-18T08:39:05-07:00" class="action-date">Sep '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>use macros insteand of partials</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57357" data-cf-modified-8fd4247e6057885f87a706d9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57357" data-cf-modified-8fd4247e6057885f87a706d9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C57359" href="#C57359">
+                <time itemprop="dateCreated" datetime="2018-09-18T08:46:17-07:00" class="action-date">Sep '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I was using macros, but I need to be able to render the partial in a different controller&amp;action, so it needs to be a discrete view file.  I think I'm just going to use raw PHP to <code>include()</code> the template file, and adjust how I reference the variables.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57359" data-cf-modified-8fd4247e6057885f87a706d9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57359" data-cf-modified-8fd4247e6057885f87a706d9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C57361" href="#C57361">
+                <time itemprop="dateCreated" datetime="2018-09-18T09:15:58-07:00" class="action-date">Sep '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Use other argument names for partial.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57361" data-cf-modified-8fd4247e6057885f87a706d9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57361" data-cf-modified-8fd4247e6057885f87a706d9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C57361"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C57363" href="#C57363">
+                <time itemprop="dateCreated" datetime="2018-09-18T09:22:20-07:00" class="action-date">Sep '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Use other argument names for partial.</p>
+</blockquote>
+<p>I'm not sure what that would do?  I'm not re-using any variable names already, so changing them shouldn't have any affect.</p>
+<p>To be clear - I'm not really looking for a work-around.  I already have one.  I just want to see if there's a bug in my code that could be causing this, or if it really is a bug in Phalcon.  Even if I was using the same variable names in a different scope, I shouldn't be experiencing this issue.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57363" data-cf-modified-8fd4247e6057885f87a706d9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57363" data-cf-modified-8fd4247e6057885f87a706d9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C57365" href="#C57365">
+                <time itemprop="dateCreated" datetime="2018-09-18T09:23:09-07:00" class="action-date">Sep '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It's bug in phalcon.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57365" data-cf-modified-8fd4247e6057885f87a706d9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57365" data-cf-modified-8fd4247e6057885f87a706d9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C57365"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C57367" href="#C57367">
+                <time itemprop="dateCreated" datetime="2018-09-18T09:25:34-07:00" class="action-date">Sep '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>It's bug in phalcon.</p>
+</blockquote>
+<p>Ok, thanks.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57367" data-cf-modified-8fd4247e6057885f87a706d9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57367" data-cf-modified-8fd4247e6057885f87a706d9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="57369" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '18</span>
+              </span><br/><a name="C57369" href="#C57369">
+                <time itemprop="dateCreated" datetime="2018-09-18T09:28:44-07:00" class="action-date">Sep '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I mean you are re-using variable names, You have <code>{% raw %}{%{% endraw %} for Applicant in applicants[key] {% raw %}%}{% endraw %}</code> and then to partial you have again pass <code>Applicant</code> and <code>class</code>. Test it with:</p>
+<pre><code>`{% raw %}{{{% endraw %} partial('index/partials/applicant',['apl':Applicant,'cl':class]) {% raw %}}}{% endraw %}`
+
+&lt;tr class = "{% raw %}{{{% endraw %} cl {% raw %}}}{% endraw %}" data-applicant-id = "{% raw %}{{{% endraw %} apl.id {% raw %}}}{% endraw %}"&gt;
+    &lt;td class = "align-middle {% raw %}{%{% endraw %} if apl.diffStatus() == constant('Model\Diff::STATUS_PROGRESS') {% raw %}%}{% endraw %}diff-bg diff-progress{% raw %}{%{% endraw %} elseif apl.diffStatus() == constant('Model\Diff::STATUS_COMPLETE') {% raw %}%}{% endraw %}diff-bg diff-complete{% raw %}{%{% endraw %} elseif apl.diffStatus() == constant('Model\Diff::STATUS_NEW') {% raw %}%}{% endraw %}diff-bg{% raw %}{%{% endraw %} endif {% raw %}%}{% endraw %}"&gt;
+        &lt;div class = "custom-control custom-checkbox applicant-complete"&gt;
+            &lt;input type = "checkbox" class = "custom-control-input" id = "complete-{% raw %}{{{% endraw %} apl.id {% raw %}}}{% endraw %}" /&gt;
+            &lt;label for="complete-{% raw %}{{{% endraw %} apl.id {% raw %}}}{% endraw %}" class="custom-control-label"&gt;
+                Complete
+            &lt;/label&gt;
+        &lt;/div&gt;
+    &lt;/td&gt;
+
+    {% raw %}{%{% endraw %} set Diffs = apl.getAssociativeDiffs() {% raw %}%}{% endraw %}
+    {% raw %}{%{% endraw %} for field_name,field_title in constant('Model\Applicant::FIELDS') {% raw %}%}{% endraw %}
+        {% raw %}{%{% endraw %} set cell_is_diff = Diffs[field_name] is defined {% raw %}%}{% endraw %}
+        &lt;td {% raw %}{%{% endraw %} if cell_is_diff {% raw %}%}{% endraw %} class = "diff" {% raw %}{%{% endraw %} endif {% raw %}%}{% endraw %}&gt;
+            {% raw %}{{{% endraw %} apl.readAttribute(field_name) {% raw %}}}{% endraw %}
+            {% raw %}{%{% endraw %} if cell_is_diff {% raw %}%}{% endraw %}
+                ( {% raw %}{{{% endraw %} Diffs[field_name].prev_value {% raw %}}}{% endraw %} )
+            {% raw %}{%{% endraw %} endif {% raw %}%}{% endraw %}
+        &lt;/td&gt;
+    {% raw %}{%{% endraw %} endfor {% raw %}%}{% endraw %}
+&lt;/tr&gt;</code></pre>
+<p>It should work like this, but yea, it's a bug.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57369" data-cf-modified-8fd4247e6057885f87a706d9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57369" data-cf-modified-8fd4247e6057885f87a706d9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="18817" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

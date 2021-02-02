@@ -1,0 +1,351 @@
+---
+layout: default
+title: 'Can&#039;t integrate Volt Help Please !!!!!!!! - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/3/volt">Volt</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Can&#039;t integrate Volt Help Please !!!!!!!!</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/11973/mekanikus" class="user-moderator-N"><span itemprop="name">mekanikus</span></a></span>
+            <time itemprop="dateCreated" datetime="2019-01-15T13:03:17-07:00">Jan '19</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2019-01-15T13:03:17-07:00">Jan '19</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '19</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>255</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9dfd6bfca343fcf1ec11d9196cbdaf45?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/11973/mekanikus" class="user-moderator-N"><span itemprop="name">mekanikus</span></a></span>
+                <span class="karma">428</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C19219" href="#C19219">
+        <time class="action-date">Jan '19</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi all, I've been working the last  3 days trying to integrate Volt and open a simple .volt file but i can't. I followed all the steps but of <a href="https://docs.phalcon.io/bs/3.3/volt">https://docs.phalcon.io/bs/3.3/volt</a>  , but its little confusing, im a beginner in Phalcon PHP, can someone help me the correct steps to follow be able to work with .volt files. </p>
+<p>this is my index.php</p>
+<pre><code class="language-php">&lt;?php
+
+use Phalcon\Loader;
+use Phalcon\Mvc\View;
+use Phalcon\Mvc\Application;
+use Phalcon\Di\FactoryDefault;
+use Phalcon\Mvc\Router;
+use Phalcon\Mvc\Url as UrlProvider;
+use Phalcon\Db\Adapter\Pdo\Mysql as DbAdapter;
+// Define some absolute path constants to aid in locating resources
+define('BASE_PATH', dirname(__DIR__));
+define('APP_PATH', BASE_PATH . '/app');
+
+// Register an autoloader
+$loader = new Loader();
+
+$loader-&gt;registerDirs(
+    [
+        APP_PATH . '/controllers/',
+        APP_PATH . '/models/',
+    ]
+);
+
+$loader-&gt;register();
+
+// Create a DI
+$di = new FactoryDefault();
+
+// Setup the view component
+$di-&gt;set(
+    'view',
+    function () {
+        $view = new View();
+        $view-&gt;setViewsDir(APP_PATH . '/views/');
+
+     //Using Volt
+     $view-&gt;registerEngines(array(
+      ".phtml" =&gt; function($view, $di) {
+           $volt = new \Phalcon\Mvc\View\Engine\Volt($view, $di);
+           $volt-&gt;setOptions(array(
+                "compiledPath" =&gt; "../app/cache/volt/"
+           ));
+           return $volt;
+    }
+));
+    }
+);
+
+// Setup a base URI
+$di-&gt;set(
+    'url',
+    function () {
+        $url = new UrlProvider();
+        $url-&gt;setBaseUri('/');
+        return $url;
+    }
+);
+
+// Setup the database service
+$di-&gt;set(
+    'db',
+    function () {
+        return new DbAdapter(
+            [
+                'host'     =&gt; 'localhost',
+                'username' =&gt; 'mekanikus',
+                'password' =&gt; 'secret',
+                'dbname'   =&gt; 'phalcon',
+            ]
+        );
+    }
+);
+
+$application = new Application($di);
+
+try {
+    // Handle the request
+    $response = $application-&gt;handle();
+
+    $response-&gt;send();
+} catch (\Exception $e) {
+    echo 'Exception: ', $e-&gt;getMessage();
+}</code></pre>
+<p>and this is my service file:</p>
+<pre><code class="language-php">&lt;?php
+
+use Phalcon\Mvc\View;
+use Phalcon\Mvc\View\Engine\Php as PhpEngine;
+use Phalcon\Mvc\Url as UrlResolver;
+use Phalcon\Mvc\View\Engine\Volt as VoltEngine;
+use Phalcon\Mvc\Model\Metadata\Memory as MetaDataAdapter;
+use Phalcon\Session\Adapter\Files as SessionAdapter;
+use Phalcon\Flash\Direct as Flash;
+use Phalcon\Mvc\View;
+
+/**
+ * Shared configuration service
+ */
+$di-&gt;setShared('config', function () {
+    return include APP_PATH . "/config/config.php";
+});
+
+/**
+ * The URL component is used to generate all kind of urls in the application
+ */
+$di-&gt;setShared('url', function () {
+    $config = $this-&gt;getConfig();
+
+    $url = new UrlResolver();
+    $url-&gt;setBaseUri($config-&gt;application-&gt;baseUri);
+
+    return $url;
+});
+
+/**
+ * Setting up the view component
+ */
+$di-&gt;setShared('view', function () {
+    $config = $this-&gt;getConfig();
+
+    $view = new View();
+    $view-&gt;setDI($this);
+    $view-&gt;setViewsDir($config-&gt;application-&gt;viewsDir);
+
+    $view-&gt;registerEngines([
+        '.volt' =&gt; function ($view) {
+            $config = $this-&gt;getConfig();
+
+            $volt = new VoltEngine($view, $this);
+
+            $volt-&gt;setOptions([
+                'compiledPath' =&gt; $config-&gt;application-&gt;cacheDir,
+                'compiledSeparator' =&gt; '_'
+            ]);
+
+            return $volt;
+        },
+        '.phtml' =&gt; PhpEngine::class
+
+    ]);
+
+    return $view;
+});
+
+/**
+ * Database connection is created based in the parameters defined in the configuration file
+ */
+$di-&gt;setShared('db', function () {
+    $config = $this-&gt;getConfig();
+
+    $class = 'Phalcon\Db\Adapter\Pdo\\' . $config-&gt;database-&gt;adapter;
+    $params = [
+        'host'     =&gt; $config-&gt;database-&gt;host,
+        'username' =&gt; $config-&gt;database-&gt;username,
+        'password' =&gt; $config-&gt;database-&gt;password,
+        'dbname'   =&gt; $config-&gt;database-&gt;dbname,
+        'charset'  =&gt; $config-&gt;database-&gt;charset
+    ];
+
+    if ($config-&gt;database-&gt;adapter == 'Postgresql') {
+        unset($params['charset']);
+    }
+
+    $connection = new $class($params);
+
+    return $connection;
+});
+
+/**
+ * If the configuration specify the use of metadata adapter use it or use memory otherwise
+ */
+$di-&gt;setShared('modelsMetadata', function () {
+    return new MetaDataAdapter();
+});
+
+/**
+ * Register the session flash service with the Twitter Bootstrap classes
+ */
+$di-&gt;set('flash', function () {
+    return new Flash([
+        'error'   =&gt; 'alert alert-danger',
+        'success' =&gt; 'alert alert-success',
+        'notice'  =&gt; 'alert alert-info',
+        'warning' =&gt; 'alert alert-warning'
+    ]);
+});
+
+/**
+ * Start the session the first time some component request the session service
+ */
+$di-&gt;setShared('session', function () {
+    $session = new SessionAdapter();
+    $session-&gt;start();
+
+    return $session;
+});</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-cf6ebb2718b2fa9b2e30fbd7-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-cf6ebb2718b2fa9b2e30fbd7-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C58407" href="#C58407">
+                <time itemprop="dateCreated" datetime="2019-01-15T13:57:06-07:00" class="action-date">Jan '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You don't need to set up you view component in both <code>index.php</code> and <code>services.php</code>.  You'll notice both of them are using <code>$di-&gt;set...()</code> - so you're pretty much doing the same thing twice.</p>
+<p>What exactly is broken?  What have you tried?  I realize it's a bit frustrating, but just saying &quot;I can't&quot; doesn't give us much to work on.  Explain exactly what the result is, what the expected result is, and what you've done so far to troubleshoot.</p>
+<p>Finally, I cleaned up your post by adding syntax highlighting - which makes it MUCH easier to read.  I suggest you Edit your post just to see what I changed.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="58407" data-cf-modified-cf6ebb2718b2fa9b2e30fbd7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="58407" data-cf-modified-cf6ebb2718b2fa9b2e30fbd7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9dfd6bfca343fcf1ec11d9196cbdaf45?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11973/mekanikus" class="user-moderator-N"><span itemprop="name">mekanikus</span></a>        </span>
+        <br>
+
+        <span class="karma">428</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C58427" href="#C58427">
+                <time itemprop="dateCreated" datetime="2019-01-16T07:06:31-07:00" class="action-date">Jan '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>thank you, i solved the problem.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="58427" data-cf-modified-cf6ebb2718b2fa9b2e30fbd7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="58427" data-cf-modified-cf6ebb2718b2fa9b2e30fbd7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9dfd6bfca343fcf1ec11d9196cbdaf45?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11973/mekanikus" class="user-moderator-N"><span itemprop="name">mekanikus</span></a>        </span>
+        <br>
+
+        <span class="karma">428</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C58429" href="#C58429">
+                <time itemprop="dateCreated" datetime="2019-01-16T07:07:23-07:00" class="action-date">Jan '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>$articles = Articles::find($parameters);
+if (count($articles) == 0) {
+$this-&gt;flash-&gt;notice(&quot;The search did not find any articles&quot;);</p>
+<pre><code>        $this-&gt;dispatcher-&gt;forward([
+            "controller" =&gt; "articles",
+            "action" =&gt; "index"
+        ]);
+
+        return;
+    }
+
+    return $this-&gt;view-&gt;render(
+               '/articles/search',
+               [
+                   'articles' =&gt; $articles,
+               ]
+           );
+  }
+
+  I get this response in the browser: Exception: Parameter 'actionName' must be a string 
+
+  any idea ?</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="58429" data-cf-modified-cf6ebb2718b2fa9b2e30fbd7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="58429" data-cf-modified-cf6ebb2718b2fa9b2e30fbd7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="19219" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

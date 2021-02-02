@@ -1,0 +1,170 @@
+---
+layout: default
+title: 'Spaces removing in Validation values? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Spaces removing in Validation values?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/11083/MrMaxie" class="user-moderator-N"><span itemprop="name">Maxie</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-04-22T17:39:42-07:00">Apr '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-04-22T17:39:42-07:00">Apr '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Apr '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>486</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/2236f3c9d21f3d0e0fd3a72e8e160b66?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/11083/MrMaxie" class="user-moderator-N"><span itemprop="name">Maxie</span></a></span>
+                <span class="karma">960</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C18125" href="#C18125">
+        <time class="action-date">Apr '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,
+I found something that looks like a little bug. I created class for validating my form and I tried to check if username contains multiple whitespaces between other characters using Regex validation.</p>
+<pre><code class="language-php">use Phalcon\Validation\Validator\Regex;
+//...
+$username = new Text('username');
+$username-&gt;addValidators(
+    new Regex([
+        'pattern' =&gt; '/^[^ ]*?([ ][^ ]+)?$/i',
+        'message' =&gt; 'Invalid username - too many spaces',
+    ])
+);
+$this-&gt;add($username);
+//...</code></pre>
+<p>I can't had reach that error. But when I was tried to search for the same way other characters (for example <code>-</code>) and tested all that regexs (including that with spaces, which was I showed in example code above) using <code>preg_match()</code> and everything was ok.</p>
+<p>Some tests later I tried to write validator by myself and... I had same problem. I found that <code>Validation::getValue()</code> returns everytime value without spaces. I used little &quot;trick&quot; for this problem:</p>
+<pre><code class="language-php">use \Phalcon\Validation;
+use \Phalcon\Validation\Validator;
+use \Phalcon\Validation\Message;
+
+class RegexValidator extends Validator {
+    function validate(Validation $validator, $attribute) {
+        // $validator-&gt;getValue($attribute); returns string without spaces
+        $data = $validator-&gt;getData();
+        if(!array_key_exists($attribute, $data))
+            $data[$attribute] = '';
+        $value = $data[$attribute];
+        $pattern = $this-&gt;getOption('pattern');
+        if(preg_match($pattern, $value) &gt; 0) {
+            return true;
+        }
+        $message = $this-&gt;getOption('message');
+        if(!$message) {
+            $message = '--REGEX-ERROR--';
+        }
+        $validator-&gt;appendMessage(
+            new Message($message, $attribute)
+        );
+        return false;
+    }
+}</code></pre>
+<p>But, it's bug?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-39b2efe5e8160b4e86fc9301-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-39b2efe5e8160b4e86fc9301-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C54945" href="#C54945">
+                <time itemprop="dateCreated" datetime="2018-04-22T19:25:35-07:00" class="action-date">Apr '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The Buildin Regex validator works little different <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/validation/validator/regex.zep#L87">look here</a></p>
+<p>Basically you have to get in matches result on index 0 equals or not at the input value</p>
+<p>Good luck</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="54945" data-cf-modified-39b2efe5e8160b4e86fc9301-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="54945" data-cf-modified-39b2efe5e8160b4e86fc9301-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2236f3c9d21f3d0e0fd3a72e8e160b66?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11083/MrMaxie" class="user-moderator-N"><span itemprop="name">Maxie</span></a>        </span>
+        <br>
+
+        <span class="karma">960</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="54997" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '18</span>
+              </span><br/><a name="C54997" href="#C54997">
+                <time itemprop="dateCreated" datetime="2018-04-24T07:29:51-07:00" class="action-date">Apr '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think you didn't understand my problem. My main problem is that <code>$validator-&gt;getValue('name_of_field');</code> returns string without spaces.
+For example setting value without form and validation I can got that value with all spaces:</p>
+<pre><code class="language-php">$user = new User;
+$user-&gt;save([
+    'username' =&gt; 'Mr Maxie'
+]);
+// ...
+User::findFirst(1)-&gt;username; // 'Mr Maxie'</code></pre>
+<p>But with simplest form with simplest validations (without any filters) I got:</p>
+<pre><code class="language-php">&lt;input type='text' name='username' value='Mr Maxie'&gt;
+//...
+User::findFirst(1)-&gt;username; // 'MrMaxie'</code></pre>
+<p>I found out spaces are removed by <code>$validation-&gt;getValue('name_of_field')</code> (that how I found out this, are described in my first post).</p>
+<p>(<a href="https://gist.github.com/MrMaxie/3116e2d37bc7f812aa187c5d6149ddc4">Gist with code cut from my project</a>)</p>
+<p>I hear that Phalcon have small differences between versions for other OSs, so I use: Windows, PHP 5.6.35, Phalcon 3.3.2</p>
+<p>I don't understand something? I forget about something?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="54997" data-cf-modified-39b2efe5e8160b4e86fc9301-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="54997" data-cf-modified-39b2efe5e8160b4e86fc9301-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="18125" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

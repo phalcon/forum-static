@@ -1,0 +1,151 @@
+---
+layout: default
+title: 'foreignKey with allowNulls true generate PDOException if wrong foreign key - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">foreignKey with allowNulls true generate PDOException if wrong foreign key</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3222/mikacalvo" class="user-moderator-N"><span itemprop="name">mikacalvo</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-06-21T08:36:27-07:00">Jun '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-06-21T08:36:27-07:00">Jun '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>445</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/54a706158246e21eade48e73e743a60a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3222/mikacalvo" class="user-moderator-N"><span itemprop="name">mikacalvo</span></a></span>
+                <span class="karma">2.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C11895" href="#C11895">
+        <time class="action-date">Jun '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm writing unit tests so I try to check various behaviours such as a wrong foreign key id.</p>
+<p>Example : a personne has to have a project_id but not a status_id</p>
+<p>in app/models/Person.php :</p>
+<pre><code class="language-php">$this-&gt;belongsTo('project_id', 'Project', 'id', array(
+    "alias" =&gt; "Project",
+    "foreignKey" =&gt; array(
+        "message" =&gt; "Project incorrect value"
+    )
+));
+$this-&gt;belongsTo('status_id', 'Status', 'id', array(
+    "alias" =&gt; "Status",
+    "foreignKey" =&gt; array(
+        "allowNulls" =&gt; true,
+        "message" =&gt; "Status incorrect value"
+    )
+));</code></pre>
+<p>then in my unit test :</p>
+<pre><code class="language-php">$person = new Person();
+$person-&gt;assign([
+    'project_id' =&gt; 3,  // doesn't exist in database
+    'birth' =&gt; "1980-01-01",
+]);
+$personOk = $person-&gt;create();
+var_dump((string)$personne-&gt;getMessages()[0]); // "Project incorrect value"
+
+$person = new Person();
+$person-&gt;assign([
+    'project_id' =&gt; 1, // existing one
+    'birth' =&gt; "1980-01-01",
+    'status_id' =&gt; 10, // doesn't exist in database
+]);
+$personOk = $person-&gt;create();
+var_dump((string)$personne-&gt;getMessages()[0]);</code></pre>
+<p>Here is the result :</p>
+<pre><code class="language-cli">There was 1 error:
+
+1) Test\ModelUnitTest::testPersonCase
+PDOException: SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update a child row: a foreign key constraint fails (`db_unit`.`person`, CONSTRAINT `person_fk_4` FOREIGN KEY (`
+statut_id`) REFERENCES `status` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION)</code></pre>
+<p>In my opinion, we should get a custom error message and not an exception.</p>
+<p>Thanks</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-68f4455bc501d9ce6a169a34-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-68f4455bc501d9ce6a169a34-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C35849" href="#C35849">
+                <time itemprop="dateCreated" datetime="2016-06-21T08:39:46-07:00" class="action-date">Jun '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>But if you remove allowNulls you got your message ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="35849" data-cf-modified-68f4455bc501d9ce6a169a34-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="35849" data-cf-modified-68f4455bc501d9ce6a169a34-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/54a706158246e21eade48e73e743a60a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3222/mikacalvo" class="user-moderator-N"><span itemprop="name">mikacalvo</span></a>        </span>
+        <br>
+
+        <span class="karma">2.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C35851" href="#C35851">
+                <time itemprop="dateCreated" datetime="2016-06-21T09:08:48-07:00" class="action-date">Jun '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>yes but then my first person created won't work as I need a status_id to be set</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="35851" data-cf-modified-68f4455bc501d9ce6a169a34-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="35851" data-cf-modified-68f4455bc501d9ce6a169a34-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="11895" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

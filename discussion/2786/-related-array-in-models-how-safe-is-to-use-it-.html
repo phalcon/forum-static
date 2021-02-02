@@ -1,0 +1,228 @@
+---
+layout: default
+title: '&quot;_related&quot; array in models - how safe is to use it? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">&quot;_related&quot; array in models - how safe is to use it?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1487/Conradaek" class="user-moderator-N"><span itemprop="name">Conradaek</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-07-09T00:00:59-07:00">Jul '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-07-09T00:00:59-07:00">Jul '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>552</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/24e438429d975d345e4f99e53b740150?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1487/Conradaek" class="user-moderator-N"><span itemprop="name">Conradaek</span></a></span>
+                <span class="karma">26.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2786" href="#C2786">
+        <time class="action-date">Jul '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have built kind of &quot;fat&quot; model of an SMS. I have written a method <code>addRecipient()</code> which creates new object of related model:</p>
+<pre><code class="language-php">
+class Smses extends ModelBase {
+
+    public function addRecipient($name, $number) {
+
+        $recipient = new Recipients();
+        $recipient-&gt;setName($name);
+        $recipient-&gt;setNumber($number);
+
+        //is using _related array safe?     
+        $this-&gt;_related['recipients'][] = $recipient; 
+
+    }
+
+    public function initialize() {
+        $this-&gt;hasMany("id","Recipients","message_id");
+    }
+
+}
+</code></pre>
+<p>In my controller I use it this way:</p>
+<pre><code class="language-php">
+$sms = new Smses();
+$sms-&gt;addRecipient('Marie','+49779988333');
+$sms-&gt;addRecipient('Tomas','+49888777666');
+$sms-&gt;create();
+</code></pre>
+<ol>
+<li>
+<p>Is this solution save? Is here the risk of some inconsistency?</p>
+</li>
+<li>Does anyone know better solution for this, or have the same problem? How you solved it?</li>
+</ol></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-876ecb39ff250547a1fb6f38-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-876ecb39ff250547a1fb6f38-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9350" href="#C9350">
+                <time itemprop="dateCreated" datetime="2014-07-09T09:03:04-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think it's safe and it would not change any soon. And alternative and safe way would be:</p>
+<pre><code class="language-php">&lt;?php
+
+class Smses extends ModelBase
+{
+
+    public function addRecipient($name, $number)
+    {
+
+        $recipient = new Recipients();
+        $recipient-&gt;setName($name);
+        $recipient-&gt;setNumber($number);
+
+        $this-&gt;tempRecipients[] = $recipient;
+    }
+
+    public function initialize()
+    {
+        $this-&gt;hasMany("id","Recipients","message_id");
+    }
+
+    public function save($values=null, $whitelist=null)
+    {
+        if (count($this-&gt;tempRecipients)) {
+            $this-&gt;recipients = $this-&gt;tempRecipients;
+        }
+        return parent::save($values, $whitelist);
+    }
+
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9350" data-cf-modified-876ecb39ff250547a1fb6f38-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9350" data-cf-modified-876ecb39ff250547a1fb6f38-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/24e438429d975d345e4f99e53b740150?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1487/Conradaek" class="user-moderator-N"><span itemprop="name">Conradaek</span></a>        </span>
+        <br>
+
+        <span class="karma">26.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9356" href="#C9356">
+                <time itemprop="dateCreated" datetime="2014-07-09T09:16:06-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks for your answer! But then I would need to declare new attribute e.g.</p>
+<pre><code class="language-php">
+class Smses extends ModelBase {
+
+    protected $tempRecipients = array();
+
+    //rest of model here
+
+}
+</code></pre>
+<p>Am I right?</p>
+<p>Are we allowed to declare class attributes in a model? I mean attributes which are not database columns?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9356" data-cf-modified-876ecb39ff250547a1fb6f38-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9356" data-cf-modified-876ecb39ff250547a1fb6f38-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9358" href="#C9358">
+                <time itemprop="dateCreated" datetime="2014-07-09T09:17:54-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yeah, I forgot to define the property right there, and yes, you can create any properties in a model as you need.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9358" data-cf-modified-876ecb39ff250547a1fb6f38-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9358" data-cf-modified-876ecb39ff250547a1fb6f38-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/24e438429d975d345e4f99e53b740150?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1487/Conradaek" class="user-moderator-N"><span itemprop="name">Conradaek</span></a>        </span>
+        <br>
+
+        <span class="karma">26.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9364" href="#C9364">
+                <time itemprop="dateCreated" datetime="2014-07-09T09:49:14-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>That is good information, thanks a lot! </p>
+<p>There is my topic about problem with isolated transactions written week ago. I don't know if it is a bug or not - after all your/my discussion did not ended will &quot;solved&quot; label:) <a href="http://forum.phalcon.io/discussion/2710/error-using-isolated-transactions"><a href="http://forum.phalcon.io/discussion/2710/error-using-isolated-transactions">http://forum.phalcon.io/discussion/2710/error-using-isolated-transactions</a></a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9364" data-cf-modified-876ecb39ff250547a1fb6f38-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9364" data-cf-modified-876ecb39ff250547a1fb6f38-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2786" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,180 @@
+---
+layout: default
+title: 'Rework the Phalcon HTTP stack - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/26/http-environment">HTTP Environment</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Rework the Phalcon HTTP stack</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2828/sergeyklay" class="user-moderator-Y"><span itemprop="name">Serghei Iakovlev</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-12-18T12:11:22-07:00">Dec '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-12-18T12:11:22-07:00">Dec '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>476</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">5</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/877a54304e07c8cb38c47b43e1d6b6b3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2828/sergeyklay" class="user-moderator-Y"><span itemprop="name">Serghei Iakovlev</span></a></span>
+                <span class="karma">39.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C15069" href="#C15069">
+        <time class="action-date">Dec '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I would like to rework the <strong>Phalcon HTTP</strong> stack, particularly the <code>Request</code> object and its lifecycle. </p>
+<p>A while ago I <a href="https://github.com/phalcon/cphalcon/issues/12480">was working on the HTTP authorization issue</a> and turned attention to the fact that by every request of a HTTP header or a variable from <code>$_SERVER</code> the <code>Request</code> object scan  the <code>$_SERVER</code> for the value.</p>
+<p>Technically, the actual implementation allows to get the value from <code>$_SERVER</code> and to overwrite it at once bypassing the <code>Request</code> object. In fact, I don't think it is right. And there are the reasons of this:</p>
+<ul>
+<li>The <code>Request</code> object doesn't keep its state, and actually the fact that it isn't static doesn't help much</li>
+<li>Any part of the application can quite legally break the request encapsulation just by overwriting <code>$_SERVER</code></li>
+<li>We don't use local (static) cache by receiving values from <code>$_SERVER</code>, <code>$_REQUEST</code> and so on, and it has its impact on the performance</li>
+<li>Each time, receiving a HTTP header, we convert <code>HTTP-KEY</code> to <code>HTTP_KEY</code></li>
+<li>But by receiving a key from <code>$_SERVER</code> we don't do the action described in the previous item</li>
+<li>At the moment we don't have methods for receiving <em>raw</em>, untreated keys as well as keys that are ready for the search</li>
+<li>Our ways of work with HTTP headers and other keys from <code>$_SERVER</code> can be different by receiving all keys or one key. This means, we receive keys of one type for <code>get all</code>, but use other keys for <code>get one</code>, so  the user could face difficulties, because the techniques of receiving certain values are not predictable</li>
+<li>The user has no possibility to receive a default value if the requested key is absent</li>
+</ul>
+<p>On top of everything else I would like to work with the request headers separately. At the moment, I see the <code>Request</code> object as a composite object which includes such objects as <code>Server</code>, <code>Headers</code>, and <code>Files</code>. Of course, I'd like to substitute mocks for those objects at the stage of testing, or to allow outside developers to create their own extended versions of those objects, which implement the common interface.</p>
+<p>If you look at <code>$_SERVER</code>, <code>$_REQUEST</code> and <code>$_FILES</code> attentively, it will be clear for you that these are only collections. Such realization brings about the understanding how the interfaces can be developed, for example, for such classes as <code>Server</code>, <code>Headers</code> and <code>Files</code>. But in fact it causes other questions, too...</p>
+<p>For example, if these collections are <em>immutable</em>. On the one hand, it seems that <code>Request</code> must always be read-only, it reflects its nature. But the current implementation of a HTTP stack, for example, allows to change it in any place of the call stack with ease. Is this right? I'd like to discuss this question.</p>
+<p>On the other hand, we'd like to append HTTP headers to a <code>Request</code> (by using Middlewares), or set the current HTTP method implicitly.</p>
+<p>I think, we could do the bigger part of this work in any <code>3.x</code> branch, keeping backward compatibility, just by declaring some methods deprecated and deleting them in the <code>4.x</code> branch.
+In general, I'd like to know the community's opinion as to the questions raised above.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-934e58a286b421633125fa63-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-934e58a286b421633125fa63-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">5</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/210/andresgutierrez" class="user-moderator-Y"><span itemprop="name">Andres Gutierrez</span></a>        </span>
+        <br>
+
+        <span class="karma">34.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C44119" href="#C44119">
+                <time itemprop="dateCreated" datetime="2016-12-19T07:57:11-07:00" class="action-date">Dec '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>We don't use local (static) cache by receiving values from $_SERVER, $_REQUEST and so on, and it has its impact on the performance</p>
+</blockquote>
+<p>Can you elaborate on that?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="44119" data-cf-modified-934e58a286b421633125fa63-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="44119" data-cf-modified-934e58a286b421633125fa63-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C44125" href="#C44125">
+                <time itemprop="dateCreated" datetime="2016-12-19T08:07:32-07:00" class="action-date">Dec '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I'm all in for encapsulable requests.
+Working with web-sockets, it could be really useful to swap request objects at run-time without any hacking...
+And the fact that Phalcon's classes are not decoupled from globals like SERVER,GET,POST are against roboustness.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="44125" data-cf-modified-934e58a286b421633125fa63-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="44125" data-cf-modified-934e58a286b421633125fa63-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/877a54304e07c8cb38c47b43e1d6b6b3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2828/sergeyklay" class="user-moderator-Y"><span itemprop="name">Serghei Iakovlev</span></a>        </span>
+        <br>
+
+        <span class="karma">39.2k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C44119"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Andres Gutierrez                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C44131" href="#C44131">
+                <time itemprop="dateCreated" datetime="2016-12-19T08:28:44-07:00" class="action-date">Dec '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>For example:</p>
+<pre><code class="language-zep">namespace Phalcon\Http;
+
+class Request implements RequestInterface, InjectionAwareInterface
+{
+    // ...
+
+    protected _method;
+
+    public final function getMethod() -&gt; string
+    {
+        if !this-&gt;_method {
+            // ...
+        }
+
+        return this-&gt;_method;
+    }
+}</code></pre>
+<blockquote>
+<blockquote>
+<p>We don't use local (static) cache by receiving values from $_SERVER, $_REQUEST and so on, and it has its impact on the performance</p>
+</blockquote>
+<p>Can you elaborate on that?</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="44131" data-cf-modified-934e58a286b421633125fa63-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="44131" data-cf-modified-934e58a286b421633125fa63-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="15069" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

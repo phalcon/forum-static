@@ -1,0 +1,156 @@
+---
+layout: default
+title: 'SQlite dropColumn implementation (+ remembering createTable) - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/24/show-community">Show to Community</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">SQlite dropColumn implementation (+ remembering createTable)</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2638/OpenEX" class="user-moderator-N"><span itemprop="name">OpenEX</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-07-28T04:00:56-07:00">Jul '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-07-28T04:00:56-07:00">Jul '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>646</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/7d07df1c3468ad43eaeaaf58e2623676?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2638/OpenEX" class="user-moderator-N"><span itemprop="name">OpenEX</span></a></span>
+                <span class="karma">9.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C7835" href="#C7835">
+        <time class="action-date">Jul '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Normally Sqlite doesn't implement dropColumn; how to do it the below piece of code shows. This is an initial approach which actually worked form me initially.
+How to implement createTable in SQLite, my other unperfect approach can be found here <a href="https://forum.phalcon.io/discussion/2274/sqlite-createtable">https://forum.phalcon.io/discussion/2274/sqlite-createtable</a> (EDITED LATER: i've just noticed you must use createTable implementation too or change the proper phrase with createTable below into normal sql query)
+Hope all of it is useful but test it, please, well before it gets into production environment.
+Worked on 2.0.6 version of Phalcon.</p>
+<pre><code class="language-php">&lt;?php 
+
+namespace PhalconAppLibrary\Phalcon\Db\Adapter\Pdo;
+
+class Sqlite extends \Phalcon\Db\Adapter\Pdo\Sqlite {
+    public function dropColumn($tableName, $schemaName, $columnName) {
+
+        /*
+            from sqlite page http://www.sqlite.org/faq.html#q11 - and this is implemented below
+
+            BEGIN TRANSACTION;
+            CREATE TEMPORARY TABLE t1_backup(a,b);
+            INSERT INTO t1_backup SELECT a,b FROM t1;
+            DROP TABLE t1;
+            CREATE TABLE t1(a,b);
+            INSERT INTO t1 SELECT a,b FROM t1_backup;
+            DROP TABLE t1_backup;
+            COMMIT;
+        */
+
+        $this-&gt;begin();
+
+        $columnsTemp=$this-&gt;describeColumns($tableName, null);
+
+        $currentStateColumnList=array();
+        for($k=0;$k&lt;count($columnsTemp);$k++) {
+                $currentStateColumnList[$k]=$columnsTemp[$k]-&gt;getName();
+        }
+
+        for($k=0;$k&lt;count($columnsTemp);$k++) {
+            if ($columnsTemp[$k]-&gt;getName()==$columnName) {
+                array_splice($columnsTemp, $k, 1);
+                break;
+            }
+        }
+
+        $columnsTemp=array("columns" =&gt; $columnsTemp);
+
+        $aquery="
+            CREATE TEMPORARY TABLE ".$tableName."_backup(".implode(",", $currentStateColumnList).");
+            INSERT INTO ".$tableName."_backup SELECT ".implode(",", $currentStateColumnList)." FROM ".$tableName.";
+            DROP TABLE ".$tableName.";";
+        $this-&gt;execute($aquery);
+
+        $this-&gt;createTable($tableName, null, $columnsTemp);
+
+        $newColumnNames=array();
+        for ($f=0;$f&lt;count($columnsTemp['columns']);$f++) {
+                       $newColumnNames[$f]=$columnsTemp['columns'][$f]-&gt;getName();
+       }
+
+        $this-&gt;execute("
+            INSERT INTO ".$tableName." SELECT ".implode(",", $newColumnNames)." FROM ".$tableName."_backup;
+        ");
+        $this-&gt;execute("
+            DROP TABLE ".$tableName."_backup;            
+        ");
+        $this-&gt;commit();
+
+    }
+
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-246844c1d2c8e9731a66d5bd-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-246844c1d2c8e9731a66d5bd-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/7d07df1c3468ad43eaeaaf58e2623676?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2638/OpenEX" class="user-moderator-N"><span itemprop="name">OpenEX</span></a>        </span>
+        <br>
+
+        <span class="karma">9.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C21299" href="#C21299">
+                <time itemprop="dateCreated" datetime="2015-07-29T04:25:08-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Another related topic (decided to create a new one with &quot;zephir&quot; word in the title) <a href="https://forum.phalcon.io/discussion/7863/zephir-sqlite-createtable-droptable-implementation-for-phalcon">https://forum.phalcon.io/discussion/7863/zephir-sqlite-createtable-droptable-implementation-for-phalcon</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21299" data-cf-modified-246844c1d2c8e9731a66d5bd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21299" data-cf-modified-246844c1d2c8e9731a66d5bd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="7835" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

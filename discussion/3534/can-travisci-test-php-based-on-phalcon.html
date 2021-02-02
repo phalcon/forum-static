@@ -1,0 +1,153 @@
+---
+layout: default
+title: 'Can Travis-CI test PHP based on Phalcon? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/4/offtopic">Offtopic</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Can Travis-CI test PHP based on Phalcon?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/578/JREAM" class="user-moderator-N"><span itemprop="name">Jesse Boyer</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-09-25T22:18:45-07:00">Sep '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-09-25T22:18:45-07:00">Sep '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1292</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/b0118ac36d373acb24122c8183b087b4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/578/JREAM" class="user-moderator-N"><span itemprop="name">Jesse Boyer</span></a></span>
+                <span class="karma">58.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3534" href="#C3534">
+        <time class="action-date">Sep '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Is this possible to do? I have a lot to read about Travis-CI but it looks really cool.
+I have a totally bare-bones setup that shoudn't fail at all with:</p>
+<pre><code>language:
+  - php
+
+php:
+  - 5.4
+  - 5.5
+  - 5.6</code></pre>
+<p>Which is really testing nothing. Anyone have any advice?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-e03e43f8a4838cd88a212db6-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-e03e43f8a4838cd88a212db6-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1eb2415bda000b22fd1f801bb9e8c003?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2/niden" class="user-moderator-Y"><span itemprop="name">Nikolaos Dimopoulos</span></a>        </span>
+        <br>
+
+        <span class="karma">39.4k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="11623" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '14</span>
+              </span><br/><a name="C11623" href="#C11623">
+                <time itemprop="dateCreated" datetime="2014-09-25T22:57:35-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You also need to tell travis what to do. Your yml file just tells Travis that it will test on PHP and the relevant versions (one VM per version)</p>
+<p>Have a look at this file which we use for the core repo</p>
+<p><a href="https://github.com/phalcon/cphalcon/blob/master/.travis.yml">https://github.com/phalcon/cphalcon/blob/master/.travis.yml</a></p>
+<p>What services to install</p>
+<pre><code>services:
+  - mongodb
+  - memcached</code></pre>
+<p>Prerequisites</p>
+<pre><code>before_install:
+ - ./unit-tests/ci/install_prereqs.sh
+ - ./unit-tests/ci/setup_dbs.sh</code></pre>
+<p>Composer</p>
+<pre><code>install:
+ - composer --prefer-source install</code></pre>
+<p>Update submodules</p>
+<pre><code>before_script:
+ - git submodule --quiet update --init --recursive
+ - (cd ext; export CFLAGS="-g3 -O1 -std=gnu90 -Wall -Werror -Wno-error=uninitialized"; phpize &amp;&amp; ./configure --silent --enable-phalcon &amp;&amp; make --silent -j4 &gt; /dev/null &amp;&amp; sudo make --silent install &amp;&amp; phpenv config-add ../unit-tests/ci/phalcon.ini)
+ - ulimit -c unlimited || true</code></pre>
+<p>Main script that runs the tests (PHPUnit) and its xml file</p>
+<pre><code>script:
+ - ZEND_DONT_UNLOAD_MODULES=1 $(phpenv which php) ./unit-tests/ci/phpunit.php --debug -c unit-tests/phpunit.xml</code></pre>
+<p>In case there was a failure</p>
+<pre><code>after_failure:
+
+- sudo apt-get -qq install gdb
+ - ./unit-tests/ci/after_failure.sh</code></pre>
+<p>Who should be notified for this build</p>
+<pre><code>notifications:
+  email:
+    - <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="a4c5cac0d6c1d7e4d4ccc5c8c7cbca8acdcb">[email&#160;protected]</a>
+    - <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="117475647063516179707d727e7f3f787e">[email&#160;protected]</a>
+    - <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e6888f8d8995a6968e878a858988c88f89">[email&#160;protected]</a>
+    - <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ff89939e9b9692968dbf8f979e939c9091d19690">[email&#160;protected]</a></code></pre>
+<p>If you are going to use Codeception, check this repo that I have been working with. It is the slow and painful path to converting all the tests to Codeception :)</p>
+<p><a href="https://github.com/niden/cphalcon/blob/2.0.0/.travis.yml">https://github.com/niden/cphalcon/blob/2.0.0/.travis.yml</a></p>
+<p>The runTests.sh file is:</p>
+<pre><code>#!/bin/sh
+
+ZEND_DONT_UNLOAD_MODULES=1 $(phpenv which php) ./unit-tests/ci/phpunit.php --debug -c unit-tests/phpunit.xml --testsuite=stable
+
+if [ "$(php -r 'echo substr(PHP_VERSION, 0, 3);')" = "5.3" ];
+then
+    # Not going to run any Codeception tests for 5.3
+    echo ".."
+else
+   $(phpenv which php) codecept.phar build
+   ZEND_DONT_UNLOAD_MODULES=1 $(phpenv which php) codecept.phar run
+fi</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11623" data-cf-modified-e03e43f8a4838cd88a212db6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11623" data-cf-modified-e03e43f8a4838cd88a212db6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3534" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

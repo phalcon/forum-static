@@ -1,0 +1,157 @@
+---
+layout: default
+title: 'Dynamic insert - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Dynamic insert</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/5979/domasV" class="user-moderator-N"><span itemprop="name">domasV</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-01-14T01:35:34-07:00">Jan '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-01-14T01:35:34-07:00">Jan '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>546</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/f7e1c1db9f5a78d481b32a13e85ef6f8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/5979/domasV" class="user-moderator-N"><span itemprop="name">domasV</span></a></span>
+                <span class="karma">626</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C10155" href="#C10155">
+        <time class="action-date">Jan '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello. I am making application with database privileges system. The main thing is that user has his own privileges set in MySQL and depending on them he can use system. So i am trying to make inserts to table, in which user has not all column rights, but phalcon returns access violation error. Error reason is that phalcon tries to insert ALL columns, even if some of them are not set in the object. Attributes skip doesnt help here, because user privileges in tables are dynamic. Is there any other solution to save record with partial columns?</p>
+<p>P.S. I tried both ways : $newPayment-&gt;create() with set properties and $newPayment-&gt;create($post).</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-5f43cd7a2f1833c2b7755ec9-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-5f43cd7a2f1833c2b7755ec9-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e089a17872ac028d8745a75f56e34d54?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2493/SidRoberts" class="user-moderator-N"><span itemprop="name">Sid Roberts</span></a>        </span>
+        <br>
+
+        <span class="karma">1.6k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="28899" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '16</span>
+              </span><br/><a name="C28899" href="#C28899">
+                <time itemprop="dateCreated" datetime="2016-01-14T08:05:43-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Phalcon definitely doesn't take into account column priveleges but <a href="https://docs.phalcon.io/en/latest/reference/models.html#dynamic-update">dynamic update</a> might help. You can set it for every model individually or set it in the Models Manager DI service to make it global:</p>
+<pre><code class="language-php">$di-&gt;setShared(
+    "modelsManager",
+    function () use ($di) {
+        $modelsManager = new \Phalcon\Mvc\Model\Manager();
+
+        $eventsManager = $di-&gt;getShared("eventsManager");
+
+        $eventsManager-&gt;attach(
+            "modelsManager:afterInitialize", 
+            function(\Phalcon\Events\Event $event, \Phalcon\Mvc\Model\ManagerInterface $modelsManager, \Phalcon\Mvc\ModelInterface $model) {
+                $modelsManager-&gt;useDynamicUpdate($model, true);
+            }
+        );
+
+        $modelsManager-&gt;setEventsManager($eventsManager);
+
+        return $modelsManager;
+    }
+);</code></pre>
+<p>You can also use my Composer package (<a href="https://packagist.org/packages/sidroberts/phalcon-events">sidroberts/phalcon-events</a>) which has the event as a class (see <a href="https://github.com/SidRoberts/phalcon-events/blob/master/src/ModelsManager/ModelDynamicUpdate.php">https://github.com/SidRoberts/phalcon-events/blob/master/src/ModelsManager/ModelDynamicUpdate.php</a>):</p>
+<pre><code class="language-php">$di-&gt;setShared(
+    "modelsManager",
+    function () use ($di) {
+        $modelsManager = new \Phalcon\Mvc\Model\Manager();
+
+        $eventsManager = $di-&gt;getShared("eventsManager");
+
+        $eventsManager-&gt;attach("modelsManager", new \Sid\Phalcon\Events\ModelsManager\ModelDynamicUpdate());
+
+        $modelsManager-&gt;setEventsManager($eventsManager);
+
+        return $modelsManager;
+    }
+);</code></pre>
+<p>Obivously, you'll still run into nasty problems if you update a column that is priveleged but that should work.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28899" data-cf-modified-5f43cd7a2f1833c2b7755ec9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28899" data-cf-modified-5f43cd7a2f1833c2b7755ec9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f7e1c1db9f5a78d481b32a13e85ef6f8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5979/domasV" class="user-moderator-N"><span itemprop="name">domasV</span></a>        </span>
+        <br>
+
+        <span class="karma">626</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C28913" href="#C28913">
+                <time itemprop="dateCreated" datetime="2016-01-15T00:39:02-07:00" class="action-date">Jan '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>In my case, dynamic update is not working as I want, so i found a bit better solution, added this function in every model. Of course now i see that i could set this in events manager.. :)</p>
+<blockquote>
+<p>public function beforeCreate(){
+$this-&gt;skipAttributesOnCreate(HelperController::getSkipFields(get_class($this)));
+}</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28913" data-cf-modified-5f43cd7a2f1833c2b7755ec9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28913" data-cf-modified-5f43cd7a2f1833c2b7755ec9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="10155" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

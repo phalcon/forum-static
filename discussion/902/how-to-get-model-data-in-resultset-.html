@@ -1,0 +1,262 @@
+---
+layout: default
+title: 'How to get model data in resultset? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How to get model data in resultset?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/554/barell" class="user-moderator-N"><span itemprop="name">barell</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-09-16T15:16:36-07:00">Sep '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-09-16T15:16:36-07:00">Sep '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>2918</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/263b5ee04747b2eb27706946c14b1d31?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/554/barell" class="user-moderator-N"><span itemprop="name">barell</span></a></span>
+                <span class="karma">2.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C902" href="#C902">
+        <time class="action-date">Sep '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have &quot;Pages&quot; and &quot;Widgets&quot; which are in many-to-many relation. This is the Pages model definition:</p>
+<pre><code class="language-php">namespace Acme\Models;
+class Pages extends \Phalcon\Mvc\Model
+{
+    public function initialize()
+    {
+        $this-&gt;hasManyToMany(
+            'id',
+            'Acme\Models\PagesWidgets',
+            'pages_id',
+            'widgets_id',
+            'Acme\Models\Widgets',
+            'id',
+            array('alias' =&gt; 'widgets')
+        );
+    }
+}</code></pre>
+<p>I'm trying to access to the Widgets in resultset:</p>
+<pre><code class="language-php">$result = $modelsManager-&gt;executeQuery('SELECT Acme\Models\Pages.*, Acme\Models\Widgets.* FROM Acme\Models\Pages JOIN Acme\Models\Widgets');
+
+foreach($result as $row) {
+    echo $row-&gt;widgets-&gt;name; 
+}</code></pre>
+<p>But with no luck, because I've just got an error: </p>
+<pre><code class="language-php">Notice: Undefined property: Phalcon\Mvc\Model\Row::$widgets</code></pre>
+<p>So, is there any way to do this?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-59befb30b2352c5fdd4fecd7-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-59befb30b2352c5fdd4fecd7-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/263b5ee04747b2eb27706946c14b1d31?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/554/barell" class="user-moderator-N"><span itemprop="name">barell</span></a>        </span>
+        <br>
+
+        <span class="karma">2.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="3472" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '14</span>
+              </span><br/><a name="C3472" href="#C3472">
+                <time itemprop="dateCreated" datetime="2013-09-17T08:53:28-07:00" class="action-date">Sep '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Ok, I've done it with query builder:</p>
+<pre><code class="language-php">$result = $modelsManager-&gt;createBuilder()
+            -&gt;columns(array('page.*', 'relation.*', 'widget.*'))
+            -&gt;from(array('page' =&gt; 'Acme\Models\Pages'))
+            -&gt;leftJoin('Acme\Models\PagesWidgets', 'relation.pages_id=page.id', 'relation')
+            -&gt;leftJoin('Acme\Models\Widgets', 'relation.widgets_id=widget.id', 'widget')
+            -&gt;getQuery()-&gt;execute();
+
+foreach($result as $row) {
+    echo $row-&gt;widget-&gt;name;
+}</code></pre>
+<p>And now I can access the data I need...
+But in this situation I don't see any sense to keep my model 'manyToMany' definition, because I still need to join my models manually. Have I right?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3472" data-cf-modified-59befb30b2352c5fdd4fecd7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3472" data-cf-modified-59befb30b2352c5fdd4fecd7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3476" href="#C3476">
+                <time itemprop="dateCreated" datetime="2013-09-17T09:12:34-07:00" class="action-date">Sep '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If you don't pass the conditions to the join, they will be automatically created by the builder if an existing relationship is present between the model in the' from' clause and the model in the 'join' clause.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3476" data-cf-modified-59befb30b2352c5fdd4fecd7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3476" data-cf-modified-59befb30b2352c5fdd4fecd7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/263b5ee04747b2eb27706946c14b1d31?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/554/barell" class="user-moderator-N"><span itemprop="name">barell</span></a>        </span>
+        <br>
+
+        <span class="karma">2.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="3477" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '14</span>
+              </span><br/><a name="C3477" href="#C3477">
+                <time itemprop="dateCreated" datetime="2013-09-17T10:10:40-07:00" class="action-date">Sep '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I have three tables:
+&quot;pages&quot; (id, title),
+&quot;widgets&quot; (id, name)
+&quot;pages_widgets&quot; (id, pages_id, widgets_id)</p>
+<p>and there are my models definitions:</p>
+<pre><code class="language-php">namespace Acme\Models;
+class Pages extends \Phalcon\Mvc\Model
+{
+    public function initialize()
+    {
+        $this-&gt;hasManyToMany(
+            'id',
+            'Acme\Models\PagesWidgets',
+            'pages_id',
+            'widgets_id',
+            'Acme\Models\Widgets',
+            'id',
+            array('alias' =&gt; 'widgets')
+        );
+  }
+}</code></pre>
+<pre><code class="language-php">namespace Acme\Models;
+class Widgets extends \Phalcon\Mvc\Model
+{
+    public function initialize()
+    {
+        $this-&gt;hasManyToMany(
+            'id',
+            'Acme\Models\PagesWidgets',
+            'widgets_id',
+            'pages_id',
+            'Acme\Models\Pages',
+            'id',
+            array('alias' =&gt; 'pages')
+        );
+  }
+}</code></pre>
+<pre><code class="language-php">namespace Acme\Models;
+class PagesWidgets extends \Phalcon\Mvc\Model
+{
+    public function initialize()
+    {
+        $this-&gt;belongsTo(
+            'pages_id', 
+            'Acme\Models\Pages',
+            'id',
+            array('alias' =&gt; 'page')
+        );
+
+        $this-&gt;belongsTo(
+            'widgets_id', 
+            'Acme\Models\Widgets',
+            'id',
+            array('alias' =&gt; 'widget')
+        );
+  }
+}</code></pre>
+<p>But when I don't pass the conditions to the join, my query looks like this:</p>
+<p>&quot;SELECT ... FROM <code>pages</code> AS <code>page</code> LEFT JOIN <code>pages_widgets</code> AS <code>relation</code> LEFT JOIN <code>widgets</code> AS <code>widget</code> &quot;</p>
+<p>So there is no automatically created conditions...</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3477" data-cf-modified-59befb30b2352c5fdd4fecd7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3477" data-cf-modified-59befb30b2352c5fdd4fecd7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/52a47f720a3e5d67c61650504d38a9cf?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10421/sairio" class="user-moderator-N"><span itemprop="name">sairio</span></a>        </span>
+        <br>
+
+        <span class="karma">65</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="52177" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '17</span>
+              </span><br/><a name="C52177" href="#C52177">
+                <time itemprop="dateCreated" datetime="2017-11-09T15:36:50-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>you can try this:
+$result = $modelsManager-&gt;createBuilder()
+-&gt;columns(array('Acme\Models\page.<em>', 'Acme\Models\relation.</em>', 'Acme\Models\widget.*'))
+-&gt;from(array('page' =&gt; 'Acme\Models\Pages'))
+-&gt;leftJoin('Acme\Models\PagesWidgets', 'relation.pages_id=page.id', 'relation')
+-&gt;leftJoin('Acme\Models\Widgets', 'relation.widgets_id=widget.id', 'widget')
+-&gt;getQuery()-&gt;execute();</p>
+<p>foreach($result as $row) {
+echo $row-&gt;{Acme\Models\widget}-&gt;name;
+}</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52177" data-cf-modified-59befb30b2352c5fdd4fecd7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52177" data-cf-modified-59befb30b2352c5fdd4fecd7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="902" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

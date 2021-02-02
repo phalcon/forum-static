@@ -1,0 +1,378 @@
+---
+layout: default
+title: 'Custom Widgets - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Custom Widgets</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/602/Raistlfiren" class="user-moderator-N"><span itemprop="name">Raistlfiren</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-10-02T12:09:52-07:00">Oct '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-10-02T12:09:52-07:00">Oct '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">6</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1980</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/c020e5a487b89dd01f30cbf8c3b67c67?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/602/Raistlfiren" class="user-moderator-N"><span itemprop="name">Raistlfiren</span></a></span>
+                <span class="karma">4.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C970" href="#C970">
+        <time class="action-date">Oct '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>I was wondering what the correct, or more appropriate way of adding widgets to a web application is through Phalcon. For example, I have a simple widget next to the logo that allows an admin to change what company they are in through a select box. My current code is as follows: </p>
+<p>Adding it to the library seems silly. Is it possible to create a widgets directory in the app folder, stick all of the widget classes there, and have a folder called widgets in the views directory?</p>
+<pre><code class="language-php">use Mac\CompanyChanger\CompanyChanger;
+/**
+* Elements component
+*/
+$di-&gt;set('companyChanger', function(){
+    return new CompanyChanger();
+});</code></pre>
+<pre><code class="language-php">&lt;?php
+
+namespace Mac\CompanyChanger;
+
+use Phalcon\Mvc\User\Component,
+    Phalcon\Forms\Form,
+    Phalcon\Forms\Element\Select,
+    Phalcon\Forms\Element\Hidden,
+    Phalcon\Forms\Element\Submit,
+    Phalcon\Validation\Validator\Identical;
+
+/**
+* Mac\Elements\CompanyChanger
+*
+*   Helps build the company menu changer next to the logo
+*/
+
+class CompanyChanger extends Component
+{
+
+    protected $_compCount;
+
+    protected $_companies;
+
+    protected $_keyfob;
+
+    protected $_userCompany;
+
+    public function __construct()
+    {
+        //Cached APC key for companies
+        $this-&gt;_keyFob = 'companies' . $this-&gt;user-&gt;id;
+
+        //Companies count
+        $this-&gt;_compCount = $this-&gt;modelsCache-&gt;get($this-&gt;_keyFob)-&gt;count();
+
+        //Companies array
+        $this-&gt;_companies = $this-&gt;modelsCache-&gt;get($this-&gt;_keyFob);
+
+        foreach($this-&gt;_companies as $company) {
+            $storeTemp[$company-&gt;companies-&gt;getCompanyId()] = $company-&gt;companies-&gt;getCompanyName();
+        }
+
+        $this-&gt;_companies = $storeTemp;
+
+        $this-&gt;_keyFob = 'userData' . $this-&gt;user-&gt;id;
+
+        //Grab user company
+        $this-&gt;_userCompany = $this-&gt;modelsCache-&gt;get($this-&gt;_keyFob)-&gt;company-&gt;getCompanyName();
+    }
+
+    public function render()
+    {
+        $this-&gt;view-&gt;form = $this-&gt;getForm();
+
+        $this-&gt;view-&gt;partial('layouts/CompanyChanger', array('compCount' =&gt; $this-&gt;_compCount, 'companies' =&gt; $this-&gt;_companies, 'userCompany' =&gt; $this-&gt;_userCompany));
+    }
+
+    protected function getForm()
+    {
+        $form = new Form();
+
+        //company
+        $company = new Select('company', $this-&gt;_companies);
+
+        $form-&gt;add($company);
+
+        //CSRF
+        $csrf = new Hidden('csrf');
+
+        $csrf-&gt;addValidator(
+            new Identical(array(
+                'value' =&gt; $this-&gt;security-&gt;getSessionToken(),
+                'message' =&gt; 'CSRF validation failed'
+            ))
+        );
+
+        $form-&gt;add($csrf);
+
+        $form-&gt;add(new Submit('Change', array(
+            'class' =&gt; 'btn btn-success'
+        )));
+
+        return $form;
+    }
+}</code></pre>
+<pre><code class="language-php">{% raw %}{%{% endraw %} if compCount &gt; 1 {% raw %}%}{% endraw %}
+    &lt;form id="application_name" method="post"&gt;
+        &lt;div id="application-name-select"&gt;
+            &lt;span id="applcation-text"&gt;Working with&lt;/span&gt;
+            &lt;div id="company-name2"&gt;
+                &lt;span id="company-name-link"&gt;{% raw %}{{{% endraw %} userCompany {% raw %}}}{% endraw %}&lt;/span&gt;
+            &lt;/div&gt;
+            &lt;div id="company-select"&gt;
+                {% raw %}{{{% endraw %} form.render('company') {% raw %}}}{% endraw %}
+            &lt;/div&gt;
+        &lt;/div&gt;
+        {% raw %}{{{% endraw %} form.render('csrf', ['value': security.getToken()]) {% raw %}}}{% endraw %}
+        &lt;div id="company-submit"&gt;
+            {% raw %}{{{% endraw %} form.render('Change') {% raw %}}}{% endraw %}
+        &lt;/div&gt;
+    &lt;/form&gt;
+{% raw %}{%{% endraw %} else {% raw %}%}{% endraw %}
+    &lt;p id="application_name"&gt;Working with {% raw %}{{{% endraw %} userCompany {% raw %}}}{% endraw %}&lt;/p&gt;
+{% raw %}{%{% endraw %} endif {% raw %}%}{% endraw %}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-29080c385c1dab5b1f24a004-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-29080c385c1dab5b1f24a004-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C3704" href="#C3704">
+                <time itemprop="dateCreated" datetime="2013-10-02T21:18:25-07:00" class="action-date">Oct '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>In INVO, we have implemented a widget for navigation following this approach: </p>
+<p><a href="https://github.com/phalcon/invo/blob/master/public/index.php#L135">https://github.com/phalcon/invo/blob/master/public/index.php#L135</a>
+<a href="https://github.com/phalcon/invo/blob/master/app/library/Elements.php">https://github.com/phalcon/invo/blob/master/app/library/Elements.php</a>
+<a href="https://github.com/phalcon/invo/blob/master/app/views/layouts/main.volt#L10">https://github.com/phalcon/invo/blob/master/app/views/layouts/main.volt#L10</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="3704" data-cf-modified-29080c385c1dab5b1f24a004-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="3704" data-cf-modified-29080c385c1dab5b1f24a004-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c03ad3d87624044fe87ff6b4e4e9cdea?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1161/DarkerGlobe" class="user-moderator-N"><span itemprop="name">DarkerGlobe</span></a>        </span>
+        <br>
+
+        <span class="karma">90</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C5758" href="#C5758">
+                <time itemprop="dateCreated" datetime="2014-03-02T16:28:46-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Sorry this is old but I found it via search as it nearly does what I'm trying (and failing) to do.</p>
+<p>Phalcon, in your 3rd link there, you have a VOLT template where you add {% raw %}{{{% endraw %} elements.getMenu() {% raw %}}}{% endraw %} which is fine - I have the same arrangement working here too.</p>
+<p>The getMenu function though contains a mix of HTML and PHP elements. Is it possible to move the HTML into a view/partial and have that rendered by VOLT also?</p>
+<p>I've tried a number of combinations of tricks to try to make this work but haven't managed to do so. Not running in an object context, can't call non station methods etc.</p>
+<p>I'm sure I'm missing something but have only just started looking at Phalcon so please excuse my ignorance.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="5758" data-cf-modified-29080c385c1dab5b1f24a004-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="5758" data-cf-modified-29080c385c1dab5b1f24a004-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/693cd29a926f2659ccec45ba126abd71?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11/doit76" class="user-moderator-N"><span itemprop="name">Karol Marcinkiewicz</span></a>        </span>
+        <br>
+
+        <span class="karma">40.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="5770" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '14</span>
+              </span><br/><a name="C5770" href="#C5770">
+                <time itemprop="dateCreated" datetime="2014-03-03T00:46:16-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes you can, this is simple replacement.
+There could be typo because i am writing in this textfield not in IDE</p>
+<p>than this:</p>
+<pre><code class="language-php">        echo '&lt;div class="nav-collapse"&gt;';
+        $controllerName = $this-&gt;view-&gt;getControllerName();
+        foreach ($this-&gt;_headerMenu as $position =&gt; $menu) {
+            echo '&lt;ul class="nav ', $position, '"&gt;';
+            foreach ($menu as $controller =&gt; $option) {
+                if ($controllerName == $controller) {
+                    echo '&lt;li class="active"&gt;';
+                } else {
+                    echo '&lt;li&gt;';
+                }
+                echo Phalcon\Tag::linkTo($controller.'/'.$option['action'], $option['caption']);
+                echo '&lt;/li&gt;';
+            }
+            echo '&lt;/ul&gt;';
+        }
+        echo '&lt;/div&gt;';</code></pre>
+<p>you can use</p>
+<pre><code class="language-php">$view = new \Phalcon\Mvc\View\Simple();
+$view-&gt;setViewsDir("views/partials/");
+echo $view-&gt;render("menu",array(
+    "controllerName" =&gt;$this-&gt;view-&gt;getControllerName(),
+    "_headerMenu" =&gt; $this-&gt;headerMenu,
+    ));</code></pre>
+<p>then in your /app/views/partials/menu.phtml you have posibitlity to use</p>
+<pre><code class="language-php">&lt;div class="nav-collapse"&gt;
+&lt;?php foreach($_header_menu as $position=&gt;$option) { ?&gt;
+    &lt;ul class="nav&lt;?= $position ?&gt;"&gt;
+                &lt;?php foreach ($menu as $controller =&gt; $option) { ?&gt;
+                &lt;?php if ($controllerName == $controller) { ?&gt;
+                    &lt;li class="active"&gt;
+                &lt;?php } else { ?&gt;
+                    echo '&lt;li&gt;';
+                &lt;?php } ?&gt;
+                &lt;?php echo Phalcon\Tag::linkTo($controller.'/'.$option['action'], $option['caption']); ?&gt;
+                &lt;/li&gt;
+            }
+    &lt;/ul&gt;
+&lt;? } ?&gt;
+&lt;/div&gt;</code></pre>
+<p>This is simple replacement, but you should think about more useful directory structure to not mix partials from controllers  from partials from plugins</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="5770" data-cf-modified-29080c385c1dab5b1f24a004-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="5770" data-cf-modified-29080c385c1dab5b1f24a004-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c03ad3d87624044fe87ff6b4e4e9cdea?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1161/DarkerGlobe" class="user-moderator-N"><span itemprop="name">DarkerGlobe</span></a>        </span>
+        <br>
+
+        <span class="karma">90</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C5777" href="#C5777">
+                <time itemprop="dateCreated" datetime="2014-03-03T03:57:03-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks so much for this - getting much closer now :)</p>
+<p>The one snag left though is that it will only render a .phtml file, if I remove that and just have a volt file, it complains that it cannot find the view file.</p>
+<p>I copied this from my bootstrap to see if registering the engines again would help (I'm using .volt files for rendering from controller/actions ok):</p>
+<p>$view-&gt;registerEngines(array('.phtml' =&gt; 'Phalcon\Mvc\View\Engine\Php', '.volt' =&gt; 'Phalcon\Mvc\View\Engine\Volt'));</p>
+<p>But then I got the error &quot;A dependency injector container is required to obtain the application services&quot;.</p>
+<p>So yes, nearly there, the glitch is simply that when rendering a partial in this way, the system does not seem to recognise .volt files even though it does when rendering from a controller/action.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="5777" data-cf-modified-29080c385c1dab5b1f24a004-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="5777" data-cf-modified-29080c385c1dab5b1f24a004-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/693cd29a926f2659ccec45ba126abd71?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11/doit76" class="user-moderator-N"><span itemprop="name">Karol Marcinkiewicz</span></a>        </span>
+        <br>
+
+        <span class="karma">40.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="5779" data-toggle="modal" data-target="#historyModal">
+                edited <span>Mar '14</span>
+              </span><br/><a name="C5779" href="#C5779">
+                <time itemprop="dateCreated" datetime="2014-03-03T05:14:39-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Did you try?</p>
+<pre><code class="language-php">$view = new \Phalcon\Mvc\View\Simple();
+$view-&gt;setViewsDir("views/partials/");
+$di=$this-&gt;getDI(); //or $di = new \Phalcon\DI\FactoryDefault();
+$view-&gt;setDi($di);
+$view-&gt;registerEngines(array(
+    ".phtml" =&gt; "Phalcon\Mvc\View\Engine\Php",
+    ".volt" =&gt; "Phalcon\Mvc\View\Engine\Volt"
+));
+echo $view-&gt;render("menu",array(
+    "controllerName" =&gt;$this-&gt;view-&gt;getControllerName(),
+    "_headerMenu" =&gt; $this-&gt;headerMenu,
+    ));</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="5779" data-cf-modified-29080c385c1dab5b1f24a004-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="5779" data-cf-modified-29080c385c1dab5b1f24a004-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c03ad3d87624044fe87ff6b4e4e9cdea?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1161/DarkerGlobe" class="user-moderator-N"><span itemprop="name">DarkerGlobe</span></a>        </span>
+        <br>
+
+        <span class="karma">90</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C5784" href="#C5784">
+                <time itemprop="dateCreated" datetime="2014-03-03T07:44:21-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hallelujah! Thanks doit76</p>
+<p>It only worked with this line but it did work and I can now render volt partials from the library.</p>
+<p>$di = new \Phalcon\DI\FactoryDefault();</p>
+<p>Cheers.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="5784" data-cf-modified-29080c385c1dab5b1f24a004-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="5784" data-cf-modified-29080c385c1dab5b1f24a004-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="970" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

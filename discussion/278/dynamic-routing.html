@@ -1,0 +1,383 @@
+---
+layout: default
+title: 'Dynamic routing - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Dynamic routing</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/185/nazwa" class="user-moderator-N"><span itemprop="name">nazwa</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-05-06T04:57:49-07:00">May '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-05-06T04:57:49-07:00">May '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">6</span>
+                </td>
+                <td>
+                    <label>Views</label><br>2954</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">4</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/758de2db098b8bbb31a3b1bd37e2b028?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/185/nazwa" class="user-moderator-N"><span itemprop="name">nazwa</span></a></span>
+                <span class="karma">15.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C278" href="#C278">
+        <time class="action-date">May '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello everyone!</p>
+<p>I must say, I totally fell in love with Phalcon.</p>
+<p>I'm trying to create a basic CMS-like application with a mixture of controller based pages and ones created dynamically. In a sense, that users can create pages as they wish based on html from database and not pre-made controllers / views.</p>
+<p>My initial idea was simple - set up a basic route for all known pages and use 404 handler to redirect to the 'dynamic' page generator</p>
+<pre><code class="language-php">$router-&gt;add(
+        "/:controller/:action/:params",
+        array(
+            "controller" =&gt; 1,
+            "action"     =&gt; 2,
+            "params"     =&gt; 3,
+        )
+    );    
+    //Set 404 paths
+    $router-&gt;notFound(array(
+        "controller" =&gt; "pages",
+        "action" =&gt; "dynamic"
+    ));</code></pre>
+<p>In theory - this was great. But in practice, it doesn't work. For example, <em>test.com/someth/to/test</em> still matches the first route and since the controller doesn't exist, Phalcon shows &quot;SomethController handler class cannot be loaded&quot; error.</p>
+<p>Has anyone got some suggestions on how to overcome that? Is there a way to override the default 'controller not found' phase?</p>
+<p>Thanks</p>
+<p>EDIT
+Ach, only just found this: <a href="http://forum.phalcon.io/discussion/106/difference-between-setdefaults-and-notfound#C442">http://forum.phalcon.io/discussion/106/difference-between-setdefaults-and-notfound#C442</a></p>
+<p>If anyone is interested in the solution:</p>
+<pre><code class="language-php">$di-&gt;set('dispatcher', function() use ($di) {
+
+    //Obtain the standard eventsManager from the DI
+    $eventsManager = $di-&gt;getShared('eventsManager');
+
+    //Listen for events produced in the dispatcher using the Security plugin
+    $eventsManager-&gt;attach('dispatch', $security);
+
+    $eventsManager-&gt;attach("dispatch", function($event, $dispatcher, $exception) {
+
+    if ($event-&gt;getType() == 'beforeException') {
+        switch ($exception-&gt;getCode()) {
+          case Phalcon\Dispatcher::EXCEPTION_HANDLER_NOT_FOUND:
+          case Phalcon\Dispatcher::EXCEPTION_ACTION_NOT_FOUND:
+            $dispatcher-&gt;forward(array(
+              'controller' =&gt; 'pages',
+              'action' =&gt; 'dynamic'
+            ));
+            return false;
+        }
+      }
+    });
+
+    $dispatcher = new Phalcon\Mvc\Dispatcher();
+
+    //Bind the EventsManager to the Dispatcher
+    $dispatcher-&gt;setEventsManager($eventsManager);
+
+    return $dispatcher;
+});</code></pre>
+<p>Problem solved, unless there is a nicer way of doing it?.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-d56aca202144ab1b2650a36d-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-d56aca202144ab1b2650a36d-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">4</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C1141" href="#C1141">
+                <time itemprop="dateCreated" datetime="2013-05-06T11:50:46-07:00" class="action-date">May '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You only need this part of code:</p>
+<pre><code class="language-php">&lt;?php
+
+$di-&gt;set('dispatcher', function() {
+
+        $eventsManager = new Phalcon\Events\Manager();
+
+        $eventsManager-&gt;attach("dispatch", function($event, $dispatcher, $exception) {
+            if ($event-&gt;getType() == 'beforeException') {
+                switch ($exception-&gt;getCode()) {
+                    case Phalcon\Dispatcher::EXCEPTION_HANDLER_NOT_FOUND:
+                    case Phalcon\Dispatcher::EXCEPTION_ACTION_NOT_FOUND:
+                        $dispatcher-&gt;forward(array(
+                            'controller' =&gt; 'errors',
+                            'action' =&gt; 'page404'
+                        ));
+                        return false;
+                }
+            }
+        });
+
+        $dispatcher = new Phalcon\Mvc\Dispatcher();
+
+        //Bind the EventsManager to the Dispatcher
+        $dispatcher-&gt;setEventsManager($eventsManager);
+
+        return $dispatcher;
+});</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="1141" data-cf-modified-d56aca202144ab1b2650a36d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="1141" data-cf-modified-d56aca202144ab1b2650a36d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/758de2db098b8bbb31a3b1bd37e2b028?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/185/nazwa" class="user-moderator-N"><span itemprop="name">nazwa</span></a>        </span>
+        <br>
+
+        <span class="karma">15.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C1202" href="#C1202">
+                <time itemprop="dateCreated" datetime="2013-05-09T14:18:01-07:00" class="action-date">May '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks for the tip.
+I use a custom security plugin for user authentications and stuff, which is why I've got the other bits.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="1202" data-cf-modified-d56aca202144ab1b2650a36d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="1202" data-cf-modified-d56aca202144ab1b2650a36d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/27c69f4107af753ad2d09d88c97136cb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/890/paanblogger" class="user-moderator-N"><span itemprop="name">Mohd Farhan Firdaus Jamil</span></a>        </span>
+        <br>
+
+        <span class="karma">3.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9037" href="#C9037">
+                <time itemprop="dateCreated" datetime="2014-06-30T12:27:41-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/nazwa">@nazwa</a> How did you get custom url that user input at pages controller ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9037" data-cf-modified-d56aca202144ab1b2650a36d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9037" data-cf-modified-d56aca202144ab1b2650a36d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/758de2db098b8bbb31a3b1bd37e2b028?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/185/nazwa" class="user-moderator-N"><span itemprop="name">nazwa</span></a>        </span>
+        <br>
+
+        <span class="karma">15.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="9038" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '14</span>
+              </span><br/><a name="C9038" href="#C9038">
+                <time itemprop="dateCreated" datetime="2014-06-30T13:04:42-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hey! It was actually very simple.</p>
+<p>Basically look at my edit above. You need to hook up to the dispatcher events and capture module / action not found.
+Forward that internally to a specific controller - in my case - pages/dynamic.</p>
+<p>Inside dynamic you can check the actual url: <em>$this-&gt;router-&gt;getRewriteUri()</em> and job done :) You can look this url up in database and display anything you like!</p>
+<p>And of course, if url is not found in db, dont forget to throw 404.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9038" data-cf-modified-d56aca202144ab1b2650a36d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9038" data-cf-modified-d56aca202144ab1b2650a36d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/27c69f4107af753ad2d09d88c97136cb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/890/paanblogger" class="user-moderator-N"><span itemprop="name">Mohd Farhan Firdaus Jamil</span></a>        </span>
+        <br>
+
+        <span class="karma">3.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C10268" href="#C10268">
+                <time itemprop="dateCreated" datetime="2014-08-12T17:24:26-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hello<a href="https://forum.phalcon.io/user/0/nazwa"> @nazwa</a> , I also have using Security plugin. But I have bump to some problem.</p>
+<p>When go to any url , your code word perfectly to load dynamic controller , but in security plugin , it seem , it have some problem to detect the right controller name.</p>
+<p>Example : my url is <a href="http://xxx.com/page">http://xxx.com/page</a> , it suppose to load dynamic controller. But , security plugin detect this url controller as &quot;page&quot; , so , it been forward to login controller.</p>
+<p>Can you share your security plugin code ? Thanks.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10268" data-cf-modified-d56aca202144ab1b2650a36d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10268" data-cf-modified-d56aca202144ab1b2650a36d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/27c69f4107af753ad2d09d88c97136cb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/890/paanblogger" class="user-moderator-N"><span itemprop="name">Mohd Farhan Firdaus Jamil</span></a>        </span>
+        <br>
+
+        <span class="karma">3.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C10269" href="#C10269">
+                <time itemprop="dateCreated" datetime="2014-08-12T17:41:37-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Solved. I have made some adjustment to my security plugin code.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10269" data-cf-modified-d56aca202144ab1b2650a36d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10269" data-cf-modified-d56aca202144ab1b2650a36d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/758de2db098b8bbb31a3b1bd37e2b028?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/185/nazwa" class="user-moderator-N"><span itemprop="name">nazwa</span></a>        </span>
+        <br>
+
+        <span class="karma">15.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C10272" href="#C10272">
+                <time itemprop="dateCreated" datetime="2014-08-13T02:15:49-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I'm glad you solved it!
+You pretty much need to keep your page controller unsecurred, so everyone can access it, and do some separate url based security checking inside if the custom route has been detected!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10272" data-cf-modified-d56aca202144ab1b2650a36d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10272" data-cf-modified-d56aca202144ab1b2650a36d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/27c69f4107af753ad2d09d88c97136cb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/890/paanblogger" class="user-moderator-N"><span itemprop="name">Mohd Farhan Firdaus Jamil</span></a>        </span>
+        <br>
+
+        <span class="karma">3.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="10851" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '14</span>
+              </span><br/><a name="C10851" href="#C10851">
+                <time itemprop="dateCreated" datetime="2014-08-31T07:45:59-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hello<a href="https://forum.phalcon.io/user/0/nazwa"> @nazwa</a>.</p>
+<p>I notice that , when using this code , I can't get correct httpreferer.</p>
+<p>Example : </p>
+<p>Link is <a href="http://xxx.com/yyy">http://xxx.com/yyy</a> (It will be dispatch forward to controller Page)
+Referer suppose to return from facebook.com
+But , at controller Page , I get httpreferer = <a href="http://xxx.com/yyy">http://xxx.com/yyy</a></p>
+<p>I try to get httpreferrer information before dispatch forward code , but still the same. Is there any solution for this ?</p>
+<p>Thanks.</p>
+<h1>Update</h1>
+<p><a href="https://forum.phalcon.io/user/0/Phalcon">@Phalcon</a> , any suggestion regarding this problem ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10851" data-cf-modified-d56aca202144ab1b2650a36d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10851" data-cf-modified-d56aca202144ab1b2650a36d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/86d2a960506486850995e6dd25403554?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2144/valVk" class="user-moderator-N"><span itemprop="name">valVk</span></a>        </span>
+        <br>
+
+        <span class="karma">12.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C13702" href="#C13702">
+                <time itemprop="dateCreated" datetime="2014-11-27T07:28:19-07:00" class="action-date">Nov '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Please also be noticed that if you have multimodule application you have to add default namespace for the dispatcher.
+I've done it and my application running in the correct way.</p>
+<pre><code class="language-php">&lt;?php
+
+$di-&gt;set('dispatcher', function() {
+
+        $eventsManager = new Phalcon\Events\Manager();
+
+        $eventsManager-&gt;attach("dispatch", function($event, $dispatcher, $exception) {
+            if ($event-&gt;getType() == 'beforeException') {
+                switch ($exception-&gt;getCode()) {
+                    case Phalcon\Dispatcher::EXCEPTION_HANDLER_NOT_FOUND:
+                    case Phalcon\Dispatcher::EXCEPTION_ACTION_NOT_FOUND:
+                        $dispatcher-&gt;forward(array(
+                            'controller' =&gt; 'errors',
+                            'action' =&gt; 'page404'
+                        ));
+                        return false;
+                }
+            }
+        });
+
+        $dispatcher = new Phalcon\Mvc\Dispatcher();
+
+        //Bind the EventsManager to the Dispatcher
+        $dispatcher-&gt;setEventsManager($eventsManager);
+
+        $dispatcher-&gt;setDefaultNamespace('APP\\MODULE\\Controllers');
+
+        return $dispatcher;
+});</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13702" data-cf-modified-d56aca202144ab1b2650a36d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13702" data-cf-modified-d56aca202144ab1b2650a36d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="278" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

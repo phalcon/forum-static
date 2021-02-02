@@ -1,0 +1,140 @@
+---
+layout: default
+title: 'Array CheckField not being checked - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/3/volt">Volt</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Array CheckField not being checked</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2693/angelvega93" class="user-moderator-N"><span itemprop="name">angelvega93</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-11-14T21:44:25-07:00">Nov '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-11-14T21:44:25-07:00">Nov '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>396</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/7ae37acd7e85c77b68e6684a90da53fb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2693/angelvega93" class="user-moderator-N"><span itemprop="name">angelvega93</span></a></span>
+                <span class="karma">8.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17297" href="#C17297">
+        <time class="action-date">Nov '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi, i have a little problem, when i try for example:</p>
+<p>{% raw %}{{{% endraw %} check_field(&quot;genre&quot;) {% raw %}}}{% endraw %}</p>
+<p>The checkbox works fine and is checked when form is submit, but if i try something like</p>
+<p>{% raw %}{{{% endraw %} check_field(&quot;genre[10]&quot;) {% raw %}}}{% endraw %}</p>
+<p>It does not work</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-8e2d9f4d47a5b1d45b8522d3-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-8e2d9f4d47a5b1d45b8522d3-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1664cd00255dfa6e438b0b5560fa1738?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5729/Ultimater" class="user-moderator-N"><span itemprop="name">Kevin Yarmak</span></a>        </span>
+        <br>
+
+        <span class="karma">4.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="52279" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '17</span>
+              </span><br/><a name="C52279" href="#C52279">
+                <time itemprop="dateCreated" datetime="2017-11-14T22:34:54-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Looks like a bug with getValue:<br />
+<a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/tag.zep#L331">https://github.com/phalcon/cphalcon/blob/master/phalcon/tag.zep#L331</a>  </p>
+<p>It's looking for <code>_POST[name]</code> rather than taking into account arrays.  </p>
+<p>A possible workaround for this is:  </p>
+<pre><code class="language-php">    $_POST['genre[10]'] = $_POST['genre'][10];</code></pre>
+<p>If you need to do this on a global scale, this gets the job done:  </p>
+<pre><code class="language-php">    while(1)
+    {
+        $repeat = false;
+        foreach($_POST as $key =&gt; $value)
+        {
+            if(is_array($value))
+            {
+                foreach($value as $k=&gt;$v)
+                {
+                    if(!array_key_exists($key.'['.$k.']',$_POST))$repeat = true;
+                    $_POST[$key.'['.$k.']'] = $v;
+                }
+            }
+        }
+        if(!$repeat)break;
+    }</code></pre>
+<p>The while-loop is only necessary if you need support for mutlidimensional arrays like:  <code>genre[id][10]</code></p>
+<p>This looks like an easy fix for cphalcon, we'll try to roll this out in the next release.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52279" data-cf-modified-8e2d9f4d47a5b1d45b8522d3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52279" data-cf-modified-8e2d9f4d47a5b1d45b8522d3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1664cd00255dfa6e438b0b5560fa1738?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5729/Ultimater" class="user-moderator-N"><span itemprop="name">Kevin Yarmak</span></a>        </span>
+        <br>
+
+        <span class="karma">4.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52281" href="#C52281">
+                <time itemprop="dateCreated" datetime="2017-11-15T00:47:59-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Created an issue for it: <a href="https://github.com/phalcon/cphalcon/issues/13162">https://github.com/phalcon/cphalcon/issues/13162</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52281" data-cf-modified-8e2d9f4d47a5b1d45b8522d3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52281" data-cf-modified-8e2d9f4d47a5b1d45b8522d3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17297" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

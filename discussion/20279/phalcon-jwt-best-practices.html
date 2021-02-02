@@ -1,0 +1,140 @@
+---
+layout: default
+title: 'Phalcon JWT best practices - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/16/security">Security</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Phalcon JWT best practices</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/12499/He1th" class="user-moderator-N"><span itemprop="name">He1th</span></a></span>
+            <time itemprop="dateCreated" datetime="2020-01-19T06:59:18-07:00">Jan '20</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2020-01-19T06:59:18-07:00">Jan '20</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>646</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/28d400ddf3af1ef5110dda3d61d56255?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/12499/He1th" class="user-moderator-N"><span itemprop="name">He1th</span></a></span>
+                <span class="karma">2.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C20279" href="#C20279">
+        <time class="action-date">Jan '20</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello.</p>
+<p>I was wondering how you guys have implementet JWT in your application. The way i have done it, is by adding a beforeDispatch, that runs this code:</p>
+<pre><code>if (!isset($headers["Authorization"]) || empty($headers["Authorization"])) {
+        //devolvemos un 403, Forbidden
+        $response-&gt;setStatusCode(403, "Forbidden");
+        $response-&gt;send();
+        die();
+    }
+
+    $token = explode(" ", $headers["Authorization"]);
+    $token = trim($token[1], '"');
+
+    try {
+        JWT::$leeway = 60; // 60 seconds
+        $user = JWT::decode($token, $this-&gt;jwt_key, array('HS256'));
+    } catch (\Firebase\JWT\ExpiredException $e) {
+        $response-&gt;setStatusCode(405, $e-&gt;getMessage());
+        $response-&gt;send();
+        die();
+    }</code></pre>
+<p>This code is implemented in my module, as an event. </p>
+<p><strong>My question is, what is the best way to setup JWT for phalcon, maybe you have done this in a much smarter way?</strong></p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-3944e94002b539660e6ee48c-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-3944e94002b539660e6ee48c-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/533985d102feef881f5c41933bd43bfb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/283/calinrada" class="user-moderator-N"><span itemprop="name">Calin Rada</span></a>        </span>
+        <br>
+
+        <span class="karma">51.1k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C61905" href="#C61905">
+                <time itemprop="dateCreated" datetime="2020-01-20T01:48:22-07:00" class="action-date">Jan '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Using <code>beforeDispatch</code>, <code>beforeDispatchLoop</code> or <code>beforeExecuteRoute</code> <strong>is</strong> the right thing to do. I personally prefer <code>beforeExecuteRoute</code> because <code>JWT::decode()</code> (or any other unnecessary checks) won't be executed if the action doesn't exists - but that depends on your setup and if you use or not the ACL for protecting an entire enpoint or just some actions. If you want to go wild or need a more complex setup, you can use it in combination with the Events Manager (<a href="https://docs.phalcon.io/4.0/en/events">https://docs.phalcon.io/4.0/en/events</a>) .</p>
+<p>The most important thing is how you design your API. Here are some nice articles:</p>
+<p><a href="https://docs.microsoft.com/en-us/azure/architecture/best-practices/api-design">https://docs.microsoft.com/en-us/azure/architecture/best-practices/api-design</a></p>
+<p><a href="https://florimond.dev/blog/articles/2018/08/restful-api-design-13-best-practices-to-make-your-users-happy/">https://florimond.dev/blog/articles/2018/08/restful-api-design-13-best-practices-to-make-your-users-happy/</a></p>
+<p><a href="https://hackernoon.com/restful-api-designing-guidelines-the-best-practices-60e1d954e7c9">https://hackernoon.com/restful-api-designing-guidelines-the-best-practices-60e1d954e7c9</a></p>
+<p>Cheers !</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="61905" data-cf-modified-3944e94002b539660e6ee48c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="61905" data-cf-modified-3944e94002b539660e6ee48c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/28d400ddf3af1ef5110dda3d61d56255?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/12499/He1th" class="user-moderator-N"><span itemprop="name">He1th</span></a>        </span>
+        <br>
+
+        <span class="karma">2.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C61907" href="#C61907">
+                <time itemprop="dateCreated" datetime="2020-01-20T03:20:27-07:00" class="action-date">Jan '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you, i will look into it!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="61907" data-cf-modified-3944e94002b539660e6ee48c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="61907" data-cf-modified-3944e94002b539660e6ee48c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="20279" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

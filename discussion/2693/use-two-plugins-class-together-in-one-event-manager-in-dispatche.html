@@ -1,0 +1,317 @@
+---
+layout: default
+title: 'use two plugins class together in one event manager in dispatcher - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/11/events-manager">Events</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">use two plugins class together in one event manager in dispatcher</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1821/amin-ajami" class="user-moderator-N"><span itemprop="name">amin-ajami</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-06-30T10:43:02-07:00">Jun '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-06-30T10:43:02-07:00">Jun '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1606</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/7193011728c97cf8d997522bfdf2320a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1821/amin-ajami" class="user-moderator-N"><span itemprop="name">amin-ajami</span></a></span>
+                <span class="karma">8.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2693" href="#C2693">
+        <time class="action-date">Jun '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>i need use two plugins class (Security class &amp; Exceptions class) together in one event manager in dispatcher :
+Exceptions.php </p>
+<pre><code class="language-php">namespace Multiple\Frontend\Plugins;
+
+use Phalcon\Mvc\Dispatcher,
+    Phalcon\Events\Event,
+    Phalcon\Mvc\User\Plugin,
+    Phalcon\Mvc\Dispatcher\Exception as DispatchException,
+    Phalcon\Acl;
+
+class Exceptions extends Plugin
+{
+
+    public function beforeException(Event $event, Dispatcher $dispatcher, $exception)
+    {
+
+        //Handle 404 exceptions
+        if ($exception instanceof DispatchException) {
+            $dispatcher-&gt;forward(array(
+                'controller' =&gt; 'error',
+                'action' =&gt; 'show404'
+            ));
+            return false;
+        }
+
+        //Handle other exceptions
+        $dispatcher-&gt;forward(array(
+            'controller' =&gt; 'error',
+            'action' =&gt; 'show503'
+        ));
+
+        return false;
+    }
+}</code></pre>
+<p>Security.php &gt;&gt;&gt;</p>
+<pre><code class="language-php">namespace Multiple\Frontend\Plugins;
+
+use Phalcon\Events\Event,
+    Phalcon\Mvc\User\Plugin,
+    Phalcon\Mvc\Dispatcher,
+    Phalcon\Acl;
+
+/**
+ * Security
+ *
+ * This is the security plugin which controls that users only have access to the modules they're assigned to
+ */
+class Security extends Plugin
+{
+
+    public function __construct($dependencyInjector)
+    {
+        $this-&gt;_dependencyInjector = $dependencyInjector;
+    }
+
+    public function getAcl()
+    {
+        if (!isset($this-&gt;persistent-&gt;acl)) {
+
+            $acl = new \Phalcon\Acl\Adapter\Memory();
+
+            //Default action is deny access
+            $acl-&gt;setDefaultAction(\Phalcon\Acl::DENY);
+
+            //Register roles
+            $roles = array(
+                'users' =&gt; new \Phalcon\Acl\Role('Users'),
+                'guests' =&gt; new \Phalcon\Acl\Role('Guests')
+            );
+            foreach ($roles as $role) {
+                $acl-&gt;addRole($role);
+            }
+
+            //Private area resources
+            $privateResources = array();
+            foreach ($privateResources as $resource =&gt; $actions) {
+                $acl-&gt;addResource(new Phalcon\Acl\Resource($resource), $actions);
+            }
+
+            //Public area resources
+            $publicResources = array(
+                'index' =&gt; array('index'),
+                'error' =&gt; array('show404', 'index'),
+                'session' =&gt; array('index', 'register', 'start', 'end'),
+                'contact' =&gt; array('index', 'send')
+            );
+
+            foreach ($publicResources as $resource =&gt; $actions) {
+                $acl-&gt;addResource(new \Phalcon\Acl\Resource($resource), $actions);
+            }
+
+            //Grant access to public areas to both users and guests
+            foreach ($roles as $role) {
+                foreach ($publicResources as $resource =&gt; $actions) {
+                    $acl-&gt;allow($role-&gt;getName(), $resource, '*');
+                }
+            }
+
+            //Grant acess to private area to role Users
+            foreach ($privateResources as $resource =&gt; $actions) {
+                foreach ($actions as $action){
+                    $acl-&gt;allow('Users', $resource, $action);
+                }
+            }
+
+            //The acl is stored in session, APC would be useful here too
+            $this-&gt;persistent-&gt;acl = $acl;
+        }
+        // print_r($this-&gt;persistent-&gt;acl);
+        return $this-&gt;persistent-&gt;acl;
+    }
+
+    /**
+     * This action is executed before execute any action in the application
+     */
+    public function beforeDispatch(Event $event, Dispatcher $dispatcher)
+    {
+
+        $auth = $this-&gt;session-&gt;get('auth');
+        if (!$auth){
+            $role = 'Guests';
+        } else {
+            $role = 'Users';
+        }
+
+        $controller = $dispatcher-&gt;getControllerName();
+        $action = $dispatcher-&gt;getActionName();
+
+        $acl = $this-&gt;getAcl();
+        // echo $role;
+        // echo $controller . ':' . $acl-&gt;isAllowed($role, $controller, $action). '&lt;br/&gt;';
+        // echo Acl::ALLOW. '&lt;br&gt;';
+
+        $allowed = $acl-&gt;isAllowed($role, $controller, $action);
+        if ($allowed != Acl::ALLOW) {
+            $this-&gt;flash-&gt;error("You don't have access to this module");
+            $dispatcher-&gt;forward(
+                array(
+                    'controller' =&gt; 'index',
+                    'action' =&gt; 'index'
+                )
+            );
+            return false;
+        }
+
+    }
+
+}</code></pre>
+<p>dispatcher code &gt;&gt;&gt;</p>
+<pre><code class="language-php">$di-&gt;set('dispatcher', function() use ($di) {
+
+    //Create an EventsManager
+    $eventsManager = new EventsManager();
+
+    $exceptions = new Multiple\Frontend\Plugins\Exceptions($di);
+    $security = new Multiple\Frontend\Plugins\Security($di);
+
+    /**
+     * We listen for events in the dispatcher using the Security plugin
+     */
+    $eventsManager-&gt;attach('dispatch:beforeException', $exceptions);
+
+    $dispatcher = new Phalcon\Mvc\Dispatcher();
+    $dispatcher-&gt;setEventsManager($eventsManager);
+
+    return $dispatcher;
+});</code></pre>
+<p>how to manage more than one event together for EX:
+use event beforeDispatch with beforeException</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-998db31d4788a07ab9c0bb8c-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-998db31d4788a07ab9c0bb8c-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="9036" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '14</span>
+              </span><br/><a name="C9036" href="#C9036">
+                <time itemprop="dateCreated" datetime="2014-06-30T11:41:07-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>What the events manager does is check for a method with the name of the event that it's triggering, so you can implement a class handling both events:</p>
+<pre><code class="language-php">namespace Multiple\Frontend\Plugins;
+
+use Phalcon\Mvc\Dispatcher,
+    Phalcon\Events\Event,
+    Phalcon\Mvc\User\Plugin,
+    Phalcon\Mvc\Dispatcher\Exception as DispatchException;
+
+class MyPlugin extends Plugin
+{
+    public function beforeDispatch(Event $event, Dispatcher $dispatcher)
+    {
+        //...
+    }
+
+    public function beforeException(Event $event, Dispatcher $dispatcher, $exception)
+    {
+        //...
+    }
+}</code></pre>
+<p>Register the plugin:</p>
+<pre><code class="language-php">$di-&gt;set('dispatcher', function() use ($di) {
+
+    //Create an EventsManager
+    $eventsManager = new EventsManager();
+
+    $plugin = new Multiple\Frontend\Plugins\MyPlugin($di);
+    $eventsManager-&gt;attach('dispatch', $plugin);
+
+    $dispatcher = new Phalcon\Mvc\Dispatcher();
+    $dispatcher-&gt;setEventsManager($eventsManager);
+
+    return $dispatcher;
+});</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9036" data-cf-modified-998db31d4788a07ab9c0bb8c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9036" data-cf-modified-998db31d4788a07ab9c0bb8c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/7193011728c97cf8d997522bfdf2320a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1821/amin-ajami" class="user-moderator-N"><span itemprop="name">amin-ajami</span></a>        </span>
+        <br>
+
+        <span class="karma">8.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9039" href="#C9039">
+                <time itemprop="dateCreated" datetime="2014-06-30T13:15:20-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>so tanx i used but at this line that call event for triggering at the first run dispatch:beforeDispatch then dispatch:beforeException that not work !!!
+for example :
+<a href="http://localhost:8888/site/error">http://localhost:8888/site/error</a> : define on publicResources , out put after run ok
+<a href="http://localhost:8888/site/errorxxx">http://localhost:8888/site/errorxxx</a> : is not a controller so most refer to error controller and show404 index but refer to index and show : You don't have access to this module and refer to index</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9039" data-cf-modified-998db31d4788a07ab9c0bb8c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9039" data-cf-modified-998db31d4788a07ab9c0bb8c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2693" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

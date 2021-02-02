@@ -1,0 +1,375 @@
+---
+layout: default
+title: 'Routing issue - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Routing issue</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/6853/Hoet" class="user-moderator-N"><span itemprop="name">Hoet</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-11-29T08:12:19-07:00">Nov '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-11-29T08:12:19-07:00">Nov '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>398</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/cfe29c6fec2b71ae311c675cdc3d7562?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/6853/Hoet" class="user-moderator-N"><span itemprop="name">Hoet</span></a></span>
+                <span class="karma">4.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C19055" href="#C19055">
+        <time class="action-date">Nov '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,</p>
+<p>I seem to have a problem with my routing. I have cleared the default routes and added two routes for testing. The '/' and '/test' are added. But when I go to the website and use something like '/bla' I end up with the index controller and index action. Instead of that I should have received an exception with a forward to a error controller with a route404 action. The action itself is nothing more then a die( 'here' ); at the moment.</p>
+<p>I have my controllers, views, plug-ins in the root of my application.</p>
+<p>The goal that I want to reach is to display the errorController::route404() endpoint when a none existing route is being requested. '/bla' for example</p>
+<p>Below is the definition of the router</p>
+<pre><code class="language-php">  $di-&gt;set( 'router', function()
+  {
+    $router =new Router( false );
+
+    $router-&gt;removeExtraSlashes( false );  // Allow for trailing slash
+
+    $router-&gt;add( '[/]{0,1}', [ 'controller' =&gt; 'index', 'action' =&gt; 'index' ]);
+    $router-&gt;add( '/test[/]{0,1}', [ 'controller' =&gt; 'index', 'action' =&gt; 'test' ]);
+
+    return $router;
+  });</code></pre>
+<p>Below is the definition of the dispatcher</p>
+<pre><code class="language-php">  $di-&gt;setShared( 'dispatcher', function()
+  {
+    // Create a new dispatcher
+    $dispatcher =new Dispatcher();
+    $dispatcher-&gt;setDefaultNamespace( 'Controllers' );
+
+    // Create an EventsManager
+    $eventsManager =new EventsManager();
+
+    // Attach an exception listener
+    $eventsManager-&gt;attach( 'dispatch:beforeException', new DispatchPlugin( ));
+
+    // Bind the EventsManager to the dispatcher
+    $dispatcher-&gt;setEventsManager( $eventsManager );
+
+    return $dispatcher;
+  });</code></pre>
+<p>Below is the definition of the DispatchPlugin class</p>
+<pre><code class="language-php">&lt;?php
+  namespace Plugins;
+
+  use Phalcon\Events\Event;
+  use Phalcon\Mvc\Dispatcher;
+  use Phalcon\Mvc\User\Plugin;
+  use Phalcon\Mvc\Dispatcher\Exception;
+
+  class DispatchPlugin extends Plugin
+  {
+    public function beforeException( Event $event, Dispatcher $dispatcher, Exception $exception )
+    {
+      // Check stuff
+      switch( $exception-&gt;getCode( ))
+      {
+        // Handle 404 exceptions
+        case Dispatcher::EXCEPTION_ACTION_NOT_FOUND:
+        case Dispatcher::EXCEPTION_HANDLER_NOT_FOUND:
+          $action ='404';
+          break;
+
+        // All other errors
+        default:
+          $action ='503';
+          break;
+      }
+
+      $dispatcher-&gt;forward([
+        'action'     =&gt; "error{$action}",
+        'controller' =&gt; 'error',
+        'namespace'  =&gt; '\\Controllers',
+      ]);
+
+      return false;
+    }
+  }</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-86b410f89c1871bd8fc40ab2-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-86b410f89c1871bd8fc40ab2-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5915f25e654c4f9e60fe51700cdee683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4769/Izopi4a" class="user-moderator-Y"><span itemprop="name">Izo</span></a>        </span>
+        <br>
+
+        <span class="karma">85.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C58007" href="#C58007">
+                <time itemprop="dateCreated" datetime="2018-11-29T08:48:32-07:00" class="action-date">Nov '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>will this do the trick you need <a href="https://docs.phalcon.io/en/3.4/routing#not-found-paths">https://docs.phalcon.io/en/3.4/routing#not-found-paths</a> ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="58007" data-cf-modified-86b410f89c1871bd8fc40ab2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="58007" data-cf-modified-86b410f89c1871bd8fc40ab2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/cfe29c6fec2b71ae311c675cdc3d7562?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6853/Hoet" class="user-moderator-N"><span itemprop="name">Hoet</span></a>        </span>
+        <br>
+
+        <span class="karma">4.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="58009" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '18</span>
+              </span><br/><a name="C58009" href="#C58009">
+                <time itemprop="dateCreated" datetime="2018-11-29T11:13:16-07:00" class="action-date">Nov '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The before exception event should be called when a route can not be found, but instead the route for / is called. I want the page that is shown as a 404 be based on the route that is requested. if it is the backend then another 404 should be shown then when the route is for the front of the application. Which is why I want to use the before exception event and in the event itself use forwarding to the correct module, controller and action.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="58009" data-cf-modified-86b410f89c1871bd8fc40ab2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="58009" data-cf-modified-86b410f89c1871bd8fc40ab2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="58035" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '18</span>
+              </span><br/><a name="C58035" href="#C58035">
+                <time itemprop="dateCreated" datetime="2018-12-03T15:39:10-07:00" class="action-date">Dec '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Your setup is almost functionally equivalent to how I set up my 404s:</p>
+<pre><code class="language-php">$DI-&gt;set('dispatcher',function(){
+    $EM = new \Phalcon\Events\Manager();
+
+    $EM-&gt;attach('dispatch:beforeException',
+        function($event,$dispatcher,$exception){
+            if( in_array(   $exception-&gt;getCode(), 
+                            [
+                                \Phalcon\Mvc\Dispatcher::EXCEPTION_HANDLER_NOT_FOUND,
+                                \Phalcon\Mvc\Dispatcher::EXCEPTION_ACTION_NOT_FOUND
+                            ]
+                        )
+                ){
+
+                $dispatcher-&gt;forward(['controller'=&gt;'index','action'=&gt;'notFound']);
+                return FALSE;
+            }
+        }
+    );
+
+    $Dispatcher = new \Phalcon\Mvc\Dispatcher();
+    $Dispatcher-&gt;setDefaultNamespace('Controller');
+    $Dispatcher-&gt;setEventsManager($EM);
+
+    return $Dispatcher;
+});</code></pre>
+<p>The one difference I can see is that I don't define the namespace in the <code>$dispatcher-&gt;forward()</code> method - I just do it with <code>setDefaultNamespace()</code> (as you do also).  Maybe that extra declaration is causing a problem?</p>
+<p>Also, I haven't disabled default routing in my router - though I'm not 100% sure what affect that has on this particular situation.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="58035" data-cf-modified-86b410f89c1871bd8fc40ab2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="58035" data-cf-modified-86b410f89c1871bd8fc40ab2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/cfe29c6fec2b71ae311c675cdc3d7562?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6853/Hoet" class="user-moderator-N"><span itemprop="name">Hoet</span></a>        </span>
+        <br>
+
+        <span class="karma">4.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="58043" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '18</span>
+              </span><br/><a name="C58043" href="#C58043">
+                <time itemprop="dateCreated" datetime="2018-12-04T03:12:51-07:00" class="action-date">Dec '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I have disabled and enabled the names space, but that did not make a difference.</p>
+<p>If you use the default routing then the default '<a href="http://domain.ext/:module/:controller/:action">http://domain.ext/:module/:controller/:action</a>' route is active. So nearly any route that you supply is found.</p>
+<p>In my case I removed all routes with a false supplied to the constructor of the router definition and only added the '/' and '/test' routes. I have changed this a little to supplying the default route instead of using the '/' as a route, leaving the '/test' route. I added an event handler to the router (RouterPlugin) to see what is beeing called.</p>
+<p>I noticed that the &quot;notMatchedRoute&quot; is called as one would expect when using a route that does not exist. What I do not understand is why is he does not throw an exception or something instead of just showing the default route. This puzzles me.</p>
+<p>I'll add a forward to the 404 action of the error controller to see if that does work like I intended.</p>
+<p>Let you know when I have tested a little more.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="58043" data-cf-modified-86b410f89c1871bd8fc40ab2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="58043" data-cf-modified-86b410f89c1871bd8fc40ab2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/cfe29c6fec2b71ae311c675cdc3d7562?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6853/Hoet" class="user-moderator-N"><span itemprop="name">Hoet</span></a>        </span>
+        <br>
+
+        <span class="karma">4.5k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C58053" href="#C58053">
+                <time itemprop="dateCreated" datetime="2018-12-04T07:10:34-07:00" class="action-date">Dec '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I found a solution, but not the one I'm looking for. The code below will display a 404 page once a certain route can't be found. The notFound() witin the router is the key to preventing the default action to be displayed when a route does not match.</p>
+<p>There are two parts in this. One the Router and the second the Dispatcher. The router will use the notFound() route to indicate that the route can not be found (matched). While the exception within the dispatcher will only fire once a route is found, but can not be matched to the specified module/controller/action. This will create an exception and that will trigger the beforeException on the dispatcher.</p>
+<p>For now this will do. I could always write my own Router. But I do not have time for that now. </p>
+<p>Thnaks for thinking with me.</p>
+<p>The router definition:</p>
+<pre><code>      $di-&gt;set( 'router', function()
+      {
+        $router =new Router( false );  // Disable default routes
+
+        // Allow for training slash
+        $router-&gt;removeExtraSlashes( false );
+
+        // Add not found action
+        $router-&gt;notFound([ 'controller' =&gt; 'error', 'action' =&gt; 'error404']);
+
+        // Add default route ('/')
+        $router-&gt;add( '/', [ 'action' =&gt; 'index', 'controller' =&gt; 'index' ]);
+
+        return $router;
+      });</code></pre>
+<p>The dispatcher definition:</p>
+<pre><code>      $di-&gt;setShared( 'dispatcher', function()
+      {
+        // Create a new dispatcher
+        $dispatcher =new Dispatcher();
+        $dispatcher-&gt;setDefaultNamespace( 'Controllers' );
+
+        // Create an EventsManager
+        $eventsManager =new EventsManager();
+
+        // Attach an exception listener
+       $eventsManager-&gt;attach( 'dispatch:beforeException', new DispatchPlugin( ));
+
+        // Bind the EventsManager to the dispatcher
+        $dispatcher-&gt;setEventsManager( $eventsManager );
+
+        return $dispatcher;
+      });</code></pre>
+<p>The dispatchPlugin:</p>
+<pre><code>&lt;?php
+  namespace Plugins;
+
+  use Phalcon\Events\Event;
+  use Phalcon\Mvc\Dispatcher;
+  use Phalcon\Mvc\User\Plugin;
+  use Phalcon\Mvc\Dispatcher\Exception;
+
+  class DispatchPlugin extends Plugin
+  {
+    public function beforeException( Event $event, Dispatcher $dispatcher, Exception $exception )
+    {
+      // Check stuff
+      switch( $exception-&gt;getCode( ))
+      {
+        // Handle 404 exceptions
+        case Dispatcher::EXCEPTION_ACTION_NOT_FOUND:
+        case Dispatcher::EXCEPTION_HANDLER_NOT_FOUND:
+          $action ='404';
+          break;
+
+        // All other errors
+        default:
+          $action ='503';
+          break;
+      }
+
+      $dispatcher-&gt;forward([
+        'action'     =&gt; "error{$action}",
+        'controller' =&gt; 'error',
+      ]);
+
+      return false;
+    }
+  }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="58053" data-cf-modified-86b410f89c1871bd8fc40ab2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="58053" data-cf-modified-86b410f89c1871bd8fc40ab2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/cfe29c6fec2b71ae311c675cdc3d7562?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6853/Hoet" class="user-moderator-N"><span itemprop="name">Hoet</span></a>        </span>
+        <br>
+
+        <span class="karma">4.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C58057" href="#C58057">
+                <time itemprop="dateCreated" datetime="2018-12-05T01:52:21-07:00" class="action-date">Dec '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hmm, actually the problem seems to have a rather simple solution. Or so it seems. If you change the definition of the router to shared within the di then you are able to obtain the router within the dispatch plugin (event) and do a forward there to the right controller. Going to try that out.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="58057" data-cf-modified-86b410f89c1871bd8fc40ab2-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="58057" data-cf-modified-86b410f89c1871bd8fc40ab2-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="19055" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

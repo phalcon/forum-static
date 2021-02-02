@@ -1,0 +1,313 @@
+---
+layout: default
+title: 'MySQL Performance'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+        <div class="bs-callout bs-callout-danger">
+            <h4>Too many negative votes</h4>
+            <p>This post has too many negative votes. The cause of this could be:</p>
+            <ul>
+                <li>Irrelevant or controversial information</li>
+                <li>Confusing question or not a real question</li>
+                <li>Aggressive vocabulary, excessive rudeness, etc</li>
+            </ul>
+        </div>
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="post-negative-h1" itemprop="name">MySQL Performance</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3869/iqiniso" class="user-moderator-N"><span itemprop="name">Phoenix UK LTD</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-09-04T16:47:30-07:00">Sep '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-09-04T16:47:30-07:00">Sep '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>986</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">-3</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/f92fc59b614d706bcbce9910c437b139?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3869/iqiniso" class="user-moderator-N"><span itemprop="name">Phoenix UK LTD</span></a></span>
+                <span class="karma">6.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body post-negative-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C8367" href="#C8367">
+        <time class="action-date">Sep '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>We have hit a wall and are trying to understand what may have happened.</p>
+<p>We have written a restful API using phalcon for speed. The root return from phalcon is blinding quick at 300ms as there is no MySQL. The additional latency (above our target of 100ms) is that the network has not been optimised. That said, the application responds very quickly considering it is running on a t1.small backed by a t1.micro database on RDS.</p>
+<p>As soon as we run a MySQL command, the whole system slows down. Queries take on average 1.2 seconds to execute which is beyond acceptable.</p>
+<p>we have set up the MySQL connection as:</p>
+<pre><code class="language-php">&lt;?php
+    $di-&gt;setShared('db', function() use ($di) {
+            $type = strtolower($di-&gt;get('config')-&gt;database-&gt;adapter);
+            $creds = array(
+                'host' =&gt; $di-&gt;get('config')-&gt;database-&gt;host,
+                'username' =&gt; $di-&gt;get('config')-&gt;database-&gt;username,
+                'password' =&gt; $di-&gt;get('config')-&gt;database-&gt;password,
+                'dbname' =&gt; $di-&gt;get('config')-&gt;database-&gt;name
+            );</code></pre>
+<p>The simplest query that runs first is an authorization query and this looks like:</p>
+<pre><code class="language-php">&lt;?php
+
+$org = Organisation::findFirst("searchID = '".$that."' AND thisOther = '".$this."'");</code></pre>
+<p>We tried this other query which is closer to raw SQL but had the same result.</p>
+<pre><code class="language-php">&lt;?php       
+
+            $query  = $this-&gt;modelsManager-&gt;createQuery("SELECT searchID FROM \Models\Organisation WHERE searchID = :org: AND thisOther = '".$this."'");
+            $org   = $query-&gt;execute(array('org' =&gt; $that))-&gt;getFirst();
+
+            $sID = $org['orgUID'];</code></pre>
+<p>This takes on avergae 1.2 seconds to excecute. </p>
+<p>We then thought ah! Database. So we upgraded the instance to a m3.2xlarge with 30gigs of memory and the result was almost exactly the same at 1.12 secs.</p>
+<p>There are pages with 5-6 queries on them that execute in order and drive the API response time to 8 seconds in some instances which is painful for such a fast framework. The models have also all be correctly defined with the column names declared to conserve resources.</p>
+<p>Thus we think that maybe there is something we are doing wrong in the framework that we are unaware of. </p>
+<p>any ideas where the issue could be? what settings do we need to modify?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-1b7b9a5eba5941f1f7857cdd-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span><span itemprop="downvoteCount">3</span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-1b7b9a5eba5941f1f7857cdd-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/83c11918052630e4dda79206c336924d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/569/kaioken" class="user-moderator-N"><span itemprop="name">Max Castro</span></a>        </span>
+        <br>
+
+        <span class="karma">16.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="22925" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '15</span>
+              </span><br/><a name="C22925" href="#C22925">
+                <time itemprop="dateCreated" datetime="2015-09-04T17:29:30-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>hello ok </p>
+<p>1- did you apply index to your tables?</p>
+<p>2- did you activate the model metadata cache?</p>
+<p>3- are you using cache on the query?</p>
+<p>i would imaginen ia the first , index to thr table</p>
+<p>let me know</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="22925" data-cf-modified-1b7b9a5eba5941f1f7857cdd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="22925" data-cf-modified-1b7b9a5eba5941f1f7857cdd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f92fc59b614d706bcbce9910c437b139?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3869/iqiniso" class="user-moderator-N"><span itemprop="name">Phoenix UK LTD</span></a>        </span>
+        <br>
+
+        <span class="karma">6.5k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="22929" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '15</span>
+              </span><br/><a name="C22929" href="#C22929">
+                <time itemprop="dateCreated" datetime="2015-09-04T23:31:56-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><ol>
+<li>
+<p>Check but there are only three records in that table so I am sure it is ot that.</p>
+</li>
+<li>
+<p>What is a model meta data cache? :S</p>
+</li>
+<li>Cannot cache this query as the permissions change regularly so it needs to be checked each time a request is made. It should not take a 1.2seconds to run though surely even if it is run every time. </li>
+</ol>
+<p>I figure they may be a giant mistake in the config file that is causing MySQL to take too long.</p>
+<p>//Edit
+config file was optimised as per spec. issues turns out to be  batch inserts not supported by Phalcon</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="22929" data-cf-modified-1b7b9a5eba5941f1f7857cdd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="22929" data-cf-modified-1b7b9a5eba5941f1f7857cdd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f92fc59b614d706bcbce9910c437b139?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3869/iqiniso" class="user-moderator-N"><span itemprop="name">Phoenix UK LTD</span></a>        </span>
+        <br>
+
+        <span class="karma">6.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C22947" href="#C22947">
+                <time itemprop="dateCreated" datetime="2015-09-05T18:20:18-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>After caching what is possible, it turns out the bottle neck is the insert statements. Apparently the method used by Phalcon to insert records into the database is just inherently slow. We will need to move those to Raw SQL out of the PHalcon framework to increase performance. </p>
+<p>We are chaching a few SQL queries but this saved only about 2 seconds of the 6 we need to get rid off. </p>
+<p>Anyone else who stumbles upon this, if you are writing an application that needs to be realy quick at high volumes (4000+ requests a minute), avoid the native Functions and just use raw SQL. We are at the point where we want to try and shave off just a few milliseconds (looking to kill 200ms) and it would seem that Phalcon is not optimised for this (Batch inserts) Willing to accept that we may be wrong but with no further advice on this we are not able to confirm either way.</p>
+<p>Still great software though :) If we can crack the universal database issue, I think it will be a great development.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="22947" data-cf-modified-1b7b9a5eba5941f1f7857cdd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span><span itemprop="downvoteCount">2</span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="22947" data-cf-modified-1b7b9a5eba5941f1f7857cdd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/83c11918052630e4dda79206c336924d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/569/kaioken" class="user-moderator-N"><span itemprop="name">Max Castro</span></a>        </span>
+        <br>
+
+        <span class="karma">16.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C22951" href="#C22951">
+                <time itemprop="dateCreated" datetime="2015-09-05T19:44:24-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>ok but weird, I have something similar and haven't run to this problem , but again i would check the db index ;)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="22951" data-cf-modified-1b7b9a5eba5941f1f7857cdd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="22951" data-cf-modified-1b7b9a5eba5941f1f7857cdd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f92fc59b614d706bcbce9910c437b139?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3869/iqiniso" class="user-moderator-N"><span itemprop="name">Phoenix UK LTD</span></a>        </span>
+        <br>
+
+        <span class="karma">6.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="22955" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '15</span>
+              </span><br/><a name="C22955" href="#C22955">
+                <time itemprop="dateCreated" datetime="2015-09-05T21:49:20-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Mm. Runinng the query in a DB client:</p>
+<p><code>SELECT orgUID FROM tableOrganisations where someUID = '12398983hjf9s8fieuwr'</code></p>
+<p>runs at 188ms. Which is with the index on <code>somUID</code>  and just three rows of data in the table. This is back on the t2.micro DB instance so I am not expecting blazing response times. Network and CPU limits mean this is about as fast as it will ever get. </p>
+<p>I basically setup a timer using PHP <code>microtime()</code> in between each step of script and as soon as there was a MySQL function there was a huge increase in response times. Something about the connection to the database? Loading the models? The coloumns to be used have all been declared as per the documentaion, so as to save memory. etc. Cannot think whatelse it could possibly be. </p>
+<p>The solution for now is to just cache as many queries as possible. Will keep investigating to try and hone in on what could be wrong but it looks like we may have to ditch the Phalcon PHQL in some places and just code SQL. Again we are looking at a real world application for this where 1ms translates to a tangible annoyance spread over serveral thousand ops per second. </p>
+<p>Will post whatever I find here later. I wish whoever it was had not marked this as solved as it is far from :) </p>
+<p>A realy interesting discussion.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="22955" data-cf-modified-1b7b9a5eba5941f1f7857cdd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="22955" data-cf-modified-1b7b9a5eba5941f1f7857cdd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/83c11918052630e4dda79206c336924d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/569/kaioken" class="user-moderator-N"><span itemprop="name">Max Castro</span></a>        </span>
+        <br>
+
+        <span class="karma">16.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C22957" href="#C22957">
+                <time itemprop="dateCreated" datetime="2015-09-05T21:58:36-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yeah, I understand I just cant get why you are getting that slow response with PHQL, because if we take your example of the slow response, then all other devs using PHQL should be showing the same results with high # of inserts, thats why I say there as to be something else , but keep pushing and keep us update ;)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="22957" data-cf-modified-1b7b9a5eba5941f1f7857cdd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="22957" data-cf-modified-1b7b9a5eba5941f1f7857cdd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f92fc59b614d706bcbce9910c437b139?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3869/iqiniso" class="user-moderator-N"><span itemprop="name">Phoenix UK LTD</span></a>        </span>
+        <br>
+
+        <span class="karma">6.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C23265" href="#C23265">
+                <time itemprop="dateCreated" datetime="2015-09-12T18:04:51-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Smacked my head against a wall with this one. </p>
+<p>There is no valid reason why queries should be taking 6 seconds to complete. Again, the database has three records in it which it needs to query against so indexes or no 1.29 seconds is incredibly slow. </p>
+<p>Additionally the inserts are 5 rows which take an additional 2 seconds.</p>
+<p>I have filtered out the network latency and this accounts for around ~300ms.</p>
+<p>The root returns a reply in about 400ms which is fine but as soon as the MySQL calls are included the whole system slows to a crawl. </p>
+<p>Which phalcon mysql settings specifically need to be looked at over and above what has been mentioned already here (excluding the database because it is practically empty so poses no load to the system at all).</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23265" data-cf-modified-1b7b9a5eba5941f1f7857cdd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23265" data-cf-modified-1b7b9a5eba5941f1f7857cdd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f92fc59b614d706bcbce9910c437b139?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3869/iqiniso" class="user-moderator-N"><span itemprop="name">Phoenix UK LTD</span></a>        </span>
+        <br>
+
+        <span class="karma">6.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C23425" href="#C23425">
+                <time itemprop="dateCreated" datetime="2015-09-17T02:00:27-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Solution!</p>
+<p>We used the microtime() function to debug where things were taking up time and slowing the process down and it was not even in the write or read from the database but the connection itself. </p>
+<p>After digging around we discovered that the RDS instance was not in the same Zone as the server we were running off which was causing all kinds of DNS issues and network latency.  We moved the dbase to the same zone and the latency vanished. <code>Thus the error was totally our fault.</code></p>
+<p>other things to note:</p>
+<p>using PDO when you start up your AWS RDS instance always select publically available so that you get an IP assigned to your instance. This will also shave a few milliseconds off the connect time and turn that setting off in PDO as well. </p>
+<p>hopefully this will help someone. I see this thread has been down voted etc.  Sincere apologies if anything said was offensive. </p>
+<p>We remain happy with the performance of Phalcon and are glad to have chosen it.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23425" data-cf-modified-1b7b9a5eba5941f1f7857cdd-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23425" data-cf-modified-1b7b9a5eba5941f1f7857cdd-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="8367" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

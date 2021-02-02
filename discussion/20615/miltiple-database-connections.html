@@ -1,0 +1,202 @@
+---
+layout: default
+title: 'Miltiple database connections - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Miltiple database connections</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10733/fctoscano" class="user-moderator-N"><span itemprop="name">Flavio Toscano</span></a></span>
+            <time itemprop="dateCreated" datetime="2020-05-06T21:09:10-07:00">May '20</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2020-05-06T21:09:10-07:00">May '20</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>May '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>200</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/f14b69c2e8b727a5488c20b5469abb2e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10733/fctoscano" class="user-moderator-N"><span itemprop="name">Flavio Toscano</span></a></span>
+                <span class="karma">1.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C20615" href="#C20615">
+        <time class="action-date">May '20</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi to everyone.</p>
+<p>Let me try to explain my problem.</p>
+<p>I´m using multiple databases in a project. One database that store all the users, and shared info like states and cities. And one database for each user, based on their id. Let´s use the config below:</p>
+<p>DB1
+Provider name: db
+Database name: app
+Table 1: States - [id, name]
+Table 2: Cities - [id, state_id, name]</p>
+<p>DB2
+Provider name: dbclient
+Database name: c1 (user id 1)
+Table 1: Clients - [id, city_id, name]</p>
+<p>When i try to create a pagination with querybuilder below:</p>
+<p>$builder = $this
+-&gt;modelsManager
+-&gt;createBuilder()
+-&gt;from(Clients::class)
+-&gt;innerJoin(Cities::class)
+-&gt;where(
+&quot;App\Models\Clients.name like '%&quot; . $name . &quot;%'&quot;
+);</p>
+<p>I´m getting this error:
+&quot;SQLSTATE[42S02]: Base table or view not found: 1146 Table 'c1.cities' doesn't exist&quot;</p>
+<p>Is there some way to create a Join between these two databases?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-f1a478500ac6547a35d52b35-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-f1a478500ac6547a35d52b35-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C63105" href="#C63105">
+                <time itemprop="dateCreated" datetime="2020-05-07T07:43:40-07:00" class="action-date">May '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Joining between 2 separate databases is technically possible, but I really have to question why?  There's no performance benefit and it causes a lot of problems - like this one.</p>
+<p>Anyway, to answer your question: I don't think you can use QueryBuilder because I don't think PHQL resolves to SQL with database name, just table name.  You should be able to accomplish what you want by writing raw SQL, then using the DB service to execute it.  Whichever DB provider you use will need to be using a database account that has access to both privileges.  In your query, you'll need to specify the database along with the table name:</p>
+<pre><code class="language-SQL">SELECT
+  *
+FROM
+  users.clients.name like :name:
+WHERE
+  users.client.class = shared.cities.class</code></pre>
+<p>Also, you should never be putting a variable into a query like you're doing with <code>'%" . $name . "%'"</code> - it's way too easy to fall victim to SQL injection attacks.  You'll notice in my query how I used <code>:name:</code> as a token?  That's a prepared query that could be executed with:</p>
+<p>$DB-&gt;execute($query,['name'=&gt;'%'.$name.'%']);</p>
+<p>Doing it this way, the SQL server parses the query first, then injects your values into the parsed query.  Prepared queries avoids bad strings from affecting the parser.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63105" data-cf-modified-f1a478500ac6547a35d52b35-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63105" data-cf-modified-f1a478500ac6547a35d52b35-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f14b69c2e8b727a5488c20b5469abb2e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10733/fctoscano" class="user-moderator-N"><span itemprop="name">Flavio Toscano</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C63113" href="#C63113">
+                <time itemprop="dateCreated" datetime="2020-05-07T19:14:32-07:00" class="action-date">May '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks for the answer, i´ll try this approuch.</p>
+<p>Let´s say that a client want´s to recovery his data from 2 days ago. Having multiple databases, in this case, make things easier. There are some other benefits too, but makes the maintenance more difficult.</p>
+<p>And i´ll certainly change my code to bind values to que query. Thaks again!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63113" data-cf-modified-f1a478500ac6547a35d52b35-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63113" data-cf-modified-f1a478500ac6547a35d52b35-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/747be74e038e35ba2207da09388e3a0d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8217/talal424" class="user-moderator-N"><span itemprop="name">talal424</span></a>        </span>
+        <br>
+
+        <span class="karma">8.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C63141" href="#C63141">
+                <time itemprop="dateCreated" datetime="2020-05-12T17:50:05-07:00" class="action-date">May '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>if you want to simply get records from the old database and then create these records on the new database i suggest you set the old database as the <code>db</code> service and get your records then overwrite the <code>db</code> service with a new one using the new database and then add your records</p>
+<p>i faced an issue like this one before so this could help</p>
+<pre><code class="language-php">// in controller
+public function setConnection($database)
+{
+    $this-&gt;getDI()-&gt;remove('db');
+
+    $this-&gt;getDI()-&gt;set(
+        'db',
+        function () use ($db) {
+
+            $connection = new Mysql(['host' =&gt; 'localhost','username' =&gt; 'root','password' =&gt; '','dbname' =&gt; $database,'charset' =&gt; 'utf8']);
+
+            return $connection;
+        },
+        true
+    );
+}
+
+public function doSomething()
+{
+    $oldRobots = Robot::find(); // this is the initial db
+
+    // do something
+
+    $this-&gt;setConnection('recent_database');
+
+    foreach($oldRobots-&gt;toArray() as $robot) {
+
+        $newRecord = new Robot($robot);
+
+        $newRecord-&gt;save();
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="63141" data-cf-modified-f1a478500ac6547a35d52b35-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="63141" data-cf-modified-f1a478500ac6547a35d52b35-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="20615" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

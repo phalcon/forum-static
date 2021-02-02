@@ -1,0 +1,379 @@
+---
+layout: default
+title: 'multi module, use addModuleResource to create api do not work, error message is &quot;class xxxxController does not exist&quot; - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">multi module, use addModuleResource to create api do not work, error message is &quot;class xxxxController does not exist&quot;</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1302/Barbery" class="user-moderator-N"><span itemprop="name">Barbery</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-03-20T04:59:34-07:00">Mar '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-03-20T04:59:34-07:00">Mar '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1770</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/d41d8cd98f00b204e9800998ecf8427e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1302/Barbery" class="user-moderator-N"><span itemprop="name">Barbery</span></a></span>
+                <span class="karma">9.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1850" href="#C1850">
+        <time class="action-date">Mar '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>my project's structure like that:
+public/
+<strong>public/index.php</strong>
+ishgo/index/
+<strong>ishgo/index/Module.php</strong>
+ishgo/index/controllers/
+<strong>ishgo/index/controllers/UserController.php</strong></p>
+<h2>I want to know why the users api do not work, always show the error message &quot;class UserController does not exist&quot;... please help!</h2>
+<p>public/index.php</p>
+<pre><code>&lt;?php
+
+use \Phalcon\Mvc\Router,
+    \Phalcon\Mvc\Application,
+    \Phalcon\DI\FactoryDefault,
+    \Phalcon\Db\Adapter\Pdo\Mysql;
+
+try {
+
+    //define app path
+    define('ROOT_PATH', dirname(__DIR__));
+    define('APP_PATH', ROOT_PATH . '/ishgo');
+
+    $di = new FactoryDefault();
+    $di-&gt;set('router', function () {
+        $router = new \Phalcon\Mvc\Router\Annotations();
+        $router-&gt;setDefaultModule('index');
+        $router-&gt;addModuleResource('index', 'User', '/api/users');
+
+        return $router;
+    });
+
+    $di-&gt;set('db', function() {
+        return new Mysql(array(
+            'host'     =&gt; 'localhost',
+            'username' =&gt; 'root',
+            'password' =&gt; '',
+            'dbname'   =&gt; 'ishgo'
+        ));
+    });
+
+    //Create an application
+    $application = new Application($di);
+
+    // Register the installed modules
+    $application-&gt;registerModules(
+        array(
+            'index' =&gt; array(
+                'className' =&gt; 'Ishgo\Index\Module',
+                'path'      =&gt; APP_PATH . '/index/Module.php',
+            ),
+            'admin' =&gt; array(
+                'className' =&gt; 'Ishgo\Admin\Module',
+                'path'      =&gt; APP_PATH . '/admin/Module.php',
+            ),
+            'work'  =&gt; array(
+                'className' =&gt; 'Ishgo\Work\Module',
+                'path'      =&gt; APP_PATH . '/work/Module.php',
+            )
+        )
+    );
+
+    //add common functions
+    include APP_PATH . '/functions.php';
+    include ROOT_PATH . '/vendor/autoload.php';
+    session_start();
+    //Handle the request
+    echo $application-&gt;handle()-&gt;getContent();
+
+} catch(\Exception $e) {
+    echo $e-&gt;getMessage();
+}</code></pre>
+<p>ishgo/index/Module.php
+&lt;?php</p>
+<pre><code>namespace Ishgo\Index;
+
+use Phalcon\Loader,
+    Phalcon\Mvc\Dispatcher,
+    Phalcon\Mvc\View,
+    Phalcon\Mvc\ModuleDefinitionInterface;
+
+class Module implements ModuleDefinitionInterface
+{
+
+    /**
+     * Register a specific autoloader for the module
+     */
+    public function registerAutoloaders()
+    {
+
+        $loader = new Loader();
+
+        $loader-&gt;registerNamespaces(
+            array(
+                'Ishgo\Index\Controllers' =&gt; APP_PATH . '/index/controllers/',
+                'Ishgo\Index\Models'      =&gt; APP_PATH . '/index/models/',
+            )
+        );
+
+        $loader-&gt;register();
+    }
+
+    /**
+     * Register specific services for the module
+     */
+    public function registerServices($di)
+    {
+
+        //Registering a dispatcher
+        $di-&gt;set('dispatcher', function() {
+            $dispatcher = new Dispatcher();
+            $dispatcher-&gt;setDefaultNamespace('Ishgo\Index\Controllers');
+            return $dispatcher;
+        });
+
+        //Registering the view component
+        $di-&gt;set('view', function() {
+            $view = new View();
+            $view-&gt;setViewsDir(APP_PATH . '/index/views/');
+            return $view;
+        });
+    }
+
+}</code></pre>
+<p>ishgo/index/controllers/UserController.php</p>
+<pre><code>&lt;?php
+namespace Ishgo\Index\Controllers;
+
+/**
+ * @RoutePrefix("/api/users")
+ */
+class UserController extends \Phalcon\Mvc\Controller
+{
+    /**
+     * @Get("/{id:\d*}")
+     */
+    public function indexAction($id=0)
+    {
+        if (empty($id)) {
+            echo 'all users';
+        } else {
+            echo 'user by id:' . $id;
+        }
+
+    }
+
+    /**
+     * @Post("/{id:\d+}")
+     */
+    public function saveAction($id)
+    {
+        echo 'update user by id:' . $id;
+    }
+
+    /**
+     * @Put("/")
+     */
+    public function addAction()
+    {
+        echo 'add user';
+    }
+
+    /**
+     * @Delete("/{id:\d+}")
+     */
+    public function deleteAction($id)
+    {
+        echo 'delete user by id:' . $id;
+    }
+
+    /**
+     * @Post("/login")
+     */
+    public function loginAction()
+    {
+        echo 'user login';
+    }
+
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-7e09ec5b76deac71ff0a2121-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-7e09ec5b76deac71ff0a2121-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6389" href="#C6389">
+                <time itemprop="dateCreated" datetime="2014-03-20T08:50:32-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This is likely a misconfiguration in the autoloader, try adding an events manager to the auto-loader to find out why it can't load the classes: <a href="http://docs.phalcon.io/en/latest/reference/loader.html#autoloading-events">http://docs.phalcon.io/en/latest/reference/loader.html#autoloading-events</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6389" data-cf-modified-7e09ec5b76deac71ff0a2121-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6389" data-cf-modified-7e09ec5b76deac71ff0a2121-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d41d8cd98f00b204e9800998ecf8427e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1302/Barbery" class="user-moderator-N"><span itemprop="name">Barbery</span></a>        </span>
+        <br>
+
+        <span class="karma">9.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6423" href="#C6423">
+                <time itemprop="dateCreated" datetime="2014-03-20T20:29:51-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I add the events manager to the Module.php/registerAutoloaders, but the file of Module.php seems not execute</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6423" data-cf-modified-7e09ec5b76deac71ff0a2121-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6423" data-cf-modified-7e09ec5b76deac71ff0a2121-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d41d8cd98f00b204e9800998ecf8427e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1302/Barbery" class="user-moderator-N"><span itemprop="name">Barbery</span></a>        </span>
+        <br>
+
+        <span class="karma">9.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6424" href="#C6424">
+                <time itemprop="dateCreated" datetime="2014-03-20T21:06:22-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I have upload the code to the github...</p>
+<p><a href="https://github.com/Barbery/phalcon.git">code</a></p>
+<p>please help me to find out the problem...</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6424" data-cf-modified-7e09ec5b76deac71ff0a2121-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6424" data-cf-modified-7e09ec5b76deac71ff0a2121-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6425" href="#C6425">
+                <time itemprop="dateCreated" datetime="2014-03-20T21:41:41-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I get it working: <a href="https://www.dropbox.com/sh/o7c30m7zx8httsa/S8HmGtKOfJ">https://www.dropbox.com/sh/o7c30m7zx8httsa/S8HmGtKOfJ</a></p>
+<p>As general, the way in which annotated routes must be loaded was changed, it needed the full class name including its namespace and the autoloader is now global so as the application can process the routes in annotations from all modules.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6425" data-cf-modified-7e09ec5b76deac71ff0a2121-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6425" data-cf-modified-7e09ec5b76deac71ff0a2121-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d41d8cd98f00b204e9800998ecf8427e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1302/Barbery" class="user-moderator-N"><span itemprop="name">Barbery</span></a>        </span>
+        <br>
+
+        <span class="karma">9.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6429" href="#C6429">
+                <time itemprop="dateCreated" datetime="2014-03-21T05:24:50-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>thank you very much!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6429" data-cf-modified-7e09ec5b76deac71ff0a2121-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6429" data-cf-modified-7e09ec5b76deac71ff0a2121-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d41d8cd98f00b204e9800998ecf8427e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1302/Barbery" class="user-moderator-N"><span itemprop="name">Barbery</span></a>        </span>
+        <br>
+
+        <span class="karma">9.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6431" href="#C6431">
+                <time itemprop="dateCreated" datetime="2014-03-21T09:02:56-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>hi, I find out some problems... </p>
+<p>one:
+why i use http get method to visit /api/users/123 , but the deleteAction is executed...
+if i change the<a href="https://forum.phalcon.io/user/0/Delete"> @Delete</a>(&quot;/{id:\d+}&quot;) to<a href="https://forum.phalcon.io/user/0/Route"> @Route</a>(&quot;/{id:\d+}&quot;, methods=&quot;DELETE&quot;) , and then it is fine!</p>
+<p>two:
+the<a href="https://forum.phalcon.io/user/0/Put"> @Put</a>(&quot;/&quot;) seems do not work, when i use http put to visit this api, i always rewrite to the default namespace/controller/action</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6431" data-cf-modified-7e09ec5b76deac71ff0a2121-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6431" data-cf-modified-7e09ec5b76deac71ff0a2121-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1850" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

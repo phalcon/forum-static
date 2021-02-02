@@ -1,0 +1,181 @@
+---
+layout: default
+title: 'Automatic Joins Using Defined Foreign Key Relationships? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Automatic Joins Using Defined Foreign Key Relationships?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/11871/JoeyOverby" class="user-moderator-N"><span itemprop="name">JoeyOverby</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-12-12T17:38:59-07:00">Dec '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-12-12T17:38:59-07:00">Dec '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>236</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/d84f2d440337e7187f8266d04efa1bf2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/11871/JoeyOverby" class="user-moderator-N"><span itemprop="name">JoeyOverby</span></a></span>
+                <span class="karma">318</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C19105" href="#C19105">
+        <time class="action-date">Dec '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm trying to use the Query Builder's constructor and just specify the args variable to create my query. </p>
+<p>My hope is to be able to dynamically create joined queries this way.  Both of the classes have the many to many relationship well defined. I would love to be able to just specify that I need Person, and Address and it knows to use the PersonAddress table to find the relationships... </p>
+<p>Person Table:</p>
+<pre><code>            id  lastName    firstName   displayAs
+            1   Smith           Jeff                J Smith
+            2   Johnson      Mark           Mark Johnson
+            3   Rivers          Sally           Sally Rivers
+            4   Smith          Anna         Anna Smith
+            5   Rivers         Billy            Billy Rivers</code></pre>
+<p>Person Address Table</p>
+<pre><code>                person_id   address_id
+                1                       1
+                4                       1
+                2                       3
+                5                       3
+                3                       4</code></pre>
+<p>and finally Address Table</p>
+<pre><code>                id  nickname    streetNumber    streetName  city    state   zipcode
+                1   Home            123                         Main St      Windsor    CO  80550
+                2   Work            2561                        S Shields    Fort Collins   CO  80526
+                3   Home            512                         Rock Ave    Loveland    CO  12352
+                4   Home            999                         Uh Oh St    Severance   CO  80550</code></pre>
+<p>Both the Person and PersonAddress Models have the relationships well defined. (Created using the scaffolding)</p>
+<pre><code class="language-php">         public function initialize()
+          {
+              $this-&gt;setSchema("biz-mngmt-test");
+              $this-&gt;setSource("person");
+              $this-&gt;hasMany('id', 'models\PersonAddress', 'person_id', ['alias' =&gt; 'PersonAddress']);
+              $this-&gt;hasMany('id', 'models\PersonFamily', 'person_id', ['alias' =&gt; 'PersonFamily']);
+          }</code></pre>
+<p>However it seems to default to an outer join. </p>
+<pre><code class="language-php">            $params = [
+                "models" =&gt; ["models\\Person", "models\\PersonAddress"],
+                "columns" =&gt; ['firstName', 'lastName', 'address_id', 'person_id'],
+                "conditions" =&gt; "lastName = 'Smith'",
+
+            ];
+
+            $queryBuilder = new \Phalcon\Mvc\Model\Query\Builder($params, $this-&gt;getDI());
+
+            /** @var Phalcon\Mvc\Model\Resultset\Simple $result */
+            $result = $queryBuilder-&gt;getQuery()-&gt;execute();
+
+            $this-&gt;assertEquals(10, $result-&gt;count() );
+
+            //Double check the last name
+
+            foreach($result-&gt;jsonSerialize() as $row){
+                echo "" . implode(" ", $row) . "\n";
+                $this-&gt;assertEquals('Smith', $row['lastName']);
+            }
+            echo "All Good!\n";
+
+            echo print_r($result-&gt;jsonSerialize(),true);
+
+            $this-&gt;assertTrue(true);</code></pre>
+<p>Outputs:</p>
+<pre><code>          Jeff Smith 1 1
+          Anna Smith 1 1
+          Jeff Smith 1 4
+          Anna Smith 1 4
+          Jeff Smith 3 2
+          Anna Smith 3 2
+          Jeff Smith 3 5
+          Anna Smith 3 5
+          Jeff Smith 4 3
+          Anna Smith 4 3</code></pre>
+<p>Is there a way to specify that it does an implicit inner (or left) join on the foreign key relationships that it has defined?</p>
+<p>It looks like there is a join method that does an implicit join, that I could use if I have too, but would really be a lot cleaner if everything could just be listed in the parameters!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-1d37a054c163ff022efa62f3-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-1d37a054c163ff022efa62f3-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C58169" href="#C58169">
+                <time itemprop="dateCreated" datetime="2018-12-17T10:13:47-07:00" class="action-date">Dec '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I don't know for sure, but I doubt there's a way to modify the behaviour of QueryBuilder in this way.  If you want to ensure a left join is used, I think you'll have to build the query yourself.</p>
+<p>What exactly are you trying to test here?  Or is the testing code just to demonstrate the problem?</p>
+<p>If you're trying to find a way to get all addresses for a single Person, you can set up a <code>hasManyToMany()</code> relationship for that.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="58169" data-cf-modified-1d37a054c163ff022efa62f3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="58169" data-cf-modified-1d37a054c163ff022efa62f3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C58171" href="#C58171">
+                <time itemprop="dateCreated" datetime="2018-12-17T10:59:59-07:00" class="action-date">Dec '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Actually query builder is using if it can figure out joins, of course you still need to make an  like call leftJoin method, but you don't need to provide for example on condition, just class name is enough.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="58171" data-cf-modified-1d37a054c163ff022efa62f3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="58171" data-cf-modified-1d37a054c163ff022efa62f3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="19105" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

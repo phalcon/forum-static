@@ -1,0 +1,285 @@
+---
+layout: default
+title: 'Extra properties in the query response object. How to get only the properties I need? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Extra properties in the query response object. How to get only the properties I need?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1991/patrioticcow" class="user-moderator-N"><span itemprop="name">patrioticcow</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-07-24T13:02:02-07:00">Jul '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-07-24T13:02:02-07:00">Jul '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>918</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/f939f13f83c6b530a01071a21cd0efb1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1991/patrioticcow" class="user-moderator-N"><span itemprop="name">patrioticcow</span></a></span>
+                <span class="karma">4.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2920" href="#C2920">
+        <time class="action-date">Jul '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,</p>
+<p>Here is my situation. I am using <code>find()</code> to look for a record in a db and I pass it to the <code>ReflectionObject</code> </p>
+<pre><code>$result = $this-&gt;find($id);
+return $this-&gt;getResultObjects($result);
+
+...
+protected function getResultObjects($result)
+{
+    foreach ($result as $row) {
+        $this-&gt;users-&gt;setProperty($row);
+    }
+}
+
+...
+public function setProperty($object)
+{
+    $reflection = new \ReflectionObject($object);
+
+    foreach ($reflection-&gt;getProperties() as $property) {
+        $property-&gt;setAccessible(TRUE);
+        $key        = '_' . $property-&gt;getName();
+        $this-&gt;$key = $property-&gt;getValue($object);
+    }
+
+    return $this;
+}</code></pre>
+<p>if i leave this as is then i get <code>Phalcon\Exception: Invalid __set property _di</code> that is because i don't have a protected var <code>$_di</code>
+my model has only:</p>
+<pre><code>protected $_id;
+protected $_name;
+protected $_email;
+protected $_password;</code></pre>
+<p>but if I <code>var_dump($reflection-&gt;getProperties());</code> i get a lot more properties (see below) and i only want to pass to the <code>ReflectionObject</code> the properties that my model has</p>
+<p>Is there a way to only grab the properties I need from the query result and ignore the rest of them? </p>
+<p>edit: i know i could just type the name of the properties i want, but that defits the purpose of my <code>getResultObjects()</code> method, that automatically sets the class properties</p>
+<pre><code>array (size=18)
+0 =&gt; &amp;
+object(ReflectionProperty)[128]
+  public 'name' =&gt; string 'di' (length=2)
+  public 'class' =&gt; string 'Application\Models\Users' (length=24)
+1 =&gt; &amp;
+object(ReflectionProperty)[127]
+  public 'name' =&gt; string 'usersEntity' (length=11)
+  public 'class' =&gt; string 'Application\Models\Users' (length=24)
+2 =&gt; &amp;
+object(ReflectionProperty)[126]
+  public 'name' =&gt; string '_dependencyInjector' (length=19)
+  public 'class' =&gt; string 'Phalcon\Mvc\Model' (length=17)
+3 =&gt; &amp;
+object(ReflectionProperty)[125]
+  public 'name' =&gt; string '_modelsManager' (length=14)
+  public 'class' =&gt; string 'Phalcon\Mvc\Model' (length=17)
+...
+...
+... i want only the ones below 
+15 =&gt; &amp;
+object(ReflectionProperty)[143]
+  public 'name' =&gt; string 'id' (length=2)
+  public 'class' =&gt; string 'Application\Models\Users' (length=24)
+16 =&gt; &amp;
+object(ReflectionProperty)[144]
+  public 'name' =&gt; string 'name' (length=4)
+  public 'class' =&gt; string 'Application\Models\Users' (length=24)
+17 =&gt; &amp;
+object(ReflectionProperty)[145]
+  public 'name' =&gt; string 'email' (length=5)
+  public 'class' =&gt; string 'Application\Models\Users' (length=24)
+18 =&gt; &amp;
+object(ReflectionProperty)[146]
+  public 'name' =&gt; string 'password' (length=8)
+  public 'class' =&gt; string 'Application\Models\Users' (length=24)</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-12d868204099c5f817593cc6-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-12d868204099c5f817593cc6-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9719" href="#C9719">
+                <time itemprop="dateCreated" datetime="2014-07-24T13:48:48-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think the strategy of using ReflectionObject is not optimal here. Maybe a better approach would be query the models meta-data service:</p>
+<pre><code class="language-php">public function setProperty($object)
+{
+    foreach ($object-&gt;getModelsMetaData()-&gt;getAttributes($object) as $property) {        
+        $object-&gt;writeAttribute($property, $object-&gt;readAttribute($property));
+    }
+    return $this;
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9719" data-cf-modified-12d868204099c5f817593cc6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9719" data-cf-modified-12d868204099c5f817593cc6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f939f13f83c6b530a01071a21cd0efb1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1991/patrioticcow" class="user-moderator-N"><span itemprop="name">patrioticcow</span></a>        </span>
+        <br>
+
+        <span class="karma">4.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9720" href="#C9720">
+                <time itemprop="dateCreated" datetime="2014-07-24T13:55:13-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>how would you rewrite the <code>getProperty</code> ?</p>
+<p>im getting <code>Warning: ReflectionClass::__construct() expects exactly 1 parameter, 0 ..</code> so i think i need to rewrite this method as well </p>
+<pre><code>public function getProperties($object = NULL)
+{
+    $object = NULL == $object ? $this : $object;
+
+    $array = array();
+
+    $reflection = new \ReflectionObject($object);
+
+    foreach ($reflection-&gt;getProperties(\ReflectionProperty::IS_PROTECTED) as $property) {
+        $property-&gt;setAccessible(TRUE);
+        if (!$property-&gt;isStatic()) {
+            $array[preg_replace('/_/', '', $property-&gt;getName(), 1)] = $property-&gt;getValue($object);
+        }
+    }
+
+    if (empty($array)) return '';
+
+    return $array;
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9720" data-cf-modified-12d868204099c5f817593cc6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9720" data-cf-modified-12d868204099c5f817593cc6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9721" href="#C9721">
+                <time itemprop="dateCreated" datetime="2014-07-24T13:57:36-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I would not use \ReflectionClass or ReflectionObject either. Why not give a try to the meta-data service?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9721" data-cf-modified-12d868204099c5f817593cc6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9721" data-cf-modified-12d868204099c5f817593cc6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f939f13f83c6b530a01071a21cd0efb1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1991/patrioticcow" class="user-moderator-N"><span itemprop="name">patrioticcow</span></a>        </span>
+        <br>
+
+        <span class="karma">4.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9722" href="#C9722">
+                <time itemprop="dateCreated" datetime="2014-07-24T13:58:27-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>:) ok, will do</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9722" data-cf-modified-12d868204099c5f817593cc6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9722" data-cf-modified-12d868204099c5f817593cc6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f939f13f83c6b530a01071a21cd0efb1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1991/patrioticcow" class="user-moderator-N"><span itemprop="name">patrioticcow</span></a>        </span>
+        <br>
+
+        <span class="karma">4.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="9724" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '14</span>
+              </span><br/><a name="C9724" href="#C9724">
+                <time itemprop="dateCreated" datetime="2014-07-24T15:35:29-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Just as an addon, this is what worked for me</p>
+<pre><code>public function setProperty($object)
+{
+    foreach ($object-&gt;getModelsMetaData()-&gt;getAttributes($object) as $property) {
+        $key        = '_' . $property;
+        $this-&gt;$key = $object-&gt;readAttribute($property);
+    }
+
+    return $this;
+}</code></pre>
+<p>this <code>$object-&gt;writeAttribute($property, $object-&gt;readAttribute($property));</code> doesn't set the properties, they become <code>NULL</code>, even if I add the <code>_</code>.</p>
+<p>I would like to know why, but either way the code works using the meta-data</p>
+<p>thanks</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9724" data-cf-modified-12d868204099c5f817593cc6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9724" data-cf-modified-12d868204099c5f817593cc6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2920" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

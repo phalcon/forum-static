@@ -1,0 +1,151 @@
+---
+layout: default
+title: 'Implement Implicit Model Binding like Laravel 5.2 - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/24/show-community">Show to Community</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Implement Implicit Model Binding like Laravel 5.2</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3635/huoybb" class="user-moderator-N"><span itemprop="name">huoybb</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-02-09T06:30:35-07:00">Feb '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-02-09T06:30:35-07:00">Feb '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Feb '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>661</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/2b4db4eed8ca8b786c8af3d3c5c0598d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3635/huoybb" class="user-moderator-N"><span itemprop="name">huoybb</span></a></span>
+                <span class="karma">7.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C10417" href="#C10417">
+        <time class="action-date">Feb '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I like the Implicit model binding provided by laravel 5.2, after some work , found could implement this way:
+route file:</p>
+<pre><code class="language-php">$router-&gt;add('/tags/{tag:[0-9]+}/item/{file:[0-9]+}','tags::showItem')-&gt;setName('tags.showItem');</code></pre>
+<p>for TagsController.php:</p>
+<pre><code class="language-php">public function showItemAction(Tags $tag,Files $file)
+    {
+        $this-&gt;view-&gt;mytag = $tag;
+        $this-&gt;view-&gt;page = $tag-&gt;getShowItemPage($file);
+        $this-&gt;view-&gt;file = $file;
+        $this-&gt;view-&gt;form = myForm::buildCommentForm($file-&gt;getTaggable($tag)-&gt;getFirst());
+    }</code></pre>
+<p>In order to get this, I found the way like this :
+in dispatch.php</p>
+<pre><code class="language-php">
+$eventsManager = new \Phalcon\Events\Manager();
+$eventsManager-&gt;attach("dispatch:beforeDispatchLoop", function($event, \Phalcon\Mvc\Dispatcher $dispatcher){
+    try{
+        $reflection = new ReflectionMethod($dispatcher-&gt;getControllerClass(), $dispatcher-&gt;getActiveMethod());
+        $actionParams = [];
+        foreach($reflection-&gt;getParameters() as $parameter){
+
+            $objectId = $dispatcher-&gt;getParam($parameter-&gt;name);
+            if(null == $objectId &amp;&amp; $parameter-&gt;isDefaultValueAvailable()) $objectId = $parameter-&gt;getDefaultValue();
+
+            if($parameter-&gt;getClass()){
+               // $className = RouterFacade::getProvider($parameter-&gt;getClass()-&gt;name);
+                $className = $parameter-&gt;getClass()-&gt;name;
+
+                if($objectId){
+                    if(is_subclass_of($className,\Phalcon\Mvc\Model::class)){
+                        /** @var \Phalcon\Mvc\Model $className */
+                        $actionParams[$parameter-&gt;name] = $className::findFirst($objectId);
+                    }else{
+                        $actionParams[$parameter-&gt;name] = new $className($objectId);
+                    }
+
+                }else{
+                    $actionParams[$parameter-&gt;name] = new $className;
+                }
+            }else{
+                $actionParams[$parameter-&gt;name] = $objectId;
+            }
+        }
+
+        if(count($actionParams)){
+            $dispatcher-&gt;setParams($actionParams);
+        }
+
+    } catch(\Phalcon\Exception $e) {
+        var_dump($e);
+        die();
+    }
+
+});
+
+$dispatcher = new \Phalcon\Mvc\Dispatcher();
+$dispatcher-&gt;setEventsManager($eventsManager);
+return $dispatcher;</code></pre>
+<p>It just works like in laravel, if you want to bind interface to some class, you could substitue &quot; $className = $parameter-&gt;getClass()-&gt;name;&quot; by some function you defined.</p>
+<p>What do you think of  this method? If you have a better idea, pls comment!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-218ac566041d407afe63fc8e-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-218ac566041d407afe63fc8e-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e089a17872ac028d8745a75f56e34d54?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2493/SidRoberts" class="user-moderator-N"><span itemprop="name">Sid Roberts</span></a>        </span>
+        <br>
+
+        <span class="karma">1.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C29759" href="#C29759">
+                <time itemprop="dateCreated" datetime="2016-02-10T03:42:54-07:00" class="action-date">Feb '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>There was a Pull Request about this recently which will be available in Phalcon 2.1: <a href="https://github.com/phalcon/cphalcon/pull/11288">https://github.com/phalcon/cphalcon/pull/11288</a></p>
+<p>I've also made an alternative implementation here which is available as a Composer package and works with Phalcon 2.0: <a href="https://github.com/SidRoberts/phalcon-boundmodels">https://github.com/SidRoberts/phalcon-boundmodels</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="29759" data-cf-modified-218ac566041d407afe63fc8e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="29759" data-cf-modified-218ac566041d407afe63fc8e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="10417" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

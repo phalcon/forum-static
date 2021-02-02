@@ -1,0 +1,256 @@
+---
+layout: default
+title: 'Error when extending Uniqueness validator - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Error when extending Uniqueness validator</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/11251/JetA2" class="user-moderator-N"><span itemprop="name">JetA2</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-08-22T03:11:08-07:00">Aug '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-08-22T03:11:08-07:00">Aug '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>320</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/720e489849269b5d1b68ae18a71d77a2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/11251/JetA2" class="user-moderator-N"><span itemprop="name">JetA2</span></a></span>
+                <span class="karma">1.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C18741" href="#C18741">
+        <time class="action-date">Aug '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>I'm extending the Uniqueness validator for use in a model. When the validator is run for a table update, I'm getting the following error:</p>
+<pre><code>Phalcon\Mvc\Model\Exception: Column 'primaryKey' doesn't belong to any of the selected models (1), when preparing: SELECT COUNT(*) AS rowcount FROM [Test] WHERE mappedData = ?0 AND primaryKey &lt;&gt; ?1</code></pre>
+<p>I am using a columnMap for my model and when the query is constructed the mapped column name is used but not the mapped primary key name. This only happens when using my extension of the uniqueness validator. If I use the parent class directly there is no problem. </p>
+<p>The validator in my sample code simply calls the parent validate method and it still fails. Am I running into some PHP inheritance issue here?</p>
+<p>Sample code below:</p>
+<pre><code class="language-php">&lt;?php
+
+error_reporting( E_ALL );
+
+function printError( $inError )
+{
+    echo "&lt;pre&gt;";
+    echo get_class( $inError ), ": ", $inError-&gt;getMessage(), "\n\n";
+
+    echo "Phalcon Version: ", Phalcon\Version::get(), "\n";
+    echo "File: ", $inError-&gt;getFile(), "\n";
+    echo "Line: ", $inError-&gt;getLine(), "\n\n";
+
+    echo $inError-&gt;getTraceAsString();
+
+    echo "&lt;/pre&gt;";
+}
+
+class ExtendedUniquenessValidator extends Phalcon\Validation\Validator\Uniqueness
+{
+    public function validate( Phalcon\Validation $inValidation, $inField )
+    {
+        return parent::validate( $inValidation, $inField );
+    }
+}
+
+class Test extends \Phalcon\Mvc\Model
+{
+    public $mappedPrimaryKey;
+    public $mappedData;
+
+    public function columnMap()
+    {
+        // Keys are the real names in the table and
+        // the values their names in the application
+        //
+        return array(
+            "primaryKey"    =&gt; "mappedPrimaryKey",  
+            "data"          =&gt; "mappedData"
+        );
+    }
+
+    public function validation()
+    {
+        $validator = new Phalcon\Validation();          
+
+        //$uv = new Phalcon\Validation\Validator\Uniqueness( array("message" =&gt; "Data must be unique" ));       // works
+        $uv = new ExtendedUniquenessValidator( array("message" =&gt; "Data must be unique" ));                     // doesn't work
+
+        $validator-&gt;add( "mappedData", $uv );
+
+        return $this-&gt;validate( $validator );
+    }
+}
+
+try
+{
+
+$di = new Phalcon\DI\FactoryDefault();
+
+$di-&gt;setShared('db', function () {
+    return new \Phalcon\Db\Adapter\PDO\Sqlite(array(
+        'dbname'   =&gt; ':memory:'
+    ));
+});
+
+$di['db']-&gt;createTable(
+    'test',
+    null,
+    [
+       'columns' =&gt; [
+            new \Phalcon\Db\Column(
+                'primaryKey',
+                [
+                    'type'          =&gt; \Phalcon\Db\Column::TYPE_INTEGER,
+                    'notNull'       =&gt; true,
+                    'autoIncrement' =&gt; true,
+                    'primary'       =&gt; true,
+                ]
+            ),
+            new \Phalcon\Db\Column(
+                'data',
+                [
+                    'type'    =&gt; \Phalcon\Db\Column::TYPE_TEXT,
+                    'notNull' =&gt; true,
+                ]
+            )
+        ]
+    ]
+);
+
+$testObject1 = new Test;
+$testObject1-&gt;mappedData = "Object 1";
+$testObject1-&gt;save();
+
+$result = Test::findFirst();
+$result-&gt;mappedData = "Object 2"; 
+$result-&gt;save();        // Triggers exception
+
+echo "end";
+
+}
+catch ( \Exception $e )
+{
+    printError( $e );
+}
+catch ( \Error $e )
+{
+    printError( $e );
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-69238e86686e1c870c1a055c-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-69238e86686e1c870c1a055c-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C57105" href="#C57105">
+                <time itemprop="dateCreated" datetime="2018-08-22T09:50:51-07:00" class="action-date">Aug '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yea actualy it was a bug which was fixed on 3.4.1. Why even have primary key other than in database?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57105" data-cf-modified-69238e86686e1c870c1a055c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57105" data-cf-modified-69238e86686e1c870c1a055c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/720e489849269b5d1b68ae18a71d77a2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11251/JetA2" class="user-moderator-N"><span itemprop="name">JetA2</span></a>        </span>
+        <br>
+
+        <span class="karma">1.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="57107" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '18</span>
+              </span><br/><a name="C57107" href="#C57107">
+                <time itemprop="dateCreated" datetime="2018-08-22T10:02:59-07:00" class="action-date">Aug '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The issue I am having does not seem to be related to issue #13398 if this is what you are referring to. This issue exists also in 3.4.1.</p>
+<p>The error does not appear when I use the Uniqueness validator directly, only when I subclass it.
+It is very strange and I do not understand the reason for it. It is as if the columnMap property in the validator is always null if I subclass it, but I don't see why that would happen.</p>
+<p>I'm using PHP7.2, can it be reproduced in other PHP versions?
+Is there anything special I should do when subclassing a phalcon class?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57107" data-cf-modified-69238e86686e1c870c1a055c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57107" data-cf-modified-69238e86686e1c870c1a055c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/720e489849269b5d1b68ae18a71d77a2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11251/JetA2" class="user-moderator-N"><span itemprop="name">JetA2</span></a>        </span>
+        <br>
+
+        <span class="karma">1.3k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C57159" href="#C57159">
+                <time itemprop="dateCreated" datetime="2018-08-30T02:42:04-07:00" class="action-date">Aug '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I fixed the issue by adding the &quot;columnMap&quot; property to my derived class,  duplicating the property declaration of the Uniqueness class.</p>
+<p>I have no idea why this is required, probably some PHP inheritance issue and not a Phalcon issue.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57159" data-cf-modified-69238e86686e1c870c1a055c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57159" data-cf-modified-69238e86686e1c870c1a055c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="18741" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,138 @@
+---
+layout: default
+title: 'Getting controller/action name in beforeMatch for routing - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Getting controller/action name in beforeMatch for routing</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/9009/jesseforrest" class="user-moderator-N"><span itemprop="name">Jesse Forrest</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-04-08T11:25:01-07:00">Apr '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-04-08T11:25:01-07:00">Apr '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Apr '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1044</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/47211aa0bcc834f0f504558b319ee0bf?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/9009/jesseforrest" class="user-moderator-N"><span itemprop="name">Jesse Forrest</span></a></span>
+                <span class="karma">2.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C15925" href="#C15925">
+        <time class="action-date">Apr '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm trying to simplify a routing scheme to only make a generic route handle many cases. I have the following code:</p>
+<pre><code>    // Routes must be in the format `/api/&lt;controller&gt;/ajax-&lt;action&gt;`
+    // Example: `/api/purchase/ajax-add-value` maps to `PurchaseController::ajaxAddValueAction`
+    $router-&gt;add('/api/([a-z-]+)/(ajax-[a-z0-9-]+)', [
+        'controller' =&gt; 1,
+        'action' =&gt; 2,
+    ])-&gt;convert('controller', function($controller) {
+        return Text::camelize($controller);
+    })-&gt;convert('action', function($action) {
+        return lcfirst(Text::camelize($action));
+    });</code></pre>
+<p>This is working great for the controllers/actions that exist. However, when something matches the pattern that doesn't exist, it's throwing a 503.  I was wondering if there was something I can chain to this to make the route not match if the controller/action does not exist.  I tried to toy around with <code>$route-&gt;beforeMatch()</code>   ,  but was unsuccessful at getting the controller and action name. Any advice here would be appreciated.</p>
+<p>An example invalid route would be: <code>/api/foo/ajax-bar</code></p>
+<p>I did see this similar unresolved discussion:
+<a href="https://forum.phalcon.io/discussion/7367/best-way-to-check-if-a-controller-exists-in-a-custom-route-match">https://forum.phalcon.io/discussion/7367/best-way-to-check-if-a-controller-exists-in-a-custom-route-match</a></p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-b06f9818a02dc0f986f256e6-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-b06f9818a02dc0f986f256e6-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e05a71a3c55b7800771353f025c8fd03?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4529/tkroll" class="user-moderator-N"><span itemprop="name">Ty Kroll</span></a>        </span>
+        <br>
+
+        <span class="karma">8.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C47445" href="#C47445">
+                <time itemprop="dateCreated" datetime="2017-04-08T23:19:08-07:00" class="action-date">Apr '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This is usually passed off to the the Dispatcher.  You can use these inside the handler to get controllers, actions:</p>
+<p><code>$controller = $dispatcher-&gt;getControllerName();</code></p>
+<p><code>$action = $dispatcher-&gt;getActionName();</code></p>
+<p>Here is an example to handle bad routes from my services.php:</p>
+<pre><code class="language-php">$di-&gt;set('dispatcher', function() {
+
+    // Create an EventsManager
+    $eventsManager = new Phalcon\Events\Manager();
+
+    // Attach a listener
+    $eventsManager-&gt;attach('dispatch:beforeException', function($event, $dispatcher, $exception) {
+
+        // handle exceptions
+        switch($exception-&gt;getCode()) {
+
+            case Phalcon\Mvc\Dispatcher::EXCEPTION_HANDLER_NOT_FOUND:
+            case Phalcon\Mvc\Dispatcher::EXCEPTION_ACTION_NOT_FOUND:
+                // forward to 404 page
+                $dispatcher-&gt;forward([
+                    'controller' =&gt; 'error404',
+                    'action' =&gt; 'index'
+                ]);
+                return false;
+        }
+    });
+
+    $dispatcher = new Phalcon\Mvc\Dispatcher();
+
+    // Bind the EventsManager to the dispatcher
+    $dispatcher-&gt;setEventsManager($eventsManager);
+
+    return $dispatcher;
+
+}, true);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="47445" data-cf-modified-b06f9818a02dc0f986f256e6-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="47445" data-cf-modified-b06f9818a02dc0f986f256e6-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="15925" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

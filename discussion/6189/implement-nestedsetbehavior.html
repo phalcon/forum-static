@@ -1,0 +1,190 @@
+---
+layout: default
+title: 'implement NestedSetBehavior - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/19/incubator">Incubator</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">implement NestedSetBehavior</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3492/jacky-htg" class="user-moderator-N"><span itemprop="name">jacky-htg</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-03-17T20:14:59-07:00">Mar '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-03-17T20:14:59-07:00">Mar '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>844</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/f9a0fda2767edbf3c3dbebbaa11d3607?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3492/jacky-htg" class="user-moderator-N"><span itemprop="name">jacky-htg</span></a></span>
+                <span class="karma">911</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6189" href="#C6189">
+        <time class="action-date">Mar '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have problem when implement a NestedSetBehavior from incubator libraries.
+My Phalcon version is 1.3.3.</p>
+<p>I create a folder &quot;nested&quot; that have 5 files (.htaccess, index.php, CategoriesController.php, Categories.php, and NestedSetBehavior.php). and i create categories table :</p>
+<pre><code>CREATE TABLE IF NOT EXISTS  `categories` (
+    `id` int(11) NOT NULL,
+    `lft` int(11) NOT NULL,
+    `rgt` int(11) NOT NULL,
+    `level` int(11) NOT NULL,
+    `title` varchar(45) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;</code></pre>
+<p>index.php file :</p>
+<pre><code class="language-php">&lt;?php
+$loader=new \Phalcon\Loader();
+$loader-&gt;registerDirs(array(__DIR__))-&gt;register();
+
+$di = new \Phalcon\DI\FactoryDefault();
+$di-&gt;set('db', function() {
+    return new \Phalcon\Db\Adapter\Pdo\Mysql(array(
+        "host" =&gt; "localhost",
+        "username" =&gt; "root",
+        "password" =&gt; "jacky^45",
+        "dbname" =&gt; "dealer_acl"
+    ));
+});
+
+$di-&gt;set('view', function() {
+    return new \Phalcon\Mvc\View();
+});
+
+$app = new \Phalcon\Mvc\Application($di);
+echo $app-&gt;handle()-&gt;getContent();
+</code></pre>
+<p>CategoriesController.php file :</p>
+<pre><code class="language-php">&lt;?php
+class CategoriesController extends Phalcon\Mvc\Controller
+{
+    public function indexAction()
+    {
+        $category = new Categories();
+        $category-&gt;title='Cars'; 
+        $category-&gt;saveNode();
+    }
+}</code></pre>
+<p>Categories.php file :</p>
+<pre><code class="language-php">&lt;?php
+class Categories extends Phalcon\Mvc\Model
+{
+    public $id;
+    public $lft;
+    public $rgt;
+    public $level;
+    public $title;
+
+    public function initialize()
+    {
+        $this-&gt;addBehavior(new NestedSetBehavior(array(
+            'leftAttribute' =&gt; 'lft',
+            'rightAttribute' =&gt; 'rgt',
+            'levelAttribute' =&gt; 'level'
+        )));
+    }
+}</code></pre>
+<p>NestedSetBehavior.php i have copied from <a href="https://raw.githubusercontent.com/phalcon/incubator/master/Library/Phalcon/Mvc/Model/Behavior/NestedSet.php">https://raw.githubusercontent.com/phalcon/incubator/master/Library/Phalcon/Mvc/Model/Behavior/NestedSet.php</a> with any modification :</p>
+<ol>
+<li>delete namespace on line 3</li>
+<li>change nameclass from NestedSet to NestedSetBehavior </li>
+<li>change the value of hasmanyRoots, from false to true <code>private $hasManyRoots=true;</code></li>
+</ol>
+<p>while i run <a href="http://localhost/nested/categories">http://localhost/nested/categories</a>, get error message &quot;There is no active transaction&quot;, but data inserted on database. So i try to add transaction code in controller:</p>
+<pre><code class="language-php">public function indexAction()
+{
+    $trManager = new \Phalcon\Mvc\Model\Transaction\Manager();
+    $tr = $trManager-&gt;get();
+
+    $category = new Categories();
+    $category-&gt;setTransaction($tr);
+    $category-&gt;title='Laptop'; 
+    $category-&gt;saveNode();
+}
+</code></pre>
+<p>error message show  &quot;Fatal error: Call to a member function update() on a non-object in... on line 796&quot;.
+code in line 796 is : <code>$owner::findFirst($pk)-&gt;update(array($this-&gt;rootAttribute =&gt; $pk));</code>.</p>
+<p>if i debug, <code>$pk</code> variable has a integer value. but operation of  <code>$owner::findFirst($pk)</code> is failed to get a record. if i <code>var_dump($owner::findFirst($pk))</code> get bool(false) result. So operation of update is getting fatal error.</p>
+<p>I try another command,  appendTo() and change my controller :</p>
+<pre><code class="language-php">public function indexAction()
+{
+    $trManager = new \Phalcon\Mvc\Model\Transaction\Manager();
+    $tr = $trManager-&gt;get();
+
+    $root = new Categories();
+    $root = $root-&gt;findFirst();
+
+    $category= new Categories();
+    $category-&gt;setTransaction($tr);
+    $category-&gt;title='BMW';
+    $category-&gt;appendTo($root);
+}</code></pre>
+<p>error message show Query syntaxt error. if i debug query show like this &quot;UPDATE categories SET lft=lft+2 WHERE lft&gt;=2 AND root=&quot;</p>
+<p>anyone can help me to implement NestedSetBehavior? Thanks.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-911c668dfc57fe42f2bf0bda-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-911c668dfc57fe42f2bf0bda-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c0ce8f5e133750a4dfea4712e533a178?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/15/le51" class="user-moderator-N"><span itemprop="name">le51</span></a>        </span>
+        <br>
+
+        <span class="karma">43.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16666" href="#C16666">
+                <time itemprop="dateCreated" datetime="2015-03-18T08:33:23-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi,</p>
+<p>have a look <a href="http://forum.phalcon.io/discussion/6105/incubator-tree-move-a-node-not-work">here</a> for your problem with  &quot;There is no active transaction&quot; message</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16666" data-cf-modified-911c668dfc57fe42f2bf0bda-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16666" data-cf-modified-911c668dfc57fe42f2bf0bda-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6189" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

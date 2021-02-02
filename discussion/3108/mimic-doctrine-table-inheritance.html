@@ -1,0 +1,462 @@
+---
+layout: default
+title: 'Mimic Doctrine Table inheritance - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Mimic Doctrine Table inheritance</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/662/ogarbe" class="user-moderator-N"><span itemprop="name">Olivier.Garbé</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-08-13T10:58:53-07:00">Aug '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-08-13T10:58:53-07:00">Aug '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1584</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/c58542c4c2b9171a023c69e6711c16f1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/662/ogarbe" class="user-moderator-N"><span itemprop="name">Olivier.Garbé</span></a></span>
+                <span class="karma">24.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3108" href="#C3108">
+        <time class="action-date">Aug '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'd like to mimic Doctrine Table inheritance (<a href="http://the-phpjs-ldc.rgou.net/symfony1/more-with-symfony/en/09-Doctrine-Form-Inheritance.markdown">http://the-phpjs-ldc.rgou.net/symfony1/more-with-symfony/en/09-Doctrine-Form-Inheritance.markdown</a> )</p>
+<p>I've manage to do it for findFirst method </p>
+<pre><code class="language-php">public static function findFirst($parameters = null)
+    {
+        $object = parent::findFirst($parameters);
+
+        if (!$object) {
+            return false;
+        }
+
+        switch ($object-&gt;type) {
+            case 'Offer':
+                $return = new Offer();
+                break;
+            default:
+                return $object;
+        }
+        $return-&gt;assign($object-&gt;toArray());
+        return $return;
+    }</code></pre>
+<p>(here we assume that the column type can have an Offer value and we want the model associated to be Offer (which inherit our own class)</p>
+<p>It works.</p>
+<p>But i don't find a good way to do this for find method, the idea would be to do the same kind on things while iterating in resultset. But how to hook query to return our own resultset and not the ResultSet\Simple ?</p>
+<p>Thanks in advance</p>
+<p>Olivier</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-cbd7200657e3d4dcf9c40097-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-cbd7200657e3d4dcf9c40097-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c58542c4c2b9171a023c69e6711c16f1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/662/ogarbe" class="user-moderator-N"><span itemprop="name">Olivier.Garbé</span></a>        </span>
+        <br>
+
+        <span class="karma">24.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="10317" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '14</span>
+              </span><br/><a name="C10317" href="#C10317">
+                <time itemprop="dateCreated" datetime="2014-08-14T03:24:21-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>update, here is the hack done on query on the _executeSelect</p>
+<p>I had to do an hack because my standard find (without any column selected was bugging :</p>
+<pre><code class="language-php">protected function _executeSelect(array $intermediate, array $bindParams, array $bindTypes = null)
+    {
+        $models = array_keys($this-&gt;_models);
+        $model = $models[0];
+        $object = new $model();
+        $dialect = $object-&gt;getReadConnection()-&gt;getDialect();
+
+        $sql = $dialect-&gt;select($intermediate);
+
+        // hack due to unknown bug in select
+        $sql = str_replace('`' . $this-&gt;_models[$model]. '` FROM', '* FROM', $sql);
+
+        return new ResultSet(
+            $this-&gt;_metaData-&gt;getColumnMap($object),
+            $object,
+            $object-&gt;getReadConnection()-&gt;query(
+                $sql,
+                $bindParams,
+                $bindTypes
+            ),
+            $this-&gt;getCache()
+        );
+    }</code></pre>
+<p>the find method in the Model object is</p>
+<pre><code class="language-php">public static function find($parameters = null)
+    {
+        if (!is_array($parameters)) {
+            $parameters = [$parameters];
+        }
+
+        $builder = new Builder($parameters);
+        $builder-&gt;from(get_called_class());
+
+        if (isset($parameters['bind'])) {
+            return $builder-&gt;getQuery()-&gt;execute($parameters['bind']);
+        } else {
+            return $builder-&gt;getQuery()-&gt;execute();
+        }
+    }</code></pre>
+<p>builder is a basic class with only one overrided method</p>
+<pre><code class="language-php">    public function getQuery()
+    {
+        $query = new Query($this-&gt;getPhql());
+        $query-&gt;setDI($this-&gt;getDI());
+        return $query;
+    }</code></pre>
+<p>Do you know why i had to do this horrible hack ?</p>
+<pre><code class="language-php">    // hack due to unknown bug in select
+   $sql = str_replace('`' . $this-&gt;_models[$model]. '` FROM', '* FROM', $sql);</code></pre>
+<p>Thanks !!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10317" data-cf-modified-cbd7200657e3d4dcf9c40097-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10317" data-cf-modified-cbd7200657e3d4dcf9c40097-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c58542c4c2b9171a023c69e6711c16f1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/662/ogarbe" class="user-moderator-N"><span itemprop="name">Olivier.Garbé</span></a>        </span>
+        <br>
+
+        <span class="karma">24.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11061" href="#C11061">
+                <time itemprop="dateCreated" datetime="2014-09-05T03:47:11-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>New question : how to hook the relation to do the same ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11061" data-cf-modified-cbd7200657e3d4dcf9c40097-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11061" data-cf-modified-cbd7200657e3d4dcf9c40097-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c58542c4c2b9171a023c69e6711c16f1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/662/ogarbe" class="user-moderator-N"><span itemprop="name">Olivier.Garbé</span></a>        </span>
+        <br>
+
+        <span class="karma">24.1k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="11102" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '14</span>
+              </span><br/><a name="C11102" href="#C11102">
+                <time itemprop="dateCreated" datetime="2014-09-06T07:05:42-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Complete new thinking on the problem :</p>
+<p>change in Phalcon 1.3.3 ( <a href="https://github.com/phalcon/cphalcon/pull/2789">https://github.com/phalcon/cphalcon/pull/2789</a> ) and 2.0.0 ( <a href="https://github.com/phalcon/cphalcon/pull/2790">https://github.com/phalcon/cphalcon/pull/2790</a> ) to use late state binding on cloneResultMap than override cloneResultMap on the &quot;parent&quot; model class :</p>
+<pre><code class="language-php">/**
+     * Assigns values to a model inherited class from an array returning a new model.
+     *
+     * @param \Phalcon\Mvc\Model $base          object to hydrate
+     * @param array              $data          data to use for hydration
+     * @param array              $columnMap     column mapping
+     * @param int                $dirtyState    object state
+     * @param boolean            $keepSnapshots keep snapshot
+     *
+     * @return \Phalcon\Mvc\Model
+     */
+    public static function cloneResultMap(
+        $base,
+        $data,
+        $columnMap,
+        $dirtyState = null,
+        $keepSnapshots = null
+    ) {
+        if (isset($data['type'])) {
+            $class = '\Ournamespace\Models\\'.$data['type'];
+            if (class_exists($class)) {
+                $base = new $class();
+            }
+        }
+        return parent::cloneResultMap(
+            $base,
+            $data,
+            $columnMap,
+            $dirtyState,
+            $keepSnapshots
+        );
+    }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11102" data-cf-modified-cbd7200657e3d4dcf9c40097-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11102" data-cf-modified-cbd7200657e3d4dcf9c40097-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">3</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/15c836c2cdd6f72e2fcf9a230632768d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1177/cvsguimaraes" class="user-moderator-N"><span itemprop="name">Carlos Guimaraes</span></a>        </span>
+        <br>
+
+        <span class="karma">8.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11443" href="#C11443">
+                <time itemprop="dateCreated" datetime="2014-09-18T23:01:19-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Very neat approach!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11443" data-cf-modified-cbd7200657e3d4dcf9c40097-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11443" data-cf-modified-cbd7200657e3d4dcf9c40097-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/820d6aa837c7ba4e1584dd5b338e43ac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1527/boedy" class="user-moderator-N"><span itemprop="name">Boudewijn Geiger</span></a>        </span>
+        <br>
+
+        <span class="karma">8.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11469" href="#C11469">
+                <time itemprop="dateCreated" datetime="2014-09-21T06:04:57-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This does not seem to work when getting related objects. Olivier, do you have a solution for this as well?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11469" data-cf-modified-cbd7200657e3d4dcf9c40097-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11469" data-cf-modified-cbd7200657e3d4dcf9c40097-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/820d6aa837c7ba4e1584dd5b338e43ac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1527/boedy" class="user-moderator-N"><span itemprop="name">Boudewijn Geiger</span></a>        </span>
+        <br>
+
+        <span class="karma">8.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="11538" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '14</span>
+              </span><br/><a name="C11538" href="#C11538">
+                <time itemprop="dateCreated" datetime="2014-09-22T13:12:50-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>My bad, it does work! I created an example that everyone can use if they want to use single table inheritence for their project, which in my opinion is very usefull.</p>
+<p>See <a href="http://www.martinfowler.com/eaaCatalog/singleTableInheritance.html">Single table inheritance</a> why this is usefull.</p>
+<p>To we need to have a Base class which extends the model.</p>
+<pre><code class="language-php">class BaseModel extends \Phalcon\Mvc\Model
+{
+    public static function cloneResultMap(
+        $base,
+        array $data,
+        $columnMap,
+        $dirtyState = null,
+        $keepSnapshots = null
+    ) {
+            if ($base-&gt;getInheritanceColumn() &amp;&amp; isset($data[$base-&gt;getInheritanceColumn()])) {
+                $class = get_class($base).'\\' . $data[$base-&gt;getInheritanceColumn()];
+                    if (class_exists($class)) {
+                            $base = new $class();
+                    }
+            }
+        return parent::cloneResultMap(
+            $base,
+            $data,
+            $columnMap,
+            $dirtyState,
+            $keepSnapshots
+        );
+    }
+
+}</code></pre>
+<p>in a class where you want single table inheritenace to work just add the following to the onConstruct method of the base class</p>
+<pre><code class="language-php">class Notification extends BaseModel
+{
+    public function onConstruct(){
+        $this-&gt;setInheritanceColumn('type');
+    }
+
+    public function getMessage(){
+        return "I'm an object of class " . get_class($this);
+    }
+}</code></pre>
+<p>Now we can add custom behavior for a like notificaton in a seperate class instead of using some ugly switch statement in the Notification class. See code below.</p>
+<pre><code class="language-php">namespace notification;
+
+class Like extends  \Notification{
+
+    public function initialize(){
+        parent::initialize();
+        $this-&gt;setSource("notification");
+    }
+
+    public function onConstruct(){
+        //type should be identicial to the class name. This could be replaced by function which return the class name.
+        $this-&gt;type = 'Like';
+    }
+
+} </code></pre>
+<p>No when we run the following code::</p>
+<pre><code class="language-php">$notification = Notification::findFirst();
+print $notification-&gt;getObject();</code></pre>
+<p>this will output</p>
+<blockquote>
+<p>I'm an object of class  notification\Like</p>
+</blockquote>
+<p>Hope<a href="https://forum.phalcon.io/user/0/Olivier"> @Olivier</a> Garbé pull request gets merged into the main branche. Thanks anyway.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11538" data-cf-modified-cbd7200657e3d4dcf9c40097-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11538" data-cf-modified-cbd7200657e3d4dcf9c40097-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/829773b9043632da87045f295b433e34?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10/rvanderfeer" class="user-moderator-N"><span itemprop="name">R van der Feer</span></a>        </span>
+        <br>
+
+        <span class="karma">5.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C21671" href="#C21671">
+                <time itemprop="dateCreated" datetime="2015-08-07T07:11:09-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It seems this change was merged in, but there's not a lot of documentation out there, so I was lead to this thread.</p>
+<p>What I'm wondering about is whether this approach would also work with resultsets;</p>
+<p>Eg. I have a message table.
+Message has several sub-types such as Discussion, Comment, Event, Poll.
+When creating a list of the 10 latest messages, I am selecting from Message, but I would like to receive instances of Discussion, Comment, Event, Poll as per their type.</p>
+<p>Is this possible at the moment, and if so: how?</p>
+<p>I've also tried a PHQL query approach, selecting from all types I'm interested in, but this does not work for me ( issue being all these types map to the same table, 'message', and this causes an error ).</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21671" data-cf-modified-cbd7200657e3d4dcf9c40097-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21671" data-cf-modified-cbd7200657e3d4dcf9c40097-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c58542c4c2b9171a023c69e6711c16f1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/662/ogarbe" class="user-moderator-N"><span itemprop="name">Olivier.Garbé</span></a>        </span>
+        <br>
+
+        <span class="karma">24.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="23545" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '15</span>
+              </span><br/><a name="C23545" href="#C23545">
+                <time itemprop="dateCreated" datetime="2015-09-20T13:21:08-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>hello, it works with resultset yes, as resultset use object hydration to returns results.</p>
+<p>you have to override the cloneResultMap of your Message object and return Discussion / Comment / Event depending on Message type :</p>
+<p>here a part of our code as an example :</p>
+<pre><code class="language-php">    /**
+     * Assigns values to a Prestation inherited class from an array returning a new model.
+     *
+     * @param \Phalcon\Mvc\Model $base          object to hydrate
+     * @param array              $data          data to use for hydration
+     * @param array              $columnMap     column mapping
+     * @param int                $dirtyState    object state
+     * @param boolean            $keepSnapshots keep snapshot
+     *
+     * @return \Phalcon\Mvc\Model
+     */
+    public static function cloneResultMap(
+        $base,
+        array $data,
+        $columnMap,
+        $dirtyState = null,
+        $keepSnapshots = null
+    ) {
+        if (isset($data['type'])) {
+            switch ($data['type']) {
+                case 'TransportDP':
+                    $class = '\Prestation\Models\Transport\Dynamic';
+                    break;
+                case 'TransportProd':
+                    $class = '\Prestation\Models\Transport\Internal';
+                    break;
+                default:
+                    $class = '\Prestation\Models\\' . $data['type'];
+                    break;
+            }
+            if (class_exists($class)) {
+                $base = new $class();
+            }
+        }
+        return parent::cloneResultMap(
+            $base,
+            $data,
+            $columnMap,
+            $dirtyState,
+            $keepSnapshots
+        );
+    }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23545" data-cf-modified-cbd7200657e3d4dcf9c40097-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23545" data-cf-modified-cbd7200657e3d4dcf9c40097-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3108" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

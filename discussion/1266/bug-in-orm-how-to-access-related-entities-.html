@@ -1,0 +1,365 @@
+---
+layout: default
+title: 'Bug in ORM? How to access related entities? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Bug in ORM? How to access related entities?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/788/Politechniczny" class="user-moderator-N"><span itemprop="name">Politechniczny</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-12-01T13:22:31-07:00">Dec '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-12-01T13:22:31-07:00">Dec '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '13</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">5</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1530</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">2</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/79b2cbd8ca182b9f58f594b628265d31?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/788/Politechniczny" class="user-moderator-N"><span itemprop="name">Politechniczny</span></a></span>
+                <span class="karma">5.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1266" href="#C1266">
+        <time class="action-date">Dec '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>This is my ERD: <a href="http://minus.com/i/0CzNcg881AfW">http://minus.com/i/0CzNcg881AfW</a></p>
+<p>Entities: </p>
+<pre><code class="language-php">&lt;?php
+class Game extends \Phalcon\Mvc\Model
+{
+    /** @var int Unique ID */
+    public $ID;
+    /** @var string Title */
+    public $name;
+    /** @var string Vendor */
+    public $vendor;
+    /** @var DateTime Release date */
+    public $released;
+    /** @var string Thumbnail image path */
+    public $image;
+    /** @var string About text */
+    public $about;
+    /**
+     * Initialize foreign keys
+     */
+    public function initialize()
+    {
+        $this-&gt;hasMany('ID','Translation','ID'); //required if ORM dumps database schema before queries?
+    }
+    /**
+     * Get ISO 8601 formatted date
+     */
+    public function toISO8601(){}
+    /**
+     * Create DateTime object after fetch
+     */
+    protected function afterFetch()
+    {
+        $this-&gt;released = new DateTime($this-&gt;released);
+    }
+    /**
+     * Get table name
+     * @return string
+     */
+    function getSource()
+    {
+        return 'games';
+    }
+}
+class Translation extends \Phalcon\Mvc\Model
+{
+    /** @var int Unique ID */
+    public $ID;
+    /** @var Game Related game */
+    protected $game;
+    /** @var User User who translates it */
+    public $translator;
+    /** @var string Language code (PL, EN, DE, SK) */
+    public $language;
+    /** @var int Completion indicator (0-100) */
+    public $complete;
+    /** @var Translation base translation */
+    public $base;
+    /**
+     * Set virtual foreign keys
+     */
+    public function initialize()
+    {
+        $this-&gt;belongsTo('game','Game','ID');
+    }
+    /**
+     * Get table name
+     * @return string
+     */
+    function getSource()
+    {
+        return 'translations';
+    }
+}</code></pre>
+<p>Entity names are singular, table names are plural. We have a translation. Now we want to get related game. If Translation::game is public, {% raw %}{{{% endraw %}translation.game{% raw %}}}{% endraw %} returns just game's ID. I changed its visibility to protected. Now ORM gets related game. But there is a problem. If you access the same related property twice, you get a fatal error:</p>
+<pre><code class="language-volt">{% raw %}{{{% endraw %}translation.game.name{% raw %}}}{% endraw %} first time it is OK
+{% raw %}{{{% endraw %}translation.game.name{% raw %}}}{% endraw %} second time - exception
+
+Catchable fatal error: Object of class Game could not be converted to string</code></pre>
+<p>Phalcon bug?</p>
+<p>How to name foreign keys columns in tables to follow standards? Should its name be the same as entity or table's name or different?</p>
+<ul>
+<li>game</li>
+<li>gameid</li>
+</ul>
+<p>IMO good ORM should map all foreign keys to related objects without any workarounds.</p>
+<p>How to write models? Like the following?</p>
+<pre><code class="language-php">public $id; // ID small or capital letters?
+public $gameid; // only ID numeric
+protected $game; // useless in Phalcon but I need an information for NetBeans IDE</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-3314e03e3ef5027c852f4a08-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-3314e03e3ef5027c852f4a08-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4508" href="#C4508">
+                <time itemprop="dateCreated" datetime="2013-12-02T09:49:13-07:00" class="action-date">Dec '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You don't need to declare the model variables explicitely.  Translation-&gt;ID (for example) will exist automatically.</p>
+<p>Setting the property to &quot;protected&quot; might also be causing the problem.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4508" data-cf-modified-3314e03e3ef5027c852f4a08-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4508" data-cf-modified-3314e03e3ef5027c852f4a08-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/79b2cbd8ca182b9f58f594b628265d31?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/788/Politechniczny" class="user-moderator-N"><span itemprop="name">Politechniczny</span></a>        </span>
+        <br>
+
+        <span class="karma">5.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4518" href="#C4518">
+                <time itemprop="dateCreated" datetime="2013-12-02T11:22:22-07:00" class="action-date">Dec '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If I change the property to &quot;public&quot;, it contains game's ID because it's not handled by Model::__get(). Then {% raw %}{{{% endraw %}translation.game.name{% raw %}}}{% endraw %} triggers &quot;Notice: Trying to get property of non-object&quot;.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4518" data-cf-modified-3314e03e3ef5027c852f4a08-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4518" data-cf-modified-3314e03e3ef5027c852f4a08-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4519" href="#C4519">
+                <time itemprop="dateCreated" datetime="2013-12-02T11:31:58-07:00" class="action-date">Dec '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Try not declaring it at all.  Phalcon will take care of that for you.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4519" data-cf-modified-3314e03e3ef5027c852f4a08-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4519" data-cf-modified-3314e03e3ef5027c852f4a08-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/79b2cbd8ca182b9f58f594b628265d31?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/788/Politechniczny" class="user-moderator-N"><span itemprop="name">Politechniczny</span></a>        </span>
+        <br>
+
+        <span class="karma">5.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4521" href="#C4521">
+                <time itemprop="dateCreated" datetime="2013-12-02T11:55:24-07:00" class="action-date">Dec '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I removed all properties in Game and Translation class. Still &quot;Notice: Trying to get property of non-object&quot; because ORM doesn't handle &quot;game&quot; property as related entity. If I don't declare it protected or private, it's created while fetching data as public. If I define it as protected/private, yes, it works, but only one time. Read 1st post with Volt examples.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4521" data-cf-modified-3314e03e3ef5027c852f4a08-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4521" data-cf-modified-3314e03e3ef5027c852f4a08-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4522" href="#C4522">
+                <time itemprop="dateCreated" datetime="2013-12-02T12:06:47-07:00" class="action-date">Dec '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Try setting an alias for the relationship.  You can alias it simply as &quot;game&quot;.</p>
+<p>I'm not sure why this might work, but I've noticed setting an alias does clear up some problems related to related models.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4522" data-cf-modified-3314e03e3ef5027c852f4a08-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4522" data-cf-modified-3314e03e3ef5027c852f4a08-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c0ce8f5e133750a4dfea4712e533a178?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/15/le51" class="user-moderator-N"><span itemprop="name">le51</span></a>        </span>
+        <br>
+
+        <span class="karma">43.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4525" href="#C4525">
+                <time itemprop="dateCreated" datetime="2013-12-02T12:59:10-07:00" class="action-date">Dec '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>+1 using aliases saves you a lot of headache !</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4525" data-cf-modified-3314e03e3ef5027c852f4a08-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4525" data-cf-modified-3314e03e3ef5027c852f4a08-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/79b2cbd8ca182b9f58f594b628265d31?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/788/Politechniczny" class="user-moderator-N"><span itemprop="name">Politechniczny</span></a>        </span>
+        <br>
+
+        <span class="karma">5.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4527" href="#C4527">
+                <time itemprop="dateCreated" datetime="2013-12-02T14:04:29-07:00" class="action-date">Dec '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Let's use an alias:</p>
+<pre><code class="language-php">class Translation extends \Phalcon\Mvc\Model
+{
+    public function initialize()
+    {
+        $this-&gt;belongsTo('game', 'Game', 'ID', ['alias'=&gt;'lol']);
+    }
+}</code></pre>
+<p>Let's try it in Volt:</p>
+<pre><code class="language-volt">{% raw %}{{{% endraw %}translation.lol.ID{% raw %}}}{% endraw %}
+{% raw %}{{{% endraw %}translation.lol.name{% raw %}}}{% endraw %} - No error! It works!
+{% raw %}{{{% endraw %}translation.lol.name{% raw %}}}{% endraw %} - To be sure, it still works!</code></pre>
+<p>Using alias helps but that's not the point. Would you call your entity &quot;lol&quot;? Let's analyze the relationship:</p>
+<ol>
+<li>In MySQL column translations.game refers to games.ID.</li>
+<li>In Translation class we set relationship belongsTo('game','Game','ID').</li>
+<li>&quot;Game&quot; entity name conflicts with &quot;game&quot; property (also column name)?</li>
+</ol>
+<p>Perhaps I should change column name from &quot;game&quot; to &quot;gameid&quot; to avoid using aliases. Don't you think it's a bug in Phalcon?</p>
+<pre><code class="language-volt">{% raw %}{{{% endraw %}translation.game.name{% raw %}}}{% endraw %} first time it works
+{% raw %}{{{% endraw %}translation.game.name{% raw %}}}{% endraw %} but second time it fails</code></pre>
+<p>How to access relationships manually without using __get() method? Possible to resolve many-to-one relationships automatically (Translation::game would contain object, not integer)?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4527" data-cf-modified-3314e03e3ef5027c852f4a08-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4527" data-cf-modified-3314e03e3ef5027c852f4a08-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4528" href="#C4528">
+                <time itemprop="dateCreated" datetime="2013-12-02T14:15:24-07:00" class="action-date">Dec '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I looked at your ERD lots of times and never noticed the fact your translation table has a &quot;game&quot; column.  That is certainly what is causing the problem.  My advice would be to change the column name as you suggested.</p>
+<p>This isn't really a bug.  What's happening is you have a relationship with the same name as a property.  When you set your alias, the relationship then had a different name, so there were no problems.  changing the column name should fix it.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4528" data-cf-modified-3314e03e3ef5027c852f4a08-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4528" data-cf-modified-3314e03e3ef5027c852f4a08-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/79b2cbd8ca182b9f58f594b628265d31?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/788/Politechniczny" class="user-moderator-N"><span itemprop="name">Politechniczny</span></a>        </span>
+        <br>
+
+        <span class="karma">5.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4540" href="#C4540">
+                <time itemprop="dateCreated" datetime="2013-12-03T14:40:15-07:00" class="action-date">Dec '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It's worth to post it as bug. This error occurs when you access relationship property for the 2nd time. Remember it works for the 1st time.</p>
+<p>I will change field name to gameid or game_id but we need a discussion about naming standards and usability. I was programming in Java. There was no conflict. Foreign keys were automatically mapped to related objects. So to access game's ID you write translation.getGame().getID() or translation.game.ID when you set properties public.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4540" data-cf-modified-3314e03e3ef5027c852f4a08-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4540" data-cf-modified-3314e03e3ef5027c852f4a08-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1266" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

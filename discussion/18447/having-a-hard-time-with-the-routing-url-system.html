@@ -1,0 +1,255 @@
+---
+layout: default
+title: 'Having a hard time with the routing &amp; url system - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Having a hard time with the routing &amp; url system</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3216/jturbide" class="user-moderator-N"><span itemprop="name">Julien Turbide</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-06-23T07:14:04-07:00">Jun '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-06-23T07:14:04-07:00">Jun '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>312</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/bacd6b9b9d4793d7b9e6daf8de127530?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3216/jturbide" class="user-moderator-N"><span itemprop="name">Julien Turbide</span></a></span>
+                <span class="karma">3.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C18447" href="#C18447">
+        <time class="action-date">Jun '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,</p>
+<p>What I'm trying to achieve is quite simple, but I'm not really able to make it work properly (because of overlapping or error from my logic). I'd like to have a generic routing system, pretty much this logic:</p>
+<p>Basic default routing:</p>
+<blockquote>
+<pre><code>  /
+  //...
+  /:controller
+  /:controller/:action
+  /:controller/:action/:slug
+  /:controller/:action/:int
+  /:controller/:action/:slug/:params
+  /:controller/:action/:int/:params</code></pre>
+</blockquote>
+<p>Adding modules:</p>
+<blockquote>
+<pre><code>  /:module
+  /:module/:controller
+  /:module/:controller/:action
+  /:module/:controller/:action/:slug
+  /:module/:controller/:action/:int
+  /:module/:controller/:action/:slug/:params
+  /:module/:controller/:action/:int/:params</code></pre>
+</blockquote>
+<p>Adding optionnal locale for basic &amp; module routing:</p>
+<blockquote>
+<pre><code>  /:locale
+  /:locale/:controller
+  /:locale/:controller/:action
+  /:locale/:controller/:action/:slug
+  /:locale/:controller/:action/:int
+  /:locale/:controller/:action/:slug/:params
+  /:locale/:controller/:action/:int/:params
+
+  /:locale/:module
+  /:locale/:module/:controller
+  /:locale/:module/:controller/:action
+  /:locale/:module/:controller/:action/:slug
+  /:locale/:module/:controller/:action/:int
+  /:locale/:module/:controller/:action/:slug/:params
+  /:locale/:module/:controller/:action/:int/:params</code></pre>
+</blockquote>
+<p>The weird part is that when I succeed to match all these generic routes, my &quot;url&quot; service wouldn't work properly and vice-versa. It's one or the other, basically because of my optionnal local field which would move the routing position.</p>
+<blockquote>
+<pre><code>{locale:([a-z]{2,3}([\_\-][[:alnum:]]{1,8})?)?}</code></pre>
+</blockquote>
+<p>For the collision between my default routing and the module name, I was able to fix it by using GroupeRoute and forcing the module name from the prefix.</p>
+<pre><code>   $this-&gt;setPrefix(($this-&gt;locale? '([\/]{0,1}){locale:([a-z]{2,3}([\_\-][[:alnum:]]{1,8})?)?}' : null) . ($this-&gt;default ? null : '/' . $module));
+
+    // /backend
+    $this-&gt;add( '/' . $params, [
+        'params' =&gt; $prefixPos + 1
+    ])-&gt;setName($module);
+
+    // /backend/users
+    $this-&gt;add('/:controller' . $params, [
+        'controller' =&gt; $prefixPos + 1,
+        'params' =&gt; $prefixPos + 2
+    ])-&gt;setName($module . '-controller');
+
+    // /backend/user/list
+    $this-&gt;add('/:controller/:action' . $params, [
+        'controller' =&gt; $prefixPos + 1,
+        'action' =&gt; $prefixPos + 2,
+        'params' =&gt; $prefixPos + 3
+    ])-&gt;setName($module . '-controller-action');
+
+    // /backend/user/profile/jturbide
+    $this-&gt;add( '/:controller/:action/([a-zA-Z0-9\_\-]+)' . $params, [
+        'controller' =&gt; $prefixPos + 1,
+        'action' =&gt; $prefixPos + 2,
+        'slug' =&gt; $prefixPos + 3,
+        'params' =&gt; $prefixPos + 4
+    ])-&gt;setName($module . '-controller-action-slug');
+
+    // /backend/user/edit/1
+    $this-&gt;add( '/:controller/:action/:int' . $params, [
+        'controller' =&gt; $prefixPos + 1,
+        'action' =&gt; $prefixPos + 2,
+        'int' =&gt; $prefixPos + 3,
+        'params' =&gt; $prefixPos + 4
+    ])-&gt;setName($module . '-controller-action-int');</code></pre>
+<p>Any help would from fixing my logic or giving me hint or the proper way to do it would be appreciated. Thanks,</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-5817e305cdf2365ceec10ecc-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-5817e305cdf2365ceec10ecc-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C56289" href="#C56289">
+                <time itemprop="dateCreated" datetime="2018-06-23T14:02:35-07:00" class="action-date">Jun '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>always defined from less especific to more especific in your case I think your problem is in <code>setPrefix</code> and what about of <code>$params</code> in all yours url definitions?</p>
+<p>create a <code>GroupRouter</code> class something like this</p>
+<pre><code class="language-php">class MyRoutes extends \Phalcon\Mvc\Router\Group {
+    private $located = false;
+    public function __construct(bool $located = false) {
+        $this-&gt;located = $located;
+        parent::__construct();
+    }
+    public function initialize() {
+        if ($this-&gt;located === true) {
+            $this-&gt;setPrefix('/{location:[a-z]{2{% raw %}}}{% endraw %}');
+        }
+        // all yours routes
+    }
+}
+
+$router = new Phalcon\Mvc\Router(false);
+$router-&gt;mount(new MyRoutes());
+$router-&gt;mount(new MyRoutes(true));</code></pre>
+<p>What do you think? try that and tell us. Good luck</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="56289" data-cf-modified-5817e305cdf2365ceec10ecc-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="56289" data-cf-modified-5817e305cdf2365ceec10ecc-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bacd6b9b9d4793d7b9e6daf8de127530?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3216/jturbide" class="user-moderator-N"><span itemprop="name">Julien Turbide</span></a>        </span>
+        <br>
+
+        <span class="karma">3.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C56337" href="#C56337">
+                <time itemprop="dateCreated" datetime="2018-06-25T06:25:42-07:00" class="action-date">Jun '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>My problem was about having a conditionnal parameter (&quot;locale&quot;) from the prefix... I tried to add it into the patterns but I got the same problem. My only solution was to separate into two different route name.</p>
+<p>Matching the route wasn't a problem, the problem was about generating the route. Because of the optionnal parameter it would try to reach the wrong index to generate the uri from the Url service.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="56337" data-cf-modified-5817e305cdf2365ceec10ecc-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="56337" data-cf-modified-5817e305cdf2365ceec10ecc-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="56341" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '18</span>
+              </span><br/><a name="C56341" href="#C56341">
+                <time itemprop="dateCreated" datetime="2018-06-25T08:05:20-07:00" class="action-date">Jun '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi Julien, if I remember correctly, the only optional parameter is <code>:params</code> and can only be used at the end of the route definition. <a href="https://docs.phalcon.io/en/3.3/routing#defining">Docs</a></p>
+<p>Good luck</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="56341" data-cf-modified-5817e305cdf2365ceec10ecc-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="56341" data-cf-modified-5817e305cdf2365ceec10ecc-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e5634f63d8472e292078b8cce60be0c8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11363/khattam12" class="user-moderator-N"><span itemprop="name">Kishor Bhatta</span></a>        </span>
+        <br>
+
+        <span class="karma">46</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C56389" href="#C56389">
+                <time itemprop="dateCreated" datetime="2018-06-26T19:55:49-07:00" class="action-date">Jun '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="http://aaa.com">Wow</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="56389" data-cf-modified-5817e305cdf2365ceec10ecc-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span><span itemprop="downvoteCount">1</span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="56389" data-cf-modified-5817e305cdf2365ceec10ecc-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="18447" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

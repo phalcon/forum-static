@@ -1,0 +1,154 @@
+---
+layout: default
+title: 'Form get{fieldName} methods - astonishing magic - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Form get{fieldName} methods - astonishing magic</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10669/Pilsenerek" class="user-moderator-N"><span itemprop="name">Michał</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-02-01T04:56:19-07:00">Feb '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-02-01T04:56:19-07:00">Feb '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>258</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/d10ecfc9a7c21a30f760c726759e57a8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10669/Pilsenerek" class="user-moderator-N"><span itemprop="name">Michał</span></a></span>
+                <span class="karma">8.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17731" href="#C17731">
+        <time class="action-date">Feb '18</time>
+    </a>
+</div>
+<div class="post-content"><div><ol>
+<li>I extend Phalcon\Forms\Form in purpose to implement CSRF layer</li>
+<li>In this form I have a methods:
+<pre><code class="language-php">private function addCsrfToken(){
+$csrf = new Hidden('token');
+$csrf-&gt;addValidator(new CsrfValidator(['form' =&gt; $this]));
+$this-&gt;add($csrf);
+}
+public function getToken(){
+$token = 'I am in -&gt; (|)';
+$this-&gt;session-&gt;set(get_class($this), $token);
+return $token;
+}</code></pre></li>
+</ol>
+<p>getToken is supposed to provide value to input</p>
+<ol start="3">
+<li>I extend one time more and create standard logIn form</li>
+<li>In login template:
+<blockquote>
+<p>{% raw %}{{{% endraw %} form.render('token') {% raw %}}}{% endraw %}</p>
+</blockquote></li>
+</ol>
+<p>And it would be ok, but I see in SESSION  'I am in -&gt; (|)' even if I don't touch loginForm or login action!
+Furthermore, adding sth to getToken method:</p>
+<pre><code class="language-php">public function getToken(){
+    $token = 'I am in -&gt; (|)';
+    echo 'test'; //don't stop it
+    exit; //stop it
+    $this-&gt;session-&gt;set(get_class($this), $token);
+    return $token;
+}</code></pre>
+<p>might spoil the effect, but no application.</p>
+<p>It occurs only when form-&gt;render is called, so I guess during rendering phalcon tries to perform getToken method, but in a secret way.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-037cba648cfd11affa6b7dec-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-037cba648cfd11affa6b7dec-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d10ecfc9a7c21a30f760c726759e57a8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10669/Pilsenerek" class="user-moderator-N"><span itemprop="name">Michał</span></a>        </span>
+        <br>
+
+        <span class="karma">8.3k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C53801" href="#C53801">
+                <time itemprop="dateCreated" datetime="2018-02-02T02:33:47-07:00" class="action-date">Feb '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>OK, I have to implement workaround:
+Initialize, in base form class:</p>
+<pre><code class="language-php">        $csrf = new Hidden('_token');
+        $this-&gt;csrfToken = md5(uniqid('', true));
+        if(!$this-&gt;request-&gt;isPost()) {
+            $this-&gt;session-&gt;set(get_class($this), $this-&gt;csrfToken);
+            $csrf-&gt;setAttribute('value', $this-&gt;csrfToken);
+        }
+        $csrf-&gt;addValidator(new CsrfValidator(['form' =&gt; $this]));
+        $this-&gt;add($csrf);</code></pre>
+<p>And I use afterValidatiom automatic method:</p>
+<pre><code class="language-php">    public function afterValidation(){
+        if($this-&gt;request-&gt;isPost()) {
+            $this-&gt;session-&gt;set(get_class($this), $this-&gt;csrfToken);
+        }
+        $this-&gt;get('_token')-&gt;clear();
+        $this-&gt;get('_token')-&gt;setAttribute('value', $this-&gt;csrfToken);
+    }</code></pre>
+<p>Of course in template:</p>
+<blockquote>
+<p>{% raw %}{{{% endraw %} form.render('_token') {% raw %}}}{% endraw %}</p>
+</blockquote>
+<p>What is bad to me:</p>
+<ul>
+<li>isValid method populates form, better is use handleRequest (I can &quot;catch&quot; form and do it sth more)</li>
+<li>getValue exists but set not</li>
+<li>get{fieldName} methods (the more magic the merrier maybe is good in Hogwart)</li>
+<li>lack of isSubmit method (usual workflow is create form, handle request, check is submitted, check is valid)</li>
+</ul></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="53801" data-cf-modified-037cba648cfd11affa6b7dec-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="53801" data-cf-modified-037cba648cfd11affa6b7dec-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17731" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,361 @@
+---
+layout: default
+title: 'Problem registering view engines using class names. Is this a bug? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/10/di-ioc">DI/IoC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Problem registering view engines using class names. Is this a bug?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/87/noobiwan" class="user-moderator-N"><span itemprop="name">Lewiz</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-10-09T09:55:30-07:00">Oct '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-10-09T09:55:30-07:00">Oct '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">7</span>
+                </td>
+                <td>
+                    <label>Views</label><br>940</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/f995126f75088cac3803b91febd711fb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/87/noobiwan" class="user-moderator-N"><span itemprop="name">Lewiz</span></a></span>
+                <span class="karma">32.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3649" href="#C3649">
+        <time class="action-date">Oct '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi, if we initialize two view services and register the view engines using the class name something goes wrong and we get not output. But if we return an instance of the service, then it works.</p>
+<p>If we do like this, it doesn't work:</p>
+<pre><code class="language-php">$di-&gt;set('view', function () use ($config) {
+    $view = new \Phalcon\Mvc\View();
+    $view-&gt;setViewsDir($config-&gt;application-&gt;viewsDir);
+    $view-&gt;registerEngines(array(
+        '.phtml' =&gt; 'Phalcon\Mvc\View\Engine\Php',
+        '.volt' =&gt; 'Phalcon\Mvc\View\Engine\Volt'
+    ));
+    return $view;
+}, true);
+
+$di-&gt;set('simpleView', function() use ($config) {
+    $view = new Phalcon\Mvc\View\Simple();
+    $view-&gt;setViewsDir($config-&gt;application-&gt;viewsDir);
+    $view-&gt;registerEngines(array(
+        ".phtml" =&gt; "Phalcon\Mvc\View\Engine\Php",
+        ".volt" =&gt; "Phalcon\Mvc\View\Engine\Volt"
+    ));
+    return $view;
+});</code></pre>
+<p>More specifically, it's doesn't work when the engines are registered using the class name in BOTH services. If one uses classnames and the other doesn't, then it works. This works all the time:</p>
+<pre><code class="language-php">$di-&gt;set('view', function () use ($config) {
+    $view = new \Phalcon\Mvc\View();
+    $view-&gt;setViewsDir($config-&gt;application-&gt;viewsDir);
+    $view-&gt;registerEngines(array(       
+        '.phtml' =&gt; function ($view, $di) use ($config) {
+            $phtml = new \Phalcon\Mvc\View\Engine\Php($view, $di);
+            return $phtml;
+        },      
+        '.volt' =&gt; function ($view, $di) use ($config) {
+            $volt = new  \Phalcon\Mvc\View\Engine\Volt($view, $di);           
+            return $volt;
+        }
+    ));
+    return $view;
+}, true);
+
+$di-&gt;set('simpleView', function() use ($config) {
+    $view = new Phalcon\Mvc\View\Simple();
+    $view-&gt;setViewsDir($config-&gt;application-&gt;viewsDir);
+    $view-&gt;registerEngines(array(       
+        '.phtml' =&gt; function ($view, $di) use ($config) {
+            $phtml = new \Phalcon\Mvc\View\Engine\Php($view, $di);
+            return $phtml;
+        },      
+        '.volt' =&gt; function ($view, $di) use ($config) {
+            $volt = new  \Phalcon\Mvc\View\Engine\Volt($view, $di);           
+            return $volt;
+        }
+    ));
+    return $view;
+});</code></pre>
+<p>Any ideas?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ca583aafbe57c402a106b0aaa70da0a2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/951/Sweet-Bob" class="user-moderator-N"><span itemprop="name">Sweet-Bob</span></a>        </span>
+        <br>
+
+        <span class="karma">10.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12031" href="#C12031">
+                <time itemprop="dateCreated" datetime="2014-10-09T13:13:39-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Because \Phalcon\Mvc\View\Engine\Volt required 2 parameters.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12031" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12031" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f995126f75088cac3803b91febd711fb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/87/noobiwan" class="user-moderator-N"><span itemprop="name">Lewiz</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12032" href="#C12032">
+                <time itemprop="dateCreated" datetime="2014-10-09T13:19:58-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I'm afraid that's not the problem. The initialization is correct according
+to the documentation. Please check
+<a href="http://docs.phalcon.io/pt/latest/api/Phalcon_Mvc_View">http://docs.phalcon.io/pt/latest/api/Phalcon_Mvc_View</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12032" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12032" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ca583aafbe57c402a106b0aaa70da0a2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/951/Sweet-Bob" class="user-moderator-N"><span itemprop="name">Sweet-Bob</span></a>        </span>
+        <br>
+
+        <span class="karma">10.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12052" href="#C12052">
+                <time itemprop="dateCreated" datetime="2014-10-10T00:31:57-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Not afraid :) <a href="http://docs.phalcon.io/en/latest/api/Phalcon_Mvc_View_Engine_Volt.html">http://docs.phalcon.io/en/latest/api/Phalcon_Mvc_View_Engine_Volt.html</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12052" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12052" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f995126f75088cac3803b91febd711fb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/87/noobiwan" class="user-moderator-N"><span itemprop="name">Lewiz</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12063" href="#C12063">
+                <time itemprop="dateCreated" datetime="2014-10-10T05:36:41-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Could you give a more concrete and explicitly answer to the problem I
+presented please?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12063" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12063" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ca583aafbe57c402a106b0aaa70da0a2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/951/Sweet-Bob" class="user-moderator-N"><span itemprop="name">Sweet-Bob</span></a>        </span>
+        <br>
+
+        <span class="karma">10.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12089" href="#C12089">
+                <time itemprop="dateCreated" datetime="2014-10-10T08:44:46-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Above in your code, you use \Phalcon\Mvc\View\Engine\Volt(required 2 parameters), NOT \Phalcon\Mvc\View(optional parameters). When you create instance of \Phalcon\Mvc\View\Engine\Volt without parameters, it will give error.You must use \Phalcon\Mvc\View\Engine\Volt with 2 parameters <a href="http://docs.phalcon.io/en/latest/api/Phalcon_Mvc_View_Engine_Volt.html">http://docs.phalcon.io/en/latest/api/Phalcon_Mvc_View_Engine_Volt.html</a>.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12089" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12089" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f995126f75088cac3803b91febd711fb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/87/noobiwan" class="user-moderator-N"><span itemprop="name">Lewiz</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12095" href="#C12095">
+                <time itemprop="dateCreated" datetime="2014-10-10T09:43:06-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Please show me where I fail to initialize the Volt engine because I can't see it. Are you refering to the line where I use the class name?</p>
+<pre><code class="language-php">'.volt' =&gt; 'Phalcon\Mvc\View\Engine\Volt'</code></pre>
+<p>If yes, I'm just following the manual and it actually works! The problem, as I see it, is the interaction of the two view components. If I have only ONE view component it works, with TWO it doesn't. Did you try to replicate the problem?</p>
+<p><a href="https://forum.phalcon.io/user/0/phalcon">@phalcon</a>, any input to give?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12095" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12095" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ca583aafbe57c402a106b0aaa70da0a2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/951/Sweet-Bob" class="user-moderator-N"><span itemprop="name">Sweet-Bob</span></a>        </span>
+        <br>
+
+        <span class="karma">10.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12096" href="#C12096">
+                <time itemprop="dateCreated" datetime="2014-10-10T10:00:31-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It's not problem, you merely used wrong code. You must use 2 variant, i tried run you code (2 variant), it's working.
+<a href="http://stackoverflow.com/questions/19122903/phalcon-view-engines">http://stackoverflow.com/questions/19122903/phalcon-view-engines</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12096" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12096" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/f995126f75088cac3803b91febd711fb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/87/noobiwan" class="user-moderator-N"><span itemprop="name">Lewiz</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12097" href="#C12097">
+                <time itemprop="dateCreated" datetime="2014-10-10T10:09:41-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I must be dumb because I still can't grasp what you are trying to explain.
+I know the second way I showed works, but why the first way of doing it
+doesn't (when using class names)? According to the documentation it should.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12097" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12097" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ca583aafbe57c402a106b0aaa70da0a2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/951/Sweet-Bob" class="user-moderator-N"><span itemprop="name">Sweet-Bob</span></a>        </span>
+        <br>
+
+        <span class="karma">10.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12101" href="#C12101">
+                <time itemprop="dateCreated" datetime="2014-10-10T10:31:49-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>first variant works too.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12101" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12101" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ca583aafbe57c402a106b0aaa70da0a2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/951/Sweet-Bob" class="user-moderator-N"><span itemprop="name">Sweet-Bob</span></a>        </span>
+        <br>
+
+        <span class="karma">10.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="12104" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '14</span>
+              </span><br/><a name="C12104" href="#C12104">
+                <time itemprop="dateCreated" datetime="2014-10-10T10:37:25-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Maybe i don't understand question correctly. Something wrong when you register services? Or when you try get access to them</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12104" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12104" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12121" href="#C12121">
+                <time itemprop="dateCreated" datetime="2014-10-11T20:01:14-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think this happen because the engine instance is built using the dependency injector (also the instance is requested being kept by the DI):</p>
+<p><a href="https://github.com/phalcon/cphalcon/blob/2.0.0/phalcon/mvc/view.zep#L577">https://github.com/phalcon/cphalcon/blob/2.0.0/phalcon/mvc/view.zep#L577</a></p>
+<p>This might cause both different view components to reuse the same instance of the engines possibly causing incompatibilities.</p>
+<p>In the other case, using a closure will create a new instance of the engine everytime the service is built.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12121" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12121" data-cf-modified-6428e1e2b28188f18d9ee5ca-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3649" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

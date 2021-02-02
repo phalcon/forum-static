@@ -1,0 +1,265 @@
+---
+layout: default
+title: 'Apache crash on EventsManager::fire() provided with custom DB adapter instance to second parameter - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/11/events-manager">Events</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Apache crash on EventsManager::fire() provided with custom DB adapter instance to second parameter</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1710/vorbeer" class="user-moderator-N"><span itemprop="name">vorbeer</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-06-12T09:14:34-07:00">Jun '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-06-12T09:14:34-07:00">Jun '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>768</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/b7ac84c83b4ca75e49df7294a4f7027b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1710/vorbeer" class="user-moderator-N"><span itemprop="name">vorbeer</span></a></span>
+                <span class="karma">902</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2543" href="#C2543">
+        <time class="action-date">Jun '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I've implemented my own DB adapter extending \Phalcon\Db\Adapter. And it works fine untill I try to set an event manager instance for it. Regardless of what events are listened or even clear instance of \Phalcon\Events\Manager().</p>
+<p>All the time I call EventsManager::fire() my apache crashes. </p>
+<p>Here is an example:</p>
+<pre><code class="language-php">&lt;?php
+
+namespace Phalcon\Db\Adapter;
+use Phalcon\Db\Exception;
+
+class Sybase extends \Phalcon\Db\Adapter implements \Phalcon\Db\AdapterInterface
+{
+    public function query($sqlStatement, $bindParams=null, $bindTypes=null)
+    {
+        /**
+         * Execute the beforeQuery event if a EventsManager is available
+         */
+        if (is_object($this-&gt;_eventsManager)) {
+            $this-&gt;_sqlStatement = $sqlStatement;
+            $this-&gt;_sqlVariables = $bindParams;
+            $this-&gt;_sqlBindTypes = $bindTypes;
+            if ($this-&gt;_eventsManager-&gt;fire("db:beforeQuery", $this, $bindParams) == false) {
+                return false;
+            }
+        }
+
+        $sql = $this-&gt;getEmulatedBindQuery($sqlStatement, $bindParams, $bindTypes);
+        $statement = sybase_query($sql, $this-&gt;_connection);
+
+        if ($statement === false) {
+            throw new Exception('Query "' . $sql . '" caused following error: "' . sybase_get_last_message() . '"');
+        } else {
+            /**
+             * Execute the afterQuery event if a EventsManager is available
+             */
+            if (is_object($this-&gt;_eventsManager)) {
+                $this-&gt;_eventsManager-&gt;fire("db:afterQuery", $this, $bindParams);
+            }
+
+            return new \Phalcon\Db\Result\Sybase($this, $statement, $sql);
+        }
+    }</code></pre>
+<p>Versions:
+PHP 5.5.10, Apache 2.4.9.0, Phalcon 1.3.0</p>
+<p>I would be grateful for any help.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-9acf471471ae5b362c83ec75-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-9acf471471ae5b362c83ec75-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5e765e30b2def171a913a5501de37faa?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/506/oh-ren" class="user-moderator-N"><span itemprop="name">ren</span></a>        </span>
+        <br>
+
+        <span class="karma">8.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C8582" href="#C8582">
+                <time itemprop="dateCreated" datetime="2014-06-12T10:00:16-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Could you enable PHP syntax highlighting? Makes it a bit more friendly on the eyes...</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8582" data-cf-modified-9acf471471ae5b362c83ec75-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8582" data-cf-modified-9acf471471ae5b362c83ec75-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5e765e30b2def171a913a5501de37faa?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/506/oh-ren" class="user-moderator-N"><span itemprop="name">ren</span></a>        </span>
+        <br>
+
+        <span class="karma">8.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C8598" href="#C8598">
+                <time itemprop="dateCreated" datetime="2014-06-12T12:31:49-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I don't have a clue actually, not really familiar in this area.
+But I guess you already have had a look here: <a href="https://github.com/phalcon/cphalcon/blob/2.0.0/phalcon/db/adapter/pdo.zep">https://github.com/phalcon/cphalcon/blob/2.0.0/phalcon/db/adapter/pdo.zep</a> ?</p>
+<p>How does the evManager instantation / assignment look like?</p>
+<p>Does Apache log an error when it crashes?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8598" data-cf-modified-9acf471471ae5b362c83ec75-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8598" data-cf-modified-9acf471471ae5b362c83ec75-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b7ac84c83b4ca75e49df7294a4f7027b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1710/vorbeer" class="user-moderator-N"><span itemprop="name">vorbeer</span></a>        </span>
+        <br>
+
+        <span class="karma">902</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C8605" href="#C8605">
+                <time itemprop="dateCreated" datetime="2014-06-13T02:45:46-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes I used ZEP sources of phalcon 2.0 as a start point before implementing my own class.</p>
+<p>Event manager instantiation and assignment looks like this:</p>
+<pre><code class="language-php">$di-&gt;set('db', function () use ($config, $di) {
+
+    $eventsManager = new \Phalcon\Events\Manager();
+
+    //Get a shared instance of the DbProfiler
+    $profiler = $di-&gt;getProfiler();
+
+    //Listen all the database events
+   $eventsManager-&gt;attach('db', function($event, $connection) use ($profiler) {
+        if ($event-&gt;getType() == 'beforeQuery') {
+            $profiler-&gt;startProfile($connection-&gt;getSQLStatement());
+        }
+        if ($event-&gt;getType() == 'afterQuery') {
+            $profiler-&gt;stopProfile();
+        }
+    });
+    $connection = new DbAdapter(array(
+        "servername" =&gt; $config-&gt;database-&gt;servername,
+        "username" =&gt; $config-&gt;database-&gt;username,
+        "password" =&gt; $config-&gt;database-&gt;password,
+        "dbname" =&gt; $config-&gt;database-&gt;dbname
+    ));
+
+    //Assign the eventsManager to the db adapter instance
+    $connection-&gt;setEventsManager($eventsManager);
+
+    return $connection;
+}, true);
+</code></pre>
+<p>But it might look like this, result is still the same:</p>
+<pre><code class="language-php">$di-&gt;set('db', function () use ($config, $di) {
+
+    $eventsManager = new \Phalcon\Events\Manager();
+
+    $connection = new DbAdapter(array(
+        "servername" =&gt; $config-&gt;database-&gt;servername,
+        "username" =&gt; $config-&gt;database-&gt;username,
+        "password" =&gt; $config-&gt;database-&gt;password,
+        "dbname" =&gt; $config-&gt;database-&gt;dbname
+    ));
+
+    //Assign the eventsManager to the db adapter instance
+    $connection-&gt;setEventsManager($eventsManager);
+
+    return $connection;
+}, true);</code></pre>
+<p>Apache doesn't log anything, it's process just halts.</p>
+<p>Finally at this moment I've discovered one valuable fact: if I pass my object casting it to stdClass the apache doesn't crash. What I change:</p>
+<pre><code class="language-php">
+        if ($this-&gt;_eventsManager-&gt;fire("db:beforeQuery", (object)(array)$this, $bindParams) == false) {
+</code></pre>
+<p>Of course it's not a solution, but it is no more doubts that it's my adapter &quot;responsible&quot; for this crash. Unfortunatelly It's still not clear what is missing in my implementation. I'll review interface an native implementations in ZEP and try to find out what is missing. And post here later if there will be any progress.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8605" data-cf-modified-9acf471471ae5b362c83ec75-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8605" data-cf-modified-9acf471471ae5b362c83ec75-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b7ac84c83b4ca75e49df7294a4f7027b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1710/vorbeer" class="user-moderator-N"><span itemprop="name">vorbeer</span></a>        </span>
+        <br>
+
+        <span class="karma">902</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="8614" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '14</span>
+              </span><br/><a name="C8614" href="#C8614">
+                <time itemprop="dateCreated" datetime="2014-06-13T07:37:35-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>And here is result of my investigation so far. The problem is not in DB adapter implementation. It's on a higher level. Apache crashes every time Adapter::query() returns false.
+As my listeners did not return anything, as well as empty EventsManager without listeners, this part</p>
+<pre><code class="language-php">            if ($this-&gt;_eventsManager-&gt;fire("db:beforeQuery", $this, $bindParams) == false) {
+                return false;
+            }</code></pre>
+<p>always returns false. So the simple workaround is make your listeners always return true at least for &quot;beforeQuery&quot; event. But what about the case you want to implement some complex logic based on events and some cases require query execution cancelling?</p>
+<p>And the last, most weird thing: When I try the same trick with mysql adapter ORM behaves completely different.
+If listeners doesn't return anything query is executed. If listeners return false explicitly query execution stops and apache is alive. Let's dig into the source:</p>
+<p>pdo.c PHP_METHOD(Phalcon_Db_Adapter_Pdo, query)</p>
+<pre><code class="language-c">        PHALCON_CALL_METHOD(&amp;status, events_manager, "fire", event_name, this_ptr, bind_params);
+        if (PHALCON_IS_FALSE(status)) {
+            RETURN_MM_FALSE;
+        }</code></pre>
+<p>Initially status is null and passed by reference, if it doesn't change in the listener it is still null, <code>PHALCON_IS_FALSE(status)</code> may not be true and method goes on.
+But what about secont case? When status becomes false method query exits with this statement: <code>RETURN_MM_FALSE;</code> and apache stay alive. Does it mean this statement is not the same as returning false in php analogical method?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8614" data-cf-modified-9acf471471ae5b362c83ec75-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8614" data-cf-modified-9acf471471ae5b362c83ec75-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2543" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

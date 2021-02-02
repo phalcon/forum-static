@@ -1,0 +1,155 @@
+---
+layout: default
+title: 'Declaring Model twice problem. Second declaration doesn&#039;t have shared dependencies. - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Declaring Model twice problem. Second declaration doesn&#039;t have shared dependencies.</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1443/cjrb2009" class="user-moderator-N"><span itemprop="name">cjrb2009</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-04-25T14:22:56-07:00">Apr '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-04-25T14:22:56-07:00">Apr '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>943</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/104c4cd4e914d0b4d08f20ddb87be07c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1443/cjrb2009" class="user-moderator-N"><span itemprop="name">cjrb2009</span></a></span>
+                <span class="karma">2.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2180" href="#C2180">
+        <time class="action-date">Apr '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi there,</p>
+<p>When I try to declare a Model twice, the second declaration returns empty shared dependenicies. I'm probably missing something. Here what I have.</p>
+<ul>
+<li>Library - LibraryBase.php</li>
+<li>Library - User.php</li>
+<li>Model - ModelBase.php</li>
+<li>Model - UserGroupsModel.php</li>
+<li>Controller - UsersController.php</li>
+</ul>
+<p>ModelBase.php</p>
+<pre><code>namespace Models;
+
+class ModelBase extends \Phalcon\Mvc\Model{
+
+   public $db; // Setting up db connection
+
+   // Initialize model
+   function initialize()
+   {
+      $this-&gt;db=$this-&gt;getDI()-&gt;getShared("db"); // Setting up db connection from injector
+   }
+
+}</code></pre>
+<p>UserGroupsModel.php</p>
+<pre><code>namespace Models;
+
+class UserGroupsModel extends ModelBase{
+
+   function initialize()
+   {
+      parent::initialize();   
+   }
+
+   function test()
+   {
+      $this-&gt;db-&gt;query('SOME QUERY');
+   }
+
+}</code></pre>
+<p>LibraryBase.php</p>
+<pre><code>namespace Libraries;
+
+class LibraryBase extends \Models\ModelBase {
+
+    function initialize()
+     {
+        parent::initialize();
+     }
+
+}</code></pre>
+<p>User.php</p>
+<pre><code>namespace Libraries;
+
+class User extends LibraryBase {
+    function initialize()
+     {
+        parent::initialize();
+     }
+
+     function get_group()
+     {
+        $UserGroupsModel=new \Models\UserGroupsModel();
+        $UserGroupsModel-&gt;test();
+     }
+}</code></pre>
+<p>UsersController.php</p>
+<pre><code>namespace Controllers;
+
+class UsersController extends \Phalcon\Mvc\Controller{
+
+    function userGoupsAction()
+    {
+        $UserGroupsModel=new \Models\UserGroupsModel();
+        $UserGroupsModel-&gt;test();
+
+        *********************************
+        Error here. Says that query() is on non-object in the UserGroupsModel.
+    }
+}</code></pre>
+<p>The idea is to extend ModelBase and to have access to common dependencies. Users.php (library) is processing user authentication etc. UsersController.php dealing with users. LibraryBase extends ModelBase to access common objects. First call for UserGroupsModel() is done from User.php library and it works. The second call for UserGroupsModel() is done from UserController.php and it returns empty $this-&gt;db in the model.</p>
+<p>If not to extend ModelBase and manually assing objects using $this-&gt;db=$this-&gt;getDI()-&gt;getShared(&quot;db&quot;);  in the UserGroupsModel() then it works. But then you need to assing common objects in every Model. I'm probably missing something.</p>
+<p>Any help, suggestions or solutions are highly appreciated.</p>
+<p>Thank you in advance.</p>
+<p>EDIT:</p>
+<p>Here is the link to stackoverflow where I have a sample that triggers an error:<a href="http://"><a href="http://stackoverflow.com/questions/23303450/phalcon-mvc-model-called-twice-returns-empty-shared-objects">http://stackoverflow.com/questions/23303450/phalcon-mvc-model-called-twice-returns-empty-shared-objects</a></a></p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-6554a24f846cd566fe071293-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-6554a24f846cd566fe071293-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2180" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

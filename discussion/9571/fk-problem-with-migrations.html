@@ -1,0 +1,459 @@
+---
+layout: default
+title: 'FK problem with migrations - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/12/developer-tools">Developer Tools</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">FK problem with migrations</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/5239/oscarmolinadev" class="user-moderator-N"><span itemprop="name">Oscar Molina</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-11-22T11:47:20-07:00">Nov '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-11-22T11:47:20-07:00">Nov '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>885</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/98fc515e032dfcffbd7c6720001bf151?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/5239/oscarmolinadev" class="user-moderator-N"><span itemprop="name">Oscar Molina</span></a></span>
+                <span class="karma">4.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C9571" href="#C9571">
+        <time class="action-date">Nov '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi guys,</p>
+<p>I have a  problem with migrations and FKs with onDelete/onUpdate, for example generate a migration with:</p>
+<p>DevTools 2.0.8 - last commit: c2e5aff43aa4fbf919abd13bb7d0ef80efb83f57</p>
+<p>Tested with:</p>
+<p>Phalcon 2.0.8 - Windows x86 for PHP 5.6.0 (vc11) </p>
+<p>XAMPP: 5.6.14
+PHP: 5.6.14
+MariaDB: 10.1.8</p>
+<p>Phalcon 2.0.8 - Windows x86 for PHP 5.5.0 (vc11) </p>
+<p>XAMPP: 1.8.3
+PHP: 5.5.15
+MySQL: 5.5.32</p>
+<p>Mysql Table</p>
+<pre><code>CREATE TABLE `users` (
+    `id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+    `name` VARCHAR(255) NOT NULL,
+    `email` VARCHAR(255) NOT NULL,
+    `password` CHAR(60) NOT NULL,
+    `mustChangePassword` CHAR(1) NULL DEFAULT NULL,
+    `idProfile` INT(10) UNSIGNED NOT NULL,
+    `idCompany` INT(10) UNSIGNED NULL DEFAULT NULL,
+    `banned` CHAR(1) NULL DEFAULT NULL,
+    `suspended` CHAR(1) NULL DEFAULT NULL,
+    `active` CHAR(1) NULL DEFAULT NULL,
+    PRIMARY KEY (`id`),
+    INDEX `FK_users_profiles` (`idProfile`),
+    CONSTRAINT `FK_users_profiles` FOREIGN KEY (`idProfile`) REFERENCES `profiles` (`id`) ON UPDATE CASCADE
+)
+COLLATE='utf8_general_ci'
+ENGINE=InnoDB
+;
+</code></pre>
+<p>Phalcon migration generates FK(references) but missing onUpdate:</p>
+<pre><code>&lt;?php 
+
+use Phalcon\Db\Column;
+use Phalcon\Db\Index;
+use Phalcon\Db\Reference;
+use Phalcon\Mvc\Model\Migration;
+
+/**
+ * Class UsersMigration_100
+ */
+class UsersMigration_100 extends Migration
+{
+    /**
+     * Define the table structure
+     *
+     * @return void
+     */
+    public function morph()
+    {
+        $this-&gt;morphTable('users', array(
+                'columns' =&gt; array(
+                    new Column(
+                        'id',
+                        array(
+                            'type' =&gt; Column::TYPE_INTEGER,
+                            'unsigned' =&gt; true,
+                            'notNull' =&gt; true,
+                            'autoIncrement' =&gt; true,
+                            'size' =&gt; 10,
+                            'first' =&gt; true
+                        )
+                    ),
+                    new Column(
+                        'name',
+                        array(
+                            'type' =&gt; Column::TYPE_VARCHAR,
+                            'notNull' =&gt; true,
+                            'size' =&gt; 255,
+                            'after' =&gt; 'id'
+                        )
+                    ),
+                    new Column(
+                        'email',
+                        array(
+                            'type' =&gt; Column::TYPE_VARCHAR,
+                            'notNull' =&gt; true,
+                            'size' =&gt; 255,
+                            'after' =&gt; 'name'
+                        )
+                    ),
+                    new Column(
+                        'password',
+                        array(
+                            'type' =&gt; Column::TYPE_CHAR,
+                            'notNull' =&gt; true,
+                            'size' =&gt; 60,
+                            'after' =&gt; 'email'
+                        )
+                    ),
+                    new Column(
+                        'mustChangePassword',
+                        array(
+                            'type' =&gt; Column::TYPE_CHAR,
+                            'size' =&gt; 1,
+                            'after' =&gt; 'password'
+                        )
+                    ),
+                    new Column(
+                        'idProfile',
+                        array(
+                            'type' =&gt; Column::TYPE_INTEGER,
+                            'unsigned' =&gt; true,
+                            'notNull' =&gt; true,
+                            'size' =&gt; 10,
+                            'after' =&gt; 'mustChangePassword'
+                        )
+                    ),
+                    new Column(
+                        'idCompany',
+                        array(
+                            'type' =&gt; Column::TYPE_INTEGER,
+                            'unsigned' =&gt; true,
+                            'size' =&gt; 10,
+                            'after' =&gt; 'idProfile'
+                        )
+                    ),
+                    new Column(
+                        'banned',
+                        array(
+                            'type' =&gt; Column::TYPE_CHAR,
+                            'size' =&gt; 1,
+                            'after' =&gt; 'idCompany'
+                        )
+                    ),
+                    new Column(
+                        'suspended',
+                        array(
+                            'type' =&gt; Column::TYPE_CHAR,
+                            'size' =&gt; 1,
+                            'after' =&gt; 'banned'
+                        )
+                    ),
+                    new Column(
+                        'active',
+                        array(
+                            'type' =&gt; Column::TYPE_CHAR,
+                            'size' =&gt; 1,
+                            'after' =&gt; 'suspended'
+                        )
+                    )
+                ),
+                'indexes' =&gt; array(
+                    new Index('PRIMARY', array('id')),
+                    new Index('FK_users_profiles', array('idProfile'))
+                ),
+                'references' =&gt; array(
+                    new Reference(
+                        'FK_users_profiles',
+                        array(
+                            'referencedSchema' =&gt; 'sptn_web',
+                            'referencedTable' =&gt; 'profiles',
+                            'columns' =&gt; array('idProfile'),
+                            'referencedColumns' =&gt; array('id')
+                        )
+                    )
+                ),
+                'options' =&gt; array(
+                    'TABLE_TYPE' =&gt; 'BASE TABLE',
+                    'AUTO_INCREMENT' =&gt; '1',
+                    'ENGINE' =&gt; 'InnoDB',
+                    'TABLE_COLLATION' =&gt; 'utf8_general_ci'
+                ),
+            )
+        );
+    }
+
+    /**
+     * Run the migrations
+     *
+     * @return void
+     */
+    public function up()
+    {
+
+    }
+
+    /**
+     * Reverse the migrations
+     *
+     * @return void
+     */
+    public function down()
+    {
+
+    }
+
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-3fcabe85d941093f15093da3-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-3fcabe85d941093f15093da3-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/98fc515e032dfcffbd7c6720001bf151?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5239/oscarmolinadev" class="user-moderator-N"><span itemprop="name">Oscar Molina</span></a>        </span>
+        <br>
+
+        <span class="karma">4.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="26805" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '15</span>
+              </span><br/><a name="C26805" href="#C26805">
+                <time itemprop="dateCreated" datetime="2015-11-23T00:36:17-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I found the problem but i don't know the best solution.</p>
+<p><strong>scripts/Phalcon/Mvc/Model/Migration.php L: 323-343</strong></p>
+<p><a href="https://github.com/phalcon/phalcon-devtools/blob/master/scripts/Phalcon/Mvc/Model/Migration.php#L323">GitHub</a></p>
+<pre><code>        $referencesDefinition = array();
+        $references = self::$_connection-&gt;describeReferences($table, $defaultSchema);
+        foreach ($references as $constraintName =&gt; $dbReference) {
+            $columns = array();
+            foreach ($dbReference-&gt;getColumns() as $column) {
+                $columns[] = "'" . $column . "'";
+            }
+            $referencedColumns = array();
+            foreach ($dbReference-&gt;getReferencedColumns() as $referencedColumn) {
+                $referencedColumns[] = "'" . $referencedColumn . "'";
+            }
+            $referenceDefinition = array();
+            $referenceDefinition[] = "'referencedSchema' =&gt; '" . $dbReference-&gt;getReferencedSchema() . "'";
+            $referenceDefinition[] = "'referencedTable' =&gt; '" . $dbReference-&gt;getReferencedTable() . "'";
+            $referenceDefinition[] = "'columns' =&gt; array(" . join(",", $columns) . ")";
+            $referenceDefinition[] = "'referencedColumns' =&gt; array(".join(",", $referencedColumns) . ")";
+            $referencesDefinition[] = $snippet-&gt;getReferenceDefinition($constraintName, $referenceDefinition);
+        }
+</code></pre>
+<p>I tried this but not work.</p>
+<pre><code>$referenceDefinition[] = "'onUpdate' =&gt;  '" . $dbReference-&gt;getOnUpdate() . "'";</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26805" data-cf-modified-3fcabe85d941093f15093da3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26805" data-cf-modified-3fcabe85d941093f15093da3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9af73076014e295c1337e33e51b52518?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2598/rianorie" class="user-moderator-N"><span itemprop="name">Rian Orie</span></a>        </span>
+        <br>
+
+        <span class="karma">6.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C26925" href="#C26925">
+                <time itemprop="dateCreated" datetime="2015-11-25T07:33:15-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This is what you're looking for:</p>
+<pre><code>            'references' =&gt; array(
+                new \Phalcon\Db\Reference('fk_answer_task', array(
+                    'referencedTable' =&gt; 'task',
+                    'columns' =&gt; array('task_id'),
+                    'referencedColumns' =&gt; array('id'),
+                    'onDelete' =&gt; 'CASCADE',
+                    'onUpdate' =&gt; 'NO ACTION'
+                )),
+                new \Phalcon\Db\Reference('fk_answer_assignment', array(
+                    'referencedTable' =&gt; 'assignment',
+                    'columns' =&gt; array('assignment_id'),
+                    'referencedColumns' =&gt; array('id'),
+                    'onDelete' =&gt; 'CASCADE',
+                    'onUpdate' =&gt; 'NO ACTION'
+                )),         </code></pre>
+<p>Also see <a href="https://docs.phalcon.io/en/latest/reference/migrations.html#defining-references"><a href="https://docs.phalcon.io/en/latest/reference/migrations.html#defining-references">https://docs.phalcon.io/en/latest/reference/migrations.html#defining-references</a></a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26925" data-cf-modified-3fcabe85d941093f15093da3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26925" data-cf-modified-3fcabe85d941093f15093da3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/98fc515e032dfcffbd7c6720001bf151?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5239/oscarmolinadev" class="user-moderator-N"><span itemprop="name">Oscar Molina</span></a>        </span>
+        <br>
+
+        <span class="karma">4.1k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C26925"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/9af73076014e295c1337e33e51b52518?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Rian Orie                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C26945" href="#C26945">
+                <time itemprop="dateCreated" datetime="2015-11-25T08:37:39-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>'onDelete' =&gt; 'CASCADE',
+'onUpdate' =&gt; 'NO ACTION'</p>
+<p>When generate the migration not puts them in the array              </p>
+<blockquote>
+<p>This is what you're looking for:</p>
+<pre><code>           'references' =&gt; array(
+              new \Phalcon\Db\Reference('fk_answer_task', array(
+                  'referencedTable' =&gt; 'task',
+                  'columns' =&gt; array('task_id'),
+                  'referencedColumns' =&gt; array('id'),
+                   'onDelete' =&gt; 'CASCADE',
+                   'onUpdate' =&gt; 'NO ACTION'
+              )),
+               new \Phalcon\Db\Reference('fk_answer_assignment', array(
+                   'referencedTable' =&gt; 'assignment',
+                   'columns' =&gt; array('assignment_id'),
+                   'referencedColumns' =&gt; array('id'),
+                   'onDelete' =&gt; 'CASCADE',
+                   'onUpdate' =&gt; 'NO ACTION'
+               )),            </code></pre>
+<p>Also see <a href="https://docs.phalcon.io/en/latest/reference/migrations.html#defining-references"><a href="https://docs.phalcon.io/en/latest/reference/migrations.html#defining-references">https://docs.phalcon.io/en/latest/reference/migrations.html#defining-references</a></a></p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26945" data-cf-modified-3fcabe85d941093f15093da3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26945" data-cf-modified-3fcabe85d941093f15093da3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9af73076014e295c1337e33e51b52518?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2598/rianorie" class="user-moderator-N"><span itemprop="name">Rian Orie</span></a>        </span>
+        <br>
+
+        <span class="karma">6.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C26947" href="#C26947">
+                <time itemprop="dateCreated" datetime="2015-11-25T09:06:54-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I didn't get that you meant during generation of the migration files, that's a good point.</p>
+<p>I'll look into it.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26947" data-cf-modified-3fcabe85d941093f15093da3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26947" data-cf-modified-3fcabe85d941093f15093da3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9af73076014e295c1337e33e51b52518?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2598/rianorie" class="user-moderator-N"><span itemprop="name">Rian Orie</span></a>        </span>
+        <br>
+
+        <span class="karma">6.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C27019" href="#C27019">
+                <time itemprop="dateCreated" datetime="2015-11-26T20:52:38-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This took a bit of searching, I fixed the problem and sent the changes upstream. As soon as they get merged you should be able to use them.</p>
+<p>See: <a href="https://github.com/phalcon/cphalcon/pull/11162">https://github.com/phalcon/cphalcon/pull/11162</a>
+and: <a href="https://github.com/phalcon/phalcon-devtools/pull/566">https://github.com/phalcon/phalcon-devtools/pull/566</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27019" data-cf-modified-3fcabe85d941093f15093da3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27019" data-cf-modified-3fcabe85d941093f15093da3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/98fc515e032dfcffbd7c6720001bf151?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5239/oscarmolinadev" class="user-moderator-N"><span itemprop="name">Oscar Molina</span></a>        </span>
+        <br>
+
+        <span class="karma">4.1k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C27019"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/9af73076014e295c1337e33e51b52518?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Rian Orie                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C27021" href="#C27021">
+                <time itemprop="dateCreated" datetime="2015-11-26T23:01:24-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks Rian!</p>
+<blockquote>
+<p>This took a bit of searching, I fixed the problem and sent the changes upstream. As soon as they get merged you should be able to use them.</p>
+<p>See: <a href="https://github.com/phalcon/cphalcon/pull/11162">https://github.com/phalcon/cphalcon/pull/11162</a>
+and: <a href="https://github.com/phalcon/phalcon-devtools/pull/566">https://github.com/phalcon/phalcon-devtools/pull/566</a></p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27021" data-cf-modified-3fcabe85d941093f15093da3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27021" data-cf-modified-3fcabe85d941093f15093da3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="9571" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,229 @@
+---
+layout: default
+title: 'Unable to delete child table follow by parent with Transaction - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Unable to delete child table follow by parent with Transaction</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1268/jhtan1" class="user-moderator-N"><span itemprop="name">jhtan1</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-03-26T01:33:31-07:00">Mar '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-03-26T01:33:31-07:00">Mar '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>912</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/f6fe2ad73d81ddea5f7214dda4b8ea6a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1268/jhtan1" class="user-moderator-N"><span itemprop="name">jhtan1</span></a></span>
+                <span class="karma">7.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1911" href="#C1911">
+        <time class="action-date">Mar '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>No problem to delete on delete1 action, but
+encounter 'The Head cannot be deleted because it is being used by Line.' error on delete2 action(with transaction).</p>
+<pre><code class="language-php">/*
+CREATE TABLE head
+(   head_id VARCHAR NOT NULL PRIMARY KEY,
+    name VARCHAR
+);
+*/
+use Phalcon\Mvc\Model,
+    Phalcon\Db\Column,
+    Phalcon\Mvc\Model\MetaData;
+
+class Head extends Phalcon\Mvc\Model {
+
+    public function initialize() {
+        $this-&gt;setSource('head');
+
+        $this-&gt;hasMany('head_id', 'Line', 'head_id', array(
+            'foreignKey' =&gt; array('message' =&gt; 'The Head cannot be deleted because it is being used by Line.')
+        ));
+    }
+
+}
+
+/*
+CREATE TABLE line
+(   line_id VARCHAR NOT NULL PRIMARY KEY,
+    name VARCHAR,
+    head_id VARCHAR NOT NULL REFERENCES head (head_id)
+);
+*/
+use Phalcon\Mvc\Model,
+    Phalcon\Db\Column,
+    Phalcon\Mvc\Model\MetaData;
+
+class Line extends Phalcon\Mvc\Model {
+
+    public function initialize() {
+        $this-&gt;setSource('line');
+
+        $this-&gt;belongsTo('head_id', 'Head', 'head_id', array(
+            'foreignKey' =&gt; array('message' =&gt; 'The Head does not exist.')
+        ));
+    }
+
+}
+
+class TestController extends Phalcon\Mvc\Controller {
+
+    public function indexAction() {
+
+    }
+
+    public function createAction() {
+        $head = new Head();
+        $head-&gt;head_id = 'h1';
+        $head-&gt;name = 'head 1';
+
+        $line = new Line();
+        $line-&gt;line_id = 'l1';
+        $line-&gt;name = 'line 1';
+
+        $head-&gt;line = $line;
+
+        if (!$head-&gt;save()) {
+            foreach ($head-&gt;getMessages() as $message) {
+                echo $message . '&lt;br/&gt;';
+            }
+        }
+    }
+
+    public function delete1Action() {
+        //$manager = new Phalcon\Mvc\Model\Transaction\Manager();
+        //$transaction = $manager-&gt;get();
+
+        $line = Line::findFirst(array(
+                    'line_id = :line_id:',
+                    'bind' =&gt; array('line_id' =&gt; 'l1')
+        ));
+
+        //$line-&gt;setTransaction($transaction);
+
+        $head = $line-&gt;head;
+        //$head-&gt;setTransaction($transaction);
+
+        if (!$line-&gt;delete()) {
+            try {
+                //$transaction-&gt;rollback();
+            } catch (Exception $e) {
+
+            }
+
+            foreach ($line-&gt;getMessages() as $message)
+                echo $message . '&lt;br/&gt;';
+
+            return;
+        }
+
+        if (!$head-&gt;delete()) {
+            try {
+                //$transaction-&gt;rollback();
+            } catch (Exception $e) {
+
+            }
+
+            foreach ($head-&gt;getMessages() as $message)
+                echo $message . '&lt;br/&gt;';
+
+            return;
+        }
+
+        //$transaction-&gt;commit();
+    }
+
+    public function delete2Action() {
+        $manager = new Phalcon\Mvc\Model\Transaction\Manager();
+        $transaction = $manager-&gt;get();
+
+        $line = Line::findFirst(array(
+                    'line_id = :line_id:',
+                    'bind' =&gt; array('line_id' =&gt; 'l1')
+        ));
+
+        $line-&gt;setTransaction($transaction);
+
+        $head = $line-&gt;head;
+        $head-&gt;setTransaction($transaction);
+
+        if (!$line-&gt;delete()) {
+            try {
+                //$transaction-&gt;rollback();
+            } catch (Exception $e) {
+
+            }
+
+            foreach ($line-&gt;getMessages() as $message)
+                echo $message . '&lt;br/&gt;';
+
+            return;
+        }
+
+        if (!$head-&gt;delete()) {
+            try {
+                $transaction-&gt;rollback();
+            } catch (Exception $e) {
+
+            }
+
+            foreach ($head-&gt;getMessages() as $message)
+                echo $message . '&lt;br/&gt;';
+
+            return;
+        }
+
+        $transaction-&gt;commit();
+    }
+
+}
+</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-38ce769fba73728f76ffedba-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-38ce769fba73728f76ffedba-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1911" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

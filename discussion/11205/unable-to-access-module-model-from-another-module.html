@@ -1,0 +1,148 @@
+---
+layout: default
+title: 'unable to access module model from another module - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">unable to access module model from another module</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/6273/vince-db" class="user-moderator-N"><span itemprop="name">Vincent D.</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-04-17T05:24:05-07:00">Apr '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-04-17T05:24:05-07:00">Apr '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Apr '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>660</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/4b62ac5f833d86aede6c6669a78dbbfa?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/6273/vince-db" class="user-moderator-N"><span itemprop="name">Vincent D.</span></a></span>
+                <span class="karma">1.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C11205" href="#C11205">
+        <time class="action-date">Apr '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>I am getting into Phalcon with a multimodule project. I have a hard time with namespaces and modules interactions. I want to access a module model from another module, frontend module calls a cms module model. Here is how I declared the classes : </p>
+<pre><code class="language-php">// CategoryModel in CmsModule
+namespace Application\Cms\Models;
+class Category extends \Phalcon\Mvc\Model
+{ // ... }
+// CategoryController in CmsModule
+namespace Application\Cms\Controllers;
+use Application\Cms\Models\Category as Category;
+class CategoryController extends ControllerBase
+{ // Here a new Category() or a Category::class work }
+
+// FrontendController in Frontend module
+namespace Application\Frontend\Controllers;
+use Application\Cms\Models\Category as Category;
+class IndexController extends ControllerBase 
+{ // Here a new Category() or a Category::class DO NOT work }</code></pre>
+<p>Both modules are declared in apps/config/modules.php and each module/Module.php declares their namespace with <code>registerAutoloaders(DiInterface $di = null)</code></p>
+<p>What am I doing wrong here ? </p>
+<p>Thanks in advance for any help.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-a5c614b66222cd7c1f10fc87-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-a5c614b66222cd7c1f10fc87-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/4b62ac5f833d86aede6c6669a78dbbfa?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6273/vince-db" class="user-moderator-N"><span itemprop="name">Vincent D.</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="32649" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '16</span>
+              </span><br/><a name="C32649" href="#C32649">
+                <time itemprop="dateCreated" datetime="2016-04-17T07:03:10-07:00" class="action-date">Apr '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Solved it by registering the Cms module namespace in the Frontend Module.php </p>
+<pre><code class="language-php">class Module implements ModuleDefinitionInterface
+{
+    public function registerAutoloaders(DiInterface $di = null)
+    {
+        $loader = new Loader();
+        $loader-&gt;registerNamespaces(array(
+            'Application\Frontend\Controllers' =&gt; __DIR__ . '/controllers/',
+            'Application\Frontend\Models' =&gt; __DIR__ . '/models/',
+            'Application\Cms\Controllers' =&gt; MODULES_PATH . '/cms/controllers/',
+            'Application\Cms\Models' =&gt; MODULES_PATH . '/cms/models/',
+        ));
+        $loader-&gt;register();
+    }
+}</code></pre>
+<p>After all this is what I wanted : frontend is the module dependant from a lot of other modules, and the other modules should stay as isolated as possible. </p>
+<p>Do you have suggestions on how to improve this ? Should I put a try/catch in this method to check if the required modules are presents ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="32649" data-cf-modified-a5c614b66222cd7c1f10fc87-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="32649" data-cf-modified-a5c614b66222cd7c1f10fc87-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1f92c8832155ca96cb3147af3cad27b0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6311/davihu" class="user-moderator-N"><span itemprop="name">David Hübner</span></a>        </span>
+        <br>
+
+        <span class="karma">9.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C32667" href="#C32667">
+                <time itemprop="dateCreated" datetime="2016-04-18T00:04:24-07:00" class="action-date">Apr '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You solved it the right way, you have to register needed namespaces in each module.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="32667" data-cf-modified-a5c614b66222cd7c1f10fc87-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="32667" data-cf-modified-a5c614b66222cd7c1f10fc87-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="11205" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,368 @@
+---
+layout: default
+title: 'Unable to get session in Library Class file - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/28/session">Session</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Unable to get session in Library Class file</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/9593/anoj" class="user-moderator-N"><span itemprop="name">anoj</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-05-16T06:28:48-07:00">May '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-05-16T06:28:48-07:00">May '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>May '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>761</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/8b004aabcdf0ae1d5ab53ff35d6ef95c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/9593/anoj" class="user-moderator-N"><span itemprop="name">anoj</span></a></span>
+                <span class="karma">840</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C16143" href="#C16143">
+        <time class="action-date">May '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>index.php Page : </p>
+<pre><code class="language-php">&lt;?php
+use Phalcon\Mvc\Dispatcher as MvcDispatcher,
+    Phalcon\Events\Manager as EventsManager,
+    Phalcon\Session\Adapter\Files as SessionAdapter;
+//error_reporting(E_ALL);
+//error_reporting(E_ERROR | E_PARSE);
+try {
+
+    /**
+     * Read the configuration from an external file
+    */
+    require __DIR__.'/../app/config/config.php';
+
+    //set default timezone here
+    date_default_timezone_set($config-&gt;timezone-&gt;default);
+
+    $loader = new \Phalcon\Loader();
+
+    /**
+     * We're a registering a set of directories taken from the configuration file
+     */
+    $loader-&gt;registerDirs(
+        array(
+            __DIR__.$config-&gt;phalcon-&gt;controllersDir,
+            __DIR__.$config-&gt;phalcon-&gt;libraryDir,
+            __DIR__.$config-&gt;phalcon-&gt;modelsDir
+        )
+    )-&gt;register();
+
+    /**
+     * The FactoryDefault Dependency Injector automatically register the right services providing a full stack framework
+     */
+    $di = new \Phalcon\DI\FactoryDefault();
+
+    /**
+     * Load router from external file
+     */
+    $di-&gt;set('router', function(){
+        require __DIR__.'/../app/config/routes.php';
+        return $router;
+    });
+
+    /**
+     * The URL component is used to generate all kind of urls in the application
+     */
+    $di-&gt;set('url', function() use ($config){
+        $url = new \Phalcon\Mvc\Url();
+        $url-&gt;setBaseUri($config-&gt;phalcon-&gt;baseUri);
+        return $url;
+    });
+
+    /**
+     * Setup the view service
+     */
+    $di-&gt;set('view', function() use ($config) {
+        $view = new \Phalcon\Mvc\View();
+        $view-&gt;setViewsDir(__DIR__.$config-&gt;phalcon-&gt;viewsDir);
+        return $view;
+    });
+
+    //Set the views cache service
+    $di-&gt;set('viewCache', function(){
+
+        //Cache data for one day by default
+        $frontCache = new Phalcon\Cache\Frontend\Output(array(
+            "lifetime" =&gt; 2592000
+        ));
+
+        //File backend settings
+        $cache = new Phalcon\Cache\Backend\File($frontCache, array(
+            "cacheDir" =&gt; __DIR__."/../app/cache/",
+            "prefix" =&gt; "php"
+        ));
+
+        return $cache;
+    });
+
+    /**
+     * Database connection is created based in the parameters defined in the configuration file
+     */
+    $di-&gt;set('db', function() use ($config) {
+        return new \Phalcon\Db\Adapter\Pdo\Mysql(array(
+            "host" =&gt; $config-&gt;database-&gt;host,
+            "username" =&gt; $config-&gt;database-&gt;username,
+            "password" =&gt; $config-&gt;database-&gt;password,
+            "dbname" =&gt; $config-&gt;database-&gt;dbname
+        ));
+    });
+
+    /**
+     * Start the session the first time some component request the session service
+     */
+    /* $di-&gt;set('session', function(){
+        $session = new Phalcon\Session\Adapter\Files();
+        $session-&gt;start();
+        return $session;
+    }); */
+        /* $di-&gt;set("session",function(){
+            $session = new Phalcon\Session\Adapter\Files();
+            $session-&gt;start();
+            return $session;
+        }); */
+
+    /**
+     * Register the flash service with custom CSS classes
+     */
+    $di-&gt;set('flash', function(){
+        $flash = new Phalcon\Flash\Direct(array(
+            'error' =&gt; 'alert alert-danger',
+            'success' =&gt; 'alert alert-success',
+            'notice' =&gt; 'alert alert-info',
+            'warning' =&gt; 'alert alert-warning',
+        ));
+        return $flash;
+    });
+
+    /* $di-&gt;setShared("session",function(){
+        $session = new Session();
+        $session-&gt;start();
+        return $session;    
+    }); */
+
+        $di-&gt;setShared('session', function () {
+            $session = new SessionAdapter();
+            $session-&gt;start();
+
+            return $session;
+        });
+
+    // Store config object
+    $di-&gt;set('config', $config);
+
+    $di-&gt;set('dispatcher', function () {
+
+        // Create an EventsManager
+        $eventsManager = new EventsManager();
+        // Attach a listener
+        $eventsManager-&gt;attach("dispatch:beforeDispatchLoop", function ($event, $dispatcher) {
+
+                if(($dispatcher-&gt;getControllerName()=="user" &amp;&amp; $dispatcher-&gt;getActionName()=="signup") || 
+                    ($dispatcher-&gt;getControllerName()=="employee" &amp;&amp; $dispatcher-&gt;getActionName()=="signupemployee") || 
+                    ($dispatcher-&gt;getControllerName()=="user" &amp;&amp; $dispatcher-&gt;getActionName()=="signin") ||
+                    ($dispatcher-&gt;getControllerName()=="user" &amp;&amp; $dispatcher-&gt;getActionName()=="checkemail") ||
+                    ($dispatcher-&gt;getControllerName()=="user" &amp;&amp; $dispatcher-&gt;getActionName()=="checkmobile") ||
+                    ($dispatcher-&gt;getControllerName()=="misc" &amp;&amp; $dispatcher-&gt;getActionName()=="saveotp") ||
+                    ($dispatcher-&gt;getControllerName()=="misc" &amp;&amp; $dispatcher-&gt;getActionName()=="sendmsg") ||
+                    ($dispatcher-&gt;getControllerName()=="misc" &amp;&amp; $dispatcher-&gt;getActionName()=="checkotp")||
+                    ($dispatcher-&gt;getControllerName()=="service" &amp;&amp; $dispatcher-&gt;getActionName()=="getservices")){
+                    //Allow without accesstoken
+                }else{
+
+                $validAccessToken = new ValidAccessToken();
+                if(!$validAccessToken-&gt;isValid()){
+                    $dispatcher-&gt;setControllerName("sessionexpired");
+                    $dispatcher-&gt;setActionName("error");
+                }else{
+                    $dispatcher-&gt;setParam("user_id", $validAccessToken-&gt;getUid());
+                    $dispatcher-&gt;setParam("utype", $validAccessToken-&gt;getUtype());
+                }
+            }
+        });
+
+        $dispatcher = new MvcDispatcher();
+        $dispatcher-&gt;setEventsManager($eventsManager);
+        return $dispatcher;
+    });
+
+    $application = new \Phalcon\Mvc\Application();
+    $application-&gt;setDI($di);
+    echo $application-&gt;handle()-&gt;getContent();
+
+} catch (Phalcon\Exception $e) {
+    echo $e-&gt;getMessage();
+} catch (PDOException $e){
+    echo $e-&gt;getMessage();
+}
+?&gt;</code></pre>
+<p>code to set session in Controller: </p>
+<pre><code class="language-php">&lt;?php
+$accesstoken = '123456788fsdfsgsdgewfs';
+$this-&gt;session-&gt;set("token", $accesstoken);
+?&gt;</code></pre>
+<p>Libary File to check set session is correct or not :
+But on this page not able to get session </p>
+<pre><code class="language-php">&lt;?php
+session_start();
+class ValidAccessToken{
+    private $user_id;
+    private $utype;
+
+    function isValid(){
+        $isvalid = false;
+        if(isset($_POST['token'])){
+            $tokenvalue  = $_POST['token'];
+        }elseif(isset($_SESSION['token'])){
+            $tokenvalue  = $_SESSION['token'];
+        }else{
+            $tokenvalue  = "";
+        }
+        echo 'TOKEN :  '.$tokenvalue."&lt;br/&gt;";
+        if($tokenvalue){    
+            $accessToken = AccessTokens::findFirstByToken($tokenvalue);
+            if($accessToken){
+                $this-&gt;user_id = $accessToken-&gt;user_id;
+                $this-&gt;utype = $accessToken-&gt;utype;
+                $isvalid = true;
+            }
+        }
+        return $isvalid;
+    }
+
+    function getUid(){
+        return $this-&gt;user_id;
+    }
+
+    function getUtype(){
+        return $this-&gt;utype;
+    }
+}
+?&gt;</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-caa97f295890b3eda0ecd327-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-caa97f295890b3eda0ecd327-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="48167" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '17</span>
+              </span><br/><a name="C48167" href="#C48167">
+                <time itemprop="dateCreated" datetime="2017-05-16T06:45:36-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Don't use <code>$_SESSION</code> and <code>$_POST</code>, use <code>$di-&gt;get("session")-&gt;get()</code> and <code>$di-&gt;get("request")-&gt;getPost()</code></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48167" data-cf-modified-caa97f295890b3eda0ecd327-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48167" data-cf-modified-caa97f295890b3eda0ecd327-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5915f25e654c4f9e60fe51700cdee683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4769/Izopi4a" class="user-moderator-Y"><span itemprop="name">Izo</span></a>        </span>
+        <br>
+
+        <span class="karma">85.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C48173" href="#C48173">
+                <time itemprop="dateCreated" datetime="2017-05-16T10:31:19-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>i am sorry if i am being annoying here, but i HATE if statments like this so much</p>
+<pre><code> if(($dispatcher-&gt;getControllerName()=="user" &amp;&amp; $dispatcher-&gt;getActionName()=="signup") || 
+                    ($dispatcher-&gt;getControllerName()=="employee" &amp;&amp; $dispatcher-&gt;getActionName()=="signupemployee") || 
+                    ($dispatcher-&gt;getControllerName()=="user" &amp;&amp; $dispatcher-&gt;getActionName()=="signin") ||
+                    ($dispatcher-&gt;getControllerName()=="user" &amp;&amp; $dispatcher-&gt;getActionName()=="checkemail") ||
+                    ($dispatcher-&gt;getControllerName()=="user" &amp;&amp; $dispatcher-&gt;getActionName()=="checkmobile") ||
+                    ($dispatcher-&gt;getControllerName()=="misc" &amp;&amp; $dispatcher-&gt;getActionName()=="saveotp") ||
+                    ($dispatcher-&gt;getControllerName()=="misc" &amp;&amp; $dispatcher-&gt;getActionName()=="sendmsg") ||
+                    ($dispatcher-&gt;getControllerName()=="misc" &amp;&amp; $dispatcher-&gt;getActionName()=="checkotp")||
+                    ($dispatcher-&gt;getControllerName()=="service" &amp;&amp; $dispatcher-&gt;getActionName()=="getservices"))</code></pre>
+<pre><code class="language-php">$allowedActions = ['user', 'signup'.....]
+
+if (in_array($dispatcher-&gt;getControllerName(), $allowedActions) {
+    ...
+}</code></pre>
+<p>so much more readable ..</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48173" data-cf-modified-caa97f295890b3eda0ecd327-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48173" data-cf-modified-caa97f295890b3eda0ecd327-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C48175" href="#C48175">
+                <time itemprop="dateCreated" datetime="2017-05-16T10:42:20-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Also better just use acl xD</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48175" data-cf-modified-caa97f295890b3eda0ecd327-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48175" data-cf-modified-caa97f295890b3eda0ecd327-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="16143" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

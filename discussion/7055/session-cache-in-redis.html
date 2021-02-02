@@ -1,0 +1,331 @@
+---
+layout: default
+title: 'Session &amp; Cache in Redis - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/28/session">Session</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Session &amp; Cache in Redis</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3151/sboudoux" class="user-moderator-N"><span itemprop="name">stephane</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-06-09T07:36:52-07:00">Jun '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-06-09T07:36:52-07:00">Jun '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Feb '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>2422</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/076d8254b3d82407f201a00995d41c96?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3151/sboudoux" class="user-moderator-N"><span itemprop="name">stephane</span></a></span>
+                <span class="karma">24.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C7055" href="#C7055">
+        <time class="action-date">Jun '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi all,</p>
+<p>I'm building an app that rely on Redis to store cache and session but I'm having a few issues. Nothing really critical, but some options/parameters seem to be missing in the adapter. I've updated Phalcon and the incubator this morning.</p>
+<p>First of all, I've install phpredis and igbinary and my app works just fine. But I'd like to push the configuration a bit further:</p>
+<ul>
+<li>using different redis.databases for session and different caches </li>
+<li>using different preffix for different type of cache ( &quot;fe.&quot; for frontend, &quot;be.&quot; for backend, &quot;data.&quot; for generated sets of data...)</li>
+</ul>
+<p><strong>front &amp; backend cache:</strong></p>
+<p>I'm using the default phalcon adapter here (Phalcon\Cache\Backend\Redis) and I can't find the way to customize the prefix or database used by Redis.</p>
+<p>Tried many sets of config, but can't make redis use the prefix or database I want.
+See a sample below: </p>
+<pre><code class="language-php">
+$asRedisConf = array(
+    'host' =&gt; '127.0.0.1:6379?weight=1&amp;database='.CONF_REDIS_DB_CACHE,
+    'port' =&gt; 6379,
+    'persistent' =&gt; false,
+    'index' =&gt; CONF_REDIS_DB_CACHE,
+    'database' =&gt; CONF_REDIS_DB_CACHE,
+
+    'lifetime' =&gt; 43200,
+
+    'prefix'   =&gt; '_dfe_',
+    'uniqueId' =&gt; '_dfe_',
+    'statsKey' =&gt; '_dfe_',
+    'prefix' =&gt; '_dfe_',
+    'name' =&gt; '_dfe_',
+
+    'index' =&gt; CONF_REDIS_DB_SESSION,
+    'database' =&gt; CONF_REDIS_DB_SESSION
+);
+
+$di-&gt;set('cache', function () use($asRedisConf) {
+
+    $oFrontCache = new Phalcon\Cache\Frontend\Data(array(
+    'lifetime' =&gt; 43200,
+    'prefix'   =&gt; 'all.'
+    ));
+
+    $oRedis = new Phalcon\Cache\Backend\Redis($oFrontCache, array('redis' =&gt; $asRedisConf));
+    return $oRedis;
+});
+</code></pre>
+<p><strong>Sessions</strong></p>
+<p>I've got roughly the same problems. I'm using the Redis class from the incubator here.
+I've found a way to specify a database in the connection url, but couldn't specify any prefix. </p>
+<pre><code class="language-php">
+$___asConfig['session'] = array(
+    'path' =&gt; 'tcp://127.0.0.1:6379?weight=1&amp;database='.CONF_REDIS_DB_SESSION,
+    'lifetime' =&gt; 43200,    //12hr
+    'cookie_lifetime' =&gt; 0, // infinite
+    'cookie_secure' =&gt; true,
+
+    'uniqueId' =&gt; '_dses_',
+    'statsKey' =&gt; '_dses_',
+    'prefix' =&gt; '_dses_',
+    'name' =&gt; '_dses_',
+
+    'index' =&gt; CONF_REDIS_DB_SESSION,
+    'database' =&gt; CONF_REDIS_DB_SESSION
+);
+
+$di-&gt;get('loader')-&gt;registerClasses(array('Phalcon\Session\Adapter\Redis' =&gt; PATH_LIBS.'/PIncubator/Session/Adapter/Redis.php'), true);
+    $di-&gt;setShared('session', function() use($___asConfig){
+
+        $oRedis = new \Phalcon\Session\Adapter\Redis($___asConfig['session']);
+
+        //$oRedis-&gt;select(CONF_REDIS_DB_SESSION);
+        //-&gt;setOption(Redis::OPT_SERIALIZER, Redis::SERIALIZER_IGBINARY); 
+
+        $oRedis-&gt;start();
+        return $oRedis;
+    });
+</code></pre>
+<p>Has anybody managed to make that work ? Should I give up Phalcon class and use phpRedis directly ?
+Or is there any plan to update the adapters to allow custom connections params (selectDb(), setPrefix()...) </p>
+<p>Thanks </p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-d491702d4593d49346d5ef2f-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-d491702d4593d49346d5ef2f-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/076d8254b3d82407f201a00995d41c96?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3151/sboudoux" class="user-moderator-N"><span itemprop="name">stephane</span></a>        </span>
+        <br>
+
+        <span class="karma">24.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C19289" href="#C19289">
+                <time itemprop="dateCreated" datetime="2015-06-10T02:25:01-07:00" class="action-date">Jun '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>nobody ? Really  :(
+I can't believe I'm the only one here trying to use advanced settings for Redis.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="19289" data-cf-modified-d491702d4593d49346d5ef2f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="19289" data-cf-modified-d491702d4593d49346d5ef2f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ff9a2f43efac70da87e23ddd6ac5061f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1663/al35mm" class="user-moderator-N"><span itemprop="name">Al</span></a>        </span>
+        <br>
+
+        <span class="karma">20.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C29771" href="#C29771">
+                <time itemprop="dateCreated" datetime="2016-02-10T10:18:05-07:00" class="action-date">Feb '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi Stephane, did you ever find a solution for this? I am searching for the same info!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="29771" data-cf-modified-d491702d4593d49346d5ef2f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="29771" data-cf-modified-d491702d4593d49346d5ef2f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/076d8254b3d82407f201a00995d41c96?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3151/sboudoux" class="user-moderator-N"><span itemprop="name">stephane</span></a>        </span>
+        <br>
+
+        <span class="karma">24.8k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C29771"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/ff9a2f43efac70da87e23ddd6ac5061f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Al                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C29795" href="#C29795">
+                <time itemprop="dateCreated" datetime="2016-02-11T03:35:15-07:00" class="action-date">Feb '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi Al,</p>
+<p>To be honest I haven't looked into that for quite a while now. As said in my original post, it's not critical, and we can always prefix keys to Identify the &quot;scope&quot;. And since it doesn't seem to impact Redis performances I've let things as it was.</p>
+<p>But phalcon has received a few updates since then, the incubator too, so I may have another look soon to see if that's been fixed
+Cheers</p>
+<blockquote>
+<p>Hi Stephane, did you ever find a solution for this? I am searching for the same info!</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="29795" data-cf-modified-d491702d4593d49346d5ef2f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="29795" data-cf-modified-d491702d4593d49346d5ef2f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ff9a2f43efac70da87e23ddd6ac5061f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1663/al35mm" class="user-moderator-N"><span itemprop="name">Al</span></a>        </span>
+        <br>
+
+        <span class="karma">20.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="29799" data-toggle="modal" data-target="#historyModal">
+                edited <span>Feb '16</span>
+              </span><br/><a name="C29799" href="#C29799">
+                <time itemprop="dateCreated" datetime="2016-02-11T04:14:50-07:00" class="action-date">Feb '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I worked it out last night after posting that reply. Here's my config with the correct keys for selecting db and prefix. It all seems to work ok, but like you said the versions have changed;</p>
+<pre><code>[session]
+adapter = "Redis"
+options[host] = "127.0.0.1"
+options[port] = "6379"
+options[index] = "0" ; select db
+options[lifetime] = 360
+options[uniqueId] = "ba_site"
+options[prefix] = "_ba_Sess_" ; prefix
+options[persistent] = true</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="29799" data-cf-modified-d491702d4593d49346d5ef2f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="29799" data-cf-modified-d491702d4593d49346d5ef2f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/076d8254b3d82407f201a00995d41c96?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3151/sboudoux" class="user-moderator-N"><span itemprop="name">stephane</span></a>        </span>
+        <br>
+
+        <span class="karma">24.8k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C29799"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/ff9a2f43efac70da87e23ddd6ac5061f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Al                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C29801" href="#C29801">
+                <time itemprop="dateCreated" datetime="2016-02-11T04:26:15-07:00" class="action-date">Feb '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Just had a look, and my version works too now. Changed the values of my constant (CONF_REDIS_DB_SESSION), and saw new databases to being used (redis-cli INFO keyspace).</p>
+<p>I guess it's been fixed in a recent version. Problem solved.</p>
+<p>Got a question for you now :)  Is the persistent option working ? Have you tested the behaviour if set to false ?
+Cheers</p>
+<blockquote>
+<p>I worked it out last night after posting that reply. Here's my config with the correct keys for selecting db and prefix. It all seems to work ok, but like you said the versions have changed;</p>
+<p>[session]
+adapter = &quot;Redis&quot;
+options[host] = &quot;127.0.0.1&quot;
+options[port] = &quot;6379&quot;
+options[index] = &quot;0&quot; ; select db
+options[lifetime] = 360
+options[uniqueId] = &quot;ba_site&quot;
+options[prefix] = &quot;_ba<em>Sess</em>&quot; ; prefix
+options[persistent] = true</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="29801" data-cf-modified-d491702d4593d49346d5ef2f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="29801" data-cf-modified-d491702d4593d49346d5ef2f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ff9a2f43efac70da87e23ddd6ac5061f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1663/al35mm" class="user-moderator-N"><span itemprop="name">Al</span></a>        </span>
+        <br>
+
+        <span class="karma">20.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C29809" href="#C29809">
+                <time itemprop="dateCreated" datetime="2016-02-11T05:16:23-07:00" class="action-date">Feb '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I'm not sure it is. I am having some session problems since switching to redis.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="29809" data-cf-modified-d491702d4593d49346d5ef2f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="29809" data-cf-modified-d491702d4593d49346d5ef2f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d3ccad0011ea5ad92e39991fa85b4281?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10771/imaimai86" class="user-moderator-N"><span itemprop="name">Anas</span></a>        </span>
+        <br>
+
+        <span class="karma">65</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C29809"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/ff9a2f43efac70da87e23ddd6ac5061f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Al                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C53853" href="#C53853">
+                <time itemprop="dateCreated" datetime="2018-02-07T00:36:34-07:00" class="action-date">Feb '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>I'm not sure it is. I am having some session problems since switching to redis.
+Hopes you solved your session issues, It would be great sharing your issues and solutions althought it is too late</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="53853" data-cf-modified-d491702d4593d49346d5ef2f-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="53853" data-cf-modified-d491702d4593d49346d5ef2f-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="7055" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

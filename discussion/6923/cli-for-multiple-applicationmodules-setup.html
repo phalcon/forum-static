@@ -1,0 +1,249 @@
+---
+layout: default
+title: 'CLI for multiple application/modules setup - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">CLI for multiple application/modules setup</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3944/attozk" class="user-moderator-N"><span itemprop="name">attozk</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-05-28T09:35:00-07:00">May '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-05-28T09:35:00-07:00">May '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>978</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/12dc9e5f97ea8e3cba415ec471c2346b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3944/attozk" class="user-moderator-N"><span itemprop="name">attozk</span></a></span>
+                <span class="karma">4.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6923" href="#C6923">
+        <time class="action-date">May '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I am trying to figure out how to setup CLI for multiple application configuration and would appreciate any help on this subject.</p>
+<p><strong>Problem</strong></p>
+<ol>
+<li>I am unable to figure out how to inform CLI about multiple application configuration. It does not seem like there is an option to pass &quot;module&quot; name to  <a href="http://docs.phalcon.io/en/latest/api/Phalcon_CLI_Console.html">Phalcon\CLI\Console::handle()</a></li>
+<li>Looking for examples of <a href="http://phalcon-php-framework-documentation.readthedocs.org/en/latest/api/Phalcon_CLI_Router.html">Phalcon\CLI\Router</a> with multiple application</li>
+</ol>
+<p><strong>My current setup looks like this:</strong></p>
+<p>I have two applications:</p>
+<ul>
+<li>v1         -&gt; path: <em>apps/kapi/v1</em></li>
+<li>admin   -&gt; path: <em>apps/kapi/admin</em></li>
+</ul>
+<p><strong>Statement</strong></p>
+<p>I would like to keep my tasks within their corresponding, such that</p>
+<ul>
+<li>AdminTask would be in admin module    (I have already registerNamespaces() for this in apps/kapi/admin/module.php)</li>
+<li>V1Task would be in v1 module               (I have already registerNamespaces() for this in apps/kapi/v1/module.php)</li>
+</ul>
+<p><strong>CLI error I get</strong></p>
+<p>I have included MainTask correctly in both applications. </p>
+<pre><code>MainTask handler class cannot be loaded</code></pre>
+<p><strong>My Attempt at cli.php</strong></p>
+<pre><code class="language-php">&lt;?php
+define('KAPI_ENV', 'local'); // this will be set from apache vhost later on..
+require_once(__DIR__ . '/../vendor/autoload.php');
+
+class Console extends \Phalcon\CLI\Console
+{
+    protected function _registerServices()
+    {
+        $loader = new \Phalcon\Loader();
+        // other NS that are not part of vendor/autoload.php
+        $namespaces = require_once(__DIR__ . '/../boot/autoload_namespaces.php');
+        $loader-&gt;registerNamespaces($namespaces[KAPI_ENV]);
+        $loader-&gt;register();
+
+        $di = new \Phalcon\DI\FactoryDefault\CLI();
+
+         // Registering a router, but how to use it?
+        $di-&gt;set('router', function(){
+            $router = new \Phalcon\CLI\Router();
+            $router-&gt;setDefaultModule('v1');
+
+            return $router;
+       });
+
+        $this-&gt;setDI($di);
+    }
+
+    public function main()
+    {
+        $this-&gt;_registerServices();
+
+        //Register the installed modules
+        $this-&gt;registerModules(array(
+            'admin' =&gt; array(
+                'className' =&gt; 'Kapi\Admin\Module',
+                'path' =&gt; '../apps/kapi/admin/Module.php'
+            ),
+            'v1' =&gt; array(
+                'className' =&gt; 'Kapi\V1\Module',
+                'path' =&gt; '../apps/kapi/v1/Module.php'
+            )
+        ));
+    }
+}
+
+// Process the console arguments
+$arguments = array();
+foreach($argv as $k =&gt; $arg) {
+    if($k == 1) {
+        $arguments['task'] = $arg;
+    } elseif($k == 2) {
+        $arguments['action'] = $arg;
+    } elseif($k &gt;= 3) {
+        $arguments['params'][] = $arg;
+    }
+}
+
+$console = new Console();
+$console-&gt;main();
+
+try {
+    // handle incoming arguments
+    $console-&gt;handle($arguments);
+}
+catch (\Phalcon\Exception $e) {
+    echo $e-&gt;getMessage();
+    exit(255);
+}</code></pre>
+<p><strong>Frontend controllers looks like this</strong></p>
+<pre><code class="language-php">// index.php
+&lt;?php
+define('KAPI_ENV', 'local'); // this will be set from apache vhost later on..
+require_once(__DIR__ . '/../vendor/autoload.php');
+
+class Application extends \Phalcon\Mvc\Application
+{
+    protected function _registerServices()
+    {
+        $loader = new \Phalcon\Loader();
+        // other NS that are not part of vendor/autoload.php
+        $namespaces = require_once(__DIR__ . '/../boot/autoload_namespaces.php');
+        $loader-&gt;registerNamespaces($namespaces[KAPI_ENV]);
+        $loader-&gt;register();
+
+        $di = new \Phalcon\DI\FactoryDefault();
+
+        //Registering a router
+        $di-&gt;set('router', function(){
+
+            $router = new \Phalcon\Mvc\Router();
+
+            // include admin routes
+            include('../apps/kapi/admin/Routes.php');
+            $admin = new AdminRoutes();
+            $router-&gt;mount($admin);
+
+            // include v1 routes
+            include('../apps/kapi/v1/Routes.php');
+            $v1 = new V1Routes();
+            $router-&gt;mount($v1);
+
+            // defaults
+            $router-&gt;setDefaultModule('v1');
+            $router-&gt;removeExtraSlashes(true);
+
+            return $router;
+        });
+
+        $this-&gt;setDI($di);
+    }
+
+    public function main()
+    {
+        $this-&gt;_registerServices();
+
+        //Register the installed modules
+        $this-&gt;registerModules(array(
+            'admin' =&gt; array(
+                'className' =&gt; 'Kapi\Admin\Module',
+                'path' =&gt; '../apps/kapi/admin/Module.php'
+            ),
+            'v1' =&gt; array(
+                'className' =&gt; 'Kapi\V1\Module',
+                'path' =&gt; '../apps/kapi/v1/Module.php'
+            )
+        ));
+
+        echo $this-&gt;handle()-&gt;getContent();
+    }
+}
+
+$application = new Application();
+$application-&gt;main();</code></pre>
+<p>Then for each Module.php I am loading module specific namespaces and other services (db, session and so on).</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-b1c86952f1c4f94b87978bf1-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-b1c86952f1c4f94b87978bf1-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/12dc9e5f97ea8e3cba415ec471c2346b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3944/attozk" class="user-moderator-N"><span itemprop="name">attozk</span></a>        </span>
+        <br>
+
+        <span class="karma">4.8k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C19871" href="#C19871">
+                <time itemprop="dateCreated" datetime="2015-06-24T14:15:17-07:00" class="action-date">Jun '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Solution @ <a href="https://forum.phalcon.io/discussion/7283/multiple-module-cli">https://forum.phalcon.io/discussion/7283/multiple-module-cli</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="19871" data-cf-modified-b1c86952f1c4f94b87978bf1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="19871" data-cf-modified-b1c86952f1c4f94b87978bf1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6923" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

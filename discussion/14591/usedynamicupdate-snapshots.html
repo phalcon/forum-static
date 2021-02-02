@@ -1,0 +1,119 @@
+---
+layout: default
+title: 'useDynamicUpdate &amp; Snapshots - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">useDynamicUpdate &amp; Snapshots</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3406/MollocH" class="user-moderator-N"><span itemprop="name">MollocH</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-10-25T03:43:45-07:00">Oct '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-10-25T03:43:45-07:00">Oct '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>598</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/49a91407f45a240159399ab5eaafb7ac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3406/MollocH" class="user-moderator-N"><span itemprop="name">MollocH</span></a></span>
+                <span class="karma">3.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C14591" href="#C14591">
+        <time class="action-date">Oct '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi there,</p>
+<p>another day, another problem :)</p>
+<p>I recently switched to using dynamic updates. I encountered a problem that the snapshots are not updated after saving the model.</p>
+<p>So this code would cause problems:</p>
+<blockquote>
+<pre><code>            $exec-&gt;setIsRunning(1);</code></pre>
+<p>$exec-&gt;save();</p>
+</blockquote>
+<pre><code>            //Do some stuff
+
+            $exec-&gt;setLastExecution($timestamp);
+            $exec-&gt;setIsRunning(0);
+            $exec-&gt;save();</code></pre>
+<p>Obviously setIsRunning(1) will work. But since update/save is not updating the snapshot and setting isRunning to 0 and lastExecution after some stuff is done will result in Phalcon only updating the timestamp. Outputting the snapshotData after the first save also shows that it differs from the actual model data.</p>
+<p>So I solved this situation by updating the snapshotData by myself</p>
+<blockquote>
+<pre><code>protected function afterUpdate()</code></pre>
+<p>{
+// We need to update the snapshot so that change -&gt; save -&gt; change -&gt; save on a model instance would work
+$this-&gt;setSnapshotData($this-&gt;toArray());
+}</p>
+</blockquote>
+<pre><code>protected function afterInsert()
+{
+    // We need to update the snapshot so that change -&gt; save -&gt; change -&gt; save on a model instance would work
+    $this-&gt;setSnapshotData($this-&gt;toArray());
+}</code></pre>
+<p>But there has to be a better solution. Why does the framework not do this kind of things by itself ?</p>
+<p>Greetings</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-f77abf31ab89e199a4068e9d-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-f77abf31ab89e199a4068e9d-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C42217" href="#C42217">
+                <time itemprop="dateCreated" datetime="2016-10-25T09:32:35-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Create issue on github with script to reprodeuce, it looks like a bug.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="42217" data-cf-modified-f77abf31ab89e199a4068e9d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="42217" data-cf-modified-f77abf31ab89e199a4068e9d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="14591" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

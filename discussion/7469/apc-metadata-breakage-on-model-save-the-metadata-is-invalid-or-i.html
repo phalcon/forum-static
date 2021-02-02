@@ -1,0 +1,229 @@
+---
+layout: default
+title: 'APC metadata breakage on Model save, The meta-data is invalid or is corrupt, Phalcon 2.0, Postgresql - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/8/cache">Cache</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">APC metadata breakage on Model save, The meta-data is invalid or is corrupt, Phalcon 2.0, Postgresql</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/4275/andrinallc" class="user-moderator-N"><span itemprop="name">andrinallc</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-07-06T12:38:13-07:00">Jul '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-07-06T12:38:13-07:00">Jul '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>777</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/dcd4f93028c5b5f6b31a2eab1dd073d8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/4275/andrinallc" class="user-moderator-N"><span itemprop="name">andrinallc</span></a></span>
+                <span class="karma">890</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C7469" href="#C7469">
+        <time class="action-date">Jul '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Greetings,</p>
+<p>I recently upgraded from 1.3 to 2.0 and am now experiencing errors from the APC metdata cache when I do a basic model save.  Everything worked fine in 1.3 and it also works fine if I remove the APC cache service.  Below is the error, stack trace, and some relevant code.  Please let me know if I can provide further information. Help/ideas/direction are greatly appreciated!</p>
+<p>Best,</p>
+<p>-b</p>
+<p>error and stack trace</p>
+<pre><code class="language-php">Undefined index: 1 in phalcon/mvc/model/metadata.zep on line 288 in &lt;b&gt;/Users/bbrown/projects/andrina/web/phalcon_apps/admin/api/index.php&lt;/b&gt; on line &lt;b&gt;171&lt;/b&gt;&lt;br /&gt;
+{"error_msg":"The meta-data is invalid or is corrupt","error_trace":"#0 [internal function]: Phalcon\\Mvc\\Model\\MetaData-&gt;getPrimaryKeyAttributes(Object(RestEntity))\n#1 [internal function]: Phalcon\\Mvc\\Model-&gt;_exists(Object(Phalcon\\Mvc\\Model\\MetaData\\Apc), Object(Phalcon\\Db\\Adapter\\Pdo\\Postgresql), 'tag')\n#2 \/Users\/bbrown\/projects\/andrina\/web\/phalcon_apps\/admin\/api\/index.php(171): Phalcon\\Mvc\\Model-&gt;save()\n#3 [internal function]: {closure}('tag', '1')\n#4 \/Users\/bbrown\/projects\/andrina\/web\/phalcon_apps\/admin\/api\/index.php(250): Phalcon\\Mvc\\Micro-&gt;handle()</code></pre>
+<p>some relevant code</p>
+<pre><code class="language-php">use Phalcon\Mvc\Micro;
+use Phalcon\DI\FactoryDefault;
+use Phalcon\Config\Adapter\Yaml as YAMLConfig;
+use Phalcon\Db\Adapter\Pdo\Postgresql as PostgresAdapter;
+use Phalcon\Mvc\Model\MetaData\APC as ApcMetaData;
+use Phalcon\Session\Adapter\Files as Session;
+
+/**
+ * service dispatcher
+ */
+$di = new FactoryDefault();
+
+/**
+ * load config file
+ */
+$di-&gt;set('config', function() {
+    return new YAMLConfig(ANDRINA_ROOT."/etc/config.yml");
+});
+
+/**
+ * db handle
+ */
+$di-&gt;set("db", function() use($di) {
+    return new PostgresAdapter(array(
+        "host"     =&gt; $di['config']-&gt;database-&gt;host,
+        "username" =&gt; $di['config']-&gt;database-&gt;user,
+        "password" =&gt; $di['config']-&gt;database-&gt;password,
+        "dbname"   =&gt; $di['config']-&gt;database-&gt;name,
+    ));
+});
+
+// db metadata caching
+$di['modelsMetadata'] = function() {
+
+    // Create a meta-data manager with APC
+    $metaData = new ApcMetaData(array(
+        "lifetime" =&gt; 86400,
+        "prefix" =&gt; "andrina"
+    ));
+
+    return $metaData;
+};
+
+//Start the session
+$di-&gt;setShared('session', function() {
+    $session = new Session([
+        'lifetime' =&gt; 3600 * 4
+    ]);
+    $session-&gt;start();
+    return $session;
+});
+
+$app = new ApiMicro();
+$app-&gt;setDI($di);</code></pre>
+<p>db table schema</p>
+<pre><code class="language-sql">andrina=&gt; \d tag
+                                   Table "public.tag"
+ Column |          Type           |                      Modifiers
+--------+-------------------------+------------------------------------------------------
+ tag_id | integer                 | not null default nextval('tag_tag_id_seq'::regclass)
+ name   | character varying(2044) | not null
+Indexes:
+    "tag_pkey" PRIMARY KEY, btree (tag_id)
+    "tag_name_key" UNIQUE CONSTRAINT, btree (name)</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-5426749bbe278ac3430f4ee0-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-5426749bbe278ac3430f4ee0-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/210/andresgutierrez" class="user-moderator-Y"><span itemprop="name">Andres Gutierrez</span></a>        </span>
+        <br>
+
+        <span class="karma">34.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="20289" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '15</span>
+              </span><br/><a name="C20289" href="#C20289">
+                <time itemprop="dateCreated" datetime="2015-07-06T13:08:38-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Did you restart the web server?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="20289" data-cf-modified-5426749bbe278ac3430f4ee0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="20289" data-cf-modified-5426749bbe278ac3430f4ee0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/dcd4f93028c5b5f6b31a2eab1dd073d8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4275/andrinallc" class="user-moderator-N"><span itemprop="name">andrinallc</span></a>        </span>
+        <br>
+
+        <span class="karma">890</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C20385" href="#C20385">
+                <time itemprop="dateCreated" datetime="2015-07-08T08:28:25-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes, when I restart the web server the first request works (when the caching happens), but all subsequent requests using the cache break with the error above.  Looking at the stack trace I suspect there is some problem with this method: getPrimaryKeyAttributes(Object(RestEntity) and the Postgresql adapter?  The model class RestEntity is general purpose where I first call setSource to point it to the correct table in the db.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="20385" data-cf-modified-5426749bbe278ac3430f4ee0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="20385" data-cf-modified-5426749bbe278ac3430f4ee0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ba142a7483a295813aa98d410af46ed7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/277/jodator" class="user-moderator-N"><span itemprop="name">Maciej</span></a>        </span>
+        <br>
+
+        <span class="karma">199</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C21171" href="#C21171">
+                <time itemprop="dateCreated" datetime="2015-07-27T04:18:15-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I had similar issue on PHP 5.4.x with MySQL. I've removed the APC metadata and then it works.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21171" data-cf-modified-5426749bbe278ac3430f4ee0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21171" data-cf-modified-5426749bbe278ac3430f4ee0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/325b7a8cd0a241dc8cac9b1dbbc52e9e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/184/fishjerky" class="user-moderator-N"><span itemprop="name">fishjerky(魚乾)</span></a>        </span>
+        <br>
+
+        <span class="karma">1.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="49337" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '17</span>
+              </span><br/><a name="C49337" href="#C49337">
+                <time itemprop="dateCreated" datetime="2017-07-04T19:55:02-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Did you install igbinary? It works when I remark apc.serializer</p>
+<pre><code class="language-PHP">;apc.serializer=igbinary</code></pre>
+<p>but... it works fine with apc_fetch() no matter remark that code or not
+My igbinary version is  2.0.1</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49337" data-cf-modified-5426749bbe278ac3430f4ee0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49337" data-cf-modified-5426749bbe278ac3430f4ee0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="7469" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

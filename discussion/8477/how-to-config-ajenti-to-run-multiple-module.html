@@ -1,0 +1,198 @@
+---
+layout: default
+title: 'How to config Ajenti to run multiple module - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/25/configuration">Configuration</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How to config Ajenti to run multiple module</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/4935/MaxCodeX" class="user-moderator-N"><span itemprop="name">Nguyen Tien Manh</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-09-12T01:16:18-07:00">Sep '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-09-12T01:16:18-07:00">Sep '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>660</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/cd0c360719758438aba165fe8b94d754?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/4935/MaxCodeX" class="user-moderator-N"><span itemprop="name">Nguyen Tien Manh</span></a></span>
+                <span class="karma">1.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C8477" href="#C8477">
+        <time class="action-date">Sep '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p><strong>I'm leaning Phalcon with multiple module. With struct.</strong></p>
+<ul>
+<li>apps
+<ul>
+<li>frontend
+<ul>
+<li>controllers</li>
+<li>models</li>
+<li>views</li>
+<li>Modules.php</li>
+</ul></li>
+<li>backend
+<ul>
+<li>controllers</li>
+<li>models</li>
+<li>views</li>
+<li>Modules.php</li>
+</ul></li>
+</ul></li>
+<li>public
+<ul>
+<li>css</li>
+<li>js</li>
+<li>img</li>
+<li>index.php</li>
+</ul></li>
+</ul>
+<p>And nginx config:</p>
+<p>server {</p>
+<pre><code>listen *:80 default_server;
+server_name localhost.dev;
+access_log /var/log/nginx/localhostdev.access.log;
+error_log /var/log/nginx/localhostdev.error.log;
+root /srv/localhost.dev/public;
+index index.html index.htm index.php;
+
+   set $root_path '/srv/localhost.dev/public';
+
+location / {
+    root   $root_path;
+    index  index.php index.html index.htm;
+
+    # if file exists return it right away
+    if (-f $request_filename) {
+        break;
+    }
+
+    # otherwise rewrite it
+    if (!-e $request_filename) {
+        rewrite ^(.+)$ /index.php?_url=$1 last;
+        break;
+    }
+}
+
+location ~* ^/(css|img|js|flv|swf|download)/(.+)$ {
+    root $root_path;
+}
+
+location ~ [^/]\.php(/|$) {
+    fastcgi_index index.php;
+    include fcgi.conf;
+    fastcgi_pass unix:/var/run/ajenti-v-php-fcgi-localhostdev-php-fcgi-0.sock;
+    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+}</code></pre>
+<p>}</p>
+<p>In public/index.php:</p>
+<pre><code class="language-php">&lt;?php 
+$di-&gt;set('router', function ()
+{
+    $router = new Router();
+
+    $router-&gt;setDefaultModule("frontend");
+
+    $router-&gt;add('/:module/:controller/:action/:params', array(
+        'module'     =&gt; 1,
+        'controller' =&gt; 2,
+        'action'     =&gt; 3,
+        'params'     =&gt; 4
+    ));
+    return $router;
+});
+?&gt;</code></pre>
+<p><strong>When i access localhost.dev:</strong></p>
+<p>it print: Hello Frontend!</p>
+<p><strong>But, i access localhost.dev/frontend</strong></p>
+<p>it print: Frontend\Controllers\BackendController handler class cannot be loaded</p>
+<p>How to fix it?</p>
+<p><strong>Additional question.</strong></p>
+<p>What I should config in nginx:</p>
+<p>root /srv/localhost.dev;</p>
+<p>location / {
+rewrite ^/$ /public/ break;
+rewrite ((?s).*) /public/$1 break;
+}</p>
+<p>location /public/ {
+if (!-e $request_filename){
+rewrite ^/((?s).*)$ /index.php?_url=/$1 break;
+}
+}</p>
+<p><strong>or</strong></p>
+<p>root /srv/localhost.dev/public;</p>
+<p>if (-f $request_filename) {
+break;
+}</p>
+<p>if (!-e $request_filename) {
+rewrite ^(.+)$ /index.php?_url=$1 last;
+break;
+}</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-4b1f8e7f0b42af7302f2e6ea-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-4b1f8e7f0b42af7302f2e6ea-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C23259" href="#C23259">
+                <time itemprop="dateCreated" datetime="2015-09-12T04:36:38-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>To be honest - i dont like to set routes when setting router, and especially this dynamic/auto/wildcard routing like this way. I am creating Routes Group for each module i have and then load those classes and mount those groups before starting app and after setting router.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23259" data-cf-modified-4b1f8e7f0b42af7302f2e6ea-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23259" data-cf-modified-4b1f8e7f0b42af7302f2e6ea-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="8477" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

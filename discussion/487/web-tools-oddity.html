@@ -1,0 +1,354 @@
+---
+layout: default
+title: 'Web Tools oddity - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/20/internals">Internals</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Web Tools oddity</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/270/huanga" class="user-moderator-N"><span itemprop="name">Andy Huang</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-06-25T10:10:23-07:00">Jun '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-06-25T10:10:23-07:00">Jun '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '13</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1055</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/ca2d40e873eecf5abe16c57d903c3e67?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/270/huanga" class="user-moderator-N"><span itemprop="name">Andy Huang</span></a></span>
+                <span class="karma">2.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C487" href="#C487">
+        <time class="action-date">Jun '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I am developing something which I wish to share with people, so I do not wish to write my database password directly into the config file. Instead, I have it in a separate file, which gets merged with the config file.  Here are the relevant parts:</p>
+<p>app/config/config.php</p>
+<pre><code class="language-php">&lt;?php
+$config = new \Phalcon\Config(array(
+                                  'database' =&gt; array(
+                                      'adapter' =&gt; 'Mysql',
+                                  ),
+                                  'application' =&gt; array(
+                                      'controllersDir' =&gt; __DIR__ . '/../../app/controllers/',
+                                      'modelsDir'      =&gt; __DIR__ . '/../../app/models/',
+                                      'viewsDir'       =&gt; __DIR__ . '/../../app/views/',
+                                      'pluginsDir'     =&gt; __DIR__ . '/../../app/plugins/',
+                                      'libraryDir'     =&gt; __DIR__ . '/../../app/library/',
+                                      'cacheDir'       =&gt; __DIR__ . '/../../app/cache/',
+                                      'baseUri'        =&gt; '/',
+                                  )
+                              ));
+$localConfigs = require_once __DIR__ . "/config.local.php";
+$config-&gt;merge($localConfigs);
+return ($config);</code></pre>
+<p>app/config/config.local.php:</p>
+<pre><code class="language-php">&lt;?php
+return(new \Phalcon\Config(
+    array(
+        'database' =&gt; array(
+            'host' =&gt; 'localhost',
+            'username' =&gt; 'username',
+            'password' =&gt; 'password',
+            'dbname' =&gt; 'database_name'
+        )
+    )
+));</code></pre>
+<p>When I use the generic bootstrap, it works.</p>
+<p>When I use the Web Tool, it works -- I can even go to the models tab and see my tables.</p>
+<p>When I use the Web Tool's models/create method, it fails with this error dump:</p>
+<pre><code class="language-php">Phalcon\Config\Exception: Configuration must be an Object
+#0 /var/www/app/config/config.php(17): Phalcon\Config-&gt;merge(true)
+#1 /var/phalcon/vendor/phalcon/devtools/scripts/Phalcon/Builder/Component.php(60): include('/var/www/app/co...')
+#2 /var/phalcon/vendor/phalcon/devtools/scripts/Phalcon/Builder/Model.php(242): Phalcon\Builder\Component-&gt;_getConfig('')
+#3 /var/phalcon/vendor/phalcon/devtools/scripts/Phalcon/Web/Tools/controllers/ModelsController.php(66): Phalcon\Builder\Model-&gt;build()
+#4 [internal function]: ModelsController-&gt;createAction()
+#5 [internal function]: Phalcon\Dispatcher-&gt;dispatch()
+#6 /var/phalcon/vendor/phalcon/devtools/scripts/Phalcon/Web/Tools.php(276): Phalcon\Mvc\Application-&gt;handle()
+#7 /var/www/public/webtools.php(31): Phalcon\Web\Tools::main('/var/phalcon/ve...')
+#8 {main}</code></pre>
+<p>What is even more odd is if I add die(var_dump($config)); just before the return in config.php, it shows me the config content no problem. But when I remove it, Phalcon thinks I am doing a merge(true) instead of merge($localConfigs). </p>
+<p>I am using vagrant to provision a 64bit Wheezy using &quot;Puppetlabs Debian 7.0rc1 x86_64, VBox 4.2.10&quot; box on vagrantbox.es, PHP 5.4 from dotdeb (5.4.16-1<del>dotdeb.1), nginx 1.4.1 from dotdeb (1.4.1-1</del>dotdeb.1), and MariaDB 10 from official (10.0.3+maria-1~wheezy), and Phalcon was build from github master branch on Jun 17.</p>
+<p>Any idea what can I do to make Web Tools work properly?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-3329b5ebce80c957c9be6922-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-3329b5ebce80c957c9be6922-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C1990" href="#C1990">
+                <time itemprop="dateCreated" datetime="2013-06-25T14:41:57-07:00" class="action-date">Jun '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It seems that for some reason the file sometimes is returning true and sometimes a valid object?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="1990" data-cf-modified-3329b5ebce80c957c9be6922-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="1990" data-cf-modified-3329b5ebce80c957c9be6922-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ca2d40e873eecf5abe16c57d903c3e67?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/270/huanga" class="user-moderator-N"><span itemprop="name">Andy Huang</span></a>        </span>
+        <br>
+
+        <span class="karma">2.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C1992" href="#C1992">
+                <time itemprop="dateCreated" datetime="2013-06-25T14:52:13-07:00" class="action-date">Jun '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It consistently returns object when I do die(var_dump()), even if it is on models/create page.
+It also consistently return true when I use it in models/create as is, without edit. Let me do a quick screen recording and show you...</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="1992" data-cf-modified-3329b5ebce80c957c9be6922-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="1992" data-cf-modified-3329b5ebce80c957c9be6922-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ca2d40e873eecf5abe16c57d903c3e67?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/270/huanga" class="user-moderator-N"><span itemprop="name">Andy Huang</span></a>        </span>
+        <br>
+
+        <span class="karma">2.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C1993" href="#C1993">
+                <time itemprop="dateCreated" datetime="2013-06-25T15:25:17-07:00" class="action-date">Jun '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Video recorded on my potato laptop, sorry for blurry and ugly lag: <a href="http://www.youtube.com/watch?v=CKO9AMcPk_U">http://www.youtube.com/watch?v=CKO9AMcPk_U</a></p>
+<p>Also, I did it completely improv, so no pre-planning, so sorry if it seems incoherent.  Here's what's happening with matching time codes:
+00:00 - 00:12 - Showing the config files in IDE
+00:35 - Browser finally loaded the page (lag due to video recording) -- I switched to IDE wanting to show edits but realized I didn't show Web Tools so I tabbed back after.
+01:00 - Loading up webtools.php, works no problem.
+01:18 - Loading up models page, works no problem -- even fetches the tables from DB.
+01:30 - merge(true) error :/
+02:10 - Edited config.php to die, but missed var_dump, so it doesn't work.
+02:30 - Added var_dump, and it shows config gets merged correctly.
+02:45 - Shows that merge does work properly even on another page.
+02:55 - Comment out die(var_dump()) line...
+03:10 - merge(true) again.
+04:17 - Edited Component.php from webtools scripts to show it does indeed run to the correct place.</p>
+<p>No idea why it is doing this. Perhaps something in phalcon.so?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="1993" data-cf-modified-3329b5ebce80c957c9be6922-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="1993" data-cf-modified-3329b5ebce80c957c9be6922-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C1994" href="#C1994">
+                <time itemprop="dateCreated" datetime="2013-06-25T15:49:39-07:00" class="action-date">Jun '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Can you try disabling any accelerator? APC, ZendOptimizer+, eAccelerator, XCache, etc?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="1994" data-cf-modified-3329b5ebce80c957c9be6922-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="1994" data-cf-modified-3329b5ebce80c957c9be6922-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ca2d40e873eecf5abe16c57d903c3e67?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/270/huanga" class="user-moderator-N"><span itemprop="name">Andy Huang</span></a>        </span>
+        <br>
+
+        <span class="karma">2.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C1995" href="#C1995">
+                <time itemprop="dateCreated" datetime="2013-06-25T15:55:58-07:00" class="action-date">Jun '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>No accelerators in this testbed. Only had XDebug enabled... disabled that and still the same problem.</p>
+<pre><code class="language-ssh"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="1660777164777862567273747f77783b21266475273b6e20223b6074796e22242726">[email&#160;protected]</a>:/etc/php5/conf.d$ ls -lha
+total 16K
+drwxr-xr-x 2 root root 4.0K Jun 25 22:51 .
+drwxr-xr-x 6 root root 4.0K Jun 18 03:43 ..
+lrwxrwxrwx 1 root root   25 Jun 18 03:43 10-pdo.ini -&gt; ../mods-available/pdo.ini
+lrwxrwxrwx 1 root root   24 Jun 18 03:43 20-gd.ini -&gt; ../mods-available/gd.ini
+lrwxrwxrwx 1 root root   29 Jun 18 03:43 20-imagick.ini -&gt; ../mods-available/imagick.ini
+lrwxrwxrwx 1 root root   26 Jun 18 03:43 20-imap.ini -&gt; ../mods-available/imap.ini
+lrwxrwxrwx 1 root root   26 Jun 18 03:43 20-intl.ini -&gt; ../mods-available/intl.ini
+lrwxrwxrwx 1 root root   28 Jun 18 03:44 20-mcrypt.ini -&gt; ../mods-available/mcrypt.ini
+lrwxrwxrwx 1 root root   31 Jun 18 03:44 20-memcached.ini -&gt; ../mods-available/memcached.ini
+lrwxrwxrwx 1 root root   28 Jun 18 03:44 20-mysqli.ini -&gt; ../mods-available/mysqli.ini
+lrwxrwxrwx 1 root root   27 Jun 18 03:44 20-mysql.ini -&gt; ../mods-available/mysql.ini
+lrwxrwxrwx 1 root root   31 Jun 18 03:44 20-pdo_mysql.ini -&gt; ../mods-available/pdo_mysql.ini
+-rw-r--r-- 1 root root   21 Jun 18 03:50 phalcon.ini
+-rw-r--r-- 1 root root  185 Jun 18 03:52 xdebug.ini.disable
+<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="fb8d9a9c899a958fbb9f9e99929a95d6cccb8998cad683cdcfd68d999483cfc9cacb">[email&#160;protected]</a>:/etc/php5/conf.d$</code></pre>
+<p>Edit: I saved a copy of the phpinfo() output here: <a href="http://dev.terrandin.net/phpinfo.html">http://dev.terrandin.net/phpinfo.html</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="1995" data-cf-modified-3329b5ebce80c957c9be6922-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="1995" data-cf-modified-3329b5ebce80c957c9be6922-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C1996" href="#C1996">
+                <time itemprop="dateCreated" datetime="2013-06-25T16:05:15-07:00" class="action-date">Jun '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Can you send me the relevant parts of the application? or Grant me access to your system?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="1996" data-cf-modified-3329b5ebce80c957c9be6922-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="1996" data-cf-modified-3329b5ebce80c957c9be6922-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ca2d40e873eecf5abe16c57d903c3e67?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/270/huanga" class="user-moderator-N"><span itemprop="name">Andy Huang</span></a>        </span>
+        <br>
+
+        <span class="karma">2.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C1997" href="#C1997">
+                <time itemprop="dateCreated" datetime="2013-06-25T16:13:46-07:00" class="action-date">Jun '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I can try to setup some sort of remote desktop on my laptop, and give you access that way (it is not running on a live server). This is a 4+ yrs old macbook, though, so it might run at potato speed.</p>
+<p>Is the <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="1b7a757f697e685b7f74767a7275">[email&#160;protected]</a> email address appearing on github okay for me to send you login information at?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="1997" data-cf-modified-3329b5ebce80c957c9be6922-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="1997" data-cf-modified-3329b5ebce80c957c9be6922-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C1998" href="#C1998">
+                <time itemprop="dateCreated" datetime="2013-06-25T16:21:00-07:00" class="action-date">Jun '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes, please send me the info to <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="30515e54425543704058515c535f5e1e595f">[email&#160;protected]</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="1998" data-cf-modified-3329b5ebce80c957c9be6922-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="1998" data-cf-modified-3329b5ebce80c957c9be6922-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ca2d40e873eecf5abe16c57d903c3e67?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/270/huanga" class="user-moderator-N"><span itemprop="name">Andy Huang</span></a>        </span>
+        <br>
+
+        <span class="karma">2.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C1999" href="#C1999">
+                <time itemprop="dateCreated" datetime="2013-06-25T16:24:54-07:00" class="action-date">Jun '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Sent, thanks!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="1999" data-cf-modified-3329b5ebce80c957c9be6922-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="1999" data-cf-modified-3329b5ebce80c957c9be6922-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ca2d40e873eecf5abe16c57d903c3e67?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/270/huanga" class="user-moderator-N"><span itemprop="name">Andy Huang</span></a>        </span>
+        <br>
+
+        <span class="karma">2.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C2000" href="#C2000">
+                <time itemprop="dateCreated" datetime="2013-06-25T17:16:31-07:00" class="action-date">Jun '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Resolved!  Thank you Andres!</p>
+<p>FYI for anyone who run into similar problem in the future:</p>
+<p>\Phalcon\Web\Tool will attempt to load the config file. Then, when you are building things, \Phalcon\Builder\Component will attempt to load the config file again. If you are using include_once or require_once like me, the second load will return true (even though for some reason die(var_dump()) doesn't seem to be affected by this). As result of that return being true instead of the data, merge cannot merge the configurations properly.</p>
+<p>Changing require_once to require resolved the issue for me.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="2000" data-cf-modified-3329b5ebce80c957c9be6922-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="2000" data-cf-modified-3329b5ebce80c957c9be6922-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="487" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

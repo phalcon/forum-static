@@ -1,0 +1,172 @@
+---
+layout: default
+title: 'Locale on routes - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Locale on routes</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/114/roman-kulish" class="user-moderator-N"><span itemprop="name">roman-kulish</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-11-18T21:30:31-07:00">Nov '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-11-18T21:30:31-07:00">Nov '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '13</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1723</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/177525cf68cabf12fac5fc4c3603ecba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/114/roman-kulish" class="user-moderator-N"><span itemprop="name">roman-kulish</span></a></span>
+                <span class="karma">5.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1204" href="#C1204">
+        <time class="action-date">Nov '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I am looking for a quick and reliable solution to simplify my implementation of passing locale / language on routes. Currently I do it like this:</p>
+<p>I have a Locale class object that is registered as a service on DI which makes it available in View and Controller. Locale object is configured like this:</p>
+<pre><code class="language-php">Locale::__constructor('&lt;DEFAULT ID&gt;', array(
+    '&lt;ID&gt;' =&gt; array(
+        'locale' =&gt; '&lt;LOCALE&gt;',
+        'additional' =&gt; array(&lt;LIST OF ADDITIONAL LOCALES&gt;)
+    )
+));</code></pre>
+<ul>
+<li>ID is a string that identifies locale configuration, it also appears as a slug on the URL: <a href="http://site.com/">http://site.com/</a>&lt;ID&gt;/blog/article/123. It can be any string like: en, en-au, english etc.</li>
+<li>LOCALE is actuale locale, en_AU for example.</li>
+<li>LIST OF ADDITIONAL LOCALES is an array of additional locales that are resolved to the LOCALE</li>
+</ul>
+<pre><code class="language-php">Locale::__constructor('en', array(
+    'en =&gt; array(
+        'locale' =&gt; 'en_AU',
+        'additional' =&gt; array('en_US', 'en')
+    ),
+    'ru' =&gt; array(
+        'locale' =&gt; 'ru_RU',
+        'additional' =&gt; array('ru_RU', 'uk_AU', 'mo_RU')
+    ),
+));</code></pre>
+<p>Each route than has &quot;language&quot; parameter:</p>
+<pre><code class="language-php">$router-&gt;addGet('/' . $language_segment . '/about', 'Index::about')-&gt;setName('about');
+$router-&gt;addGet('/' . $language_segment . '/contact', 'Index::contact')-&gt;setName('contact');
+$router-&gt;addGet('/' . $language_segment . '/terms-of-service', 'Index::termsOfService')-&gt;setName('terms-of-service');</code></pre>
+<p>... where $language_segment is <code>{language:en|ru|&lt;ID&gt;}</code>. This is how a route knows about language. Aspecial case is required for handling &quot;/&quot; URL: corresponding controller simply redirects to the URL with the supported or default language that is detected from $_SERVER['HTTP_ACCEPT_LANGUAGE'].</p>
+<p>Finally, I setup &quot;dispatch:beforeDispatchLoop&quot; event listener:</p>
+<pre><code class="language-php">$eventsManager-&gt;attach('dispatch:beforeDispatchLoop', function(
+        Phalcon\Events\Event $event,
+        Phalcon\Mvc\Dispatcher $dispatcher,
+        Phalcon\Mvc\Dispatcher\Exception $exception = null) use($di) {
+
+        $locale = $di-&gt;get('locale');
+
+        // if route has been resolved, then $dispatcher SHOULD have "language" on the array
+        // of parameters. Its value is set as default (request) language.
+
+        if (( $language = $dispatcher-&gt;getParam('language') ) !== null) {
+            $locale-&gt;setLocale($language);
+        } else {
+
+            // in case of 404, exception etc, request language is detected from the URL
+            // *I don't like hardcoded regexp below*
+
+            $url = ( isset($_GET['_url']) ? $_GET['_url'] : $_SERVER['REQUEST_URI'] );
+
+            if ( preg_match('#^/(' . implode('|', $locale-&gt;listLanguages()) . ')/#', $url, $matches) ) {
+                $locale-&gt;setLocale($matches[1]);
+            }
+        }
+
+        // ... otherwise, default Locale language remains intact
+    });</code></pre>
+<p>And that's it. In the View I pass value returned by $view-&gt;locale-&gt;getLanguage() as a parameter to Phalcon\Mvc\Url to create a URL for the current language.</p>
+<p>There is also a special implementation in the controller action that handles 404, if locale is not present on the URL, it tries to redirect to the same URL prepended with language.</p>
+<hr />
+<p>So do you see anyway to simplify it, e.g., keep everything in one place and avoid working with raw URL using hardcoded regexp when extracting languages? I want to make it universal and release this thing as a component.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-df5d75f3173b30562b3b0c05-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-df5d75f3173b30562b3b0c05-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/120a80790b934719bfe4c9488a0b61b7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/727/naNuke" class="user-moderator-N"><span itemprop="name">naNuke</span></a>        </span>
+        <br>
+
+        <span class="karma">2.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4358" href="#C4358">
+                <time itemprop="dateCreated" datetime="2013-11-20T18:36:26-07:00" class="action-date">Nov '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Did you look at <a href="https://github.com/phalcon/website">https://github.com/phalcon/website</a> ? its the source code for phalcon website which uses different languages.</p>
+<p>Also have you considered making your locale class to extend Phalcon\DI\Injectable ? that way you can easily access other components like url in your class and then just use your class methods at few places in controller/routes.</p>
+<p>Maybe I am just pointing out the oblivious here, but might help :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4358" data-cf-modified-df5d75f3173b30562b3b0c05-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4358" data-cf-modified-df5d75f3173b30562b3b0c05-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/177525cf68cabf12fac5fc4c3603ecba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/114/roman-kulish" class="user-moderator-N"><span itemprop="name">roman-kulish</span></a>        </span>
+        <br>
+
+        <span class="karma">5.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C4359" href="#C4359">
+                <time itemprop="dateCreated" datetime="2013-11-20T19:52:20-07:00" class="action-date">Nov '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks for pointing it out. I didn't see Phalcon website code, but language support is implemented in almost the same way there. The only difference, they don't use any Locale object for language detection and setup language in ControllerBase instead of dispatcher. Also they don't handle 404 and failures in different languages, which is required for me.</p>
+<p>I though about implementing Phalcon\DI\Injectable. It might have helped me to implement language aware routes and URL, but ... The problem is in loosely coupled framework there is no centralized logic you can hook into or extend. You should put workarounds in a number of places. It makes it harder to setup, but I am staying optimistic and looking for a simpler and better solution.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="4359" data-cf-modified-df5d75f3173b30562b3b0c05-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="4359" data-cf-modified-df5d75f3173b30562b3b0c05-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1204" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

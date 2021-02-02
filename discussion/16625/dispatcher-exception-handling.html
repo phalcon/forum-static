@@ -1,0 +1,214 @@
+---
+layout: default
+title: 'Dispatcher exception handling - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Dispatcher exception handling</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/9223/janisbizkovskis" class="user-moderator-N"><span itemprop="name">janisbizkovskis</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-07-31T09:06:01-07:00">Jul '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-07-31T09:06:01-07:00">Jul '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1837</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/c3be71f18f48bcbe5836c302d5d4cccb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/9223/janisbizkovskis" class="user-moderator-N"><span itemprop="name">janisbizkovskis</span></a></span>
+                <span class="karma">3.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C16625" href="#C16625">
+        <time class="action-date">Jul '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Soo, I am trying to handle 500 pages using <code>dispatch:beforeException</code>, see code:</p>
+<pre><code class="language-php"> $di-&gt;setShared('dispatcher', function () use ($di) {
+    /** @var Manager $eventsManager */
+    $eventsManager = $di-&gt;getShared('eventsManager');
+
+    $eventsManager-&gt;attach('dispatch:beforeException', function ($event, Dispatcher $dispatcher, $exception) use ($di)      {
+            if ($exception instanceof \Phalcon\Mvc\Dispatcher\Exception) {
+                switch ($exception-&gt;getCode()) {
+                    case Phalcon\Mvc\Dispatcher::EXCEPTION_HANDLER_NOT_FOUND:
+                    case Phalcon\Mvc\Dispatcher::EXCEPTION_ACTION_NOT_FOUND:
+                        $action = ErrorController::ACTION_SHOW_404;
+
+                        break;
+
+                    default:
+                        $action = ErrorController::ACTION_SHOW_500;
+                }
+            } else {
+                $action = ErrorController::ACTION_SHOW_500;
+            }
+
+            $dispatcher-&gt;forward([
+                'module'     =&gt; APP_MODULE,
+                'controller' =&gt; 'error',
+                'action'     =&gt; $action,
+            ]);
+
+            return false;
+    });
+
+    $dispatcher = new Dispatcher();
+    $dispatcher-&gt;setEventsManager($eventsManager);
+
+    return $dispatcher;
+});</code></pre>
+<p>but the issue is that, when calling <code>throw new \Exception('test')</code> inside of controller action - everything is fine, but when calling it insade of <code>initialize()</code>, I get only blank page, and no error messages whatsoever.</p>
+<p>Thinks I tested and excluded are:</p>
+<ol>
+<li>
+<p><code>initialize()</code> conflict on <code>ErrorController</code> - there it's empty <code>public function initialize() { }</code>, so it doesn't get called from ControllerBase which is having some action in there</p>
+</li>
+<li>
+<p>There are no code on 500 page, except settign status code(500) and using <code>echo 500</code>, so it doesn't throw exception itself</p>
+</li>
+<li>500 page and it's controller are super simple, they are not calling any kind of services, which could throw an exception</li>
+</ol>
+<p>By checking <code>dispatcher.zep</code>, it should work as intended, but it doesn't... Really have no idea, what I am doing wrong.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-9698e1c13252e4b93f74ce19-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-9698e1c13252e4b93f74ce19-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C49979" href="#C49979">
+                <time itemprop="dateCreated" datetime="2017-07-31T09:31:01-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>When server throws 500 internal error on it's own, something has gone wild and thus cannot be catched by user level exceptions etc. For instance it could be syntax error, parse error or any kind of lower errors catched only by interpreter.</p>
+<p>You need to define shutdown function on your index (FrontPageController) with native PHP <code>register_shutdown_function()</code>.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49979" data-cf-modified-9698e1c13252e4b93f74ce19-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49979" data-cf-modified-9698e1c13252e4b93f74ce19-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C49983" href="#C49983">
+                <time itemprop="dateCreated" datetime="2017-07-31T11:18:02-07:00" class="action-date">Jul '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi<a href="https://forum.phalcon.io/user/0/janisbizkovkis"> @janisbizkovkis</a> <code>$dispatcher-&gt;forward()</code> don't suppot <code>module</code> but support <code>namespace</code> the rest of the code lucks fine</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49983" data-cf-modified-9698e1c13252e4b93f74ce19-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49983" data-cf-modified-9698e1c13252e4b93f74ce19-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c3be71f18f48bcbe5836c302d5d4cccb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9223/janisbizkovskis" class="user-moderator-N"><span itemprop="name">janisbizkovskis</span></a>        </span>
+        <br>
+
+        <span class="karma">3.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="49989" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '17</span>
+              </span><br/><a name="C49989" href="#C49989">
+                <time itemprop="dateCreated" datetime="2017-08-01T01:23:43-07:00" class="action-date">Aug '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/stamster">@stamster</a> - it can be catched, see <code>set_error_handler</code> and <code>set_exception_handler</code> and <code>register_shutdown_function</code></p>
+<p><a href="https://forum.phalcon.io/user/0/emiliodeg">@emiliodeg</a> - yep, it doesn't, but that option got ignored anyway. And namespace is the right one by checkig it. But still, I can't get why throwing exception in <code>initialize()</code> doesn't work, but throwing it in <code>ControllerBase-&gt;idnexAction()</code> it works... And most veirdly, on:</p>
+<pre><code class="language-php">public function onShutDown() {
+    if ($error = error_get_last()) {
+        var_dump($error);
+        die();
+    }
+}</code></pre>
+<p><code>$error</code> is empty.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49989" data-cf-modified-9698e1c13252e4b93f74ce19-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49989" data-cf-modified-9698e1c13252e4b93f74ce19-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C49989"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/c3be71f18f48bcbe5836c302d5d4cccb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        janisbizkovskis                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C49991" href="#C49991">
+                <time itemprop="dateCreated" datetime="2017-08-01T01:53:07-07:00" class="action-date">Aug '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p><a href="https://forum.phalcon.io/user/0/stamster">@stamster</a> - it can be catched, see <code>set_error_handler</code> and <code>set_exception_handler</code> and <code>register_shutdown_function</code></p>
+</blockquote>
+<p>Isn't that what I wrote in my previous comment? I just don't see where you registered shutdown function in your code. Now you're saying that basically dispatcher is able to catch those level errors as well (not exceptions), w/o need to register shutdown function?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="49991" data-cf-modified-9698e1c13252e4b93f74ce19-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="49991" data-cf-modified-9698e1c13252e4b93f74ce19-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="16625" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

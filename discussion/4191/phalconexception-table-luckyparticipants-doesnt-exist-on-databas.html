@@ -1,0 +1,259 @@
+---
+layout: default
+title: 'PhalconException: Table &quot;Luckyparticipants&quot; doesn&#039;t exist on database when dumping meta-data for Luckyparticipants - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">PhalconException: Table &quot;Luckyparticipants&quot; doesn&#039;t exist on database when dumping meta-data for Luckyparticipants</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2793/ag95" class="user-moderator-N"><span itemprop="name">Alexey</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-12-06T08:13:40-07:00">Dec '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-12-06T08:13:40-07:00">Dec '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1162</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/dc9dc10a58f1b7c075ebcc0bd63061a4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2793/ag95" class="user-moderator-N"><span itemprop="name">Alexey</span></a></span>
+                <span class="karma">2.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4191" href="#C4191">
+        <time class="action-date">Dec '14</time>
+    </a>
+</div>
+<div class="post-content"><div><pre><code class="language-php">&lt;?php
+
+class Luckyparticipants extends Model {
+
+    public $id;
+    public $lucky_id;
+    public $user_id;
+
+    public function initialize()
+    {
+        $this-&gt;belongsTo("lucky_id", "Lucky", "id");
+
+    }   
+}</code></pre>
+<pre><code class="language-php">&lt;?php
+class Model extends \Phalcon\Mvc\Model {
+
+    public $di;
+    public $manager;
+    public $db;
+    public $tools;
+    public $session;
+    public $config;
+
+    /**
+    * Set DI and DB defaults of models
+    */
+    public function onConstruct(){
+        $this-&gt;di = (object)\Phalcon\DI\FactoryDefault::getDefault();
+        $this-&gt;manager = $this-&gt;di['modelsManager'];
+        $this-&gt;db = $this-&gt;di['db'];
+        $this-&gt;tools = $this-&gt;di['tools'];
+        $this-&gt;config = $this-&gt;di['config'];
+        $this-&gt;session = $this-&gt;di['session'];
+        $this-&gt;models = $this-&gt;di['models'];
+        $this-&gt;setSource($this-&gt;db-&gt;getModelTable(get_called_class()));
+    }
+
+    /**
+    * Get data list
+    * @params - where params (string, array)
+    * @full - select all table columns or only columns wich in sys_heads table (bool)
+    * @editable - go to findFirst method (bool)
+    */
+    public function get($params = null, $full = true, $editable = false, $model = null){
+        $model = ($model == null) ? get_called_class() : $model;
+        $fields = ($full) ? $this-&gt;db-&gt;getModelColumns($model) : $this-&gt;tools-&gt;getHead($model);
+        $columns = '';
+        $where = '';
+        $bind = array();    
+
+        if (is_string($params)){
+            $colkey = ((intval($params)+1) == 1) ? 'UNI' : 'PRI';
+            $key = $this-&gt;db-&gt;getUniqueColumn($model, $colkey);
+            $param = $params;
+            $params = array($key =&gt; $param);
+        }
+
+        $counter = 0;
+        foreach ($fields as $c=&gt;$field){
+            $columns .= ($full) ? $field['col'].((count($fields) &gt; $counter+1) ? ', ' : '') : $c.((count((array)$fields) &gt; $counter+1) ? ', ' : '');
+            $counter++;
+        }
+
+        if ($params !== null){
+            $counter = 0;
+            foreach ($params as $field=&gt;$value){
+                $where .= $field.' = :'.$field.':'.((count($params) &gt; $counter+1) ? 'AND ' : '');
+                $bind[$field] = $value;
+                $counter++;
+            }
+        }
+
+        $result = ($params == null) ? $this-&gt;db-&gt;getAll($columns, $model) : $model::findFirst(array($where, 'bind' =&gt; $bind), $editable);
+        return (count((array)$result) &gt; 0) ? $result : false;
+    }
+
+    /**
+    * Redeclarade default Phalcon method, remove DI data in result
+    * @params - data (array)
+    * @editable - std object given or phalcon object. phalcon object may be save (bool)
+    */
+    public static function findFirst($params = null, $editable = false){
+        $data = parent::findFirst($params);
+        if ($editable)
+            return $data;
+        $object = new stdClass();
+        if (count($data) &gt; 0 &amp;&amp; $data != null)
+            foreach($data as $k=&gt;$r)
+                if (!is_object($r) &amp;&amp; !preg_match('/^_[a-z]+/i', $k))
+                    $object-&gt;$k = $r;
+        return $object;
+    }
+
+    /**
+    * Replace id values to names and return
+    * @date - date given (object)
+    * @column - column replace (string)
+    * @model - model name (string)
+    * @default - default array with values (array)
+    * @fieldName - field name (string)
+    * @fieldID - field id (string)
+    */
+    public function setIDtoName($data, $column, $model, $default = null, $fieldName = 'name', $fieldID = 'id'){
+        $all = $this-&gt;db-&gt;getAll('*', $model);
+        $sorted = ($default == null) ? array() : $default;
+
+        if (count((array)$all) &gt; 0)
+            foreach ($all as $a)
+                $sorted[$a-&gt;$fieldID] = $a-&gt;$fieldName;
+
+        if (count((array)$data) &gt; 0)
+            foreach ($data as $d)
+                $d-&gt;$column = (isset($sorted[(int)$d-&gt;$column])) ? $sorted[(int)$d-&gt;$column] : 0;
+
+        return ($data != null) ? $data : false;
+    }
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-2777c622436a363ae5ff6474-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-2777c622436a363ae5ff6474-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/dc9dc10a58f1b7c075ebcc0bd63061a4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2793/ag95" class="user-moderator-N"><span itemprop="name">Alexey</span></a>        </span>
+        <br>
+
+        <span class="karma">2.6k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="13956" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '14</span>
+              </span><br/><a name="C13956" href="#C13956">
+                <time itemprop="dateCreated" datetime="2014-12-06T12:39:55-07:00" class="action-date">Dec '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>solved:</p>
+<pre><code class="language-php">&lt;?php
+    public function getSource()
+    {
+        return "luckyparticipants";
+    }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13956" data-cf-modified-2777c622436a363ae5ff6474-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13956" data-cf-modified-2777c622436a363ae5ff6474-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bec4e0cb13d5f8599368104010d8b2b5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5323/akramaliabbasi" class="user-moderator-N"><span itemprop="name">Programmer</span></a>        </span>
+        <br>
+
+        <span class="karma">122</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C26019" href="#C26019">
+                <time itemprop="dateCreated" datetime="2015-11-06T22:14:32-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I got the same error when on multi modules system through following commands :
+phalcon create-all-models --get-set --mapcolumn --directory apps\frontend\models
+In controller file along with this I got the error:
+$ForexRates = ForexRates::find();
+print_r($ForexRates);</p>
+<p>Got the error:
+Notice: Array to string conversion in C:\xampp\htdocs\testingtoday\apps\frontend\Module.php on line 78
+Notice: Array to string conversion in C:\xampp\htdocs\testingtoday\apps\frontend\Module.php on line 78
+Table 'forex_rates' doesn't exist in database when dumping meta-data for testingtoday\frontend\Models\ForexRates</p>
+<p>And on following  line changed the code : in testingtoday\apps\frontend Module.php</p>
+<p>$di['db'] = function () use ($config) {
+//   return new DbAdapter($config-&gt;toArray());
+//};
+To Replaces with :
+$di['db'] = function() use ($config) {  //
+return new DbAdapter(array(
+&quot;host&quot;     =&gt;$config-&gt;database-&gt;host,
+&quot;username&quot; =&gt; $config-&gt;database-&gt;username,
+&quot;password&quot; =&gt; $config-&gt;database-&gt;password,
+&quot;dbname&quot;   =&gt; $config-&gt;database-&gt;dbname
+));
+};</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26019" data-cf-modified-2777c622436a363ae5ff6474-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26019" data-cf-modified-2777c622436a363ae5ff6474-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4191" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,171 @@
+---
+layout: default
+title: 'Strange error: model saved without errors but actually DB not &quot;UPDATE&quot;d - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Strange error: model saved without errors but actually DB not &quot;UPDATE&quot;d</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/5159/tobispace" class="user-moderator-N"><span itemprop="name">tobispace</span></a></span>
+            <time itemprop="dateCreated" datetime="2019-01-29T06:27:11-07:00">Jan '19</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2019-01-29T06:27:11-07:00">Jan '19</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '19</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>344</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/6c5a7ed70304818cf1753f148f442737?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/5159/tobispace" class="user-moderator-N"><span itemprop="name">tobispace</span></a></span>
+                <span class="karma">12.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C19303" href="#C19303">
+        <time class="action-date">Jan '19</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,</p>
+<p>We are experiencing a very strange error. We think it is caused by a bug inside MySql/MariaDB, but I would still try to ask here hoping that someone can give me some alternative idea on which to reflect (or maybe, if it has already happened to someone ...).</p>
+<p>I have a procedure which executes an UPDATE on a record. The procedure is executed as a job (cli).</p>
+<p>Procedure:</p>
+<pre><code class="language-php">public function updateElement( $id ) {
+    $element = Element::findFirstById( $id );
+
+    if( !$element ) {
+        throw new App\Exceptions\NotFound();
+    }
+
+    $date = \DateTime::createFromFormat( 'Y-m-d', $element-&gt;getCurrentDate() );
+    $date-&gt;modify( '+1 year' );
+
+    $element-&gt;setCurrentDate( $date-&gt;format( 'Y-m-d' ) );
+
+    $element-&gt;saveOrFail();
+}</code></pre>
+<p>Note that <code>saveOrFail()</code> is a method that simply executes a <code>save()</code> on the Model and in case of failure it launches a specific exception based on our application structure.</p>
+<p>The problem is that <strong>sometimes</strong>, apparently <strong>randomly</strong>, the new <code>CurrentDate</code> value is not actually saved in the database.</p>
+<p>If we execute the same procedure on the same record, the new <code>CurrentDate</code> value is saved.</p>
+<p>This procedure is performed hundreds of times a day on many different &quot;elements&quot;. It is a procedure that is launched by a process that is always listening, which just notes that an &quot;element&quot; has been set in a certain way, then launches a new process on it that performs this procedure.</p>
+<p>It may be possible to have more than one of these processes running simultaneously (each on different &quot;elements&quot;). We have a control that avoids to launch too many of these processes at the same time (at most 5).</p>
+<p>After we became aware of this issue, we introduced controls in the form of log files at each point of the procedure. We have found that the &quot;calculation&quot; of the new date is always correct and that the Phalcon ORM always returns true on <code>save()</code>.</p>
+<p>We also added this at the end of the procedure:</p>
+<pre><code class="language-php">    $element = Element::findFirstById( $id );
+
+    if( !$element ) {
+        throw new App\Exceptions\NotFound();
+    }
+
+    /* NEW */
+    $oldDate = \DateTime::createFromFormat( 'Y-m-d', $element-&gt;getCurrentDate() );
+
+    $date = \DateTime::createFromFormat( 'Y-m-d', $element-&gt;getCurrentDate() );
+    $date-&gt;modify( '+1 year' );
+
+    $element-&gt;setCurrentDate( $date-&gt;format( 'Y-m-d' ) );
+
+    $element-&gt;saveOrFail();
+
+    /* NEW */
+    $element-&gt;refresh();
+
+    $newDate = \DateTime::createFromFormat( 'Y-m-d', $element-&gt;getCurrentDate() );
+
+    /* $date is the previous calculated date */
+    if( $newDate == $OldDate ) {
+        throw new \Exception( 'Same date' );
+    }</code></pre>
+<p>The <code>\Exception</code> thrown at the end of the method is thrown only sometimes. I mean that on two procedures that actually don't update <code>CurrentDate</code> value, the first one is able to notice the different dates, the second one not and thinks that the two dates are different (which would mean that <code>CurrentDate</code> has been properly updated, when actually has not).</p>
+<p>Otherwise, if between the time of the UPDATE and the moment of control we wait 1 minute (or in any case a few seconds), the error is <strong>always</strong> detected.</p>
+<p>This is a very strange issue. And actually we are 99.9% sure thatbefore a certain moment it never appeared. We think it started to show up after an upgrade on our servers (maybe MariaDB?).</p>
+<p>We use:</p>
+<p>Nginx
+MySql MariaDB 10.1.37
+PHP 7.0.26
+Phalcon 3.3.2</p>
+<p>Thank you for any help or ideas.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-b7f6e6c3bd335e310e88a599-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-b7f6e6c3bd335e310e88a599-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C58627" href="#C58627">
+                <time itemprop="dateCreated" datetime="2019-01-29T09:07:21-07:00" class="action-date">Jan '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You sure you didn't updated phalcon right? I guess in other places your code didn't change? Maybe you are locking database and first update is still happening and second doesn't do update then?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="58627" data-cf-modified-b7f6e6c3bd335e310e88a599-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="58627" data-cf-modified-b7f6e6c3bd335e310e88a599-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6c5a7ed70304818cf1753f148f442737?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5159/tobispace" class="user-moderator-N"><span itemprop="name">tobispace</span></a>        </span>
+        <br>
+
+        <span class="karma">12.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C58631" href="#C58631">
+                <time itemprop="dateCreated" datetime="2019-01-29T10:52:31-07:00" class="action-date">Jan '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>we updated Phalcon as well, from 3.1.0 to that version.</p>
+<p>I thought about a locking issue but we don't execute the procedure under a transaction or with a forUpdate (apart from Phalcon's save implicit one). and the fact is that the date is not updated only &quot;sometimes&quot;...</p>
+<p>note that we don't see any error in system logs (application server and mysql server), nginx logs, php logs.... no errors AT ALL... :(</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="58631" data-cf-modified-b7f6e6c3bd335e310e88a599-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="58631" data-cf-modified-b7f6e6c3bd335e310e88a599-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="19303" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,239 @@
+---
+layout: default
+title: 'Disable ORM cache during development and for testing - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/8/cache">Cache</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Disable ORM cache during development and for testing</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3525/berliner" class="user-moderator-N"><span itemprop="name">berliner</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-11-06T10:03:11-07:00">Nov '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-11-06T10:03:11-07:00">Nov '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>728</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/0b12c34cf515baaf8b77f28aaf279418?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3525/berliner" class="user-moderator-N"><span itemprop="name">berliner</span></a></span>
+                <span class="karma">2.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C9345" href="#C9345">
+        <time class="action-date">Nov '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>Using phalcon 2.0.1, I have added ORM caching to my project:</p>
+<pre><code class="language-php">$di-&gt;set('modelsCache', function () use () {
+    $frontCache = new FrontData(
+        array(
+            "lifetime" =&gt; 172800
+        )
+    );
+    $cache = new BackFile(
+        $frontCache,
+        array(
+            "cacheDir" =&gt; $directory,
+        )
+    );
+    return $cache;
+}</code></pre>
+<p>Now I would like to disable this during development and for automated testing. I use the ORM caching in the form:</p>
+<pre><code class="language-php">MyObject::find(array(
+    'id != :id:',
+    'bind' =&gt; array(
+        'id' =&gt; $id,
+    ),
+    'cache' =&gt; array(
+        'key' =&gt; 'my_cache_key',
+        'lifetime' =&gt; 3600,
+    ),
+))</code></pre>
+<p>If I simply omit adding the cache component to the dependency injection container, the cache component will complain as soon as I call a find method with the cache key.</p>
+<p>The logged error is:</p>
+<pre><code>Service 'modelsCache' wasn't found in the dependency injection container</code></pre>
+<p>So, how can I disable the Cache? Anyway of stubbing the Backend Cache? I know that I could create a dummy Backend Cache component that implements the BackendInterface, but I figured that there must be a way of disabling the cache.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-1a5996aadb8e33878b0ce134-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-1a5996aadb8e33878b0ce134-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5915f25e654c4f9e60fe51700cdee683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4769/Izopi4a" class="user-moderator-Y"><span itemprop="name">Izo</span></a>        </span>
+        <br>
+
+        <span class="karma">85.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C25967" href="#C25967">
+                <time itemprop="dateCreated" datetime="2015-11-06T10:14:32-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>hi,</p>
+<pre><code class="language-php">$this-&gt;di-&gt;set('modelsCache', function(){
+
+            $frontCache = new FrontendData(
+                array(
+                    "lifetime" =&gt; 186400
+                )
+            );
+
+            $cache = new Redis($frontCache, array(
+                'host' =&gt; '127.0.0.1',
+                'port' =&gt; 6379,
+                "statsKey" =&gt; '_PHCM'
+            ));
+
+            if (APPLICATION_ENV === 'development'){
+                $cache-&gt;flush();
+            }
+
+            return $cache;
+        }, true);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="25967" data-cf-modified-1a5996aadb8e33878b0ce134-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="25967" data-cf-modified-1a5996aadb8e33878b0ce134-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C26131" href="#C26131">
+                <time itemprop="dateCreated" datetime="2015-11-09T11:18:41-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Could you just set the cache lifetime to 1?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26131" data-cf-modified-1a5996aadb8e33878b0ce134-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26131" data-cf-modified-1a5996aadb8e33878b0ce134-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ac53de901013bc443a83868fb2f85d7a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5247/HessianZ" class="user-moderator-N"><span itemprop="name">Hessian</span></a>        </span>
+        <br>
+
+        <span class="karma">993</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="27221" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '15</span>
+              </span><br/><a name="C27221" href="#C27221">
+                <time itemprop="dateCreated" datetime="2015-12-02T00:38:42-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>What about this</p>
+<pre><code class="language-php">class NoneBackend extends \Phalcon\Cache\Backend implements \Phalcon\Cache\BackendInterface
+{
+    public function delete($keyName)
+    {
+    }
+
+    public function exists($keyName = null, $lifetime = null)
+    {
+    }
+
+    public function get($keyName, $lifetime = null)
+    {
+    }
+
+    public function queryKeys($prefix = null)
+    {
+    }
+
+    public function save($keyName = null, $content = null, $lifetime = null, $stopBuffer = true)
+    {
+    }
+}
+</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27221" data-cf-modified-1a5996aadb8e33878b0ce134-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27221" data-cf-modified-1a5996aadb8e33878b0ce134-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d4c874b37ece5d590b399e6bc7802aac?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8711/zeecher" class="user-moderator-N"><span itemprop="name">zeecher Game</span></a>        </span>
+        <br>
+
+        <span class="karma">114</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C58115" href="#C58115">
+                <time itemprop="dateCreated" datetime="2018-12-10T05:36:56-07:00" class="action-date">Dec '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>For phpunit I created Mock class,</p>
+<blockquote>
+<p>$cacheMock = $this-&gt;createMock( \Phalcon\Cache\Backend\Redis::class);</p>
+<p>$cacheMock-&gt;expects($this-&gt;any())
+-&gt;method('save')-&gt;willReturn(true);</p>
+<p>$cacheMock-&gt;expects($this-&gt;any())
+-&gt;method('get')-&gt;willReturn(null);</p>
+<p>$cacheMock-&gt;expects($this-&gt;any())
+-&gt;method('delete')-&gt;willReturn(true);</p>
+<p>$cacheMock-&gt;expects($this-&gt;any())
+-&gt;method('exists')-&gt;willReturn(true);</p>
+<p>$this-&gt;di-&gt;getService('modelsCache')
+-&gt;setSharedInstance($cacheMock);</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="58115" data-cf-modified-1a5996aadb8e33878b0ce134-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="58115" data-cf-modified-1a5996aadb8e33878b0ce134-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="9345" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

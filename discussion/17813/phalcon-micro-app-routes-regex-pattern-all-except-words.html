@@ -1,0 +1,263 @@
+---
+layout: default
+title: 'Phalcon micro app routes regex pattern (all except words) - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Phalcon micro app routes regex pattern (all except words)</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/9081/cottton" class="user-moderator-N"><span itemprop="name">cottton</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-02-19T10:33:25-07:00">Feb '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-02-19T10:33:25-07:00">Feb '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>763</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/06b6b9b6c7ea16c827969486f0e8f8e7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/9081/cottton" class="user-moderator-N"><span itemprop="name">cottton</span></a></span>
+                <span class="karma">1.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17813" href="#C17813">
+        <time class="action-date">Feb '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p><em>Asked same question at <a href="https://stackoverflow.com/questions/48869023/phalcon-micro-app-routes-regex-pattern-all-except-words">stackoverflow</a>. Thought it makes sense to ask here.</em></p>
+<p>Im lost with the phalcon regex routes pattern.</p>
+<p>I want to get the id (f.e.)</p>
+<p><strong>url/foo/bar/baz/some123id</strong></p>
+<p>So id can be anything but <strong>count</strong> and <strong>find</strong>.</p>
+<p>Usually you get this via a path <strong>/foo/{id}</strong></p>
+<p>But i need a pattern to exclude the words <strong>find</strong> and <strong>count</strong>.</p>
+<p><strong>Example code</strong></p>
+<pre><code>class EntityController extends \Phalcon\Mvc\Controller
+{
+    public function get($id)
+    {
+        return $this-&gt;response-&gt;setStatusCode(200, "OK")
+            -&gt;sendHeaders()
+            -&gt;setContent("TEST: get entity by id {$id}")
+            -&gt;send();
+    }
+
+    public function count()
+    {
+        return $this-&gt;response-&gt;setStatusCode(200, "OK")
+            -&gt;sendHeaders()
+            -&gt;setContent("TEST: count entities")
+            -&gt;send();
+    }
+
+    public function find()
+    {
+        return $this-&gt;response-&gt;setStatusCode(200, "OK")
+            -&gt;sendHeaders()
+            -&gt;setContent("TEST: find entities")
+            -&gt;send();
+    }
+}
+
+$app = new \Phalcon\Mvc\Micro();
+$app-&gt;notFound(
+    function () use ($app) {
+        $app-&gt;response-&gt;setStatusCode(404, 'Not Found');
+        $app-&gt;response-&gt;sendHeaders();
+        $message = 'Route Not Found';
+        $app-&gt;response-&gt;setContent($message);
+        $app-&gt;response-&gt;send();
+    }
+);
+
+$entities = new \Phalcon\Mvc\Micro\Collection();
+$entities-&gt;setHandler(new EntityController());
+$entities-&gt;get('/bom/count', 'count');
+$entities-&gt;get('/bom/find', 'find');
+
+// usually search by id (does not work)
+// $entities-&gt;get('/bom/{id}', 'get');
+
+// does not work with /123c (c is in "count")
+// $entities-&gt;get('/bom/{id:[^count|find]+}', 'get');
+
+// should actually work (as of PHP regex) but does not
+$entities-&gt;get('/bom/{id:^(?!^count$|^find$).+}', 'get');
+$app-&gt;mount($entities);
+$app-&gt;handle();
+
+// Tests
+// curl -v url/bom/count
+// TEST: count entities
+
+// curl -v url/bom/find
+// TEST: find entities
+
+// curl -v url/bom/abc123
+// Route Not Found</code></pre>
+<p>The pattern <strong>^(?!^count$|^find$).+}</strong> works with PHP.</p>
+<p><strong>PHP Pattern Test</strong></p>
+<pre><code>$format = "%-20s%-20s%-20s\r\n";
+echo sprintf(
+    $format,
+    "Subject",
+    "Does match",
+    "Expect match"
+);
+$pattern = "^(?!^count$|^find$).+";
+foreach (
+    [
+        'sku'       =&gt; true,
+        'count'     =&gt; false,
+        'find'      =&gt; false,
+        'countfind' =&gt; true,
+        'findcount' =&gt; true,
+        'skucount'  =&gt; true,
+        'skufind'   =&gt; true,
+        'countsku'  =&gt; true,
+        'findsku'   =&gt; true,
+        'coun'      =&gt; true,
+        'fin'       =&gt; true,
+        'ount'      =&gt; true,
+        'ind'       =&gt; true,
+        'skucoun'   =&gt; true,
+        'skufin'    =&gt; true,
+        'finsku'    =&gt; true,
+        'counsku'   =&gt; true,
+    ] as $subject =&gt; $expectMatch
+) {
+
+    $matches = [];
+    $doesMatch = preg_match("/{$pattern}/", $subject, $matches);
+    echo sprintf(
+        $format,
+        $subject,
+        $doesMatch,
+        var_export($expectMatch, true)
+    );
+}
+
+// Subject             Does match          Expect match
+// sku                 1                   true
+// count               0                   false
+// find                0                   false
+// countfind           1                   true
+// findcount           1                   true
+// skucount            1                   true
+// skufind             1                   true
+// countsku            1                   true
+// findsku             1                   true
+// coun                1                   true
+// fin                 1                   true
+// ount                1                   true
+// ind                 1                   true
+// skucoun             1                   true
+// skufin              1                   true
+// finsku              1                   true
+// counsku             1                   true</code></pre>
+<p>What am i missing here?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-2f216892ed614860dc847e79-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-2f216892ed614860dc847e79-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/06b6b9b6c7ea16c827969486f0e8f8e7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9081/cottton" class="user-moderator-N"><span itemprop="name">cottton</span></a>        </span>
+        <br>
+
+        <span class="karma">1.2k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="54095" data-toggle="modal" data-target="#historyModal">
+                edited <span>Feb '18</span>
+              </span><br/><a name="C54095" href="#C54095">
+                <time itemprop="dateCreated" datetime="2018-02-22T06:52:44-07:00" class="action-date">Feb '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><strong>Solution:</strong></p>
+<p><code>\/*((?!count$|find$)[^\/\r\n\t]+)\/*</code></p>
+<p><strong>Why:</strong></p>
+<p>I checked what phalcon used as compiled pattern:</p>
+<pre><code>foreach ($app-&gt;getRouter()-&gt;getRoutes() as $route) {
+    file_put_contents('tmp/_test.log', var_export($route-&gt;getCompiledPattern(), true) . PHP_EOL, FILE_APPEND);
+}</code></pre>
+<p>and </p>
+<p><code>/{id:^(?!^count$|^find$).+}</code></p>
+<p>became to </p>
+<p><code>#^/^(?!^count$|^find$).+$#u</code></p>
+<p>And i think as <strong>Leyff da</strong>  (at stack) mentioned the <code>^</code> is the problem.</p>
+<hr />
+<p>Example of a <code>/foo/bar/</code> -path:</p>
+<p><code>/foo/bar/{id:\/*((?!count$|find$)[^\/\r\n\t]+)\/*}</code></p>
+<p>becomes to </p>
+<p><code>#^\/foo\/bar\/\/*((?!count$|find$)[^\/\r\n\t]+)\/*$#u</code></p>
+<p>Pattern break down:</p>
+<pre><code>#                                       delimiter
+    ^                                   start of string
+        \/foo\/bar\/                    path
+        \/*                             possible multiple slashes before id like "foo/bar///id123"
+            (                           capture id
+                (
+                    ?!                  negative lookahead
+                    count               string
+                        $               end of string (to not match f.e. counts, count1, ...)
+                    |                   or
+                    find                string
+                        $               end of string (to not match f.e. finds, find1, ...)
+                )
+                [^\/\r\n\t]+            do not capture slashes, tab or new line after id
+            )
+        \/*                             possible multiple slashes after id like "foo/bar/id123///"
+    $                                   end of string
+#                                       delimiter
+u                                       unicode</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="54095" data-cf-modified-2f216892ed614860dc847e79-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="54095" data-cf-modified-2f216892ed614860dc847e79-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17813" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

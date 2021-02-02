@@ -1,0 +1,274 @@
+---
+layout: default
+title: 'Storing related records - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Storing related records</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1800/EquaI1ty" class="user-moderator-N"><span itemprop="name">Alexandr Vitruk</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-08-17T10:58:32-07:00">Aug '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-08-17T10:58:32-07:00">Aug '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>667</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/70452aeb2ebcfe5ab6fa38a4f9fb6915?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1800/EquaI1ty" class="user-moderator-N"><span itemprop="name">Alexandr Vitruk</span></a></span>
+                <span class="karma">6.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3154" href="#C3154">
+        <time class="action-date">Aug '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Good afternoon! How can I save related records, if I need to <strong>store more than two related records</strong>? </p>
+<p>In <a href="http://docs.phalcon.io/en/latest/reference/models.html#storing-related-records">documentation</a>:</p>
+<pre><code class="language-php">&lt;?php
+
+// Create a robot
+$artist = new Artists();
+$artist-&gt;name = 'Shinichi Osawa';
+$artist-&gt;country = 'Japan';
+
+// Create an album
+$album = new Albums();
+$album-&gt;name = 'The One';
+$album-&gt;artist = $artist; //Assign the artist
+$album-&gt;year = 2008;
+
+//Save both records
+$album-&gt;save();</code></pre>
+<p>I need something like this: </p>
+<pre><code class="language-php">$model = new Model();
+$model-&gt;FirstRelatedRecord-&gt;SecondRelatedRecord = $some_content;
+$model-&gt;save();</code></pre>
+<p>I have 3 Entity:</p>
+<pre><code class="language-php">class Tickets extends Model {
+
+    public $id;
+    public $email;
+    public $uniquekey;
+    public $active;
+    public $new;
+
+        public function initialize(){
+            $this-&gt;hasMany("id", "Modules\Modules\Models\TicketsMembers", "ticket_id", array(
+                'alias' =&gt; 'TicketsMembers',
+                'foreignKey' =&gt; array(
+                    'action' =&gt; \Phalcon\Mvc\Model\Relation::ACTION_CASCADE
+                )));
+        }
+    }
+
+    class TicketsMembers extends Model {
+
+    public $id;
+    public $ticket_id;
+    public $name;
+
+        public function initialize(){
+            $this-&gt;hasMany("id", "Modules\Modules\Models\TicketsMessages", "member_id", array(
+                'alias' =&gt; 'TicketsMessages',
+                'foreignKey' =&gt; array(
+                    'action' =&gt; \Phalcon\Mvc\Model\Relation::ACTION_CASCADE
+                )));
+        }
+    }
+
+    class TicketsMessages extends Model {
+
+      public $id;
+      public $member_id;
+      public $message;
+      public $date;
+      public $answer;
+
+        public function initialize(){
+
+        }
+    }</code></pre>
+<p>I'm trying to do as following: </p>
+<pre><code class="language-php">$model = new Tickets();
+
+$model-&gt;email = $this-&gt;request-&gt;getPost('email', 'email');
+            $model-&gt;uniquekey = rand(100,109).date('dmy');
+            $model-&gt;active = 'Y';
+            $model-&gt;new = 'Y';
+
+            $member = new TicketsMembers();
+            $member-&gt;ticket_id = $model;
+            $member-&gt;name = $this-&gt;request-&gt;getPost('name', array('string', 'striptags'));
+
+            $model-&gt;TicketsMembers = $member;
+
+            $content = new TicketsMessages();
+            $content-&gt;member_id = $model-&gt;TicketsMembers;
+            $content-&gt;message = $this-&gt;request-&gt;getPost('message', array('string', 'striptags'));
+            $content-&gt;date = time();
+            $content-&gt;answer = 'N';
+
+            $model-&gt;TicketsMembers-&gt;TicketsMessages = $content;
+
+            if (!$model-&gt;save()) {
+
+                //My code
+
+}</code></pre>
+<p>As a result, records are stored in table &quot;tickets&quot; and table &quot;tickets_members&quot;. However, table &quot;tickets_messages&quot; is empty. </p>
+<p>So, </p>
+<pre><code class="language-php">$model-&gt;TicketsMembers = $member;</code></pre>
+<p>works perfect, but</p>
+<pre><code class="language-php">$model-&gt;TicketsMembers-&gt;TicketsMessages = $content;</code></pre>
+<p>does not work.</p>
+<p>What should I do in this situation? Is it possible in such a way save a record? Thanks for your help!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-8b704f7df99eef7413b95fa1-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-8b704f7df99eef7413b95fa1-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/24e438429d975d345e4f99e53b740150?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1487/Conradaek" class="user-moderator-N"><span itemprop="name">Conradaek</span></a>        </span>
+        <br>
+
+        <span class="karma">26.3k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C10449" href="#C10449">
+                <time itemprop="dateCreated" datetime="2014-08-17T13:27:03-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>In line</p>
+<pre><code class="language-php">
+$member-&gt;ticket_id = $model;
+</code></pre>
+<p>You assing an <strong>object</strong> to a variable that is expected to be an <strong>integer</strong>.</p>
+<p>You do the same in this line:</p>
+<pre><code class="language-php">
+$content-&gt;member_id = $model-&gt;TicketsMembers;
+</code></pre>
+<p>You assign here a RESULTSET to a field that is expected to be integer.</p>
+<p>I think it is not allowed to to this, but I might be wrong.</p>
+<p>What I would do is:</p>
+<p><strong>1</strong> In TicketsMembers I would define missing <code>belongsTo</code> relation to <code>Tickets</code>.</p>
+<p><strong>2</strong> In TicketsMessages I would define missing <code>belongsTo</code> relation to <code>TicketsMembers</code>.</p>
+<p>Then:</p>
+<pre><code class="language-php">
+$model = new Tickets();
+
+$model-&gt;email = '<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f0918795839f9d95b0918795839f9d95de939f9d">[email&#160;protected]</a>';
+$model-&gt;uniquekey = 3423;
+$model-&gt;active = 'Y';
+$model-&gt;new = 'Y';
+
+$member = new TicketsMembers();
+$member-&gt;name = 'Awesome Name';
+
+$content = new TicketsMessages();
+$content-&gt;message = 'Awesome message';
+$content-&gt;date = time();
+$content-&gt;answer = 'N';
+
+//assigns parent to children
+$model-&gt;TicketsMembers = $member;
+$member-&gt;TicketsMessages = $content;
+
+if (!$model-&gt;save()) {
+//My code
+}
+</code></pre>
+<p>I have chaned <code>$this-&gt;request-&gt;getPost</code> to strings because there might be a risk that <code>getPost</code> (for some reason) returns null. What I mean is, that you need to find point of failure - there are more than one now. First try to check if relations work properly, then add <code>getPost</code> methods.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10449" data-cf-modified-8b704f7df99eef7413b95fa1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10449" data-cf-modified-8b704f7df99eef7413b95fa1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/70452aeb2ebcfe5ab6fa38a4f9fb6915?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1800/EquaI1ty" class="user-moderator-N"><span itemprop="name">Alexandr Vitruk</span></a>        </span>
+        <br>
+
+        <span class="karma">6.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="10451" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '14</span>
+              </span><br/><a name="C10451" href="#C10451">
+                <time itemprop="dateCreated" datetime="2014-08-17T14:26:54-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Problem solved.</p>
+<ol>
+<li>
+<p>About belongsTo: these relation are defined (I just forgot to copy these lines =/ );</p>
+</li>
+<li>In line:</li>
+</ol>
+<pre><code class="language-php">$member-&gt;ticket_id = $model;</code></pre>
+<p>I'm really assing an object to a variable that is expected to be an integer, but if works perfectly. Perhaps there is a better way to get Id of parrent-table;</p>
+<ol start="3">
+<li>So, the fault was in the wrong syntax in this line:</li>
+</ol>
+<pre><code class="language-php">$model-&gt;TicketsMembers-&gt;TicketsMessages = $content;</code></pre>
+<p>This line isn't working.</p>
+<p>Your variant</p>
+<pre><code class="language-php">//assigns parent to children
+$model-&gt;TicketsMembers = $member;
+$member-&gt;TicketsMessages = $content;</code></pre>
+<p>works great!</p>
+<p><strong>Thanks for your help!</strong></p>
+<p>PS: How do you paste code on a black background? I haven't a tag [code] or something in the editor.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10451" data-cf-modified-8b704f7df99eef7413b95fa1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10451" data-cf-modified-8b704f7df99eef7413b95fa1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3154" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

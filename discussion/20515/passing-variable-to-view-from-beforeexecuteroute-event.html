@@ -1,0 +1,219 @@
+---
+layout: default
+title: 'Passing variable to view from beforeExecuteRoute() event - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/11/events-manager">Events</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Passing variable to view from beforeExecuteRoute() event</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/5431/assadnazar" class="user-moderator-N"><span itemprop="name">assadnazar</span></a></span>
+            <time itemprop="dateCreated" datetime="2020-04-08T15:03:18-07:00">Apr '20</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2020-04-08T15:03:18-07:00">Apr '20</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Apr '20</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>143</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/3304923b8992f922f6f133bb3fcadaf2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/5431/assadnazar" class="user-moderator-N"><span itemprop="name">assadnazar</span></a></span>
+                <span class="karma">5.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C20515" href="#C20515">
+        <time class="action-date">Apr '20</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have defined my dispatcher  service with following event attachment:</p>
+<pre><code class="language-php">$di-&gt;setShared('dispatcher', function() use ($di) {
+    $eventsManager = new EventsManager();
+    $eventsManagerHandler = new EventManagerHandler($di);
+    $eventsManager-&gt;attach('dispatch', $eventsManagerHandler);
+
+    $dispatcher = new Dispatcher();
+    $dispatcher-&gt;setDefaultNamespace('Test\Modules\Frontend\Controllers');
+    $dispatcher-&gt;setEventsManager($eventsManager);
+
+    return $dispatcher;
+});</code></pre>
+<p>In EventManagerHandler class, I have defined beforeExecuteRoute() function:</p>
+<pre><code class="language-php">public function beforeExecuteRoute(Event $event, Dispatcher $dispatcher) : bool
+{
+    $controllerName = $dispatcher-&gt;getControllerName();
+    $actionName     = $dispatcher-&gt;getActionName();
+
+    // Only check permissions on private controllers
+    if ($dispatcher-&gt;getDI()-&gt;getAcl()-&gt;isPrivate($controllerName)) {
+        // Get the current identity
+        $identity = $dispatcher-&gt;getDI()-&gt;getAuth()-&gt;getIdentity();
+
+        // If there is no identity available the user is redirected to index/index
+        if (!is_array($identity)) {
+            $dispatcher-&gt;getDI()-&gt;getFlash()-&gt;error('You need to sign in to access the page.');
+
+            $forwardUrl = array(
+                'controller' =&gt; 'index',
+                'action'     =&gt; 'index'
+            );
+
+            $request = new Request();
+            $uri = $request-&gt;getURI();
+
+            if($uri !== '/' || $uri !== '/dashboard' || $uri !== '/dashboard/index')
+                $forwardUrl['params'] = array('_returnUrl' =&gt; $uri);
+
+            $dispatcher-&gt;forward($forwardUrl);
+            return false;
+        }
+
+        // Set User Menu
+        $menu = Menus::findFirstByProfileId($dispatcher-&gt;getDI()-&gt;getAuth()-&gt;getProfileId());
+        if ($menu) {
+            $dispatcher-&gt;getDI()-&gt;getView()-&gt;menu = json_decode(json_decode($menu-&gt;menu), true, 512);
+        }
+
+        // Check if the user have permission to the current option
+        if (!$dispatcher-&gt;getDI()-&gt;getAcl()-&gt;isAllowed($dispatcher-&gt;getDI()-&gt;getAuth()-&gt;getProfile(), $controllerName, $actionName)) {
+
+            // Access Denied Error Page
+            $dispatcher-&gt;forward([
+                'controller' =&gt; 'errors',
+                'action'     =&gt; 'show401'
+            ]);
+
+            return false;
+        }
+    }
+
+    return true;
+}</code></pre>
+<p>Here I want to pass <code>$menu</code> to the view. How can I achieve this? Currently, <code>$dispatcher-&gt;getDI()-&gt;getView()</code> has no action defined so it does not attach the variable to current action.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-9ab3e5043b7fc230f0790637-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-9ab3e5043b7fc230f0790637-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/747be74e038e35ba2207da09388e3a0d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8217/talal424" class="user-moderator-N"><span itemprop="name">talal424</span></a>        </span>
+        <br>
+
+        <span class="karma">8.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C62693" href="#C62693">
+                <time itemprop="dateCreated" datetime="2020-04-08T16:13:47-07:00" class="action-date">Apr '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>could extending <code>Phalcon\Di\Injectable</code> from <code>EventManagerHandler</code> could do the trick ? or perhaps <code>Phalcon\Mvc\View::setVars()</code> or <code>Phalcon\Mvc\View::setVar()</code></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62693" data-cf-modified-9ab3e5043b7fc230f0790637-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62693" data-cf-modified-9ab3e5043b7fc230f0790637-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3304923b8992f922f6f133bb3fcadaf2?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5431/assadnazar" class="user-moderator-N"><span itemprop="name">assadnazar</span></a>        </span>
+        <br>
+
+        <span class="karma">5.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="62695" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '20</span>
+              </span><br/><a name="C62695" href="#C62695">
+                <time itemprop="dateCreated" datetime="2020-04-08T17:39:01-07:00" class="action-date">Apr '20</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>In my EventManagerHandler</p>
+<pre><code class="language-php">public function beforeRender(Event $event, View $view)
+{
+    // Only check permissions on private controllers
+    if ($view-&gt;getDI()-&gt;getAcl()-&gt;isPrivate($view-&gt;getControllerName())) {
+        // Get the current identity
+        $identity = $view-&gt;getDI()-&gt;getAuth()-&gt;getIdentity();
+
+        // If there is no identity available the user is redirected to index/index
+        if (is_array($identity)) {
+            // Set User Menu
+            $menu = Menus::findFirstByProfileId($identity['profileId']);
+            if ($menu) {
+                //$dispatcher-&gt;getDI()-&gt;getView()-&gt;menu = json_decode(json_decode($menu-&gt;menu), true, 512);
+                $view-&gt;setVar('menu', json_decode(json_decode($menu-&gt;menu), true, 512));
+            }
+        }
+    }
+}</code></pre>
+<p>and then in View Service attached event manager:</p>
+<pre><code class="language-php">$di-&gt;set('view', function () {
+    $manager = new Manager();
+
+    $eventsManagerHandler = new EventManagerHandler();
+    $manager-&gt;attach(
+        'view',
+        $eventsManagerHandler
+    );
+
+    $view = new View();
+    $view-&gt;setDI($this);
+    $view-&gt;setViewsDir(__DIR__ . '/views/');
+    $view-&gt;setLayoutsDir(__DIR__ . '/views/layouts/');
+
+    $view-&gt;registerEngines([
+        '.volt'  =&gt; 'voltShared',
+        '.phtml' =&gt; PhpEngine::class
+    ]);
+    $view-&gt;setEventsManager($manager);
+    return $view;
+});</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="62695" data-cf-modified-9ab3e5043b7fc230f0790637-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="62695" data-cf-modified-9ab3e5043b7fc230f0790637-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="20515" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

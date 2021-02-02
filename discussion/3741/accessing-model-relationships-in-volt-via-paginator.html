@@ -1,0 +1,407 @@
+---
+layout: default
+title: 'Accessing model relationships in volt via paginator - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Accessing model relationships in volt via paginator</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1720/blm14" class="user-moderator-N"><span itemprop="name">blm14</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-10-21T08:44:29-07:00">Oct '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-10-21T08:44:29-07:00">Oct '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">6</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1638</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/82140260df942005abbc598cbba6c688?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1720/blm14" class="user-moderator-N"><span itemprop="name">blm14</span></a></span>
+                <span class="karma">40.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3741" href="#C3741">
+        <time class="action-date">Oct '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have two models, PtsPerStudy and SaeReport:</p>
+<pre><code class="language-php">public class SaeReport extends Phalcon\Mvc\Model{
+    public function initialize(){
+        $this-&gt;belongsTo("ae_id","PtsPerStudy","id");
+    }
+    ...
+}
+
+public class PtsPerStudy extends Phalcon\Mvc\Model{
+    public function initialize(){
+        $this-&gt;hasMany('id','SaeReport','ae_id');
+    }
+    ...
+}</code></pre>
+<p>Each SaeReport has one PtsPerStudy record and a PtsPerStudy record can have many SaeReport rows. Here is the code from the controller:</p>
+<pre><code class="language-php"> public function indexAction($id){
+
+      $numberPage = 1;
+
+      $identity=$this-&gt;auth-&gt;getIdentity();
+      $query = Criteria::fromInput($this-&gt;di,'SaeReport',$this-&gt;request-&gt;getPost());
+
+      $this-&gt;persistent-&gt;searchParams = $query-&gt;getParams();
+      $numberPage = $this-&gt;request-&gt;getQuery('page','int');
+
+      $parameters = array();
+      if($this-&gt;persistent-&gt;searchParams){
+    $parameters = $this-&gt;persistent-&gt;searchParams;
+      }else{
+    $parameters = "study_id = ".$id ;
+      }
+
+      $saereports = SaeReport::find($parameters);
+
+      $paginator = new Paginator(array("data"=&gt;$saereports,"limit"=&gt;10,"page"=&gt;$numberPage));
+
+      $this-&gt;view-&gt;page = $paginator-&gt;getPaginate();
+
+      $mystudy = Studies::findFirstByPkStudy($id);
+
+      $this-&gt;view-&gt;mystudy=$mystudy;
+
+  }</code></pre>
+<p>And I see this error, once per row to be displayed, in /var/log/httpd/error_log:</p>
+<pre><code class="language-php">[Tue Oct 21 11:37:05 2014] [error] [client 156.145.229.210] PHP Notice:  Access to undefined property SaeReport::PtsPerStudy in /var/www/html/dsmc/app/cache/_var_www_html_dsmc_app_views_saereport_index.volt.php on line 23, referer: &lt;url&gt;</code></pre>
+<p>Is this something that I am doing wrong or is there a bug in the volt template engine? I would think that it should be accessing it like SaeReport-&gt;PtsPerStudy not SaeReport::PtsPerStudy, no?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-12036814812876f13a576430-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-12036814812876f13a576430-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fb35f447c5edce740bc88e405d5eb3af?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/742/cspeak" class="user-moderator-N"><span itemprop="name">Steven</span></a>        </span>
+        <br>
+
+        <span class="karma">5.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="12411" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '14</span>
+              </span><br/><a name="C12411" href="#C12411">
+                <time itemprop="dateCreated" datetime="2014-10-21T09:28:09-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>When calling related models, prepend the related model name with &quot;get&quot;.</p>
+<p>So instead of:</p>
+<pre><code class="language-php">SaeReport-&gt;PtsPerStudy()</code></pre>
+<p>Try using:</p>
+<pre><code class="language-php">SaeReport-&gt;getPtsPerStudy()</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12411" data-cf-modified-12036814812876f13a576430-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12411" data-cf-modified-12036814812876f13a576430-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/82140260df942005abbc598cbba6c688?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1720/blm14" class="user-moderator-N"><span itemprop="name">blm14</span></a>        </span>
+        <br>
+
+        <span class="karma">40.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12412" href="#C12412">
+                <time itemprop="dateCreated" datetime="2014-10-21T09:32:29-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes that was a typo, thank you. The error is being thrown in the volt, not the controller.</p>
+<pre><code class="language-html">{% raw %}{%{% endraw %} for item in page.items {% raw %}%}{% endraw %}
+
+        &lt;tr&gt;
+        &lt;td&gt;{% raw %}{{{% endraw %}item.PtsPerStudy.getName()  {% raw %}}}{% endraw %}&lt;/td&gt;
+        &lt;TD&gt; {% raw %}{{{% endraw %}link_to("SAEReport/viewlist/" ~ mystudy.getPkStudy() ~ "/" ~ item.getId()," View","class":"btn btn-primary") {% raw %}}}{% endraw %}&lt;/TD&gt;
+        &lt;/tr&gt;
+
+{% raw %}{%{% endraw %} if loop.last {% raw %}%}{% endraw %}</code></pre>
+<p>So item is the SaeReport items in the paginator and I want to access the PtsPerStudy row associated with each SaeReport row that I am displaying in the paginator.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12412" data-cf-modified-12036814812876f13a576430-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12412" data-cf-modified-12036814812876f13a576430-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fb35f447c5edce740bc88e405d5eb3af?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/742/cspeak" class="user-moderator-N"><span itemprop="name">Steven</span></a>        </span>
+        <br>
+
+        <span class="karma">5.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12413" href="#C12413">
+                <time itemprop="dateCreated" datetime="2014-10-21T09:37:10-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The same rule still applies in the volt template files. In the case of your newest example, try this:</p>
+<pre><code class="language-php">{% raw %}{%{% endraw %} for item in page.items {% raw %}%}{% endraw %}
+
+        &lt;tr&gt;
+        &lt;td&gt;{% raw %}{{{% endraw %}item.getPtsPerStudy().getName()  {% raw %}}}{% endraw %}&lt;/td&gt;
+        &lt;TD&gt; {% raw %}{{{% endraw %}link_to("SAEReport/viewlist/" ~ mystudy.getPkStudy() ~ "/" ~ item.getId()," View","class":"btn btn-primary") {% raw %}}}{% endraw %}&lt;/TD&gt;
+        &lt;/tr&gt;
+
+{% raw %}{%{% endraw %} if loop.last {% raw %}%}{% endraw %}</code></pre>
+<p>When you acess the paginated items in a template, you are still referencing the objects (Phalcon\Mvc\Model\Resultset\Simple) unless you change the hydration option. Instead of &quot;-&gt;&quot;, you'll just use a period.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12413" data-cf-modified-12036814812876f13a576430-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12413" data-cf-modified-12036814812876f13a576430-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fb35f447c5edce740bc88e405d5eb3af?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/742/cspeak" class="user-moderator-N"><span itemprop="name">Steven</span></a>        </span>
+        <br>
+
+        <span class="karma">5.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12414" href="#C12414">
+                <time itemprop="dateCreated" datetime="2014-10-21T09:43:33-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>One thing I forgot to add was that when you refer to methods of realted Models in volt (i.e. <strong>items.getPtsPerStudy().getName()</strong>), if the related result does not exist, it will throw an exception that it can not find, in your case, &quot;getName()&quot; of an undefined object since &quot;getPtsPerStudy()&quot; will not return an object.</p>
+<p>I'm not entirely sure on the best way of doing this but here is what I've done in the past:</p>
+<pre><code class="language-php">{% raw %}{%{% endraw %} for item in page.items {% raw %}%}{% endraw %}
+        {% raw %}{%{% endraw %} set PtsPerStudy = item.getPtsPerStudy() {% raw %}%}{% endraw %}
+        &lt;tr&gt;
+        &lt;td&gt;{% raw %}{{{% endraw %} PtsPerStudy ? PtsPerStudy.getName() : '-'  {% raw %}}}{% endraw %}&lt;/td&gt;
+        &lt;TD&gt; {% raw %}{{{% endraw %}link_to("SAEReport/viewlist/" ~ mystudy.getPkStudy() ~ "/" ~ item.getId()," View","class":"btn btn-primary") {% raw %}}}{% endraw %}&lt;/TD&gt;
+        &lt;/tr&gt;
+
+{% raw %}{%{% endraw %} if loop.last {% raw %}%}{% endraw %}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12414" data-cf-modified-12036814812876f13a576430-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12414" data-cf-modified-12036814812876f13a576430-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/82140260df942005abbc598cbba6c688?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1720/blm14" class="user-moderator-N"><span itemprop="name">blm14</span></a>        </span>
+        <br>
+
+        <span class="karma">40.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12415" href="#C12415">
+                <time itemprop="dateCreated" datetime="2014-10-21T09:58:19-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><dl>
+<dt>The method &quot;getPtsPerStudy&quot; doesn't exist on model &quot;SaeReport&quot;</dt>
+<dd><p>(</p></dd>
+</dl></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12415" data-cf-modified-12036814812876f13a576430-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12415" data-cf-modified-12036814812876f13a576430-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fb35f447c5edce740bc88e405d5eb3af?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/742/cspeak" class="user-moderator-N"><span itemprop="name">Steven</span></a>        </span>
+        <br>
+
+        <span class="karma">5.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="12417" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '14</span>
+              </span><br/><a name="C12417" href="#C12417">
+                <time itemprop="dateCreated" datetime="2014-10-21T10:14:06-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hmm, the only time I've come across that error was when I had my relationship settings messed up in the models.</p>
+<p>Are your models setup with namespaces?</p>
+<p>Also, could you post up part of those table schemas?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12417" data-cf-modified-12036814812876f13a576430-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12417" data-cf-modified-12036814812876f13a576430-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/82140260df942005abbc598cbba6c688?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1720/blm14" class="user-moderator-N"><span itemprop="name">blm14</span></a>        </span>
+        <br>
+
+        <span class="karma">40.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12418" href="#C12418">
+                <time itemprop="dateCreated" datetime="2014-10-21T10:29:01-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes my models are set up with namespaces, I was removing them for clarity, but I can include them.</p>
+<pre><code class="language-sql">CREATE TABLE `sae_report` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `study_id` int(11) DEFAULT NULL,
+  `sponsor` varchar(45) DEFAULT NULL,
+  `overall_pi` varchar(45) DEFAULT NULL,
+  `is_up` varchar(1) DEFAULT NULL,
+  `report_type` varchar(1) DEFAULT NULL,
+  `date_pi_informed` date DEFAULT NULL,
+  `date_of_report` date DEFAULT NULL,
+  `date_of_onset` date DEFAULT NULL,
+  `date_resolved` date DEFAULT NULL,
+  `ae_id` varchar(200) DEFAULT NULL,
+  `death` int(11) DEFAULT NULL,
+  `lifethreat` int(11) DEFAULT NULL,
+  `hosp` int(11) DEFAULT NULL,
+  `disability_incapacity` int(11) DEFAULT NULL,
+  `congentical_abn` int(11) DEFAULT NULL,
+  `otherwise_serious` int(11) DEFAULT NULL,
+  `causality` varchar(15) DEFAULT NULL,
+  `expectedness` varchar(15) DEFAULT NULL,
+  `brief_description` text,
+  `diagnosis` text,
+  `if_recovered_date` date DEFAULT NULL,
+  `if_fatal_date` date DEFAULT NULL,
+  `cause_of_death` varchar(255) DEFAULT NULL,
+  `parent_id` int(11) DEFAULT NULL,
+  `outcome_fatal` int(11) DEFAULT NULL,
+  `outcome_ongoing` int(11) DEFAULT NULL,
+  `outcome_recovered_with` int(11) DEFAULT NULL,
+  `outcome_recovered` varchar(45) DEFAULT NULL,
+  `is_deleted` int(11) DEFAULT NULL,
+  `submitted_date` varchar(45) DEFAULT NULL,
+  `outcome` text,
+  `crc_name` varchar(45) DEFAULT NULL,
+  `crc_uni` varchar(45) DEFAULT NULL,
+  `crc_fax` varchar(45) DEFAULT NULL,
+  `crc_phone` varchar(45) DEFAULT NULL,
+  `pi_fax` varchar(45) DEFAULT NULL,
+  `pi_phone` varchar(45) DEFAULT NULL,
+  `pi_name` varchar(45) DEFAULT NULL,
+  `pi_uni` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM AUTO_INCREMENT=1532 DEFAULT CHARSET=utf8;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `pts_per_study` AS select distinct `events`.`patient_study_id` AS `patient_study_id`,`events`.`MRN` AS `mrn`,`events`.`pk_study` AS `pk_study`,`events`.`pt_age` AS `pt_age`,`events`.`sex` AS `sex` from `events`;</code></pre>
+<p>Is it maybe because PtsPerStudy is actually based on a database view and not a table? The phalcon dev tools happily created a model for it from command line...</p>
+<p>So ae_id in the table sae_report is a foreign key to id from the view pts_per_study</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12418" data-cf-modified-12036814812876f13a576430-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12418" data-cf-modified-12036814812876f13a576430-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fb35f447c5edce740bc88e405d5eb3af?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/742/cspeak" class="user-moderator-N"><span itemprop="name">Steven</span></a>        </span>
+        <br>
+
+        <span class="karma">5.7k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12419" href="#C12419">
+                <time itemprop="dateCreated" datetime="2014-10-21T10:35:34-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>There could be a few things.</p>
+<p>I don't see the <code>id</code> column in the view (ptsperstudy) but another thing you should look at when creating your relationships in the models is including the namespaces as shows here: <a href="http://docs.phalcon.io/en/latest/reference/models.html#cascade-restrict-actions">http://docs.phalcon.io/en/latest/reference/models.html#cascade-restrict-actions</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12419" data-cf-modified-12036814812876f13a576430-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12419" data-cf-modified-12036814812876f13a576430-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/82140260df942005abbc598cbba6c688?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1720/blm14" class="user-moderator-N"><span itemprop="name">blm14</span></a>        </span>
+        <br>
+
+        <span class="karma">40.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12420" href="#C12420">
+                <time itemprop="dateCreated" datetime="2014-10-21T10:39:25-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Wow I am slow today. Thank you I forgot to include ID in the select...</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12420" data-cf-modified-12036814812876f13a576430-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12420" data-cf-modified-12036814812876f13a576430-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fb35f447c5edce740bc88e405d5eb3af?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/742/cspeak" class="user-moderator-N"><span itemprop="name">Steven</span></a>        </span>
+        <br>
+
+        <span class="karma">5.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C12421" href="#C12421">
+                <time itemprop="dateCreated" datetime="2014-10-21T10:45:45-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Glad I could help :-)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="12421" data-cf-modified-12036814812876f13a576430-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="12421" data-cf-modified-12036814812876f13a576430-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3741" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

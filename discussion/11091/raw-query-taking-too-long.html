@@ -1,0 +1,289 @@
+---
+layout: default
+title: 'Raw query taking too long - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Raw query taking too long</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1663/al35mm" class="user-moderator-N"><span itemprop="name">Al</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-04-08T10:18:32-07:00">Apr '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-04-08T10:18:32-07:00">Apr '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Apr '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">5</span>
+                </td>
+                <td>
+                    <label>Views</label><br>761</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/ff9a2f43efac70da87e23ddd6ac5061f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1663/al35mm" class="user-moderator-N"><span itemprop="name">Al</span></a></span>
+                <span class="karma">20.4k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C11091" href="#C11091">
+        <time class="action-date">Apr '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I've been fighting this issue in different ways for a while. Right now I have cron generate a MySQL view of a joined query processing 300,000 results with a limit of 1000.  This query runs very fast.</p>
+<p>Here's the query that generates the view;</p>
+<pre><code class="language-php">    $sql = "
+            DROP VIEW IF EXISTS active_users_list;
+            CREATE VIEW active_users_list AS
+            SELECT roles_users.*, users.* FROM roles_users
+            LEFT JOIN users ON users.id = roles_users.user_id
+            WHERE roles_users.role_id = '2'
+            AND users.f_name IS NOT NULL
+            AND users.city IS NOT NULL
+            AND users.gender IS NOT NULL
+            AND users.date_of_birth IS NOT NULL
+            ORDER BY users.last_active DESC
+            LIMIT 1000;
+        ";
+        $con = \Phalcon\DI::getDefault()-&gt;getShared('db');
+        if($con-&gt;query($sql)) {
+            echo "Active user list generated\n";
+        }</code></pre>
+<p>Then the following code is used to query the view of 1000 results in a paginated way;</p>
+<pre><code class="language-php">        $sql = "
+        select * from active_users_list
+        LIMIT $offset, $limit
+        ";
+         $con = \Phalcon\DI::getDefault()-&gt;getShared('db');
+         $data = $con-&gt;query($sql);
+         $data-&gt;setFetchMode(\Phalcon\Db::FETCH_OBJ);
+         $results = (object) $data-&gt;fetchAll();</code></pre>
+<p>This query can be very slow and can take 6 seconds or more!</p>
+<p>I originally had the main query running here, paginated, with all 300,000 results, but as you got  further to the end of pagination  it would get rediculously slow.</p>
+<p>It seems to be the <code>LIMIT $offset, $limit</code> which slows it down.  I was under the impression the above was a raw SQL query, so would avoid Phalcon's limitations when working with large result sets. Is the speed issue here still caused by Phalcon?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-04e7cc4d52a60b475ecf7f71-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-04e7cc4d52a60b475ecf7f71-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C32313" href="#C32313">
+                <time itemprop="dateCreated" datetime="2016-04-08T11:27:22-07:00" class="action-date">Apr '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This sounds more like an SQL issue rather than Phalcon. Rewriting the join to inner will give you some performance boost:</p>
+<pre><code class="language-sql">SELECT roles_users.*, users.* FROM users INNER JOIN roles_users ON users.id=roles_users.user_id WHERE roles_users.role_id=2</code></pre>
+<p>You may use a PHQL query builer with <code>Phalcon\Paginator\Adapter\QueryBuilder</code> as your paginator and still get the same performance as with raw SQL, since the builder will automatically insert the LIMIT command. Check the docs: <a href="https://docs.phalcon.io/en/latest/reference/pagination.html">https://docs.phalcon.io/en/latest/reference/pagination.html</a></p>
+<p>And yes, your last snippet will execute a raw SQL command using the PDO adapter, so it should have the same performance as running it from console for eg.</p>
+<p>Try benchmarking your query first, so you can pinpoint the performance bottleneck. Here's a nice tutorial, although not exhaustive: <a href="https://www.digitalocean.com/community/tutorials/how-to-measure-mysql-query-performance-with-mysqlslap">https://www.digitalocean.com/community/tutorials/how-to-measure-mysql-query-performance-with-mysqlslap</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="32313" data-cf-modified-04e7cc4d52a60b475ecf7f71-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="32313" data-cf-modified-04e7cc4d52a60b475ecf7f71-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="32315" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '16</span>
+              </span><br/><a name="C32315" href="#C32315">
+                <time itemprop="dateCreated" datetime="2016-04-08T11:33:30-07:00" class="action-date">Apr '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Rewrite your view to remove OFFSET and use LIMIT and WHERE greather then something clause instead(im guessing you have user id maybe).</p>
+<p>On a big data set you should avoid offset.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="32315" data-cf-modified-04e7cc4d52a60b475ecf7f71-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="32315" data-cf-modified-04e7cc4d52a60b475ecf7f71-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C32317" href="#C32317">
+                <time itemprop="dateCreated" datetime="2016-04-08T11:35:06-07:00" class="action-date">Apr '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>PS: Views won't reduce execution time (99% of the times). Oh, and I do hope you've indexed your columns ;]</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="32317" data-cf-modified-04e7cc4d52a60b475ecf7f71-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="32317" data-cf-modified-04e7cc4d52a60b475ecf7f71-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C32321" href="#C32321">
+                <time itemprop="dateCreated" datetime="2016-04-08T11:38:59-07:00" class="action-date">Apr '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Best case to check if it's the phalcon or sql just test it in sql(for example in phpmyadmin) or just use plain php.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="32321" data-cf-modified-04e7cc4d52a60b475ecf7f71-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="32321" data-cf-modified-04e7cc4d52a60b475ecf7f71-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ff9a2f43efac70da87e23ddd6ac5061f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1663/al35mm" class="user-moderator-N"><span itemprop="name">Al</span></a>        </span>
+        <br>
+
+        <span class="karma">20.4k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C32315"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C32345" href="#C32345">
+                <time itemprop="dateCreated" datetime="2016-04-09T05:11:03-07:00" class="action-date">Apr '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Rewrite your view to remove OFFSET and use LIMIT and WHERE greather then something clause instead(im guessing you have user id maybe).</p>
+<p>On a big data set you should avoid offset.</p>
+</blockquote>
+<p>Thanks for the pointers. Yes there are user IDs and roles_users has foreign key on user_id.  I will try using LIMIT with WHERE and see how that goes.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="32345" data-cf-modified-04e7cc4d52a60b475ecf7f71-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="32345" data-cf-modified-04e7cc4d52a60b475ecf7f71-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ff9a2f43efac70da87e23ddd6ac5061f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1663/al35mm" class="user-moderator-N"><span itemprop="name">Al</span></a>        </span>
+        <br>
+
+        <span class="karma">20.4k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C32317"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Lajos Bencz                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C32347" href="#C32347">
+                <time itemprop="dateCreated" datetime="2016-04-09T05:14:04-07:00" class="action-date">Apr '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>PS: Views won't reduce execution time (99% of the times). Oh, and I do hope you've indexed your columns ;]</p>
+</blockquote>
+<p>Yes I'm using foreign keys. The intention isn't really to use the view. I'm only using it at the moment to try to debug the speed issues.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="32347" data-cf-modified-04e7cc4d52a60b475ecf7f71-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="32347" data-cf-modified-04e7cc4d52a60b475ecf7f71-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C32349" href="#C32349">
+                <time itemprop="dateCreated" datetime="2016-04-09T06:15:12-07:00" class="action-date">Apr '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>But firstly check it on raw query. Maybe it's really phalcon's problem.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="32349" data-cf-modified-04e7cc4d52a60b475ecf7f71-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="32349" data-cf-modified-04e7cc4d52a60b475ecf7f71-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ff9a2f43efac70da87e23ddd6ac5061f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1663/al35mm" class="user-moderator-N"><span itemprop="name">Al</span></a>        </span>
+        <br>
+
+        <span class="karma">20.4k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C32349"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="32361" data-toggle="modal" data-target="#historyModal">
+                edited <span>Apr '16</span>
+              </span><br/><a name="C32361" href="#C32361">
+                <time itemprop="dateCreated" datetime="2016-04-09T16:38:49-07:00" class="action-date">Apr '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>But firstly check it on raw query. Maybe it's really phalcon's problem.</p>
+</blockquote>
+<p>No, it's the query. I spent the day reading up on it, and it's suprisingly tricky. I remember discovering the same issue in the past too.  Using <code>offset</code> on a large data set is the issue. Doing something like <code>WHERE id BETWEEN $offset AND $last_id</code> is the only way this seems possible, but I am ordering by <code>last_active (DateTime)</code> and not ID.  I have had to rediseign the way the app works. This link is helpful for anyone who comes across this issue. <a href="https://www.percona.com/files/presentations/ppc2009/PPC2009_mysql_pagination.pdf">https://www.percona.com/files/presentations/ppc2009/PPC2009_mysql_pagination.pdf</a> &lt;- this crappy forum won't link it. Use underscores &quot;_&quot; in place of %5</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="32361" data-cf-modified-04e7cc4d52a60b475ecf7f71-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="32361" data-cf-modified-04e7cc4d52a60b475ecf7f71-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="11091" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

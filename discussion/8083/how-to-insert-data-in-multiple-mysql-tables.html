@@ -1,0 +1,426 @@
+---
+layout: default
+title: 'How to insert data in multiple mysql tables - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How to insert data in multiple mysql tables</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2249/Stefjoe" class="user-moderator-N"><span itemprop="name">Stefjoe</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-08-15T10:50:22-07:00">Aug '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-08-15T10:50:22-07:00">Aug '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1645</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/95593bdf7bc6c62dbd16767e520f13c8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2249/Stefjoe" class="user-moderator-N"><span itemprop="name">Stefjoe</span></a></span>
+                <span class="karma">59.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C8083" href="#C8083">
+        <time class="action-date">Aug '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi<a href="https://forum.phalcon.io/user/0/all"> @all</a>,</p>
+<p>i develop a register form with several tables, i took the &quot;invo&quot; project as my base.</p>
+<ol>
+<li>Table &quot;account&quot; includes accout_id, password, email and username -&gt; here i can insert data with no problem.</li>
+<li>Table &quot;profile&quot; includes profile_id, account_id(foreign key), gender, birthday -&gt; can't insert</li>
+</ol>
+<p>I created 1 Controller RegisterController.php and 2 Model Account.php and Profile.php.</p>
+<p>How can i insert data into the second table and set the account_Id as foreign_Key into its.</p>
+<p>RegisterController:</p>
+<p>class RegisterController extends ControllerBase{</p>
+<pre><code>        $form = new RegisterForm;
+
+        if ($this-&gt;request-&gt;isPost()) {
+
+            $username = $this-&gt;request-&gt;getPost('username', 'alphanum');
+            $email = $this-&gt;request-&gt;getPost('email', 'email');
+            $password = $this-&gt;request-&gt;getPost('password');
+            $repeatPassword = $this-&gt;request-&gt;getPost('confirmPassword');
+            $gender = $this -&gt; request -&gt; getPost('gender');
+
+            if ($password != $repeatPassword) {
+                $this-&gt;flash-&gt;error('Passwords are different');
+                return false;
+            }
+
+            $user = new Account();
+            $user-&gt;username = $username;
+            $user-&gt;password = sha1($password);
+            $user-&gt;email = $email;
+            $user-&gt;date = new Phalcon\Db\RawValue('now()');
+            $user-&gt;active = 'Y';
+           if ($user-&gt;save() == false) {
+                foreach ($user-&gt;getMessages() as $message) {
+                    $this-&gt;flash-&gt;error((string) $message);
+                }
+            } else {
+                //$this-&gt;tag-&gt;setDefault('email', '');
+                //$this-&gt;tag-&gt;setDefault('password', '');
+                $this-&gt;flash-&gt;success('Thanks for sign-up, please log-in to start generating invoices');
+                return $this-&gt;forward('session/index');
+            }
+        }
+
+        $profile = new Profile();
+        $profile -&gt; gender = $gender;
+        $profile -&gt; save();
+
+        $this-&gt;view-&gt;form = $form;
+
+    }</code></pre>
+<p>}</p>
+<p>Account.php:</p>
+<p>use Phalcon\Mvc\Model;
+use Phalcon\Mvc\Model\Validator\Email as EmailValidator;
+use Phalcon\Mvc\Model\Validator\Uniqueness as UniquenessValidator;</p>
+<p>class Account extends Model
+{
+public function validation()
+{
+$this-&gt;validate(new EmailValidator(array(
+'field' =&gt; 'email'
+)));
+$this-&gt;validate(new UniquenessValidator(array(
+'field' =&gt; 'email',
+'message' =&gt; 'Sorry, The email was registered by another user'
+)));
+$this-&gt;validate(new UniquenessValidator(array(
+'field' =&gt; 'username',
+'message' =&gt; 'Sorry, That username is already taken'
+)));
+if ($this-&gt;validationHasFailed() == true) {
+return false;
+}
+}</p>
+<p>}</p>
+<p>Profile.php:</p>
+<p>use Phalcon\Mvc\Model;</p>
+<p>class Profile extends Model
+{
+public $gender;</p>
+<pre><code>public $birthday;</code></pre>
+<p>}</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-1acda4008a937b0a6b3bddd8-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-1acda4008a937b0a6b3bddd8-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="21929" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '15</span>
+              </span><br/><a name="C21929" href="#C21929">
+                <time itemprop="dateCreated" datetime="2015-08-15T11:11:32-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi there, <a href="https://docs.phalcon.io/en/latest/reference/models.html#storing-related-records">check the docs</a>! ;]</p>
+<p>Additional info in <a href="https://forum.phalcon.io/discussion/793/model-not-saving-related-records">this thread</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21929" data-cf-modified-1acda4008a937b0a6b3bddd8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21929" data-cf-modified-1acda4008a937b0a6b3bddd8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/95593bdf7bc6c62dbd16767e520f13c8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2249/Stefjoe" class="user-moderator-N"><span itemprop="name">Stefjoe</span></a>        </span>
+        <br>
+
+        <span class="karma">59.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C21931" href="#C21931">
+                <time itemprop="dateCreated" datetime="2015-08-16T03:18:39-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi Lajos,</p>
+<p>thx for your very fast reply, i will try it today :-)</p>
+<p>Rgds</p>
+<p>Stefan</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21931" data-cf-modified-1acda4008a937b0a6b3bddd8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21931" data-cf-modified-1acda4008a937b0a6b3bddd8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/95593bdf7bc6c62dbd16767e520f13c8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2249/Stefjoe" class="user-moderator-N"><span itemprop="name">Stefjoe</span></a>        </span>
+        <br>
+
+        <span class="karma">59.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C21933" href="#C21933">
+                <time itemprop="dateCreated" datetime="2015-08-16T09:15:46-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Sorry i can't get it run.</p>
+<p>I also tried &quot;belongsTo&quot; and &quot;hasMany&quot;. The only &quot;insert into&quot; is the user account, but nothing in the &quot;profile&quot;.</p>
+<p>Profile.php:</p>
+<pre><code>   $this-&gt;belongsTo('fid', 'Account', 'id', array(
+        'alias' =&gt; 'account',
+        'reusable' =&gt; true
+    ));</code></pre>
+<p>Account.php:</p>
+<pre><code>    $this-&gt;hasMany('id', 'Profile', 'fid', array(
+        'alias' =&gt; 'profile',
+        'foreignKey' =&gt; array(
+            'message' =&gt; 'Profile cannot be deleted because it\'s used on Users'
+        )
+    ));</code></pre>
+<p>ProfileController.php:</p>
+<pre><code>        $profile         = new Profile();
+        $profile-&gt;assign(array(
+            'fid' =&gt; $this-&gt;request-&gt;getPost('id', 'int'),
+            'name' =&gt; "rfrfr",
+            'birthday' =&gt; "eee",
+            'country' =&gt;  'dxde',
+
+        ));
+
+        $profile-&gt;save();</code></pre>
+<p>AccountController.php:</p>
+<pre><code>                $user        = new User();
+                $user-&gt;assign(array(
+                'username' =&gt; $username,
+                'email' =&gt; $email,
+                'password' =&gt; $password,
+                'date' =&gt; new Phalcon\Db\RawValue('now()'),
+                'active' =&gt; 'Y'
+
+            ));
+
+            $user-&gt;save();</code></pre>
+<p>Thx for your help :-)</p>
+<p>Rgds</p>
+<p>Stefan</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21933" data-cf-modified-1acda4008a937b0a6b3bddd8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21933" data-cf-modified-1acda4008a937b0a6b3bddd8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="21937" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '15</span>
+              </span><br/><a name="C21937" href="#C21937">
+                <time itemprop="dateCreated" datetime="2015-08-16T10:14:21-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>As far as I understand your code, you should do something like this:</p>
+<pre><code class="language-php">// Profile.php (Model)
+$this-&gt;belongsTo('fid', 'Account', 'id', array(
+    'alias' =&gt; 'account',
+    'reusable' =&gt; true
+));</code></pre>
+<pre><code class="language-php">// Account.php (Model)
+$this-&gt;hasMany('id', 'Profile', 'fid', array(
+     'alias' =&gt; 'profile',
+     'foreignKey' =&gt; array(
+         'message' =&gt; 'Account cannot be deleted because it\'s used on Profile'
+     )
+));</code></pre>
+<pre><code class="language-php">// RegisterController.php (Controller)
+public function registerAction() {
+   $form = new RegisterForm;
+   if ($this-&gt;request-&gt;isPost()) {
+      $username = $this-&gt;request-&gt;getPost('username', 'alphanum');
+      $email = $this-&gt;request-&gt;getPost('email', 'email');
+      $password = $this-&gt;request-&gt;getPost('password');
+      $repeatPassword = $this-&gt;request-&gt;getPost('confirmPassword');
+      $gender = $this -&gt; request -&gt; getPost('gender');
+      if ($password != $repeatPassword) {
+         $this-&gt;flash-&gt;error('Passwords are different');
+         return false;
+      }
+      $user = new Account();
+      $user-&gt;username = $username;
+      //$user-&gt;password = sha1($password);
+      $user-&gt;password = $this-&gt;security-&gt;hash($password); // see: https://docs.phalcon.io/en/latest/reference/security.html
+      $user-&gt;email = $email;
+      $user-&gt;date = new Phalcon\Db\RawValue('now()');
+      $user-&gt;active = 'Y';
+      $profile = new Profile();
+      $profile -&gt;gender = $gender;
+      $user-&gt;profile = array($profile); // hasMany relationship, define as array
+      if ($user-&gt;save() == false) {
+         foreach ($user-&gt;getMessages() as $message) {
+            $this-&gt;flash-&gt;error((string) $message);
+         }
+      } else {
+           $this-&gt;flash-&gt;success('Thanks for sign-up, please log-in to start generating invoices');
+           return $this-&gt;forward('session/index');
+        }
+    } 
+    $this-&gt;view-&gt;form = $form;
+}</code></pre>
+<p>Hope it helps!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21937" data-cf-modified-1acda4008a937b0a6b3bddd8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21937" data-cf-modified-1acda4008a937b0a6b3bddd8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/95593bdf7bc6c62dbd16767e520f13c8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2249/Stefjoe" class="user-moderator-N"><span itemprop="name">Stefjoe</span></a>        </span>
+        <br>
+
+        <span class="karma">59.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C21943" href="#C21943">
+                <time itemprop="dateCreated" datetime="2015-08-16T10:28:28-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>YES YES YES!!! Lajos you are my best friend .... for now :-))))))</p>
+<p>Thank you soooo much, it was only the array (= $user-&gt;profile = array($profile); // hasMany relationship, define as array)</p>
+<p>Kind Rgds</p>
+<p>Stefan</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21943" data-cf-modified-1acda4008a937b0a6b3bddd8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21943" data-cf-modified-1acda4008a937b0a6b3bddd8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/410d71c1b4fa780ab6d5eafc03ceadc5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10547/jgalt2" class="user-moderator-N"><span itemprop="name">John Galt</span></a>        </span>
+        <br>
+
+        <span class="karma">13.9k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C21937"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Lajos Bencz                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C52949" href="#C52949">
+                <time itemprop="dateCreated" datetime="2017-12-18T09:06:43-07:00" class="action-date">Dec '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hello! Thanks for adding this useful information.</p>
+<p>That I'm trying to do is very similar to this, but I got no records on my second tables, in this example would be the &quot;Profile&quot; table,  also, I'm not getting any errors, why this happens? How can I debugg this? Thank you!</p>
+<blockquote>
+<p>As far as I understand your code, you should do something like this:</p>
+<pre><code class="language-php">// Profile.php (Model)
+$this-&gt;belongsTo('fid', 'Account', 'id', array(
+   'alias' =&gt; 'account',
+   'reusable' =&gt; true
+));</code></pre>
+<pre><code class="language-php">// Account.php (Model)
+$this-&gt;hasMany('id', 'Profile', 'fid', array(
+    'alias' =&gt; 'profile',
+    'foreignKey' =&gt; array(
+        'message' =&gt; 'Account cannot be deleted because it\'s used on Profile'
+    )
+));</code></pre>
+<pre><code class="language-php">// RegisterController.php (Controller)
+public function registerAction() {
+  $form = new RegisterForm;
+  if ($this-&gt;request-&gt;isPost()) {
+     $username = $this-&gt;request-&gt;getPost('username', 'alphanum');
+    $email = $this-&gt;request-&gt;getPost('email', 'email');
+    $password = $this-&gt;request-&gt;getPost('password');
+    $repeatPassword = $this-&gt;request-&gt;getPost('confirmPassword');
+    $gender = $this -&gt; request -&gt; getPost('gender');
+    if ($password != $repeatPassword) {
+       $this-&gt;flash-&gt;error('Passwords are different');
+        return false;
+     }
+    $user = new Account();
+    $user-&gt;username = $username;
+    //$user-&gt;password = sha1($password);
+    $user-&gt;password = $this-&gt;security-&gt;hash($password); // see: https://docs.phalcon.io/en/latest/reference/security.html
+    $user-&gt;email = $email;
+    $user-&gt;date = new Phalcon\Db\RawValue('now()');
+    $user-&gt;active = 'Y';
+    $profile = new Profile();
+    $profile -&gt;gender = $gender;
+    $user-&gt;profile = array($profile); // hasMany relationship, define as array
+    if ($user-&gt;save() == false) {
+       foreach ($user-&gt;getMessages() as $message) {
+          $this-&gt;flash-&gt;error((string) $message);
+       }
+    } else {
+         $this-&gt;flash-&gt;success('Thanks for sign-up, please log-in to start generating invoices');
+         return $this-&gt;forward('session/index');
+      }
+  } 
+  $this-&gt;view-&gt;form = $form;
+}</code></pre>
+<p>Hope it helps!</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52949" data-cf-modified-1acda4008a937b0a6b3bddd8-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52949" data-cf-modified-1acda4008a937b0a6b3bddd8-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="8083" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,189 @@
+---
+layout: default
+title: 'Best way to store encryption key on same server in Phalcon app - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/16/security">Security</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Best way to store encryption key on same server in Phalcon app</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/517/n0nag0n" class="user-moderator-N"><span itemprop="name">Austin</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-06-20T11:06:25-07:00">Jun '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-06-20T11:06:25-07:00">Jun '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>520</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/91c2702541ba0f9b9bcfe2443bd5c659?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/517/n0nag0n" class="user-moderator-N"><span itemprop="name">Austin</span></a></span>
+                <span class="karma">2.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C18421" href="#C18421">
+        <time class="action-date">Jun '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hey guys,</p>
+<p>So I was reading over the docs on how to encrypt stuff <a href="https://docs.phalcon.io/en/3.3/crypt">https://docs.phalcon.io/en/3.3/crypt</a> and also saw an example here on how to setup an encryption service. <a href="https://docs.phalcon.io/en/3.3/crypt#service">https://docs.phalcon.io/en/3.3/crypt#service</a>.</p>
+<p>I'm not in love (at all) with storing a global key in this manner. Just curious what others thing of my implementation.</p>
+<p>So I have a key that I have stored encrypted in .phalcon/somekey.gpg. When the server starts up, (and memcached is started), I run this simple command to decrypt the key by entering a password I have in my head, set it to stdout store it in an environment variable, then store it in memcached.</p>
+<pre><code class="language-bash">$ ~ SOME_KEY=$(gpg -dq --no-symkey-cache .phalcon/somekey.gpg) php -r "\$m = new Memcached(); \$m-&gt;addServer('localhost', 11211); \$m-&gt;set('SOME_KEY', getenv('SOME_KEY'));"</code></pre>
+<p>Then in my <code>config.php</code> file, I have a value for my key.</p>
+<pre><code class="language-php">$m = new Memcached();
+$m-&gt;addServer('localhost', 11211);
+
+return new \Phalcon\Config([
+    'database' =&gt; [
+       // db stuff
+    ],
+    'application' =&gt; [
+       // app stuff
+    ],
+    'secret_key' =&gt; $m-&gt;get('SOME_KEY')
+]);</code></pre>
+<p>Then in my crypt service, I reference <code>secret_key</code> to be used. Thoughts? I'm trying to do what I can to prevent someone from gaining access somehow and then running <code>tar /</code> to capture the key, and I'm not storing the key in the db, but in RAM. I'm also trying to do what I can to keep the key safe on the same server (instead of calling another server to do the encryption as that (I image) would cause a significant slowdown from making many calls within the model to decrypt all the fields individually.</p>
+<p>Also curious on anyones thoughts on key rotation and how that would look in Phalcon? I have some models setup with <code>beforeSave()</code> and <code>afterFetch()</code> with automatically decrypting and encrypting variables so data is stored encrypted at rest, but also dynamically decrypted so I don't have to manually do it all the time. How would one go about rotating an encryption key on all the data that is at rest with the <code>beforeSave()</code> and <code>afterFetch()</code> events being set the way they are?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-c3712daea09cfedfdf360ac1-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-c3712daea09cfedfdf360ac1-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C56213" href="#C56213">
+                <time itemprop="dateCreated" datetime="2018-06-21T01:35:49-07:00" class="action-date">Jun '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hey<a href="https://forum.phalcon.io/user/0/Austin"> @Austin</a>, that's an ingenius solution, but i think it all depends!</p>
+<p>Where is the app hosted? If it's a rented/owned physical box, you can easiliy secure the pass in plaintext using linux permissions. You should setup an encrypted LVM in this case.</p>
+<p>If it's a shared VPS host, storing the plain pass in memcached is a good idea. Although it COULD be compromised, but that's on the provider, and not something you can do about.</p>
+<p>Is it a multi-user server (do you provide hosting services)?
+If it is, storing it in memcached will not help, since anyone can access that, and if you want to harden that, you are back to step one.</p>
+<p>Regarding key rotation:
+If you want to use beforeFetch/afterFetch/etc, you will need some kind of flag that synchronizes key rotation for each record. That's not really performant.</p>
+<p>I would create a console/migration task for that, where you decrypt all data to memory, then encrypt and write it back with the new key.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="56213" data-cf-modified-c3712daea09cfedfdf360ac1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="56213" data-cf-modified-c3712daea09cfedfdf360ac1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/91c2702541ba0f9b9bcfe2443bd5c659?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/517/n0nag0n" class="user-moderator-N"><span itemprop="name">Austin</span></a>        </span>
+        <br>
+
+        <span class="karma">2.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="56221" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '18</span>
+              </span><br/><a name="C56221" href="#C56221">
+                <time itemprop="dateCreated" datetime="2018-06-21T07:25:45-07:00" class="action-date">Jun '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/Lajos">@Lajos</a> Bencz So I suppose some context would be helpful. Currently it's running on a leased VM where I have root access. It also has some other sites that I host on the VM, but none of the other sites use Memcached. They are also running under fcgi.</p>
+<p>I think of the scenarios you listed above, I could protect myself with linux permissions. Could you detail that out a little bit more? Lets say my user that runs fcgi is <code>cgiuser1</code>. My web dir and all that would be under <code>cgiuser1</code>. The only thing I can think of that would protect it permissions wise from other users on my system would be to create a file with 0600 permissions right? But if root was compromised and they ran a <code>tar /</code> then they'd get my key and all the data regardless of whatever permissions level I have. Granted sticking it in a &quot;public&quot; environment like memcached isn't a hot idea either, but at least it's a hope that if I were attacked, the person wouldn't think to pull out all cached data in memcached (or apcu, etc). Can't stick it in an environment variable cause  that's available on the disk I think in /proc/environs or something and can't use /dev/shm as both spots are on disk and woulommandd be compromised in a <code>tar /</code> command.</p>
+<p>The other solution I was thinking was just buying another tiny vm and on each web request make a request to get the encryption key and store the key in memory for the duration of the script and dump it afterwards, but that also brings with it a whole new slew of security issues that need to be tackled, but maybe something like <a href="https://www.vaultproject.io/">project vault</a> would be good in that case?</p>
+<p>With key rotation, are you saying I would set a constant in a task and do something similar to </p>
+<pre><code class="language-php">public function beforeSave() {
+        if($this-&gt;somefield) {
+            $di = $this-&gt;getDI();
+            $new_key = defined('NEW_KEY_ROTATION') ? NEW_KEY_ROTATION : null;
+            $this-&gt;somefield = $di-&gt;getCrypt()-&gt;encryptBase64($this-&gt;somefield, $new_key);
+        }
+    }
+
+    public function afterFetch() {
+        if($this-&gt;somefield) {
+            $di = $this-&gt;getDI();
+            $this-&gt;somefield = $di-&gt;getCrypt()-&gt;decryptBase64($this-&gt;somefield);
+        }
+    }</code></pre>
+<p>And then in some task, just pull back everything and resave it?</p>
+<pre><code class="language-php">define('NEW_KEY_ROTATION', $new_key_from_memcached_or_wherever);
+$robots = Robots::find();
+foreach($robots as $robot) {
+    $robot-&gt;save();
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="56221" data-cf-modified-c3712daea09cfedfdf360ac1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="56221" data-cf-modified-c3712daea09cfedfdf360ac1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/78346d9a407e5432b095ee62937c2fdb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11373/kumaradityasingh" class="user-moderator-N"><span itemprop="name">kumar Aditya singh </span></a>        </span>
+        <br>
+
+        <span class="karma">3</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C57071" href="#C57071">
+                <time itemprop="dateCreated" datetime="2018-08-20T21:40:39-07:00" class="action-date">Aug '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>i am struggling to
+Java. Java decreased in popularity by about 6,000 job postings in 2018 compared to 2017, but is still extremely well-established. ...
+Python. Python grew in popularity by about 5,000 job postings over 2017. ...
+JavaS<a href="http://www.welookups.com">crip</a>t. ...
+C++ ...
+C# ...
+PHP. ...
+Perl.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57071" data-cf-modified-c3712daea09cfedfdf360ac1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span><span itemprop="downvoteCount">1</span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57071" data-cf-modified-c3712daea09cfedfdf360ac1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="18421" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

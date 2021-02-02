@@ -1,0 +1,183 @@
+---
+layout: default
+title: 'Vokuro can&#039;t load Mail template - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Vokuro can&#039;t load Mail template</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2249/Stefjoe" class="user-moderator-N"><span itemprop="name">Stefjoe</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-06-17T12:58:22-07:00">Jun '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-06-17T12:58:22-07:00">Jun '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>314</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/95593bdf7bc6c62dbd16767e520f13c8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2249/Stefjoe" class="user-moderator-N"><span itemprop="name">Stefjoe</span></a></span>
+                <span class="karma">59.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C16345" href="#C16345">
+        <time class="action-date">Jun '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>i have a problem with Vokuro Mail.php. The emails were send, but the content is always empty.</p>
+<p>The getTemplate functition can't load the confirmation.volt.</p>
+<pre><code class="language-php">    public function getTemplate($name, $params)
+    {
+        $parameters = array_merge([
+            'publicUrl' =&gt; $this-&gt;config-&gt;application-&gt;publicUrl
+        ], $params);
+        return $this-&gt;view-&gt;getRender('emailTemplates', $name, $parameters, function ($view) {
+            $view-&gt;setRenderLevel(View::LEVEL_LAYOUT);
+        });
+        return $view-&gt;getContent();
+    }
+    /**
+     * Sends e-mails via AmazonSES based on predefined templates
+     *
+     * @param array $to
+     * @param string $subject
+     * @param string $name
+     * @param array $params
+     * @return bool|int
+     * @throws Exception
+     */
+    public function send($to, $subject, $name, $params)
+    {
+        // Settings
+        $mailSettings = $this-&gt;config-&gt;mail;
+        $template = $this-&gt;getTemplate($name, $params);
+        // Create the message
+        $message = Message::newInstance()
+            -&gt;setSubject($subject)
+            -&gt;setTo($to)
+            -&gt;setFrom([
+                $mailSettings-&gt;fromEmail =&gt; $mailSettings-&gt;fromName
+            ])
+            -&gt;setBody($template, 'text/html');
+        if (isset($mailSettings) &amp;&amp; isset($mailSettings-&gt;smtp)) {
+            if (!$this-&gt;transport) {
+                $this-&gt;transport = Smtp::newInstance(
+                    $mailSettings-&gt;smtp-&gt;server,
+                    $mailSettings-&gt;smtp-&gt;port,
+                    $mailSettings-&gt;smtp-&gt;security
+                )
+                -&gt;setUsername($mailSettings-&gt;smtp-&gt;username)
+                -&gt;setPassword($mailSettings-&gt;smtp-&gt;password);
+            }
+            // Create the Mailer using your created Transport
+            $mailer = \Swift_Mailer::newInstance($this-&gt;transport);
+            return $mailer-&gt;send($message);
+        } else {
+            return $this-&gt;amazonSESSend($message-&gt;toString());
+        }
+    }</code></pre>
+<p>When i do this in send function, it works:</p>
+<pre><code>$template = '&lt;tbody&gt;
+&lt;tr&gt;
+    &lt;td style="padding:40px 0  0 0;"&gt;
+        &lt;p style="color:#000;font-size: 16px;line-height:24px;font-family:\'HelveticaNeue\',\'Helvetica Neue\',Helvetica,Arial,sans-serif;font-weight:normal;"&gt;
+
+            &lt;h2 style="font-size: 14px;font-family:\'HelveticaNeue\',\'Helvetica Neue\',Helvetica,Arial,sans-serif;"&gt;
+                You\'re Almost There! Just Confirm Your Email
+            &lt;/h2&gt;
+
+            &lt;p style="font-size: 13px;line-height:24px;font-family:\'HelveticaNeue\',\'Helvetica Neue\',Helvetica,Arial,sans-serif;"&gt;
+                You\'ve successfully created a  account. To activate it, please click below to verify your email address.
+            &lt;/p&gt;
+            &lt;br&gt;
+            &lt;br&gt;
+                &lt;a style="background:#E86537;color:#fff;padding:10px" href="http://{% raw %}{{{% endraw %} publicUrl {% raw %}}}{% endraw %}{% raw %}{{{% endraw %} confirmUrl {% raw %}}}{% endraw %}"&gt;Confirm&lt;/a&gt;
+            &lt;br&gt;
+            &lt;br&gt;
+
+            &lt;br&gt;
+        &lt;/p&gt;
+    &lt;/td&gt;
+&lt;/tr&gt;</code></pre>
+<p>&lt;/tbody&gt;';</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-a3da21d75b9d17c239b1ef66-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-a3da21d75b9d17c239b1ef66-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/95593bdf7bc6c62dbd16767e520f13c8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2249/Stefjoe" class="user-moderator-N"><span itemprop="name">Stefjoe</span></a>        </span>
+        <br>
+
+        <span class="karma">59.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="48833" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '17</span>
+              </span><br/><a name="C48833" href="#C48833">
+                <time itemprop="dateCreated" datetime="2017-06-18T12:54:35-07:00" class="action-date">Jun '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>If anybody is interested, i found a way:</p>
+<pre><code> public function getTemplate($name, $params)
+{
+
+    $parameters = array_merge([
+        'publicUrl' =&gt; $this-&gt;config-&gt;application-&gt;publicUrl
+    ], $params);
+    $this-&gt;view-&gt;getRender('emailTemplates', $name, $parameters);
+    $this-&gt;view-&gt;setRenderLevel(View::LEVEL_LAYOUT);
+
+    return $this-&gt;view-&gt;getContent();
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48833" data-cf-modified-a3da21d75b9d17c239b1ef66-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48833" data-cf-modified-a3da21d75b9d17c239b1ef66-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="16345" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

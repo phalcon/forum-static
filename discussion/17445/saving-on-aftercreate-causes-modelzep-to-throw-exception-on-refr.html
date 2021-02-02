@@ -1,0 +1,200 @@
+---
+layout: default
+title: 'Saving on `afterCreate()` causes model.zep to throw Exception on `refresh()` - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Saving on `afterCreate()` causes model.zep to throw Exception on `refresh()`</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/5159/tobispace" class="user-moderator-N"><span itemprop="name">tobispace</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-12-13T04:15:20-07:00">Dec '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-12-13T04:15:20-07:00">Dec '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>534</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/6c5a7ed70304818cf1753f148f442737?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/5159/tobispace" class="user-moderator-N"><span itemprop="name">tobispace</span></a></span>
+                <span class="karma">12.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17445" href="#C17445">
+        <time class="action-date">Dec '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,</p>
+<p>I'm doing an intervention on my application regarding the way to generate a unique and sequential Order Number.</p>
+<p>At the moment the Order Number is generated on <code>beforeValidationOnCreate()</code>, where a query is performed on the table looking for the latest record and setting as order number the same retreived value <code>+ 1</code>.</p>
+<p>I've changed this behaviour because concurrent transactions sometimes cause two records being created with the same order number (the &quot;second&quot; order causes database exception for unique index violation, that is a correct behaviour). On the other hand, using <code>forUpdate()</code> or <code>sharedLock()</code> during the order creation transaction to retreive the latest order number causes this error: <code>SQLSTATE[40001]: Serialization failure: 1213 Deadlock found when trying to get lock; try restarting transaction</code>.</p>
+<p>So, I've decided to do this:</p>
+<ol>
+<li><code>OrderNumber</code> field becomes <code>DEFAULT NULL</code> with a <code>UNIQUE</code> index</li>
+<li>On <code>afterCreate()</code>, I copy the value of <code>OrderId</code> into <code>OrderNumber</code> and save the model: <code>$this-&gt;save()</code></li>
+</ol>
+<p>The problem is that if I perform a <code>$order-&gt;refresh()</code> at some point after it was created/saved this way (and I do the <code>refresh()</code> on the same instance of the created model), I get this error:</p>
+<pre><code>Phalcon\Mvc\Model\Exception
+
+The record cannot be refreshed because it does not exist or is deleted
+
+File: phalcon/mvc/model.zep
+Line: 3433</code></pre>
+<p><code>$order</code> dirty state is <code>PERSISTENT</code> when this happens.</p>
+<p>I'm sure the problem is that I <code>save()</code> a model on <code>afterCreate()</code>, causing the model to be no more a &quot;creation&quot; and making it become an &quot;update&quot;.</p>
+<p>How can I fix this problem?</p>
+<p>Thank you very much</p>
+<p><strong>Using PHP 7.0 with Phalcon 3.2.0 on Debian 8 with MySql 5.7</strong></p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-a014f00c52a397e56bcfb5ed-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-a014f00c52a397e56bcfb5ed-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52897" href="#C52897">
+                <time itemprop="dateCreated" datetime="2017-12-14T15:16:43-07:00" class="action-date">Dec '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Why not just use an <code>AUTO_INCREMENT</code> column and let the database worry about consistency?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52897" data-cf-modified-a014f00c52a397e56bcfb5ed-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52897" data-cf-modified-a014f00c52a397e56bcfb5ed-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6c5a7ed70304818cf1753f148f442737?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5159/tobispace" class="user-moderator-N"><span itemprop="name">tobispace</span></a>        </span>
+        <br>
+
+        <span class="karma">12.9k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C52897"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Dylan Anderson                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C52901" href="#C52901">
+                <time itemprop="dateCreated" datetime="2017-12-15T01:05:02-07:00" class="action-date">Dec '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Why not just use an <code>AUTO_INCREMENT</code> column and let the database worry about consistency?</p>
+</blockquote>
+<p>I already have an <code>AUTO_INCREMENT</code> column which is the table ID column. Anyway that wasn't my question. The point is: is saving (updating) a record in <code>afterCreate</code> permitted? How can I prevent that error?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52901" data-cf-modified-a014f00c52a397e56bcfb5ed-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52901" data-cf-modified-a014f00c52a397e56bcfb5ed-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52903" href="#C52903">
+                <time itemprop="dateCreated" datetime="2017-12-15T08:41:03-07:00" class="action-date">Dec '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I don't know where I read it, but I believe you can't call <code>save()</code> in <code>afterCreate()</code>.  I have no source for that info, and it still shouldn't be causing an exception like that, but I don't think that's allowed.</p>
+<p>My suggestion of AUTO_INCREMENT was an attempt to potentially solve your root problem rather than the symptom.  Oftentimes people (myself included) get so wrapped up in fixing a technical problem that we can't step back and see the bigger issue.  You say you're copying orderID into orderNumber.  That's the same data in 2 columns, and you're looking for a solution where they're guaranteed to be the same.  To me it seems pretty clear the cleanest solution is to change your thinking a bit, get rid of the orderNumber column and just use the orderID, since they're going to be the same value anyway</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52903" data-cf-modified-a014f00c52a397e56bcfb5ed-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52903" data-cf-modified-a014f00c52a397e56bcfb5ed-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6c5a7ed70304818cf1753f148f442737?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5159/tobispace" class="user-moderator-N"><span itemprop="name">tobispace</span></a>        </span>
+        <br>
+
+        <span class="karma">12.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C52903"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Dylan Anderson                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C52907" href="#C52907">
+                <time itemprop="dateCreated" datetime="2017-12-15T10:22:55-07:00" class="action-date">Dec '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>I don't know where I read it, but I believe you can't call <code>save()</code> in <code>afterCreate()</code>.  I have no source for that info, and it still shouldn't be causing an exception like that, but I don't think that's allowed.</p>
+<p>My suggestion of AUTO_INCREMENT was an attempt to potentially solve your root problem rather than the symptom.  Oftentimes people (myself included) get so wrapped up in fixing a technical problem that we can't step back and see the bigger issue.  You say you're copying orderID into orderNumber.  That's the same data in 2 columns, and you're looking for a solution where they're guaranteed to be the same.  To me it seems pretty clear the cleanest solution is to change your thinking a bit, get rid of the orderNumber column and just use the orderID, since they're going to be the same value anyway</p>
+</blockquote>
+<p>Yes, I know... Thank you for your suggestion, anyway I need the OrderNumber column to stay where it is for backward compatibility and most importantly because I wanted to generate an OrderNumber <strong>based</strong> on the ID (ie. a base16 of the ID or something like that...).</p>
+<p>I think you're right: no &quot;self save&quot; inside afterCreate is permitted. It's like native <code>TRIGGER</code>s in SQL: on <code>AFTER INSERT</code> you can't update <code>NEW</code> record.</p>
+<p>So I think the solution would be to perform a raw query inside afterCreate, tricking the Model to let him think that no updates were made.</p>
+<pre><code class="language-php">public function afterCreate() {
+    $this-&gt;setOrderNumber( SomeClass::generateOrderNumber( $this-&gt;getId() ) );
+
+    $db = $this-&gt;getWriteConnection();
+
+    $db-&gt;query( 'UPDATE the_order_table SET the_order_number = :order_number WHERE the_order_table_id = :purchase_order_id ', [
+        ':order_number'         =&gt; $this-&gt;getOrderNumber(),
+        ':purchase_order_id'    =&gt; $this-&gt;getId(),
+    ]);
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52907" data-cf-modified-a014f00c52a397e56bcfb5ed-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52907" data-cf-modified-a014f00c52a397e56bcfb5ed-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17445" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

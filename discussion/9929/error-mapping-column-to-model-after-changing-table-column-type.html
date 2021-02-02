@@ -1,0 +1,569 @@
+---
+layout: default
+title: 'Error mapping column to model after changing table column type - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Error mapping column to model after changing table column type</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1012/EggMeister" class="user-moderator-N"><span itemprop="name">EggMeister</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-12-20T07:30:58-07:00">Dec '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-12-20T07:30:58-07:00">Dec '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">6</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1517</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/ace317a2b6955f52dbca44b664ca0dd5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1012/EggMeister" class="user-moderator-N"><span itemprop="name">EggMeister</span></a></span>
+                <span class="karma">2.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C9929" href="#C9929">
+        <time class="action-date">Dec '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>I have a model named 'Users', and a corresponding database table named 'users'. I've built some basic creation, getting, and setting functionality that has worked well thusfar. </p>
+<p>I've run into a problem after changing the data type of my 'id' column in my database. I want to use GUIDs instead of numbers for identifying my users, but after changing the column data type from int to varchar, I get the following error:</p>
+<pre><code class="language-php">PHP Fatal error:  Uncaught exception 'Phalcon\\Mvc\\Model\\Exception' with message 'Column '1dffc8f8' doesn't belong to any of the selected models (1), when preparing: SELECT [Users].* FROM [Users] WHERE ([customerid] = :APR0:) AND id = 1dffc8f8-ec15-91c9-0d3e-9b1aafa1ffad' in /home/.../public_html/controllers/UsersController.php:255\nStack trace:\n#0 [internal function]: Phalcon\\Mvc\\Model\\Query-&gt;_getQualified(Array)\n#1 [internal function]: Phalcon\\Mvc\\Model\\Query-&gt;_getExpression(Array, true)\n#2 [internal function]: Phalcon\\Mvc\\Model\\Query-&gt;_getExpression(Array, true)\n#3 [internal function]: Phalcon\\Mvc\\Model\\Query-&gt;_getExpression(Array, true)\n#4 [internal function]:
+Phalcon\\Mvc\\Model\\Query-&gt;_getExpression(Array, true)\n#5 [internal function]: Phalcon\\Mvc\\Model\\Query-&gt;_get
+Expression(Array, true)\n#6 [internal function]: Phalcon\\Mvc\\Model\\Query-&gt;_getExpression(Array)\n#7 [internal function]: Phalcon\\Mvc\\Model\\Query-&gt;_prepareSelect()\n#8 [internal
+function]: Phalcon\\Mvc\\Model\\Query-&gt;parse()\n#9 [internal function] in /home/.../public_html/controllers/UsersController.php on line 255</code></pre>
+<p>The line throwing the error is:</p>
+<pre><code class="language-php">$user = $customer-&gt;getUsers("id = $userid")-&gt;getFirst();</code></pre>
+<p>But any other code that retreives users by id fails as well.</p>
+<p>The part of the error where it says:
+&quot;Column '1dffc8f8' doesn't belong to any of the selected models&quot;
+Makes me think that Phalcon has somehow cached my table structure, and is now trying to find a column that no longer exists. However, I'm not aware of any caching that I've enabled, or where this might be getting cached. This error persists after a restart of Apache, and a restart of the MySQL server.</p>
+<p>As soon as I change the data type back van varchar to int, the error disappears.</p>
+<p>It would be great if anyone has any insight in what is going wrong, and how to fix this. Thanks very much in advance.</p>
+<p>I'm running this on Phalcon 2.0.8 and MySQL.</p>
+<p>Below is my model. </p>
+<pre><code class="language-php">&lt;?php
+use Phalcon\Mvc\Model,
+    Phalcon\Mvc\Model\Validator\InclusionIn,
+    Phalcon\Mvc\Model\Validator\Uniqueness;
+
+/**
+ * @property string username
+ * @property string email
+ * @property string password
+ * @property int status
+ * @property string firstName
+ * @property string lastName
+ * @property int telephoneNumber
+ * @property DateTime dateOfBirth
+ * @property int gender
+ * @property bool isAdmin
+ */
+class Users extends Model
+{
+    public $customerid;
+
+    public function initialize()
+    {
+        $this-&gt;belongsTo("customerid", "Customers", "id");
+        $this-&gt;hasMany("id", "Statistics", "userid");
+        $this-&gt;hasOne("id", "Sessions", "userid");
+        $this-&gt;hasMany("id", "Images", "userid");
+    }
+
+    public function validation()
+    {
+
+        //active must be: 0 or 1
+        $this-&gt;validate(new InclusionIn(
+            array(
+                "field"  =&gt; "status",
+                "domain" =&gt; array("0", "1")
+            )
+        ));
+
+        //Email address must be unique
+        $this-&gt;validate(new Uniqueness(
+            array(
+                "field"   =&gt; "email",
+                "message" =&gt; "The user's email must be unique"
+            )
+        ));
+
+        //Check if any messages have been produced
+        if ($this-&gt;validationHasFailed() == true) {
+            return false;
+        }
+    }
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-55366ac3000c14a86b60095a-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-55366ac3000c14a86b60095a-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C28007" href="#C28007">
+                <time itemprop="dateCreated" datetime="2015-12-20T08:17:01-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You sure you dont have maybe modelsMetadata cache enabled in di in APC or somewhere ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28007" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28007" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ace317a2b6955f52dbca44b664ca0dd5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1012/EggMeister" class="user-moderator-N"><span itemprop="name">EggMeister</span></a>        </span>
+        <br>
+
+        <span class="karma">2.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="28009" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '15</span>
+              </span><br/><a name="C28009" href="#C28009">
+                <time itemprop="dateCreated" datetime="2015-12-20T08:29:05-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Pretty sure. The application is pretty basic at this stage, and I haven't manually configured any caching functionality.</p>
+<p>This is the entire setup portion for the database adapter:</p>
+<pre><code class="language-php">function getDbAdapter(){
+
+    $configFile = parse_ini_file("config.ini");
+
+    return new \Phalcon\Db\Adapter\Pdo\Mysql(array(
+        "host" =&gt; $configFile["host"],
+        "username" =&gt; $configFile["username"],
+        "password" =&gt; $configFile["password"],
+        "dbname" =&gt; $configFile["dbname"]
+    ));
+}
+$di = new \Phalcon\DI\FactoryDefault();
+$di-&gt;set('db', getDbAdapter());
+$app = new Phalcon\Mvc\Micro();
+$app-&gt;setDI($di);</code></pre>
+<p>This is the Phalcon information from phpinfo:</p>
+<pre><code class="language-php">phalcon Web framework delivered as a C-extension for PHP
+
+phalcon enabled
+Author  Phalcon Team and contributors
+Version     2.0.8
+Build Date  Nov 6 2015 11:16:24
+Powered by Zephir   Version 0.8.0a
+
+Directive   Local Value Master Value
+phalcon.db.escape_identifiers   On  On
+phalcon.db.force_casting    Off Off
+phalcon.orm.cast_on_hydrate Off Off
+phalcon.orm.column_renaming On  On
+phalcon.orm.enable_implicit_joins   On  On
+phalcon.orm.enable_literals On  On
+phalcon.orm.events  On  On
+phalcon.orm.exception_on_failed_save    Off Off
+phalcon.orm.ignore_unknown_columns  Off Off
+phalcon.orm.late_state_binding  Off Off
+phalcon.orm.not_null_validations    On  On
+phalcon.orm.virtual_foreign_keys    On  On</code></pre>
+<p>Is there anything else I could check?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28009" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28009" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ace317a2b6955f52dbca44b664ca0dd5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1012/EggMeister" class="user-moderator-N"><span itemprop="name">EggMeister</span></a>        </span>
+        <br>
+
+        <span class="karma">2.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C28011" href="#C28011">
+                <time itemprop="dateCreated" datetime="2015-12-20T08:54:33-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><pre><code class="language-php">'Column '1dffc8f8' doesn't belong to any of the selected models (1), when preparing: SELECT [Users].* FROM [Users] WHERE ([customerid] = :APR0:) AND id = 1dffc8f8-ec15-91c9-0d3e-9b1aafa1ffad'</code></pre>
+<p>the generated statement seems to think 'id' is still an integer; the error refers to a non-existing column named '1dffc8f8', as this is the first part of the GUID. This is seen as a column identifier, because it isn't wrapped in single quotes in the generated statement.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28011" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28011" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C28013" href="#C28013">
+                <time itemprop="dateCreated" datetime="2015-12-20T09:19:56-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well its pretty possible. Use single quotes or backticks.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28013" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28013" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ace317a2b6955f52dbca44b664ca0dd5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1012/EggMeister" class="user-moderator-N"><span itemprop="name">EggMeister</span></a>        </span>
+        <br>
+
+        <span class="karma">2.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C28015" href="#C28015">
+                <time itemprop="dateCreated" datetime="2015-12-20T09:26:43-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I would, but that statement isn't generated by me, but by Phalcon. If I do:</p>
+<pre><code class="language-php">$user = $customer-&gt;getUsers("id = $userid")-&gt;getFirst();</code></pre>
+<p>or</p>
+<pre><code class="language-php">$user = Users::findFirst($userid);</code></pre>
+<p>Then I get that error because the statement it prepares seems to be meant for an integer column.</p>
+<p>I tried to manually tell Phalcon that the id property is a string by adding this to the model:</p>
+<pre><code class="language-php">* @property string id</code></pre>
+<p>But that didn't do anything.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28015" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28015" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="28017" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '15</span>
+              </span><br/><a name="C28017" href="#C28017">
+                <time itemprop="dateCreated" datetime="2015-12-20T10:13:17-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Try:</p>
+<pre><code>$user = $customer-&gt;getUsers("id = `$userid`")-&gt;getFirst(); // or
+$user = $customer-&gt;getUsers("id = '$userid'")-&gt;getFirst();</code></pre>
+<p>Also im not sure is it safe, you should use binding.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28017" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28017" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ace317a2b6955f52dbca44b664ca0dd5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1012/EggMeister" class="user-moderator-N"><span itemprop="name">EggMeister</span></a>        </span>
+        <br>
+
+        <span class="karma">2.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C28019" href="#C28019">
+                <time itemprop="dateCreated" datetime="2015-12-20T10:30:41-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>These both seem to work:</p>
+<pre><code class="language-php">$user = Users::find("id = '$userid'")-&gt;getFirst();
+//and
+$user = Users::find(array('id' =&gt; "'$userid'"))-&gt;getFirst();</code></pre>
+<p>Anyone have any idea why this is required? Is there anything that can be done in the model to make this work normally? Otherwise I'd have to re-do a lot of logic.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28019" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28019" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="28021" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '15</span>
+              </span><br/><a name="C28021" href="#C28021">
+                <time itemprop="dateCreated" datetime="2015-12-20T10:44:57-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Its not about model name or phalcon, its about builded query, string without any backticks/quotes is just a column name, try binding:</p>
+<pre><code class="language-php">$user=Users::findFirst([
+    'conditions'=&gt;'id = :id:'
+    'bind'=&gt;array['id'=&gt;$useid]
+]);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28021" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28021" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ace317a2b6955f52dbca44b664ca0dd5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1012/EggMeister" class="user-moderator-N"><span itemprop="name">EggMeister</span></a>        </span>
+        <br>
+
+        <span class="karma">2.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C28033" href="#C28033">
+                <time itemprop="dateCreated" datetime="2015-12-20T14:20:03-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Excellent. This works:</p>
+<pre><code class="language-php">$user=Users::findFirst([
+    'conditions'=&gt;'id = :id:',
+    'bind'=&gt;array('id'=&gt;$userid)
+]);</code></pre>
+<p>Thanks very much for the help.</p>
+<p>I liked the previty of <code>$user = Users::findFirst($userid);</code>. Do I understand correctly that I can't use this if my ID is not an integer?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28033" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28033" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="28037" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '15</span>
+              </span><br/><a name="C28037" href="#C28037">
+                <time itemprop="dateCreated" datetime="2015-12-20T15:16:58-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes, exactly :P Well you can still use it like:</p>
+<pre><code>$user = Users::findFirst($userid);</code></pre>
+<p>You can just overload findFirst method yourself :). Well you can even create BaseModel/AbstractModel - well you extend it here. And then your models will use it, and you can use your super duper long id just by findFirst($userid) :).</p>
+<p>You just have do something like this:</p>
+<pre><code class="language-php">(abstract) class BaseModel/AbstractModel extends Model
+{
+    public function findFirst($parameters)
+    {
+        if(is_string($parameters)){// well in mostly times convention tell us to use int, but you want string
+                return parent::findFirst(array(
+                    'conditions'=&gt;'id = :id:',
+                    'bind'=&gt;array('id'=&gt;$parameters)
+                ));
+        }
+        return parent::findFirst($parameters);
+    }
+
+    // not sure about find method, i dont think you need to overload it in your case
+}</code></pre>
+<p>and then your users:</p>
+<pre><code class="language-php">class Users extends AbstractModel
+{
+}</code></pre>
+<p>And you can go back to : </p>
+<pre><code class="language-php">Users::findFirst($userid);</code></pre>
+<p>Also i dont understand your code in first place:</p>
+<pre><code class="language-php">$user = $customer-&gt;getUsers("id = $userid")-&gt;getFirst();</code></pre>
+<p>Cant you just use</p>
+<pre><code class="language-php">Users::findFirst($userId)</code></pre>
+<p>With code i provided above ? Also - can you check if for example if you put string without dashes is it still not working ? If not i will do PR with fix for that, cuz its seems like a bug.</p>
+<p>Also you sure that </p>
+<pre><code class="language-php">Users::findFirst($userId)</code></pre>
+<p>Wasnt working ? Cuz as i remember phalcon be default using bind when you provide only parameter as not array.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28037" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28037" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ace317a2b6955f52dbca44b664ca0dd5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1012/EggMeister" class="user-moderator-N"><span itemprop="name">EggMeister</span></a>        </span>
+        <br>
+
+        <span class="karma">2.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="28107" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '15</span>
+              </span><br/><a name="C28107" href="#C28107">
+                <time itemprop="dateCreated" datetime="2015-12-21T10:58:46-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I can confirm that this:</p>
+<pre><code class="language-php">$user = Users::findFirst($userId)</code></pre>
+<p>Doesn't work. It produces the error mentioned in the opening post. This also doesn't work:</p>
+<pre><code class="language-php">$user = Users::find("id = $userid")-&gt;getFirst();</code></pre>
+<p>This produces the same error.</p>
+<p>This seems like a bug to me. It's fine if the framework requires the ID to be an integer, but it should at least throw a better exception, instead of building an invalid query and then interpreting the ID as a column name.</p>
+<p>As to your question about this code:</p>
+<pre><code class="language-php">$user = $customer-&gt;getUsers("id = $userid")-&gt;getFirst();</code></pre>
+<p>At that stage in the logic I have a customer, and I want to make sure that the requested user belongs to that customer. Of course, that could also be achieved with an extra parameter for the customer when searching users.</p>
+<p>Great idea about implementing my own findFirst method that handles varchar IDs. I'll give that a try!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28107" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28107" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ace317a2b6955f52dbca44b664ca0dd5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1012/EggMeister" class="user-moderator-N"><span itemprop="name">EggMeister</span></a>        </span>
+        <br>
+
+        <span class="karma">2.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="28115" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '15</span>
+              </span><br/><a name="C28115" href="#C28115">
+                <time itemprop="dateCreated" datetime="2015-12-21T11:16:57-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>For future reference, here is the implementation of the abstract BaseModel class with the override for findFirst, that supports non-integer IDs. I can confirm that this works.</p>
+<pre><code class="language-php">&lt;?php
+use Phalcon\Mvc\Model;
+
+abstract class BaseModel extends Model
+{
+    /**
+     * @param array|null|string $parameters
+     * @return Model
+     */
+    public static function findFirst($parameters = null)
+    {
+        if(is_string($parameters) &amp;&amp; (strpos($parameters,'=') === false)){
+            return parent::findFirst(array(
+                'conditions'=&gt;'id = :id:',
+                'bind'=&gt;array('id'=&gt;$parameters)
+            ));
+        }
+        return parent::findFirst($parameters);
+    }
+}</code></pre>
+<p>Edit: added the check if the parameter contains the character '='. Otherwise this usage breaks:</p>
+<pre><code class="language-php">$user = Users::findFirst("username = '$username'");</code></pre>
+<p>I'm not entirely happy with this approach. Might reconsider in the future.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28115" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28115" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="28151" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '15</span>
+              </span><br/><a name="C28151" href="#C28151">
+                <time itemprop="dateCreated" datetime="2015-12-22T03:02:19-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well you should not use </p>
+<pre><code>$user = Users::findFirst("username = '$username'");</code></pre>
+<p>This, cuz i dont event now if this working, but this is not using binding. If you want to pass variable in the condition YOU HAVE TO use binding. Cuz not using it can cause SQL Injection</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28151" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28151" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ace317a2b6955f52dbca44b664ca0dd5?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1012/EggMeister" class="user-moderator-N"><span itemprop="name">EggMeister</span></a>        </span>
+        <br>
+
+        <span class="karma">2.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C28235" href="#C28235">
+                <time itemprop="dateCreated" datetime="2015-12-23T14:40:49-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>That usage does work by default. But that's a good point, I'll change it to use binding.</p>
+<p>Any idea why binding isn't used by default for the 'find' and 'findFirst' methods?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28235" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28235" data-cf-modified-55366ac3000c14a86b60095a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="9929" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

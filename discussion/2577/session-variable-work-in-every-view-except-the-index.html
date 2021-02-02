@@ -1,0 +1,345 @@
+---
+layout: default
+title: 'Session variable work in every view except the index - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Session variable work in every view except the index</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1044/SebastienFCT" class="user-moderator-N"><span itemprop="name">Sebastien</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-06-16T06:34:42-07:00">Jun '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-06-16T06:34:42-07:00">Jun '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>875</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/d431ad72846c298fb0117cc2e54dfdc7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1044/SebastienFCT" class="user-moderator-N"><span itemprop="name">Sebastien</span></a></span>
+                <span class="karma">1.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2577" href="#C2577">
+        <time class="action-date">Jun '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello everyone,</p>
+<p>I decided to push a sample in my own server in order to check any trouble while migrating from my dear &quot;localhost&quot; to a real server. I am facing a trouble I can't solve since yesterday:</p>
+<p>I am using a <code>session variable</code> &quot;language&quot; which lead the use of the correct <code>message.php</code> (english, french or chinese in my case).</p>
+<p>All my controllers extend from my <code>ControllerBase</code>, and this <code>ControllerBase</code> is managing the language logic.</p>
+<p>The idea is simple: in every view I have three flag (cn, fr and en) when the user is clicking one of these flag, the current page (and more generally all the page which will be explored) change to the desired language.</p>
+<p>In a local directory, it works pretty well... while on the server it is actually working in every view except the index view...</p>
+<p>I can't figure out where is the trouble. Especially because there is no specific error called and because it works like a charm in my local repository.</p>
+<p>The following is the <code>ControllerBase</code> logic:</p>
+<pre><code class="language-php">    &lt;?php
+
+    use Phalcon\Mvc\Controller;
+    class ControllerBase extends Controller
+    {
+    // Here I check if the language session is alredy defined and I load the desired message.php
+    protected function _getTranslation()
+    {
+
+        if ($this-&gt;session-&gt;has("language")) {
+            if (file_exists("messages/".$this-&gt;session-&gt;get("language").".php")) {
+               require "messages/".$this-&gt;session-&gt;get("language").".php";
+            } else {
+               require "messages/en.php";
+            }
+        } else {
+            require "messages/en.php";
+        }       
+
+        //Return a translation object
+        return new \Phalcon\Translate\Adapter\NativeArray(array(
+           "content" =&gt; $messages
+        ));
+
+    }
+
+    // Here I check if the first parameter or the second parameter is defining the language, if not I load the default english language
+    protected function beforeExecuteRoute($dispatcher) 
+    {
+        if ($this-&gt;dispatcher-&gt;getParam(0) == "fr") {
+            $this-&gt;session-&gt;set("language", "fr");
+        } elseif ($this-&gt;dispatcher-&gt;getParam(0) == "en") {
+            $this-&gt;session-&gt;set("language", "en");
+        } elseif ($this-&gt;dispatcher-&gt;getParam(0) == "cn") {
+            $this-&gt;session-&gt;set("language", "cn");
+        } else {
+            if ($this-&gt;dispatcher-&gt;getParam(1) == "fr") {
+                $this-&gt;session-&gt;set("language", "fr");
+            } elseif ($this-&gt;dispatcher-&gt;getParam(1) == "en") {
+                $this-&gt;session-&gt;set("language", "en");
+            } elseif ($this-&gt;dispatcher-&gt;getParam(1) == "cn") {
+                $this-&gt;session-&gt;set("language", "cn");
+            } else {
+                if ($this-&gt;session-&gt;has("language")) {
+                    $this-&gt;session-&gt;set("language", $this-&gt;session-&gt;get("language"));
+                } else {
+                    $this-&gt;session-&gt;set("language", "en");
+                }
+            }
+        }
+    }
+
+    // Here the I define the url for each flag at every view loading
+    protected function afterExecuteRoute($dispatcher) 
+    {
+
+        $this-&gt;view-&gt;setVar("t", $this-&gt;_getTranslation());
+
+        if ($this-&gt;dispatcher-&gt;getParam(0)) {
+            if ($this-&gt;dispatcher-&gt;getParam(0) == "fr" || $this-&gt;dispatcher-&gt;getParam(0) == "en" || $this-&gt;dispatcher-&gt;getParam(0) == "cn") {
+                $this-&gt;view-&gt;fr = "/sebfct/" . $this-&gt;dispatcher-&gt;getControllerName() . "/" . $this-&gt;dispatcher-&gt;getActionName() . "/fr";
+
+                $this-&gt;view-&gt;en = "/sebfct/" . $this-&gt;dispatcher-&gt;getControllerName() . "/" . $this-&gt;dispatcher-&gt;getActionName() . "/en";
+
+                $this-&gt;view-&gt;cn = "/sebfct/" . $this-&gt;dispatcher-&gt;getControllerName() . "/" . $this-&gt;dispatcher-&gt;getActionName() . "/cn";
+            } else {
+                $this-&gt;view-&gt;fr = "/sebfct/" . $this-&gt;dispatcher-&gt;getControllerName() . "/" . $this-&gt;dispatcher-&gt;getActionName() . "/" . $this-&gt;dispatcher-&gt;getParam(0) . "/fr";
+
+                $this-&gt;view-&gt;en = "/sebfct/" . $this-&gt;dispatcher-&gt;getControllerName() . "/" . $this-&gt;dispatcher-&gt;getActionName() . "/" . $this-&gt;dispatcher-&gt;getParam(0) . "/en";
+
+                $this-&gt;view-&gt;cn = "/sebfct/" . $this-&gt;dispatcher-&gt;getControllerName() . "/" . $this-&gt;dispatcher-&gt;getActionName() . "/" . $this-&gt;dispatcher-&gt;getParam(0) . "/cn";
+            }   
+        } else {
+            $this-&gt;view-&gt;fr = "/sebfct/" . $this-&gt;dispatcher-&gt;getControllerName() . "/" . $this-&gt;dispatcher-&gt;getActionName() . "/fr";
+
+            $this-&gt;view-&gt;en = "/sebfct/" . $this-&gt;dispatcher-&gt;getControllerName() . "/" . $this-&gt;dispatcher-&gt;getActionName() . "/en";
+
+            $this-&gt;view-&gt;cn = "/sebfct/" . $this-&gt;dispatcher-&gt;getControllerName() . "/" . $this-&gt;dispatcher-&gt;getActionName() . "/cn";
+        }
+
+    }
+ }</code></pre>
+<p>The following is the index.volt (every view extend from it)</p>
+<pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+    &lt;head&gt;
+        &lt;title&gt;TITLE&lt;/title&gt;
+    &lt;/head&gt;
+    {% raw %}{{{% endraw %} stylesheet_link("css/base.css") {% raw %}}}{% endraw %}
+    {% raw %}{{{% endraw %} stylesheet_link("css/layout.css") {% raw %}}}{% endraw %}
+    {% raw %}{{{% endraw %} stylesheet_link("css/skeleton.css") {% raw %}}}{% endraw %}
+    {% raw %}{{{% endraw %} stylesheet_link("css/main.css") {% raw %}}}{% endraw %}
+    {% raw %}{{{% endraw %} stylesheet {% raw %}}}{% endraw %}
+    &lt;body&gt;
+        &lt;div class="container"&gt;
+            &lt;div class="one columns"&gt;
+                &lt;a class="nav-link" href="/sebfct"&gt;
+                    {% raw %}{{{% endraw %} homeIcon {% raw %}}}{% endraw %}
+                &lt;/a&gt;
+            &lt;/div&gt;
+            &lt;div class="two columns"&gt;
+                &lt;a class="nav-link" href="/sebfct"&gt;
+                    &lt;h4 class="nav-bar"&gt;WEBSITE&lt;/h1&gt;
+                    &lt;h5&gt;Version 1.2&lt;/h5&gt;
+                &lt;/a&gt;
+            &lt;/div&gt;
+
+            &lt;div class="one column offset-by-ten nav-bar"&gt;&lt;a href= {% raw %}{{{% endraw %} en {% raw %}}}{% endraw %}&gt;{% raw %}{{{% endraw %} english {% raw %}}}{% endraw %}&lt;/a&gt;&lt;/div&gt;
+            &lt;div class="one column nav-bar"&gt;&lt;a href= {% raw %}{{{% endraw %} fr {% raw %}}}{% endraw %}&gt;{% raw %}{{{% endraw %} french {% raw %}}}{% endraw %}&lt;/a&gt;&lt;/div&gt;
+            &lt;div class="one column nav-bar"&gt;&lt;a href= {% raw %}{{{% endraw %} cn {% raw %}}}{% endraw %}&gt;{% raw %}{{{% endraw %} chinese {% raw %}}}{% endraw %}&lt;/a&gt;&lt;/div&gt;
+
+            &lt;div class="sixteen columns"&gt;
+            &lt;/div&gt;
+
+            &lt;div class="three columns offset-by-ten menu"&gt;
+                &lt;h4&gt;&lt;a class="nav-link" href="/sebfct/tutorial"&gt;&lt;?php echo $t-&gt;_("gen_tuto") ?&gt;&lt;/a&gt;&lt;/h1&gt;
+            &lt;/div&gt;
+            &lt;div class="three columns menu"&gt;
+                &lt;h4&gt;&lt;a class="nav-link" href="/sebfct/about"&gt;&lt;?php echo $t-&gt;_("gen_about") ?&gt;&lt;/a&gt;&lt;/h1&gt;
+            &lt;/div&gt;
+
+            &lt;div class="sixteen columns"&gt;
+                &lt;hr /&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+        {% raw %}{{{% endraw %} content() {% raw %}}}{% endraw %}
+    &lt;/body&gt;
+&lt;/html&gt;</code></pre>
+<p>So as I metioned before, this logic is working pretty well in every view except the index/index.volt,
+The architecture for my website is the following:</p>
+<pre><code>website
+    .phalcon
+    app
+        cache
+        config
+        controller
+            AboutController.php
+            ControllerBase.php
+            IndexController.php
+            TutorialController.php
+        models
+        views
+            about
+                index.volt
+            index
+                index.volt
+            tutorial
+                index.volt
+        public
+            .... public things ....
+        .htaccess
+        index.html</code></pre>
+<p>Any advice would be welcome, even if it seems trivial. Thank you in advance</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-ff01e74e67ddc211308b52ca-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-ff01e74e67ddc211308b52ca-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C8745" href="#C8745">
+                <time itemprop="dateCreated" datetime="2014-06-17T09:44:00-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>An ugly but effective method would be to put <code>exit()</code> statements at various places in your <code>ControllerBase</code> file.  Then, when you view your index page, see if all the methods are being called that you expect.  My guess is that the index controller is reaching a condition none of the other controllers are.</p>
+<p>Also, possibly silly question but it must be asked: Is your <code>IndexController</code> actually extending <code>ControllerBase</code>?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8745" data-cf-modified-ff01e74e67ddc211308b52ca-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8745" data-cf-modified-ff01e74e67ddc211308b52ca-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d431ad72846c298fb0117cc2e54dfdc7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1044/SebastienFCT" class="user-moderator-N"><span itemprop="name">Sebastien</span></a>        </span>
+        <br>
+
+        <span class="karma">1.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C8761" href="#C8761">
+                <time itemprop="dateCreated" datetime="2014-06-17T21:08:30-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/quasipickle">(@quasipickle</a> I reply here, the icon <code>reply</code> close to <code>downgrade</code> and <code>upgrade</code> call nothing)</p>
+<p>First thank you for your answer. I will be a little busy today, so I will try your solution as soon as possible (probably after my work).</p>
+<p>I checked (just for being sure) but yes, of course the <code>indexController</code> extends <code>ControllerBase</code> (without it, the flag wouldn't even be displayed on the screen since their variable giving the url for the .png file wouldn't be loaded).</p>
+<p>I am also wondering about your comment: </p>
+<blockquote>
+<p>the index controller is reaching a condition none of the other controllers are.</p>
+</blockquote>
+<p>how this <code>none condition</code> can be reached in the server but not in localhost? (both repository in my local machine and my server are exactly the same).  </p>
+<p>Again, thank you for your help, I will give some news ASAP. (I can also join the url of the server if needed, I am just not sure it is tolerated, or it would be useful).</p>
+<p>Sincerely,</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8761" data-cf-modified-ff01e74e67ddc211308b52ca-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8761" data-cf-modified-ff01e74e67ddc211308b52ca-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d431ad72846c298fb0117cc2e54dfdc7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1044/SebastienFCT" class="user-moderator-N"><span itemprop="name">Sebastien</span></a>        </span>
+        <br>
+
+        <span class="karma">1.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C8796" href="#C8796">
+                <time itemprop="dateCreated" datetime="2014-06-19T05:37:38-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/quasipickle">@quasipickle</a> After testing your method it appears that everything is called well (by <code>everything</code> please refer to the above urnordered list).</p>
+<p>I created a new server, I installed phalcon in the same configuration as my local machine, the result is the same:</p>
+<p>In <code>localhost</code>, the language are displayed well in every view, while in the distant server, the language is displayed everywhere except the index view. Everything seems to be called correctly:</p>
+<ul>
+<li>The flag are well displayed (their url are loaded by the <code>BaseController</code>)</li>
+<li>The flag are pointing to the correct url: the current one + <code>/fr</code>, <code>/en</code> or <code>/cn</code> (also loaded by the <code>BaseController</code>)</li>
+<li>The current url are always the one desired.</li>
+</ul>
+<p>If anyone have any idea, please don't hesitate! (And if someone have time for testing my code source it would be also helpful for me even if I am afraid that everything &quot;work&quot; well in localhost...</p>
+<p>Sincerely,</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8796" data-cf-modified-ff01e74e67ddc211308b52ca-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8796" data-cf-modified-ff01e74e67ddc211308b52ca-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d431ad72846c298fb0117cc2e54dfdc7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1044/SebastienFCT" class="user-moderator-N"><span itemprop="name">Sebastien</span></a>        </span>
+        <br>
+
+        <span class="karma">1.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="8847" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '14</span>
+              </span><br/><a name="C8847" href="#C8847">
+                <time itemprop="dateCreated" datetime="2014-06-21T18:28:22-07:00" class="action-date">Jun '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi everyone, </p>
+<p>I would like to add some of my research:</p>
+<p>When I save my parameter <code>$this-&gt;view-&gt;url = $this-&gt;dispatcher-&gt;getParam(0);</code> in my <code>ControllerBase.php</code>, and then I print it in my <code>index.volt</code>: <code>{% raw %}{{{% endraw %} url {% raw %}}}{% endraw %}</code>, I obtain the following:</p>
+<p>In my localhost:</p>
+<ol>
+<li>page <code>index</code> : nothing printed</li>
+<li>page <code>index/index/fr</code> : fr printed</li>
+<li>page <code>index/index/en</code> : en printed</li>
+<li>page <code>index/index/cn</code> : cn printed</li>
+</ol>
+<p>In my distant server:
+nothing is printed with <code>{% raw %}{{{% endraw %} url {% raw %}}}{% endraw %}</code> in all the cases.</p>
+<p>Once again, the installation and the file are totally the same, and I reinstalled a new server in order to be sure of it.</p>
+<p>Sincerely,</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="8847" data-cf-modified-ff01e74e67ddc211308b52ca-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="8847" data-cf-modified-ff01e74e67ddc211308b52ca-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2577" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

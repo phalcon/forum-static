@@ -1,0 +1,230 @@
+---
+layout: default
+title: '$route-&gt;addPost gives: A dependency injection container is required to access the &#039;request&#039; service - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">$route-&gt;addPost gives: A dependency injection container is required to access the &#039;request&#039; service</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-06-07T09:57:15-07:00">Jun '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-06-07T09:57:15-07:00">Jun '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>377</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/e00a6fdd3e722135512e013b7f1e9693?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a></span>
+                <span class="karma">17.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C7017" href="#C7017">
+        <time class="action-date">Jun '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello, I'm in the beginning stages of writing an Angular/AJAX application with Phalcon.  I have routing implemented and when I use:</p>
+<pre><code class="language-php">$router-&gt;add("/ajax/promotions",[
+    'controller' =&gt; 'noauthajax',
+    'action' =&gt; 'promotions'
+]);</code></pre>
+<p>everything works as it should, but when I change to:</p>
+<pre><code class="language-php">$router-&gt;addPost("/ajax/promotions",[
+    'controller' =&gt; 'noauthajax',
+    'action' =&gt; 'promotions'
+]);</code></pre>
+<p>I get the error: A dependency injection container is required to access the 'request' service</p>
+<p>I'm guessing I'm missing a use or $di somewhere, but not sure why this is happening.  I would really like to specify whether or not my requests are get or post.</p>
+<p>Here is my $di config:</p>
+<pre><code class="language-php">use Phalcon\Loader;
+use Phalcon\Mvc\View;
+use Phalcon\Mvc\Url as UrlProvider;
+use Phalcon\Mvc\Application;
+use Phalcon\DI\FactoryDefault;
+use Phalcon\Db\Adapter\Pdo\Mysql as DbAdapter;
+use Phalcon\Security;
+use Phalcon\Events\Manager as EventsManager;
+use Phalcon\Session\Adapter\Files as SessionAdapter;
+
+try {
+
+    // Register an autoloader
+    $loader = new Loader();
+    $loader-&gt;registerDirs(array(
+        '../app/controllers/',
+        '../app/models/'
+    ))-&gt;register();
+
+    // Create a DI
+    $di = new FactoryDefault();
+
+    $di-&gt;set('dispatcher', function() use ($di) {
+        $eventsManager = new EventsManager;
+        /**
+        * Check if the user is allowed to access certain action using the SecurityPlugin
+        */
+        $eventsManager-&gt;attach('dispatch:beforeDispatch', new SecurityPlugin);
+        /**
+        * Handle exceptions and not-found exceptions using NotFoundPlugin
+        */
+        $eventsManager-&gt;attach('dispatch:beforeException', new NotFoundPlugin);
+        $dispatcher = new Dispatcher;
+        $dispatcher-&gt;setEventsManager($eventsManager);
+        return $dispatcher;
+    });
+
+    $di-&gt;set('security', function(){
+        $security = new Security();
+        //Set the password hashing factor to 12 rounds
+        $security-&gt;setWorkFactor(12);
+        return $security;
+    }, true);
+
+    // Setup the database service
+    $di-&gt;set('db', function(){
+        return new DbAdapter(array(
+            "host"     =&gt; "****",
+            "username" =&gt; "****",
+            "password" =&gt; "****",
+            "dbname"   =&gt; "****"
+        ));
+    });
+
+    /**
+    * Start the session the first time some component request the session service
+    */
+    $di-&gt;set('session', function() {
+        $session = new SessionAdapter();
+        $session-&gt;start();
+        return $session;
+    });
+
+    $di-&gt;set('router',function() {
+        require '../app/routes.php';
+        return $router;
+    });
+
+    // Setup the view component
+    $di-&gt;set('view', function(){
+        $view = new View();
+        $view-&gt;setViewsDir('../app/views/');
+        return $view;
+    });
+
+    $di-&gt;set('url', function(){
+        $url = new UrlProvider();
+        $url-&gt;setBaseUri('/');
+        return $url;
+    });
+
+    // Handle the request
+    $application = new Application($di);
+
+    echo $application-&gt;handle()-&gt;getContent();
+
+} catch(\Exception $e) {
+     echo "PhalconException: ", $e-&gt;getMessage();
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-95ada048840d2dd690f35b61-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-95ada048840d2dd690f35b61-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2f69d5b9f090cdf63044160780e59bb7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3991/pauliuspetronis" class="user-moderator-N"><span itemprop="name">Paulius</span></a>        </span>
+        <br>
+
+        <span class="karma">4.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="19123" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '15</span>
+              </span><br/><a name="C19123" href="#C19123">
+                <time itemprop="dateCreated" datetime="2015-06-07T11:17:56-07:00" class="action-date">Jun '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Try this.
+In <code>$di</code> config</p>
+<pre><code class="language-php">// from
+$di-&gt;set('router',function() {
+        require '../app/routes.php';
+        return $router;
+    });
+// to
+$di-&gt;set('router',function () use ($di) {
+        require '../app/routes.php';
+        return $router;
+    });</code></pre>
+<p>and in <code>../app/routes.php</code> add line:</p>
+<pre><code class="language-php">$router-&gt;setDI($di);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="19123" data-cf-modified-95ada048840d2dd690f35b61-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="19123" data-cf-modified-95ada048840d2dd690f35b61-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e00a6fdd3e722135512e013b7f1e9693?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a>        </span>
+        <br>
+
+        <span class="karma">17.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C19125" href="#C19125">
+                <time itemprop="dateCreated" datetime="2015-06-07T12:38:10-07:00" class="action-date">Jun '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Excellent!  Thank you!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="19125" data-cf-modified-95ada048840d2dd690f35b61-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="19125" data-cf-modified-95ada048840d2dd690f35b61-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="7017" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,734 @@
+---
+layout: default
+title: 'ACL not working in Phalcon - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/17/acl">Acl</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">ACL not working in Phalcon</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1891/Flanex" class="user-moderator-N"><span itemprop="name">Flanex</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-07-03T01:26:18-07:00">Jul '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-07-03T01:26:18-07:00">Jul '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">7</span>
+                </td>
+                <td>
+                    <label>Views</label><br>3597</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/9c7cd611ae9ecc04baeecb2d65cfce53?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1891/Flanex" class="user-moderator-N"><span itemprop="name">Flanex</span></a></span>
+                <span class="karma">37.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2717" href="#C2717">
+        <time class="action-date">Jul '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>i was following the tutorial by Jesse Boyer, but I am stuck on the ACL part of teh tutorial, which seems not to be working for some reason, when adding more public areas like 'posts', 'forum' etc. instead of just 'index' and 'signin'.</p>
+<p>Background info: </p>
+<p><strong>I am running Windows 7 64-bit and WAMP SERVER 2.4 (32-bit) with PHP 5.4.16 and Apache is 2.4.4, if it helps. It's a strange combination, but the 64-bit versions of WAMP didn't work on my 64-bit machine for some reason.</strong></p>
+<p><strong>Phalcon Windows dll version is 1.3.2 x86 TS</strong> ( the same problem occurs  with 1.3.1. version as well )</p>
+<p>I have this in my Permission.php file located in config/Permission.php</p>
+<pre><code class="language-php">&lt;?php
+
+use \Phalcon\Mvc\Dispatcher,
+    \Phalcon\Events\Event,
+    \Phalcon\Acl;
+
+/**
+ * Permission
+ *
+ * Prevents User Types from accessing areas they are not allowed in.
+ */
+class Permission extends \Phalcon\Mvc\User\Plugin {
+
+    /**
+     * Constants to prevent a typo
+     */
+    const GUEST = 'guest';
+    const USER  = 'user';
+    const ADMIN = 'admin';
+
+    /**
+     * Accessible to everyone
+     * @var array
+     */
+    protected $_publicResources = [
+        'index'  =&gt; ['*'],
+        'signin' =&gt; ['*'],
+        'posts'  =&gt; ['*'],
+    ];
+
+    /**
+     * Accessible to Users (and Admins)
+     * @var array
+     */
+    protected $_userResources = [
+        'dashboard' =&gt; ['*']
+    ];
+
+    /**
+     * Accessible to Admins
+     * @var array
+     */
+    protected $_adminResources = [
+        'admin' =&gt; ['*']
+    ];
+
+    // ------------------------------------------------------------------------
+
+    /**
+     * Triggers before a route is successfully executed
+     *
+     * @param  Event      $event
+     * @param  Dispatcher $dispatcher
+     *
+     * @return boolean|void
+     */
+
+    public function beforeExecuteRoute(Event $event, Dispatcher $dispatcher)
+    {
+
+        // Debug
+        // $this-&gt;session-&gt;destroy();
+
+        // Get the current role
+        $role = $this-&gt;session-&gt;get('role');
+        if (!$role) {
+            $role = self::GUEST;
+        }
+
+        // Get the current Controller/Action from the dispatcher
+        $controller = $dispatcher-&gt;getControllerName();
+        $action     = $dispatcher-&gt;getActionName();
+
+        // Get the ACL Rule List
+        $acl = $this-&gt;_getAcl();
+
+        // See if they have permission
+        $allowed = $acl-&gt;isAllowed($role, $controller, $action);
+
+        if ($allowed != Acl::ALLOW)
+        {
+            $this-&gt;flash-&gt;error('You do not have permission to access this area');
+            $this-&gt;response-&gt;redirect('');
+
+            // Stop the dispatcher at the current operation
+            $this-&gt;view-&gt;disable();
+            return false;
+        }
+    }
+
+    // ------------------------------------------------------------------------
+
+    /**
+     * Build the Session ACL list one time if it's not set
+     *
+     * @return object
+     */
+    protected function _getACL()
+    {
+        if (!isset($this-&gt;persistent-&gt;acl))
+        {
+            $acl = new Acl\Adapter\Memory();
+            $acl-&gt;setDefaultAction(Acl::DENY);
+
+            $roles = [
+                self::GUEST =&gt; new Acl\Role(self::GUEST),
+                self::USER  =&gt; new Acl\Role(self::USER),
+                self::ADMIN =&gt; new Acl\Role(self::ADMIN),
+            ];
+
+            // Place all the roles inside the ACL Object
+            foreach ($roles as $role) {
+                $acl-&gt;addRole($role);
+            }
+
+            // Public Resources
+            foreach ($this-&gt;_publicResources as $resource =&gt; $action) {
+                $acl-&gt;addResource(new Acl\Resource($resource), $action);
+            }
+
+            // User Resources
+            foreach ($this-&gt;_userResources as $resource =&gt; $action) {
+                $acl-&gt;addResource(new Acl\Resource($resource), $action);
+            }
+
+            // Admin Resources
+            foreach ($this-&gt;_adminResources as $resource =&gt; $action) {
+                $acl-&gt;addResource(new Acl\Resource($resource), $action);
+            }
+
+            // Allow ALL Roles to access the Public Resources
+            foreach ($roles as $role) {
+                foreach($this-&gt;_publicResources as $resource =&gt; $action) {
+                    $acl-&gt;allow($role-&gt;getName(), $resource, '*');
+                }
+            }
+
+            // Allow User &amp; Admin to access the User Resources
+            foreach ($this-&gt;_userResources as $resource =&gt; $actions) {
+                foreach ($actions as $action) {
+                    $acl-&gt;allow(self::USER, $resource, $action);
+                    $acl-&gt;allow(self::ADMIN, $resource, $action);
+                }
+            }
+
+            // Allow Admin to access the Admin Resources
+            foreach ($this-&gt;_adminResources as $resource =&gt; $actions) {
+                foreach ($actions as $action) {
+                    $acl-&gt;allow(self::ADMIN, $resource, $action);
+                }
+            }
+
+            $this-&gt;persistent-&gt;acl = $acl;
+        }
+
+        return $this-&gt;persistent-&gt;acl;
+    }
+
+    // ------------------------------------------------------------------------
+
+}</code></pre>
+<p>then I got this in my PostsController.php:</p>
+<pre><code class="language-php">&lt;?php
+
+use \Phalcon\Tag;
+
+class PostsController extends BaseController {
+
+    public function onConstruct()
+    {
+        parent::initialize();
+    }
+
+    public function indexAction()
+    {
+        Tag::setTitle('Posts');
+    }
+
+}</code></pre>
+<p>and this in my index.php in the public root (bootstrap file):</p>
+<pre><code class="language-php">&lt;?php
+
+require '../app/config/Config.php';
+
+try {
+
+    //Register an autoloader
+    $loader = new \Phalcon\Loader();
+    $loader-&gt;registerDirs([
+        '../app/controllers/',
+        '../app/models/',
+        '../app/config/'
+    ]);
+
+    $loader-&gt;registerClasses([
+        'Component\User'     =&gt; '../app/components/User.php',
+        'Component\Helper'   =&gt; '../app/components/Helper.php',
+        'Component\Security' =&gt; '../app/components/Security.php',
+    ]);
+
+    $loader-&gt;register();
+
+    // Create a DI
+    $di = new Phalcon\DI\FactoryDefault();
+
+    // Return general config
+    $di-&gt;setShared('config', function() use ($config) {
+        return $config;
+    });
+
+    // Return API config
+    $di-&gt;setShared('api', function() use ($api) {
+        return $api;
+    });
+
+    // Return custom components
+    $di-&gt;setShared('component', function() {
+        $obj = new stdClass();
+        $obj-&gt;helper = new \Component\Helper;
+        $obj-&gt;user   = new \Component\User;
+        return $obj;
+    });
+
+    // Database
+    $di-&gt;set('db', function() use ($di) {
+        $dbConfig = $di-&gt;get('config')-&gt;get('db')-&gt;toArray();
+        $db = new \Phalcon\Db\Adapter\Pdo\Mysql($dbConfig);
+        return $db;
+    });
+
+    // View
+    // Register Volt as a service
+    $di-&gt;set('voltService', function($view, $di) {
+        $volt = new \Phalcon\Mvc\View\Engine\Volt($view, $di);
+        $volt-&gt;setOptions(array(
+            "compiledPath"      =&gt; "../app/compiled-templates/",
+            "compiledExtension" =&gt; ".compiled",
+            "compileAlways"     =&gt; true
+        ));
+        return $volt;
+    });
+
+    // Register Volt as template engine
+    $di-&gt;set('view', function() {
+        $view = new \Phalcon\Mvc\View();
+        $view-&gt;setViewsDir('../app/views/');
+        $view-&gt;registerEngines(array(
+            ".volt" =&gt; 'voltService'
+        ));
+        return $view;
+    });
+
+    // Router
+    $di-&gt;set('router', function() {
+        $router = new \Phalcon\Mvc\Router();
+        $router-&gt;mount(new Routes());
+        return $router;
+    });
+
+    // Session
+    $di-&gt;setShared('session', function() {
+        $session = new \Phalcon\Session\Adapter\Files();
+        $session-&gt;start();
+        return $session;
+    });
+
+    // Flash Data (Temporary Data)
+    $di-&gt;set('flash', function() {
+        $flash = new \Phalcon\Flash\Session([
+            'error'   =&gt; 'alert alert-danger',
+            'success' =&gt; 'alert alert-success',
+            'notice'  =&gt; 'alert alert-info',
+            'warning' =&gt; 'alert alert-warning',
+        ]);
+        return $flash;
+    });
+
+    // Base URI
+    $di-&gt;set('url', function(){
+        $url = new \Phalcon\Mvc\Url();
+        $url-&gt;setBaseUri('/test/');
+        return $url;
+    });
+
+    // Custom dispatcher including ACL (Overrides the default)
+    $di-&gt;set('dispatcher', function() use ($di) {
+
+        $eventsManager = $di-&gt;getShared('eventsManager');
+
+        // Custom ACL Class
+        $permission = new Permission();
+
+        // Listen for events from the permission class
+
+        $eventsManager-&gt;attach('dispatch', $permission);
+
+        $dispatcher = new \Phalcon\Mvc\Dispatcher();
+        $dispatcher-&gt;setEventsManager($eventsManager);
+
+        return $dispatcher;
+
+    });
+
+    // Security - temporary b/c security-&gt;hash bug in 1.3.2
+    $di-&gt;set('security', function(){
+        $security = new \Component\Security();
+        //Set the password hashing factor to 12 rounds
+        $security-&gt;setWorkFactor(12);
+        return $security;
+    }, true);
+
+    // Deploy the App
+    $application = new \Phalcon\Mvc\Application($di);
+    echo $application-&gt;handle()-&gt;getContent();
+
+} catch(\Phalcon\Exception $e) {
+     // !!! comment in production !!!
+     echo "PhalconException: ", $e-&gt;getMessage();
+}</code></pre>
+<p>And I can only access: <code>http://localhost/test/index</code> and <code>http://localhost/test/signin</code> but I am NOT able to access <code>http://localhost/test/posts</code>. When I hit <code>http://localhost/test/posts</code> I am automaticallty redirected to the homepage and the message <code>You do not have permission to access this area</code>pops out.</p>
+<p>So, I think the problem is probably in the Permission.php file. Any idea what is wrong there?</p>
+<p>Another thing that I don't understand is that even if I comment out the signin from the resources like:</p>
+<pre><code class="language-php"> /**
+     * Accessible to everyone
+     * @var array
+     */
+    protected $_publicResources = [
+        'index'  =&gt; ['*'],
+        // 'signin' =&gt; ['*'],
+        // 'posts'  =&gt; ['*'],
+    ];</code></pre>
+<p>I can still access <code>http://localhost/test/signin</code> . How is it possible?</p>
+<p>Could this part:</p>
+<pre><code class="language-php">// Allow ALL Roles to access the Public Resources
+            foreach ($roles as $role) {
+                foreach($this-&gt;_publicResources as $resource =&gt; $action) {
+                    $acl-&gt;allow($role-&gt;getName(), $resource, '*');
+                }
+            }</code></pre>
+<p>be causing the problem?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9c7cd611ae9ecc04baeecb2d65cfce53?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1891/Flanex" class="user-moderator-N"><span itemprop="name">Flanex</span></a>        </span>
+        <br>
+
+        <span class="karma">37.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9121" href="#C9121">
+                <time itemprop="dateCreated" datetime="2014-07-03T01:58:46-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>if I comment out this:</p>
+<pre><code class="language-php">if ($allowed != Acl::ALLOW)
+        {
+            // $this-&gt;flash-&gt;error('You do not have permission to access this area');
+            // $this-&gt;response-&gt;redirect('');
+            return false;
+        }</code></pre>
+<p>Then I can access posts.</p>
+<p>So, for some reason $allowed is not set to allow, why? Any idea what is wrong with the code?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9121" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9121" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9c7cd611ae9ecc04baeecb2d65cfce53?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1891/Flanex" class="user-moderator-N"><span itemprop="name">Flanex</span></a>        </span>
+        <br>
+
+        <span class="karma">37.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="9122" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '14</span>
+              </span><br/><a name="C9122" href="#C9122">
+                <time itemprop="dateCreated" datetime="2014-07-03T02:03:50-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This code:</p>
+<pre><code class="language-php">$allowed = $acl-&gt;isAllowed($role, $controller, $action);
+
+        print_r($allowed);
+        die;
+
+        if ($allowed != Acl::ALLOW)
+        {
+            $this-&gt;flash-&gt;error('You do not have permission to access this area');
+            $this-&gt;response-&gt;redirect('');
+            return false;
+        }</code></pre>
+<p>Gives me <code>1</code> on this URIs:</p>
+<pre><code>http://localhost/test
+http://localhost/test/signin</code></pre>
+<p>But nothing (blank page) on posts:</p>
+<pre><code>http://localhost/test/posts</code></pre>
+<p>Why is there just a blank white page? Not even <code>0</code> for <a href="http://localhost/test/posts">http://localhost/test/posts</a>?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9122" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9122" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9c7cd611ae9ecc04baeecb2d65cfce53?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1891/Flanex" class="user-moderator-N"><span itemprop="name">Flanex</span></a>        </span>
+        <br>
+
+        <span class="karma">37.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="9123" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '14</span>
+              </span><br/><a name="C9123" href="#C9123">
+                <time itemprop="dateCreated" datetime="2014-07-03T02:12:30-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>btw. I have noticed that the output of:</p>
+<p>$acl is always the same, even if I change the resources like:</p>
+<pre><code>protected $_userResources = [
+        'blabalbalbababab' =&gt; ['*']
+    ];</code></pre>
+<p>I still see 'dashboard' in print_r($acl) when typing:</p>
+<pre><code class="language-php">// Get the current Controller/Action from the dispatcher
+        $controller = $dispatcher-&gt;getControllerName();
+        $action     = $dispatcher-&gt;getActionName();
+
+        // Get the ACL Rule List
+        $acl = $this-&gt;_getAcl();
+
+        print_r($acl);
+        die;
+
+        // See if they have permission
+        $allowed = $acl-&gt;isAllowed($role, $controller, $action);</code></pre>
+<p>Could it be some problem with <code>Phalcon\Acl\Adapter\Memory</code> in Phalcon 1.3.2 x86 on Windows ? </p>
+<p>If so, how can I refresh taht to reflect the current values? Or is it something different?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9123" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9123" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9c7cd611ae9ecc04baeecb2d65cfce53?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1891/Flanex" class="user-moderator-N"><span itemprop="name">Flanex</span></a>        </span>
+        <br>
+
+        <span class="karma">37.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="9124" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '14</span>
+              </span><br/><a name="C9124" href="#C9124">
+                <time itemprop="dateCreated" datetime="2014-07-03T02:17:56-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><code>object(Phalcon\Acl\Adapter\Memory)</code> is always the same. Like it's cached or soemthing. Why is that? I tried to restart the WAMP server, but it's always the same ;(. Doesn't reflect the new added or changed resources for user or guest or admin. ;(</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9124" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9124" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9c7cd611ae9ecc04baeecb2d65cfce53?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1891/Flanex" class="user-moderator-N"><span itemprop="name">Flanex</span></a>        </span>
+        <br>
+
+        <span class="karma">37.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9125" href="#C9125">
+                <time itemprop="dateCreated" datetime="2014-07-03T02:41:46-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I tried v1.3.1 but with the same results ;(. </p>
+<p>Btw. I am running Windows 7 64-bit and WAMP SERVER 2.4 (32-bit) with PHP 5.4.16 and Apache is 2.4.4, if it helps. It's a strange combination, but the 64-bit  versions of WAMP didn't work on my 64-bit machine for some reason.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9125" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9125" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c5bdd38f8189e96c9fa07a2011fd3d25?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2002/OpsRJ" class="user-moderator-N"><span itemprop="name">OpsRJ</span></a>        </span>
+        <br>
+
+        <span class="karma">4.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9925" href="#C9925">
+                <time itemprop="dateCreated" datetime="2014-08-02T06:22:48-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I have the same problem.</p>
+<p>Is there any news about it?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9925" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9925" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5a05e6d829cbd747d6a5ed5161e24f7e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2046/monikadahitule" class="user-moderator-N"><span itemprop="name">monikadahitule</span></a>        </span>
+        <br>
+
+        <span class="karma">4.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C10557" href="#C10557">
+                <time itemprop="dateCreated" datetime="2014-08-21T02:55:13-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>me too have the same problem</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10557" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10557" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/d26e6ab949b422d1df6488fcc1440998?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1927/subdigger" class="user-moderator-N"><span itemprop="name">subdigger</span></a>        </span>
+        <br>
+
+        <span class="karma">102</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11918" href="#C11918">
+                <time itemprop="dateCreated" datetime="2014-10-05T22:41:48-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>+1</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11918" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11918" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/54a706158246e21eade48e73e743a60a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3222/mikacalvo" class="user-moderator-N"><span itemprop="name">mikacalvo</span></a>        </span>
+        <br>
+
+        <span class="karma">2.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="16025" data-toggle="modal" data-target="#historyModal">
+                edited <span>Feb '15</span>
+              </span><br/><a name="C16025" href="#C16025">
+                <time itemprop="dateCreated" datetime="2015-02-20T03:39:44-07:00" class="action-date">Feb '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>the first solution that comes to my mind is to unset the persistent variable so there's no &quot;cache&quot; :</p>
+<blockquote>
+<p>public function getAcl()</p>
+<p>{</p>
+<p>unset($this-&gt;persistent-&gt;acl); /<em> HERE </em>/</p>
+<p>if (!isset($this-&gt;persistent-&gt;acl)) {</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16025" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16025" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3d416ab1aa073d36a371a9d478da88fc?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3630/fonshua" class="user-moderator-N"><span itemprop="name">fonshua</span></a>        </span>
+        <br>
+
+        <span class="karma">60</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C17408" href="#C17408">
+                <time itemprop="dateCreated" datetime="2015-04-19T19:51:11-07:00" class="action-date">Apr '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><pre><code class="language-php">    public function getAcl()
+    {
+
+        // invalidate the cache.  Without destroying the persistent storage, changes to acl won't be detected.      
+        $this-&gt;persistent-&gt;destroy();
+        if (!isset($this-&gt;persistent-&gt;acl)) {
+</code></pre>
+<p>You can try: $this-&gt;persistent-&gt;destroy();. For some reason unsetting persistent-&gt;acl just doesn't work for me.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="17408" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="17408" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/25ac5f3abcf9addb0e2eb61737085244?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5455/DmitryMakanin" class="user-moderator-N"><span itemprop="name">DmitryMakanin</span></a>        </span>
+        <br>
+
+        <span class="karma">1.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C27343" href="#C27343">
+                <time itemprop="dateCreated" datetime="2015-12-04T13:49:36-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>+1</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="27343" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="27343" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/28dd556317319ff38897a3925c4814c1?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8197/gargaman237" class="user-moderator-N"><span itemprop="name">AMAN GARG</span></a>        </span>
+        <br>
+
+        <span class="karma">74</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C16025"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/54a706158246e21eade48e73e743a60a?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        mikacalvo                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C41815" href="#C41815">
+                <time itemprop="dateCreated" datetime="2016-10-18T05:32:35-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You answer is great. It works!! Appreciated</p>
+<blockquote>
+<p>the first solution that comes to my mind is to unset the persistent variable so there's no &quot;cache&quot; :</p>
+<blockquote>
+<p>public function getAcl()</p>
+<p>{</p>
+<p>unset($this-&gt;persistent-&gt;acl); /<em> HERE </em>/</p>
+<p>if (!isset($this-&gt;persistent-&gt;acl)) {</p>
+</blockquote>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="41815" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="41815" data-cf-modified-a64bf6c0645fa7970f5bcb80-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2717" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

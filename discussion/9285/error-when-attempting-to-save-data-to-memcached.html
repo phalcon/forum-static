@@ -1,0 +1,314 @@
+---
+layout: default
+title: 'Error when attempting to save data to memcached - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/8/cache">Cache</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Error when attempting to save data to memcached</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-11-03T17:12:00-07:00">Nov '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-11-03T17:12:00-07:00">Nov '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>995</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/e00a6fdd3e722135512e013b7f1e9693?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a></span>
+                <span class="karma">17.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C9285" href="#C9285">
+        <time class="action-date">Nov '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Error is: Failed storing data in memcached, error code: 20</p>
+<pre><code class="language-php">
+    use Phalcon\Mvc\User\Component;
+    use Phalcon\DI;
+    use Phalcon\Cache\Frontend\Data as FrontData;
+    use Phalcon\Cache\Backend\Libmemcached as BackMemCached;
+    use Phalcon\Mvc\Model\Message;
+
+    class Universe extends Component {
+
+        protected function buildCache() {
+            $sdk = $this-&gt;getDi()-&gt;getShared('sdkaccount');
+            $region = $this-&gt;getDi()-&gt;getShared('session')-&gt;get('current_region');
+
+            $params = [
+                'brands' =&gt; null,
+                'packages' =&gt; null,
+                'groups' =&gt; null
+            ];
+
+            $getParams = [
+                'region' =&gt; $region-&gt;code
+            ];
+
+            $sdk_response = $sdk-&gt;post("AudienceProfile/Region", $params, $getParams);
+
+            if ($sdk_response-&gt;result != "success") {
+                $this-&gt;appendMessage(new Message($sdk_response-&gt;message));
+                return false;
+            }
+
+            $this-&gt;buildCacheData($sdk_response,"public");
+
+            return true;
+        }
+
+        protected function buildCacheData($sdk_response,$type) {
+            $cache = $this-&gt;getCache();
+
+            $brands = $sdk_response-&gt;metadata-&gt;brands;
+            $packages = $sdk_response-&gt;metadata-&gt;packages;
+            $groups = $sdk_response-&gt;metadata-&gt;groups;
+            $audiences = $sdk_response-&gt;data;
+
+            if ($type == "private") {
+                $user = DI::getDefault()-&gt;getSession()-&gt;get('auth_user');
+                $cache-&gt;save("privatebrands".$user-&gt;account_id,$brands);
+                $cache-&gt;save("privatepackages".$user-&gt;account_id,$packages);
+                $cache-&gt;save("privategroups".$user-&gt;account_id,$groups);
+                $cache-&gt;save("privateaudiences".$user-&gt;account_id,$audiences);
+            } else {
+                //// It's dying here
+                $cache-&gt;save("publicbrands",$brands);
+                $cache-&gt;save("publicpackages",$packages);
+                $cache-&gt;save("publicgroups",$groups);
+                $cache-&gt;save("publicaudiences",$audiences);
+            }
+
+            return true;
+        }
+
+        protected function getCache() {
+            $frontCache = new FrontData([
+                "lifetime" =&gt; 900 //15 minutes
+            ]);
+
+            $cache = new BackMemCached(
+                $frontCache,
+                [
+                    "servers" =&gt; [
+                        "host" =&gt; "127.0.0.1",
+                        "port" =&gt; "11211",
+                        "weight" =&gt; "1"
+                    ]
+                ]
+            );
+
+            return $cache;
+        }
+
+        public function getGroups($arrGroupIDs) {
+            $user = DI::getDefault()-&gt;getSession()-&gt;get('auth_user');
+            $cache = $this-&gt;getCache();
+            $arr = [];
+            $groups = $cache-&gt;get("publicgroups");
+
+            if (empty($groups)) {
+                if (!$this-&gt;buildCache()) {
+                    return false;
+                }
+                $groups = $cache-&gt;get("publicgroups");
+            }
+
+            foreach ($arrGroupIDs as $groupID) {
+                foreach($groups as $group) {
+                    var_dump($group,$groupID);
+                    die();
+                }
+            }
+            return $arr;
+        }
+    }</code></pre>
+<p>It's dying calling $cache-&gt;save(&quot;publicbrands&quot;,$brands);  What am I doing wrong?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-4f59d160988cea1bd54d2f73-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-4f59d160988cea1bd54d2f73-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C25755" href="#C25755">
+                <time itemprop="dateCreated" datetime="2015-11-04T01:06:03-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="http://php.net/manual/en/memcached.getresultcode.php">http://php.net/manual/en/memcached.getresultcode.php</a></p>
+<p>20 - MEMCACHED_NO_SERVERS</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="25755" data-cf-modified-4f59d160988cea1bd54d2f73-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="25755" data-cf-modified-4f59d160988cea1bd54d2f73-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e00a6fdd3e722135512e013b7f1e9693?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a>        </span>
+        <br>
+
+        <span class="karma">17.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C25769" href="#C25769">
+                <time itemprop="dateCreated" datetime="2015-11-04T07:09:56-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks! I thought this was a Phalcon specific error and found no docs. Good to know it's a general PHP error code.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="25769" data-cf-modified-4f59d160988cea1bd54d2f73-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="25769" data-cf-modified-4f59d160988cea1bd54d2f73-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e00a6fdd3e722135512e013b7f1e9693?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a>        </span>
+        <br>
+
+        <span class="karma">17.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C25793" href="#C25793">
+                <time itemprop="dateCreated" datetime="2015-11-04T16:17:39-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I've made sure that memcached is installed on the server, but I'm still getting the same error.  When I print_r the cache instance, I get this:</p>
+<pre><code class="language-php">    object(Phalcon\Cache\Backend\Libmemcached)#104 (8) {
+    ["_frontend":protected]=&gt;
+    object(Phalcon\Cache\Frontend\Data)#118 (1) {
+        ["_frontendOptions":protected]=&gt;
+        array(1) {
+        ["lifetime"]=&gt;
+          int(900)
+        }
+    }
+    ["_options":protected]=&gt;
+    array(2) {
+        ["servers"]=&gt;
+        array(3) {
+        ["host"]=&gt;
+        string(9) "127.0.0.1"
+        ["port"]=&gt;
+        string(5) "11211"
+        ["weight"]=&gt;
+        string(3) "100"
+        }
+        ["statsKey"]=&gt;
+        string(5) "_PHCM"
+    }
+    ["_prefix":protected]=&gt;
+    string(0) ""
+    ["_lastKey":protected]=&gt;
+    string(0) ""
+    ["_lastLifetime":protected]=&gt;
+    NULL
+    ["_fresh":protected]=&gt;
+    bool(false)
+    ["_started":protected]=&gt;
+    bool(false)
+    ["_memcache":protected]=&gt;
+    NULL
+    }</code></pre>
+<p>It seems like this is a valid instance of the memcached backend.  The code from above is still valid, but I continue to get this error</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="25793" data-cf-modified-4f59d160988cea1bd54d2f73-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="25793" data-cf-modified-4f59d160988cea1bd54d2f73-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e00a6fdd3e722135512e013b7f1e9693?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3916/zhegwood" class="user-moderator-N"><span itemprop="name">Zach</span></a>        </span>
+        <br>
+
+        <span class="karma">17.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C25795" href="#C25795">
+                <time itemprop="dateCreated" datetime="2015-11-04T16:33:44-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Never mind... Created it via DI and now it's working.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="25795" data-cf-modified-4f59d160988cea1bd54d2f73-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="25795" data-cf-modified-4f59d160988cea1bd54d2f73-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bcb5cc9f3d1e3c3cab87efd5ac1dc9c7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4525/stamster" class="user-moderator-N"><span itemprop="name">Jonathan Aaron Steel</span></a>        </span>
+        <br>
+
+        <span class="karma">79.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C28351" href="#C28351">
+                <time itemprop="dateCreated" datetime="2015-12-27T20:41:35-07:00" class="action-date">Dec '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>DI (SharedService) is always a way to go.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="28351" data-cf-modified-4f59d160988cea1bd54d2f73-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="28351" data-cf-modified-4f59d160988cea1bd54d2f73-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="9285" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

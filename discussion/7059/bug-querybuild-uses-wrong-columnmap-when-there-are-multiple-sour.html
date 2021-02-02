@@ -1,0 +1,121 @@
+---
+layout: default
+title: '[Bug] QueryBuild uses wrong columnMap when there are multiple sources - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/9/paginator">Paginator</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">[Bug] QueryBuild uses wrong columnMap when there are multiple sources</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/4025/hairui219" class="user-moderator-N"><span itemprop="name">hairui219</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-06-09T11:46:51-07:00">Jun '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-06-09T11:46:51-07:00">Jun '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>423</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/2a8411527a26e5fa6745cf22f6bee41c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/4025/hairui219" class="user-moderator-N"><span itemprop="name">hairui219</span></a></span>
+                <span class="karma">499</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C7059" href="#C7059">
+        <time class="action-date">Jun '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Phalcon 2.0.1 /  Php 5.5.12-2ubuntu4.4 / Ubuntu 14.10</p>
+<p>I am using the QueryBuilder together with Paginator. </p>
+<p>Here is my original code:</p>
+<pre><code class="language-php">    public function getOrgIssueList($org_id, $page = 1, $limit = 20)
+    {
+        $builder = $this-&gt;getModelsManager()-&gt;createBuilder()
+            -&gt;columns('i.*')
+            -&gt;from(array('i' =&gt; 'GQ\Models\Issue', 'p' =&gt; 'GQ\Models\Paper'))
+            -&gt;where('i.paper_id=p.id')
+            -&gt;andWhere('p.org_id=' . $org_id)
+            -&gt;orderBy('issue DESC');
+
+        $paginator = new QueryBuilder(array(
+            "builder" =&gt; $builder,
+            "limit" =&gt; $limit,
+            "page" =&gt; $page
+        ));
+
+        return $paginator-&gt;getPaginate();
+    }</code></pre>
+<p>Everything looks fine, but I got the strange error while fetching results from the Paginator.</p>
+<blockquote>
+<p>Column 'paper_id' is not part of the column map</p>
+</blockquote>
+<p>As I took a deep look inside the resultset, I found the _columnMap was set to the ColumnMap of GQ\Models\Paper rather than GQ\Models\Issue (which was desired).</p>
+<h1><em>QuickFix:</em></h1>
+<pre><code class="language-php">//reverse the array in the 'from' syntax 
+            -&gt;from(array('i' =&gt; 'GQ\Models\Issue', 'p' =&gt; 'GQ\Models\Paper'))
+//to
+            -&gt;from(array('p' =&gt; 'GQ\Models\Paper', 'i' =&gt; 'GQ\Models\Issue'))</code></pre>
+<p>And everything was fine by now. But I still think it is a problem need to be solved.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-aa44e87445390c81ca44fd1d-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-aa44e87445390c81ca44fd1d-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/210/andresgutierrez" class="user-moderator-Y"><span itemprop="name">Andres Gutierrez</span></a>        </span>
+        <br>
+
+        <span class="karma">34.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C19297" href="#C19297">
+                <time itemprop="dateCreated" datetime="2015-06-10T08:10:03-07:00" class="action-date">Jun '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Could you please try again using Phalcon 2.0.3 (master branch)?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="19297" data-cf-modified-aa44e87445390c81ca44fd1d-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="19297" data-cf-modified-aa44e87445390c81ca44fd1d-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="7059" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,218 @@
+---
+layout: default
+title: 'Phalcon does not catch MySQL error on duplicate entry - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Phalcon does not catch MySQL error on duplicate entry</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2081/mjankovskis" class="user-moderator-N"><span itemprop="name">mjankovskis</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-08-08T00:42:51-07:00">Aug '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-08-08T00:42:51-07:00">Aug '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>2131</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/97e3c74cec107116eaa0d4eb22e1531d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2081/mjankovskis" class="user-moderator-N"><span itemprop="name">mjankovskis</span></a></span>
+                <span class="karma">4.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3065" href="#C3065">
+        <time class="action-date">Aug '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have table structure like</p>
+<pre><code>id -         slug -       locale 
+1 -     my-cool-slug - en
+2 -     my-cool-slug - lv</code></pre>
+<p>id - primary key
+slug_locale = unique key( like - my-cool-slug_en, and my-cool-slug_lv same slugs, but locale is different thats why there's no error)</p>
+<p>When I try to add a new slug with Phalcon it shows error</p>
+<p>SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry 'my-cool-slug-lv' for key 'slug_locale'</p>
+<pre><code class="language-php">        $data = EventsLang::findFirst(array(
+            'conditions' =&gt; 'object_id = :id: AND locale = :locale:',
+            'bind' =&gt; array('id' =&gt; $object_id, 'locale' =&gt; $locale)
+        ));
+        if(!$data) {
+            $data = new EventsLang;
+            $data-&gt;locale= $locale;
+            $data-&gt;object_id = $object_id;
+        }
+        if($transaction) $data-&gt;setTransaction($transaction);
+        if(isset($columns['slug']) and !empty($columns['slug'])) $data-&gt;slug = $columns['slug'];
+        if($data-&gt;save()) {
+            return true;
+        }
+        if($transaction) $transaction-&gt;rollback(t("Could not save translation"));
+        return false;</code></pre>
+<p>Here's the code I'm passing transaction from before Event creating, like </p>
+<pre><code class="language-php">        $transaction = \Core::getTransaction();
+        try {
+            if($event_id) {
+                $events_obj = Events::findFirst($event_id);
+                if(!$events_obj) $events_obj = new Events();
+            } else {
+                $events_obj = new Events();
+            }
+            $events_obj-&gt;setTransaction($transaction);
+            if(!$events_obj-&gt;save()) {
+                $transaction-&gt;rollback(t("Nevarēja saglabāt pamatdatus"));
+            }</code></pre>
+<p>And I pass created transaction before</p>
+<pre><code class="language-php">            EventsLang::add($events_obj-&gt;id,$lang,$columns, $transaction);
+            }  catch (\Phalcon\Mvc\Model\Transaction\Failed $e) {
+            return array(
+                'error' =&gt; $e-&gt;getMessage()
+            );
+        }</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-1298b8e185da18d9086c09ac-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-1298b8e185da18d9086c09ac-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c393137504e3c8e04fec99f187fcc33e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1057/maxgalbu" class="user-moderator-N"><span itemprop="name">Max Galbusera</span></a>        </span>
+        <br>
+
+        <span class="karma">3.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="10162" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '14</span>
+              </span><br/><a name="C10162" href="#C10162">
+                <time itemprop="dateCreated" datetime="2014-08-08T03:14:51-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You say your table columns are <code>id</code>, <code>slug</code> and <code>locale</code> but your query uses <code>object_id</code></p>
+<pre><code class="language-php">    $data = EventsLang::findFirst(array(
+        'conditions' =&gt; 'object_id = :id: AND locale = :locale:',
+        'bind' =&gt; array('id' =&gt; $object_id, 'locale' =&gt; $locale)
+    ));</code></pre>
+<p>And:</p>
+<pre><code class="language-php">if(isset($columns['slug']) and !empty($columns['slug'])) $data-&gt;slug = $columns['slug'];</code></pre>
+<p>What is $columns?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10162" data-cf-modified-1298b8e185da18d9086c09ac-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10162" data-cf-modified-1298b8e185da18d9086c09ac-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/97e3c74cec107116eaa0d4eb22e1531d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2081/mjankovskis" class="user-moderator-N"><span itemprop="name">mjankovskis</span></a>        </span>
+        <br>
+
+        <span class="karma">4.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="10164" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '14</span>
+              </span><br/><a name="C10164" href="#C10164">
+                <time itemprop="dateCreated" datetime="2014-08-08T04:07:43-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>There's nothing with that, i just interpreted to you to understand it easier    </p>
+<pre><code>id === object_id</code></pre>
+<p>$columns is this, there's no point with that, just passing slug column to EventLang models</p>
+<pre><code class="language-php">    $columns = array(
+        'slug' =&gt; seo_string($data['title'][$lang]),
+    );</code></pre>
+<p>There's more fields on table, but I showed only what is used to!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10164" data-cf-modified-1298b8e185da18d9086c09ac-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10164" data-cf-modified-1298b8e185da18d9086c09ac-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C10177" href="#C10177">
+                <time itemprop="dateCreated" datetime="2014-08-08T11:44:39-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I think this would not be handled better by Phalcon unless you add an UniquenessValidator:</p>
+<ul>
+<li><a href="http://docs.phalcon.io/en/latest/reference/models.html#validating-data-integrity">http://docs.phalcon.io/en/latest/reference/models.html#validating-data-integrity</a></li>
+<li><a href="https://github.com/phalcon/invo/blob/master/app/models/Users.php#L17">https://github.com/phalcon/invo/blob/master/app/models/Users.php#L17</a></li>
+</ul></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10177" data-cf-modified-1298b8e185da18d9086c09ac-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10177" data-cf-modified-1298b8e185da18d9086c09ac-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/97e3c74cec107116eaa0d4eb22e1531d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2081/mjankovskis" class="user-moderator-N"><span itemprop="name">mjankovskis</span></a>        </span>
+        <br>
+
+        <span class="karma">4.5k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C10225" href="#C10225">
+                <time itemprop="dateCreated" datetime="2014-08-11T00:50:54-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yeah, thank you, but its little messy by this, coz other table related errors Phalcon can handle! :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10225" data-cf-modified-1298b8e185da18d9086c09ac-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10225" data-cf-modified-1298b8e185da18d9086c09ac-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3065" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

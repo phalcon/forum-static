@@ -1,0 +1,274 @@
+---
+layout: default
+title: 'One-to-one relationship through an intermediate table - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">One-to-one relationship through an intermediate table</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-10-23T09:58:26-07:00">Oct '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-10-23T09:58:26-07:00">Oct '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>630</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a></span>
+                <span class="karma">125.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17145" href="#C17145">
+        <time class="action-date">Oct '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>My data has a one-to-one relationship between a <code>CourseAdd</code> model, and it's <code>EventType</code> model.  However, the data in those tables don't interact with each other - they both relate back to a row in the <code>event</code> table.</p>
+<p>I have created a many-to-many relationship like so:</p>
+<pre><code class="language-php">$this-&gt;hasManyToMany(
+            'event_id',
+            '\Model\Event',
+            'id','type',
+            '\Model\EventType',
+            'name',
+            ['alias'=&gt;'Type']
+        );</code></pre>
+<p>This is successfully setting up the relationship, but the problem is that it's not set up as a single entity, but rather a collection.  So in <code>CourseAdd</code>, <code>$this-&gt;Type</code> references a simple resultset.  To reference the particular record, I have to go <code>$this-&gt;Type[0]</code>.</p>
+<p>Is there a way to set up a one-to-one relationship, but specifying it through an intermediary table?  Looking at the Zephyr source code, it appears there are references to &quot;has-one-through&quot;, but I don't see any subsequent methods to call.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-0ccedaea2fefdd01c326f256-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-0ccedaea2fefdd01c326f256-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C51713" href="#C51713">
+                <time itemprop="dateCreated" datetime="2017-10-23T20:19:50-07:00" class="action-date">Oct '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi<a href="https://forum.phalcon.io/user/0/Dylan"> @Dylan</a> do you try with <code>params</code> in relation options?</p>
+<pre><code class="language-php">public function initialize() {
+  $this-&gt;hasManyToMany(
+    'event_id',
+    '\Model\Event',
+    'id','type',
+    '\Model\EventType',
+    'name',
+    [
+      'alias'=&gt;'Type',
+      'params' =&gt; [
+          'limit' =&gt; 1 // one-to-one
+      ]
+    ]
+  );
+}
+
+public function getType() {
+    return $this-&gt;getRelated('Type')-&gt;getFirst();
+}
+
+public function setType($type) {
+    $this-&gt;Type[0] = $type;
+}
+</code></pre>
+<p>With that you can simulate a one-to-one.</p>
+<p>I hope it helps. Good luck</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51713" data-cf-modified-0ccedaea2fefdd01c326f256-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51713" data-cf-modified-0ccedaea2fefdd01c326f256-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a4422d89d7bed6763f236da321a1747f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9683/petermoo" class="user-moderator-N"><span itemprop="name">Peter</span></a>        </span>
+        <br>
+
+        <span class="karma">9.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C51725" href="#C51725">
+                <time itemprop="dateCreated" datetime="2017-10-23T22:47:33-07:00" class="action-date">Oct '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Is there any other code using the components of the relationship? Do they check/protect the one-to-one relationship? Things could be messy if one bit of code assumes one-to-one while another bit allows a many-to-one connection.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51725" data-cf-modified-0ccedaea2fefdd01c326f256-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51725" data-cf-modified-0ccedaea2fefdd01c326f256-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C51713"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Emilio Degiovanni                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C51749" href="#C51749">
+                <time itemprop="dateCreated" datetime="2017-10-24T08:32:28-07:00" class="action-date">Oct '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Hi<a href="https://forum.phalcon.io/user/0/Dylan"> @Dylan</a> do you try with <code>params</code> in relation options?</p>
+<pre><code class="language-php">public function initialize() {
+ $this-&gt;hasManyToMany(
+  'event_id',
+  '\Model\Event',
+  'id','type',
+  '\Model\EventType',
+  'name',
+  [
+    'alias'=&gt;'Type',
+    'params' =&gt; [
+        'limit' =&gt; 1 // one-to-one
+    ]
+  ]
+ );
+}
+
+public function getType() {
+  return $this-&gt;getRelated('Type')-&gt;getFirst();
+}
+
+public function setType($type) {
+  $this-&gt;Type[0] = $type;
+}
+</code></pre>
+<p>With that you can simulate a one-to-one.</p>
+<p>I hope it helps. Good luck</p>
+</blockquote>
+<p>I added the <code>params</code> option, but it didn't change the data structure at all.  I tried looking for other options other than <code>alias</code> but I wasn't able to find any documentation.  Could you provide a link?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51749" data-cf-modified-0ccedaea2fefdd01c326f256-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51749" data-cf-modified-0ccedaea2fefdd01c326f256-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.7k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C51725"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/a4422d89d7bed6763f236da321a1747f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Peter                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="51751" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '17</span>
+              </span><br/><a name="C51751" href="#C51751">
+                <time itemprop="dateCreated" datetime="2017-10-24T08:33:15-07:00" class="action-date">Oct '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Is there any other code using the components of the relationship? Do they check/protect the one-to-one relationship? Things could be messy if one bit of code assumes one-to-one while another bit allows a many-to-one connection.</p>
+</blockquote>
+<p>I don't anticipate this relationship being used for anything other than read-only.  And since this is technically a kind of many-to-one relationship, the assumption will always be that &quot;Type&quot; should be a single record.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51751" data-cf-modified-0ccedaea2fefdd01c326f256-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51751" data-cf-modified-0ccedaea2fefdd01c326f256-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.2k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C51749"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Dylan Anderson                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C51757" href="#C51757">
+                <time itemprop="dateCreated" datetime="2017-10-24T18:51:46-07:00" class="action-date">Oct '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well the only doc about is <a href="https://docs.phalcon.io/en/3.2/db-models-relationships">model relationship</a>. The <code>params</code> option was in post on blog but paginations now is broken. But basically you can pass in <code>params</code> the same parameters what use in <a href="https://docs.phalcon.io/en/3.2/db-models#finding-records">find()/findFirst()</a> just <code>limit conditions order etc...</code></p>
+<p>I hope it helps you</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51757" data-cf-modified-0ccedaea2fefdd01c326f256-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51757" data-cf-modified-0ccedaea2fefdd01c326f256-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1eb2415bda000b22fd1f801bb9e8c003?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2/niden" class="user-moderator-Y"><span itemprop="name">Nikolaos Dimopoulos</span></a>        </span>
+        <br>
+
+        <span class="karma">39.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C51871" href="#C51871">
+                <time itemprop="dateCreated" datetime="2017-10-29T11:30:55-07:00" class="action-date">Oct '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Have a look at this blog post (yeah I know I need to fix the pagination for the blog)</p>
+<p><a href="https://blog.phalcon.io/post/phalcon-2-0-4-released">https://blog.phalcon.io/post/phalcon-2-0-4-released</a></p>
+<p>It outlines the relationships with parameters</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="51871" data-cf-modified-0ccedaea2fefdd01c326f256-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="51871" data-cf-modified-0ccedaea2fefdd01c326f256-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17145" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

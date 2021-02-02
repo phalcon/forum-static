@@ -1,0 +1,486 @@
+---
+layout: default
+title: 'ACL with namespaces - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/17/acl">Acl</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">ACL with namespaces</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/8997/zanza54" class="user-moderator-N"><span itemprop="name">zanza54</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-05-12T02:11:38-07:00">May '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-05-12T02:11:38-07:00">May '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>May '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>772</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/ca092b8cd9300d03a429a7e32f4c8e94?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/8997/zanza54" class="user-moderator-N"><span itemprop="name">zanza54</span></a></span>
+                <span class="karma">5.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C16127" href="#C16127">
+        <time class="action-date">May '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm writing an ACL that needs to take namespaces into account.
+Some of my controllers are named the same but are from different namespaces.
+Example:
+<code>App\Controllers\Account\Tickets</code>
+<code>App\Controllers\Admin\Tickets</code></p>
+<p>How can I add this functionality to my ACL? My first thought was to add the namespace in the resourcename and let the beforeDispatch code do a namepace+controller search in all the available resources. This resulted in an <code>Dispatcher has detected a cyclic routing causing stability problems</code> error.</p>
+<p>Thanks in advance for any help!</p>
+<p>Original code:</p>
+<pre><code class="language-php">
+&lt;?php
+
+use Phalcon\Acl;
+use Phalcon\Acl\Role;
+use Phalcon\Acl\Adapter\Memory as AclList;
+use Phalcon\Acl\Resource;
+use Phalcon\Events\Event;
+use Phalcon\Mvc\User\Plugin;
+use Phalcon\Mvc\Dispatcher;
+
+class SecurityPlugin extends Plugin
+{
+
+    /**
+     * Returns an existing or new access control list
+     *
+     * @returns AclList
+     */
+    public function getAcl()
+    {
+        if (!isset($this-&gt;persistent-&gt;acl)) {
+            $acl = new AclList();
+            $acl-&gt;setDefaultAction(Acl::DENY);
+
+            // Register roles
+            $roles = [
+        'admins' =&gt; new Role(
+          'admins',
+          'Website administrators'
+        ),
+                'users'  =&gt; new Role(
+                    'users',
+                    'Member privileges, granted after sign in.'
+                ),
+                'guests' =&gt; new Role(
+                    'guests',
+                    'Anyone browsing the site who is not signed in is considered to be a "Guest".'
+                )
+            ];
+            foreach ($roles as $role) {
+                $acl-&gt;addRole($role);
+            }
+
+            //Private area resources
+            $privateResources = array(
+                'accountdashboard'    =&gt; array('*'),
+                'licensemanager'    =&gt; array('*'),
+                'profile'    =&gt; array('*'),
+                'tickets'    =&gt; array('*')
+            );
+
+      $privateResourcesAdmin = array(
+                'admindashboard'     =&gt;  array('*'),
+                'tickets'     =&gt; array('*'),
+                'licensemanager' =&gt; array('*')
+            );
+
+      //Public area resources
+            $publicResources = array(
+                //Public section
+                'index'       =&gt; array('*'),
+                'register'    =&gt; array('*'),
+                'errors'      =&gt; array('show401', 'show404', 'show500'),
+                'register'    =&gt; array('*'),
+                'login'       =&gt; array('*'),
+                'logout'            =&gt; array('*'),
+                'buy'                   =&gt; array('*'),
+                'license'           =&gt; array('*'),
+                //API
+                'auth'                          =&gt; array('*'),
+                'user'                          =&gt; array('*'),
+                'courses'                       =&gt; array('*'),
+                'announcements'         =&gt; array('*'),
+            );
+
+            foreach ($privateResources as $resource =&gt; $actions) {
+                $acl-&gt;addResource(new Resource($resource), $actions);
+            }
+
+      foreach ($privateResourcesAdmin as $resource =&gt; $actions) {
+        $acl-&gt;addResource(new Resource($resource), $actions);
+      }
+
+            foreach ($publicResources as $resource =&gt; $actions) {
+                $acl-&gt;addResource(new Resource($resource), $actions);
+            }
+
+            //Grant access to public areas to users, admins and guests
+            foreach ($roles as $role) {
+                foreach ($publicResources as $resource =&gt; $actions) {
+                    foreach ($actions as $action){
+                        $acl-&gt;allow($role-&gt;getName(), $resource, $action);
+                    }
+                }
+            }
+
+            //Grant access to private area to role Users
+            foreach ($privateResources as $resource =&gt; $actions) {
+                foreach ($actions as $action){
+                    $acl-&gt;allow('users', $resource, $action);
+                }
+            }
+
+      foreach ($privateResourcesAdmin as $resource =&gt; $actions) {
+                foreach ($actions as $action){
+                    $acl-&gt;allow('admins', $resource, $action);
+                }
+            }
+
+            //The acl is stored in session, APC would be useful here too
+            $this-&gt;persistent-&gt;acl = $acl;
+        }
+        return $this-&gt;persistent-&gt;acl;
+    }
+
+    /**
+     * This action is executed before execute any action in the application
+     *
+     * @param Event $event
+     * @param Dispatcher $dispatcher
+     * @return bool
+     */
+    public function beforeDispatch(Event $event, Dispatcher $dispatcher){
+        $auth = $this-&gt;session-&gt;has('auth');
+
+        if (!$auth){
+            $role = 'guests';
+        } else {
+      $authSession = $this-&gt;session-&gt;get("auth");
+      if($authSession['account_type'] == 'admin'){
+        $role = 'admins';
+      } else {
+        $role = 'users';
+      }
+        }
+
+        $namespace = $dispatcher-&gt;getNamespaceName();
+        $controller = $dispatcher-&gt;getControllerName();
+        $action = $dispatcher-&gt;getActionName();
+        $acl = $this-&gt;getAcl();
+
+        if (!$acl-&gt;isResource($controller)) {
+            $dispatcher-&gt;forward([
+                'namespace' =&gt; 'App\\Controllers',
+                'controller' =&gt; 'errors',
+                'action'     =&gt; 'show404'
+            ]);
+            return false;
+        }
+
+        $allowed = $acl-&gt;isAllowed($role, $controller, $action);
+
+        if (!$allowed) {
+            if($namespace == 'App\\Controllers\\Admin'){
+                $dispatcher-&gt;forward(array(
+                    'namespace' =&gt; 'App\\Controllers',
+                    'controller' =&gt; 'errors',
+                    'action'     =&gt; 'show404'
+                ));
+            } else {
+                $dispatcher-&gt;forward(array(
+                    'namespace' =&gt; 'App\\Controllers',
+                    'controller' =&gt; 'errors',
+                    'action'     =&gt; 'show401'
+                ));
+            }
+            return false;
+        }
+    }
+}
+</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-082e09906d7c0a4da27c76b3-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-082e09906d7c0a4da27c76b3-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="48127" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '17</span>
+              </span><br/><a name="C48127" href="#C48127">
+                <time itemprop="dateCreated" datetime="2017-05-12T03:25:37-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Well tbh i would just add resource as:</p>
+<p><code>Admin:Tickes</code> and <code>Account:Tickets</code> names, and just proper code in <code>beforeDispatch</code></p>
+<p>This error you have is most likely due to some forward loop. Not related to those namespaces thing. Test it with xdebug to find what exactly happens i gueess it's like - beforeDispatch -&gt; forward -&gt; beforeDispatch -&gt; forward etc</p>
+<p>Also i think it's better to put this code to beforeExecuteAction so you know that those actions exist.</p>
+<p>Well at least i use it like this in multimodule app.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48127" data-cf-modified-082e09906d7c0a4da27c76b3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48127" data-cf-modified-082e09906d7c0a4da27c76b3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/ca092b8cd9300d03a429a7e32f4c8e94?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8997/zanza54" class="user-moderator-N"><span itemprop="name">zanza54</span></a>        </span>
+        <br>
+
+        <span class="karma">5.9k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C48127"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Wojciech Ślawski                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="48129" data-toggle="modal" data-target="#historyModal">
+                edited <span>May '17</span>
+              </span><br/><a name="C48129" href="#C48129">
+                <time itemprop="dateCreated" datetime="2017-05-13T07:02:12-07:00" class="action-date">May '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Your <code>:</code> suggestion did the trick. I tried using a slash but that just wouldn't work. </p>
+<p>I'm using beforeDispatch in conjunction with an not found plugin so it handles all the exceptions being thrown by <code>beforeDispatch</code> :)</p>
+<p>Thank you very much for your help!</p>
+<p>For future reference by other people, this is the code that solved it for me:</p>
+<pre><code class="language-php">
+&lt;?php
+
+use Phalcon\Acl;
+use Phalcon\Acl\Role;
+use Phalcon\Acl\Adapter\Memory as AclList;
+use Phalcon\Acl\Resource;
+use Phalcon\Events\Event;
+use Phalcon\Mvc\User\Plugin;
+use Phalcon\Mvc\Dispatcher;
+
+class SecurityPlugin extends Plugin
+{
+
+    /**
+     * Returns an existing or new access control list
+     *
+     * @returns AclList
+     */
+    public function getAcl()
+    {
+        if (!isset($this-&gt;persistent-&gt;acl)) {
+            $acl = new AclList();
+            $acl-&gt;setDefaultAction(Acl::DENY);
+
+            // Register roles
+            $roles = [
+        'admins' =&gt; new Role(
+          'admins',
+          'Website administrators'
+        ),
+                'users'  =&gt; new Role(
+                    'users',
+                    'Member privileges, granted after sign in.'
+                ),
+                'guests' =&gt; new Role(
+                    'guests',
+                    'Anyone browsing the site who is not signed in is considered to be a "Guest".'
+                )
+            ];
+            foreach ($roles as $role) {
+                $acl-&gt;addRole($role);
+            }
+
+            //Private area resources
+            $privateResources = array(
+                'App\Controllers\Account:accountdashboard'    =&gt; array('*'),
+                'App\Controllers\Account:licensemanager'    =&gt; array('*'),
+                'App\Controllers\Account:profile'    =&gt; array('*'),
+                'App\Controllers\Account:tickets'    =&gt; array('*')
+            );
+
+      $privateResourcesAdmin = array(
+                'App\Controllers\Admin:admindashboard'     =&gt;  array('*'),
+                'App\Controllers\Admin:tickets'     =&gt; array('*'),
+                'App\Controllers\Admin:licensemanager' =&gt; array('*')
+            );
+
+      //Public area resources
+            $publicResources = array(
+                //Public section
+                'App\Controllers:index'       =&gt; array('*'),
+                'App\Controllers:register'    =&gt; array('*'),
+                'App\Controllers:errors'      =&gt; array('show401', 'show404', 'show500'),
+                'App\Controllers:register'    =&gt; array('*'),
+                'App\Controllers:login'       =&gt; array('*'),
+                'App\Controllers:logout'            =&gt; array('*'),
+                'App\Controllers:buy'                   =&gt; array('*'),
+                'App\Controllers:license'           =&gt; array('*'),
+                //API
+                'App\Controllers\Api:auth'                          =&gt; array('*'),
+                'App\Controllers\Api:user'                          =&gt; array('*')
+            );
+
+            foreach ($privateResources as $resource =&gt; $actions) {
+                $acl-&gt;addResource(new Resource($resource), $actions);
+            }
+
+      foreach ($privateResourcesAdmin as $resource =&gt; $actions) {
+        $acl-&gt;addResource(new Resource($resource), $actions);
+      }
+
+            foreach ($publicResources as $resource =&gt; $actions) {
+                $acl-&gt;addResource(new Resource($resource), $actions);
+            }
+
+            //Grant access to public areas to users, admins and guests
+            foreach ($roles as $role) {
+                foreach ($publicResources as $resource =&gt; $actions) {
+                    foreach ($actions as $action){
+                        $acl-&gt;allow($role-&gt;getName(), $resource, $action);
+                    }
+                }
+            }
+
+            //Grant access to private area to role Users
+            foreach ($privateResources as $resource =&gt; $actions) {
+                foreach ($actions as $action){
+                    $acl-&gt;allow('users', $resource, $action);
+                }
+            }
+
+      foreach ($privateResourcesAdmin as $resource =&gt; $actions) {
+                foreach ($actions as $action){
+                    $acl-&gt;allow('admins', $resource, $action);
+                }
+            }
+
+            //The acl is stored in session, APC would be useful here too
+            $this-&gt;persistent-&gt;acl = $acl;
+        }
+        return $this-&gt;persistent-&gt;acl;
+    }
+
+    /**
+     * This action is executed before execute any action in the application
+     *
+     * @param Event $event
+     * @param Dispatcher $dispatcher
+     * @return bool
+     */
+    public function beforeDispatch(Event $event, Dispatcher $dispatcher){
+        $auth = $this-&gt;session-&gt;has('auth');
+
+        if (!$auth){
+            $role = 'guests';
+        } else {
+      $authSession = $this-&gt;session-&gt;get("auth");
+      if($authSession['account_type'] == 'admin'){
+        $role = 'admins';
+      } else {
+        $role = 'users';
+      }
+        }
+
+        $namespace = $dispatcher-&gt;getNamespaceName();
+        $controller = $dispatcher-&gt;getControllerName();
+        $action = $dispatcher-&gt;getActionName();
+        $acl = $this-&gt;getAcl();
+
+        //Mind the ':' inbetween $namespace and $controller!
+        if (!$acl-&gt;isResource($namespace . ":" . $controller)) {
+            $dispatcher-&gt;forward([
+                'namespace' =&gt; 'App\\Controllers',
+                'controller' =&gt; 'errors',
+                'action'     =&gt; 'show404'
+            ]);
+            return false;
+        }
+
+        //Mind the ':' inbetween $namespace and $controller!
+        $allowed = $acl-&gt;isAllowed($role, $namespace . ":" . $controller, $action);
+
+        if (!$allowed) {
+            if($namespace == 'App\\Controllers\\Admin'){
+                $dispatcher-&gt;forward(array(
+                    'namespace' =&gt; 'App\\Controllers',
+                    'controller' =&gt; 'errors',
+                    'action'     =&gt; 'show404'
+                ));
+            } else {
+                $dispatcher-&gt;forward(array(
+                    'namespace' =&gt; 'App\\Controllers',
+                    'controller' =&gt; 'errors',
+                    'action'     =&gt; 'show401'
+                ));
+            }
+            return false;
+        }
+    }
+}
+</code></pre>
+<blockquote>
+<p>Well tbh i would just add resource as:</p>
+<p><code>Admin:Tickes</code> and <code>Account:Tickets</code> names, and just proper code in <code>beforeDispatch</code></p>
+<p>This error you have is most likely due to some forward loop. Not related to those namespaces thing. Test it with xdebug to find what exactly happens i gueess it's like - beforeDispatch -&gt; forward -&gt; beforeDispatch -&gt; forward etc</p>
+<p>Also i think it's better to put this code to beforeExecuteAction so you know that those actions exist.</p>
+<p>Well at least i use it like this in multimodule app.</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48129" data-cf-modified-082e09906d7c0a4da27c76b3-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48129" data-cf-modified-082e09906d7c0a4da27c76b3-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="16127" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

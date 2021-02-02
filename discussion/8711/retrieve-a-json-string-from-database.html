@@ -1,0 +1,238 @@
+---
+layout: default
+title: 'Retrieve a JSON string from database - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Retrieve a JSON string from database</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/5045/k7faq" class="user-moderator-N"><span itemprop="name">Steven Rhodes</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-09-26T22:27:55-07:00">Sep '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-09-26T22:27:55-07:00">Sep '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1643</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/c6251d91458d83e25f95e63b4927dc39?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/5045/k7faq" class="user-moderator-N"><span itemprop="name">Steven Rhodes</span></a></span>
+                <span class="karma">1.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C8711" href="#C8711">
+        <time class="action-date">Sep '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have a database with fields that contain JSON arrays.
+If I PDO select the row contents of one of these tables via straight PHP I can dump the data to the screen and it matches the database. Example:</p>
+<pre><code class="language-php">$query = $database-&gt;prepare("SELECT * FROM modsettings
+                WHERE proj_id = ? AND mo = ? ORDER BY id DESC LIMIT 1");
+$query-&gt;execute(array($proj["id"], 2));
+$result = $query1-&gt;fetch(PDO::FETCH_ASSOC);
+var_dump($result);
+{"mid":"","module_id":"1" ......} // stripped excessive content</code></pre>
+<p>When I attempt this same with PhalconPHP I am greeted with garbage.</p>
+<pre><code class="language-php">$result = Modulesettings::findFirst( array( 'conditions' =&gt; 'project_token = "' . $token . '"' , 'columns' =&gt; 'settings' ) );
+var_dump($result-&gt;settings);
+object(Phalcon\Mvc\Model\Row)#61 (1) { ["settings"]=&gt; string(167) "{"text":"&lt;\/a&gt;
+
+&lt;\/a&gt;
+","class":""}" }</code></pre>
+<p>How would I get this raw string out of the table? All other data returns fine from all the other tables.</p>
+<p>Thanks.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-d66a4554873c7613cb45193c-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-d66a4554873c7613cb45193c-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/533985d102feef881f5c41933bd43bfb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/283/calinrada" class="user-moderator-N"><span itemprop="name">Calin Rada</span></a>        </span>
+        <br>
+
+        <span class="karma">51.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C23817" href="#C23817">
+                <time itemprop="dateCreated" datetime="2015-09-27T04:56:46-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You could try this 3 solutions:</p>
+<ul>
+<li>Use the built-in method toArray:</li>
+</ul>
+<pre><code class="language-php">$st_result = $result-&gt;toArray();</code></pre>
+<ul>
+<li>Using getters</li>
+</ul>
+<pre><code class="language-php">public function getSettings()
+{
+    return json_decode($this-&gt;settings, true);
+}</code></pre>
+<ul>
+<li>Using afterFetch</li>
+</ul>
+<pre><code class="language-php">public function afterFetch()
+{
+    if ($this-&gt;settings) {
+        $this-&gt;settings = json_decode($this-&gt;settings, true);
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23817" data-cf-modified-d66a4554873c7613cb45193c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23817" data-cf-modified-d66a4554873c7613cb45193c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c6251d91458d83e25f95e63b4927dc39?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5045/k7faq" class="user-moderator-N"><span itemprop="name">Steven Rhodes</span></a>        </span>
+        <br>
+
+        <span class="karma">1.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C23831" href="#C23831">
+                <time itemprop="dateCreated" datetime="2015-09-27T16:18:12-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Calin, thank you.</p>
+<p>Unfortunately none of these ideas produced any results that I have not already experienced. It seems there is some other escaping of results by the framework and I need to find an alternate method to gather the data.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23831" data-cf-modified-d66a4554873c7613cb45193c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23831" data-cf-modified-d66a4554873c7613cb45193c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/7d5e7c755223afdcd7c2680d4547fb53?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4625/hartjo" class="user-moderator-N"><span itemprop="name">Jan Rainier Llarenas</span></a>        </span>
+        <br>
+
+        <span class="karma">3.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="23833" data-toggle="modal" data-target="#historyModal">
+                edited <span>Sep '15</span>
+              </span><br/><a name="C23833" href="#C23833">
+                <time itemprop="dateCreated" datetime="2015-09-27T17:18:26-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>try this one... </p>
+<pre><code>            $result = Modulesettings::findFirst( array( 'conditions' =&gt; 'project_token = "' . $token . '"' , 'columns' =&gt; 'settings' ) );
+            echo json_encode($result-&gt;settings);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23833" data-cf-modified-d66a4554873c7613cb45193c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23833" data-cf-modified-d66a4554873c7613cb45193c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c6251d91458d83e25f95e63b4927dc39?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5045/k7faq" class="user-moderator-N"><span itemprop="name">Steven Rhodes</span></a>        </span>
+        <br>
+
+        <span class="karma">1.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C23835" href="#C23835">
+                <time itemprop="dateCreated" datetime="2015-09-27T18:58:26-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you Jan however no change. Output still does not match record in table.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23835" data-cf-modified-d66a4554873c7613cb45193c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23835" data-cf-modified-d66a4554873c7613cb45193c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/533985d102feef881f5c41933bd43bfb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/283/calinrada" class="user-moderator-N"><span itemprop="name">Calin Rada</span></a>        </span>
+        <br>
+
+        <span class="karma">51.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C23853" href="#C23853">
+                <time itemprop="dateCreated" datetime="2015-09-28T02:21:58-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The only reason why it won't output what you expect, can be related to the data saved in your &quot;settings&quot; column. I am using the afterFetch method without any problems. Also, when I save the data I am doing it with a setter:</p>
+<pre><code class="language-php">public function setMyColumn(array $data)
+{
+    $this-&gt;data = json_encode($data, JSON_FORCE_OBJECT);
+    return $this;
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23853" data-cf-modified-d66a4554873c7613cb45193c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23853" data-cf-modified-d66a4554873c7613cb45193c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/746a625a9264a203a6ddf711e0c6b120?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/301/quasipickle" class="user-moderator-Y"><span itemprop="name">Dylan Anderson</span></a>        </span>
+        <br>
+
+        <span class="karma">125.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C23881" href="#C23881">
+                <time itemprop="dateCreated" datetime="2015-09-28T09:43:50-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It's a little unclear to me exactly what is being retrieved from the database.  Could you paste what you expect and what you're getting?</p>
+<p>Also, please use code formatting - it's easier to read.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23881" data-cf-modified-d66a4554873c7613cb45193c-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23881" data-cf-modified-d66a4554873c7613cb45193c-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="8711" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,640 @@
+---
+layout: default
+title: '[Phalcon 2.0.3] The meta-data is invalid or is corrupt - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/14/annotations">Annotations</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">[Phalcon 2.0.3] The meta-data is invalid or is corrupt</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/4205/nguyenducduy" class="user-moderator-N"><span itemprop="name">Duy Nguyen</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-06-28T18:27:15-07:00">Jun '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-06-28T18:27:15-07:00">Jun '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1024</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/0d3f4e9159103269eea6b3da81b7f4bb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/4205/nguyenducduy" class="user-moderator-N"><span itemprop="name">Duy Nguyen</span></a></span>
+                <span class="karma">1.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C7335" href="#C7335">
+        <time class="action-date">Jun '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi Phalcon team,</p>
+<p>I'm developing a webapp with Phalcon framework, i'm using <strong>the model annotations parser</strong> + <strong> model metadata set</strong> to customize my model property class.</p>
+<p>But some problem appear and i did not fix it. For example:</p>
+<p>I create a user manager feature with CRUD code. Read and Delete action is done and work okay, but Create and Update action is error, when add or edit the model appear message &quot;<strong>The meta-data is invalid or is corrupt</strong>&quot;, can u help me fix my error, i'm tried change metadata storage from file to memory but it not work.</p>
+<p><em>Machine develop enviroment:</em>
+Mac OS X 10.10
+Homebrew package</p>
+<ul>
+<li>
+<ul>
+<li>Nginx 1.8</li>
+</ul>
+</li>
+<li>
+<ul>
+<li>PHP-FPM 5.5</li>
+</ul>
+</li>
+<li>
+<ul>
+<li>Phalcon 2.0.3</li>
+</ul>
+</li>
+<li>
+<ul>
+<li>MySQL 5.6</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-php">Bootstrap.php
+public function initMetadata($options = [])
+    {
+        $config = $this-&gt;di['config'];
+
+        $this-&gt;di-&gt;set('modelsMetadata', function() use ($config) {
+            // $metaData = new PhMetadataFiles(
+            //     ['metaDataDir' =&gt; $config-&gt;app_model-&gt;metadata]
+            // );
+
+            $metaData = new PhMetadataMemory();
+
+            //Set a custom meta-data database introspection
+            $metaData-&gt;setStrategy(new FlyAnnotationsMetaDataInitializer());
+
+            return $metaData;
+        });
+    }
+public function initAnnotations($options = [])
+    {
+        $config = $this-&gt;di['config'];
+
+        $this-&gt;di-&gt;set('annotations', function() use ($config) {
+            // return new PhAnnotationsAdapter([
+            //     'annotationsDir' =&gt; $config-&gt;app_annotations-&gt;cache
+            // ]);
+
+            return new PhAnnotationsAdapterMemory();
+        });
+    }</code></pre>
+<pre><code class="language-php">AnnotationsInitializer.php
+&lt;?php
+/**
+ * \Fly\AnnotationInitializer
+ * AnnotationInitializer.php
+ *
+ * Model Annotation Initializer class
+ *
+ * @author      phalcon.io
+ * @since       2014-12-19
+ * @category    Fly
+ *
+ */
+
+namespace Fly;
+
+use Phalcon\Events\Event;
+use Phalcon\Mvc\Model\Manager as ModelsManager;
+use Phalcon\Mvc\ModelInterface;
+
+class AnnotationsInitializer extends \Phalcon\Mvc\User\Plugin
+{
+
+    /**
+     * This is called after initialize the model
+     *
+     * @param Phalcon\Events\Event $event
+     */
+    public function afterInitialize(Event $event, ModelsManager $manager, ModelInterface $model)
+    {
+        //Reflector
+        $reflector = $this-&gt;annotations-&gt;get($model);
+
+        /**
+         * Read the annotations in the class' docblock
+         */
+        $annotations = $reflector-&gt;getClassAnnotations();
+
+        if ($annotations) {
+
+            /**
+             * Traverse the annotations
+             */
+            foreach ($annotations as $annotation) {
+                switch ($annotation-&gt;getName()) {
+
+                    /**
+                     * Initializes the model's source
+                     */
+                    case 'Source':
+                        $arguments = $annotation-&gt;getArguments();
+                        $manager-&gt;setModelSource($model, $arguments[0]);
+                        break;
+
+                    /**
+                     * Initializes Has-Many relations
+                     */
+                    case 'HasMany':
+                        $arguments = $annotation-&gt;getArguments();
+                        $manager-&gt;addHasMany($model, $arguments[0], $arguments[1], $arguments[2]);
+                        break;
+
+                    /**
+                     * Initializes Has-Many relations
+                     */
+                    case 'BelongsTo':
+                        $arguments = $annotation-&gt;getArguments();
+                        if (isset($arguments[3])) {
+                            $manager-&gt;addBelongsTo($model, $arguments[0], $arguments[1], $arguments[2], $arguments[3]);
+                        } else {
+                            $manager-&gt;addBelongsTo($model, $arguments[0], $arguments[1], $arguments[2]);
+                        }
+                        break;
+
+                }
+            }
+        }
+
+    }
+
+}</code></pre>
+<pre><code class="language-php">AnnotationsMetaDataInitializer.php
+&lt;?php
+/**
+ * \Fly\AnnotationsMetaDataInitializer
+ * AnnotationsMetaDataInitializer.php
+ *
+ * Metadata Annotation Initializer class
+ *
+ * @author      phalcon.io
+ * @since       2014-12-19
+ * @category    Fly
+ *
+ */
+
+namespace Fly;
+
+use Phalcon\Db\Column;
+use Phalcon\DiInterface;
+use Phalcon\Mvc\Model\MetaData;
+use Phalcon\Mvc\ModelInterface;
+
+class AnnotationsMetaDataInitializer
+{
+
+    /**
+     * Initializes the model's meta-data
+     *
+     * @param Phalcon\Mvc\ModelInterface $model
+     * @param Phalcon\DiInterface $di
+     * @return array
+     */
+    public function getMetaData(ModelInterface $model, DiInterface $di)
+    {
+        $reflection = $di['annotations']-&gt;get($model);
+
+        $properties = $reflection-&gt;getPropertiesAnnotations();
+        if (!$properties) {
+            throw new Exception("There are no properties defined on the class");
+        }
+
+        $attributes = [];
+        $nullables = [];
+        $dataTypes = [];
+        $dataTypesBind = [];
+        $numericTypes = [];
+        $primaryKeys = [];
+        $nonPrimaryKeys = [];
+        $identity = false;
+
+        foreach ($properties as $name =&gt; $collection) {
+
+            if ($collection-&gt;has('Column')) {
+
+                $arguments = $collection-&gt;get('Column')-&gt;getArguments();
+
+                /**
+                 * Get the column's name
+                 */
+                if (isset($arguments['column'])) {
+                    $columnName = $arguments['column'];
+                } else {
+                    $columnName = $name;
+                }
+
+                /**
+                 * Check for the 'type' parameter in the 'Column' annotation
+                 */
+                if (isset($arguments['type'])) {
+                    switch ($arguments['type']) {
+                        case 'integer':
+                            $dataTypes[$columnName] = Column::TYPE_INTEGER;
+                            $dataTypesBind[$columnName] = Column::BIND_PARAM_INT;
+                            $numericTypes[$columnName] = true;
+                            break;
+                        case 'string':
+                            $dataTypes[$columnName] = Column::TYPE_VARCHAR;
+                            $dataTypesBind[$columnName] = Column::BIND_PARAM_STR;
+                            break;
+                    }
+                } else {
+                    $dataTypes[$columnName] = Column::TYPE_VARCHAR;
+                    $dataTypesBind[$columnName] = Column::BIND_PARAM_STR;
+                }
+
+                /**
+                 * Check for the 'nullable' parameter in the 'Column' annotation
+                 */
+                if (!$collection-&gt;has('Identity')) {
+                    if (isset($arguments['nullable'])) {
+                        if (!$arguments['nullable']) {
+                            $nullables[] = $columnName;
+                        }
+                    }
+                }
+
+                $attributes[] = $columnName;
+
+                /**
+                 * Check if the attribute is marked as primary
+                 */
+                if ($collection-&gt;has('Primary')) {
+                    $primaryKeys[] = $columnName;
+                } else {
+                    $nonPrimaryKeys[] = $columnName;
+                }
+
+                /**
+                 * Check if the attribute is marked as identity
+                 */
+                if ($collection-&gt;has('Identity')) {
+                    $identity = $columnName;
+                }
+
+            }
+
+        }
+
+        return [
+
+            //Every column in the mapped table
+            MetaData::MODELS_ATTRIBUTES =&gt; $attributes,
+
+            //Every column part of the primary key
+            MetaData::MODELS_PRIMARY_KEY =&gt; $primaryKeys,
+
+            //Every column that isn't part of the primary key
+            MetaData::MODELS_NON_PRIMARY_KEY =&gt; $nonPrimaryKeys,
+
+            //Every column that doesn't allows null values
+            MetaData::MODELS_NOT_NULL =&gt; $nullables,
+
+            //Every column and their data types
+            MetaData::MODELS_DATA_TYPES =&gt; $dataTypes,
+
+            //The columns that have numeric data types
+            MetaData::MODELS_DATA_TYPES_NUMERIC =&gt; $numericTypes,
+
+            //The identity column, use boolean false if the model doesn't have
+            //an identity column
+            MetaData::MODELS_IDENTITY_COLUMN =&gt; $identity,
+
+            //How every column must be bound/casted
+            MetaData::MODELS_DATA_TYPES_BIND =&gt; $dataTypesBind,
+
+            //Fields that must be ignored from INSERT SQL statements
+            MetaData::MODELS_AUTOMATIC_DEFAULT_INSERT =&gt; [],
+
+            //Fields that must be ignored from UPDATE SQL statements
+            MetaData::MODELS_AUTOMATIC_DEFAULT_UPDATE =&gt; []
+
+        ];
+    }
+
+    /**
+     * Initializes the model's column map
+     *
+     * @param Phalcon\Mvc\ModelInterface $model
+     * @param Phalcon\DiInterface $di
+     * @return array
+     */
+    public function getColumnMaps(ModelInterface $model, DiInterface $di)
+    {
+        $reflection = $di['annotations']-&gt;get($model);
+
+        $columnMap = [];
+        $reverseColumnMap = [];
+
+        $renamed = false;
+        foreach ($reflection-&gt;getPropertiesAnnotations() as $name =&gt; $collection) {
+
+            if ($collection-&gt;has('Column')) {
+
+                $arguments = $collection-&gt;get('Column')-&gt;getArguments();
+
+                /**
+                 * Get the column's name
+                 */
+                if (isset($arguments['column'])) {
+                    $columnName = $arguments['column'];
+                } else {
+                    $columnName = $name;
+                }
+
+                $columnMap[$columnName] = $name;
+                $reverseColumnMap[$name] = $columnName;
+
+                if (!$renamed) {
+                    if ($columnName != $name) {
+                        $renamed = true;
+                    }
+                }
+            }
+        }
+
+        if ($renamed) {
+            return [
+                MetaData::MODELS_COLUMN_MAP =&gt; $columnMap,
+                MetaData::MODELS_REVERSE_COLUMN_MAP =&gt; $reverseColumnMap
+            ];
+        }
+
+        return null;
+    }
+
+}</code></pre>
+<pre><code class="language-php">ModelUser.php
+&lt;?php
+namespace Model;
+
+use Phalcon\DI\FactoryDefault as DI;
+use Fly\BaseModel as FlyModel;
+
+/**
+ * User
+ *
+ * Represents a User
+ *
+ * @Source('fly_user');
+ */
+class User extends FlyModel
+{
+    /**
+    * @Primary
+    * @Identity
+    * @Column(type="integer", nullable=false, column="u_id")
+    */
+    public $id;
+
+    /**
+    * @Column(type="string", nullable=true, column="u_name")
+    */
+    public $name;
+
+    /**
+    * @Column(type="string", nullable=true, column="u_email")
+    */
+    public $email;
+
+    /**
+    * @Column(type="string", nullable=false, column="u_password")
+    */
+    public $password;
+
+    /**
+    * @Column(type="integer", nullable=false, column="u_role")
+    */
+    public $role;
+
+    /**
+    * @Column(type="string", nullable=true, column="u_avatar")
+    */
+    public $avatar;
+
+    /**
+    * @Column(type="integer", nullable=false, column="u_status")
+    */
+    public $status;
+
+    /**
+    * @Column(type="integer", nullable=true, column="u_datecreated")
+    */
+    public $datecreated;
+
+    /**
+    * @Column(type="integer", nullable=true, column="u_datemodified")
+    */
+    public $datemodified;
+
+    const STATUS_ENABLE = 1;
+    const STATUS_DISABLE = 3;
+
+    protected $lang;
+
+    public function initialize()
+    {
+        parent::initialize();
+    }
+
+    public function onConstruct()
+    {
+        $this-&gt;lang = DI::getDefault()-&gt;get('lang');
+    }
+
+    public function beforeCreate()
+    {
+        $this-&gt;datecreated = time();
+    }
+
+    public function beforeUpdate()
+    {
+        $this-&gt;datemodified = time();
+    }
+
+    public function validation()
+    {
+        $this-&gt;validate(new \Phalcon\Mvc\Model\Validator\PresenceOf(
+            [
+                'field'  =&gt; 'name',
+                'message' =&gt; $this-&gt;lang-&gt;get('message_name_notempty')
+            ]
+        ));
+
+        $this-&gt;validate(new \Phalcon\Mvc\Model\Validator\Uniqueness(
+            [
+                'field'  =&gt; 'email',
+                'message' =&gt; $this-&gt;lang-&gt;get('message_email_unique')
+            ]
+        ));
+
+        $this-&gt;validate(new \Phalcon\Mvc\Model\Validator\PresenceOf(
+            [
+                'field'  =&gt; 'password',
+                'message' =&gt; $this-&gt;lang-&gt;get('message_password_notempty')
+            ]
+        ));
+
+        $this-&gt;validate(new \Phalcon\Mvc\Model\Validator\Numericality(
+            [
+                'field'  =&gt; 'role',
+                'message' =&gt; $this-&gt;lang-&gt;get('message_role_isnum')
+            ]
+        ));
+
+        $this-&gt;validate(new \Phalcon\Mvc\Model\Validator\Numericality(
+            [
+                'field'  =&gt; 'status',
+                'message' =&gt; $this-&gt;lang-&gt;get('message_status_isnum')
+            ]
+        ));
+
+        return $this-&gt;validationHasFailed() != true;
+    }
+
+    /**
+     * Extends Phalcon findFirst to handle cache
+     */
+    public static function findFirst($parameters=null)
+    {
+        $data = parent::findFirst($parameters);
+        return $data;
+    }
+}</code></pre>
+<pre><code class="language-php">UserController.php
+public function addAction()
+    {
+        $redirectUrl = (string) urldecode(base64_decode($this-&gt;dispatcher-&gt;getParam('redirect')));
+        $formData = [];
+        $message = '';
+
+        if ($this-&gt;request-&gt;hasPost('fsubmit')) {
+            if ($this-&gt;security-&gt;checkToken()) {
+                $formData = array_merge($formData, $this-&gt;request-&gt;getPost());
+
+                $myUser = new \Model\User();
+                $myUser-&gt;assign([
+                    'name' =&gt; $formData['fname'],
+                    'email' =&gt; $formData['femail'],
+                    'password' =&gt; $this-&gt;security-&gt;hash($formData['fpassword']),
+                    'role' =&gt; $formData['frole'],
+                    'avatar' =&gt; $formData['favatar'],
+                    'status' =&gt; $formData['fstatus'],
+                ]);
+
+                if ($myUser-&gt;create()) {
+                    $this-&gt;flash-&gt;success($this-&gt;lang-&gt;get('message_add_success'));
+                } else {
+                    foreach ($myUser-&gt;getMessages() as $msg) {
+                        $message .= $msg-&gt;getMessage() . "&lt;/br&gt;";
+                    }
+                    $this-&gt;flash-&gt;error($message);
+                }
+            } else {
+                $this-&gt;flash-&gt;error('CSRF Detected.');
+            }
+        }
+
+        $this-&gt;tag-&gt;prependTitle($this-&gt;lang-&gt;get('title_add'));
+        $this-&gt;breadcrumb-&gt;add($this-&gt;lang-&gt;get('title_add'), 'admin/user');
+        $this-&gt;breadcrumb-&gt;add($this-&gt;lang-&gt;get('title_adding'), 'admin/user/add');
+        $this-&gt;view-&gt;setVars([
+            'redirectUrl' =&gt; $redirectUrl,
+            'formData' =&gt; $formData,
+            'breadcrumb' =&gt; $this-&gt;breadcrumb-&gt;generate(),
+            'statusList' =&gt; \Model\User::getStatusList(),
+            'roleList' =&gt; \Model\User::getRoleList(),
+        ]);
+    }</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-fc7ae2f2fa02ec1af6138fd0-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-fc7ae2f2fa02ec1af6138fd0-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/210/andresgutierrez" class="user-moderator-Y"><span itemprop="name">Andres Gutierrez</span></a>        </span>
+        <br>
+
+        <span class="karma">34.6k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C20023" href="#C20023">
+                <time itemprop="dateCreated" datetime="2015-06-29T07:58:04-07:00" class="action-date">Jun '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>getMetaData() is missing two indexes required MODELS_DEFAULT_VALUES and MODELS_EMPTY_STRING_VALUES: <a href="https://docs.phalcon.io/en/latest/reference/models.html#manual-meta-data">https://docs.phalcon.io/en/latest/reference/models.html#manual-meta-data</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="20023" data-cf-modified-fc7ae2f2fa02ec1af6138fd0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="20023" data-cf-modified-fc7ae2f2fa02ec1af6138fd0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/0d3f4e9159103269eea6b3da81b7f4bb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4205/nguyenducduy" class="user-moderator-N"><span itemprop="name">Duy Nguyen</span></a>        </span>
+        <br>
+
+        <span class="karma">1.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C20047" href="#C20047">
+                <time itemprop="dateCreated" datetime="2015-06-29T23:45:50-07:00" class="action-date">Jun '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank so much Phalcon Team :) I was fixed it.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="20047" data-cf-modified-fc7ae2f2fa02ec1af6138fd0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="20047" data-cf-modified-fc7ae2f2fa02ec1af6138fd0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="7335" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

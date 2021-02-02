@@ -1,0 +1,192 @@
+---
+layout: default
+title: 'How to load the domPDF library in phalcon 3.2.3? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/25/configuration">Configuration</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How to load the domPDF library in phalcon 3.2.3?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10197/rodrigoatilano" class="user-moderator-N"><span itemprop="name">Rodrigo Atilano Alva</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-11-07T09:19:28-07:00">Nov '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-11-07T09:19:28-07:00">Nov '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>658</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/2897fb2e91c799c96be716afcf5aeec7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10197/rodrigoatilano" class="user-moderator-N"><span itemprop="name">Rodrigo Atilano Alva</span></a></span>
+                <span class="karma">799</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17247" href="#C17247">
+        <time class="action-date">Nov '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I am working on Phalcon 3.2 and I try to use the DomPDF library, someone who has implemented it to tell me how I add it?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-d02f85fc5393306d3da9fc21-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-d02f85fc5393306d3da9fc21-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5915f25e654c4f9e60fe51700cdee683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4769/Izopi4a" class="user-moderator-Y"><span itemprop="name">Izo</span></a>        </span>
+        <br>
+
+        <span class="karma">85.5k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52105" href="#C52105">
+                <time itemprop="dateCreated" datetime="2017-11-07T10:19:56-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>hmm intresting, i am using mpdf, didnt know about this one.</p>
+<p>Anyways, implementing &quot;standalone&quot; libraries has nothing to do with Phalcon, you have to implement them in your own way. Here are some code samples of my workers which are sending emails</p>
+<pre><code class="language-php">
+$di-&gt;set('simpleView', function ($dir) use ($config) {
+
+        $view = new \Phalcon\Mvc\View\Simple();
+        $view-&gt;setViewsDir($dir);
+        $eventsManager = new EventsManager();
+
+        $view-&gt;registerEngines([
+            '.phtml' =&gt; function ($view, $di) {
+
+                $phtml = new \Phalcon\Mvc\View\Engine\Php($view, $di);
+
+                return $phtml;
+            },
+            '.volt'  =&gt; function ($view, $di) use ($config) {
+
+                $volt = new  \Phalcon\Mvc\View\Engine\Volt($view, $di);
+                $volt-&gt;setOptions([
+                    'compileAlways' =&gt; true,
+                    'compiledPath'  =&gt; $config-&gt;voltCompileDir
+                ]);
+
+                $compiler = $volt-&gt;getCompiler();
+                $compiler-&gt;addFunction("money_format", "money_format");
+                $compiler-&gt;addFunction("round", "round");
+                $compiler-&gt;addFunction("hashIds", function ($resolvedArgs, $exprArgs) {
+
+                    return $this-&gt;getShared("hashIds")-&gt;encode($resolvedArgs);
+                });
+
+                return $volt;
+            }
+        ]);
+
+        $eventsManager-&gt;attach("view:afterRender", function ($event, $view) {
+
+            $search = [
+                '/\&gt;[^\S ]+/s',  // strip whitespaces after tags, except space
+                '/[^\S ]+\&lt;/s',  // strip whitespaces before tags, except space
+                '/(\s)+/s'       // shorten multiple whitespace sequences
+            ];
+
+            $replace = [
+                '&gt;',
+                '&lt;',
+                '\\1'
+            ];
+
+            $view-&gt;setContent((string)preg_replace($search, $replace, $view-&gt;getContent()));
+        });
+
+        return $view;
+    });
+
+    //in the controller 
+    $html = $this-&gt;simpleView-&gt;render("somevoltfile.volt", ['my-data' =&gt; "somevar" ... ]);
+
+    //create the pdf should be something like this
+    $dompdf = new Dompdf\Dompdf();
+    $dompdf-&gt;loadHtml($html);
+    $dompdf-&gt;render();
+
+    $output = $dompdf-&gt;output();
+    file_put_contents('/var/www/mysite/filename.pdf', $output);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52105" data-cf-modified-d02f85fc5393306d3da9fc21-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52105" data-cf-modified-d02f85fc5393306d3da9fc21-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">3</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a2658b5645f7a791cd1fbf709c4eb9b0?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8837/cosmy81" class="user-moderator-N"><span itemprop="name">Cosimo</span></a>        </span>
+        <br>
+
+        <span class="karma">12.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="52107" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '17</span>
+              </span><br/><a name="C52107" href="#C52107">
+                <time itemprop="dateCreated" datetime="2017-11-07T11:01:37-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The easy way: download dompdf inside a dir like lib/vendor/dompdf and define your LIB_PATH.
+Then include this lines wherever you need:</p>
+<blockquote>
+<pre><code>    require_once(LIB_PATH.'/vendor/dompdf/dompdf_config.inc.php');  
+    $dompdf = new \DOMPDF();  
+    $dompdf-&gt;load_html($html_code);  
+    $dompdf-&gt;render();  
+
+                  // debug pdf  
+     $dompdf-&gt;stream("pdf_".date('dmYHm').".pdf");  </code></pre>
+</blockquote>
+<p>you should wrap it inside a phalcon pdf class created ad hoc for generating pdf.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52107" data-cf-modified-d02f85fc5393306d3da9fc21-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52107" data-cf-modified-d02f85fc5393306d3da9fc21-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17247" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

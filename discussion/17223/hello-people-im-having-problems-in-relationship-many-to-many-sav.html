@@ -1,0 +1,392 @@
+---
+layout: default
+title: 'Hello people , I&#039;m having problems in relationship many to many save and also with self-relationship. - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Hello people , I&#039;m having problems in relationship many to many save and also with self-relationship.</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10313/uendelflavio" class="user-moderator-N"><span itemprop="name">uendelflavio</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-11-03T12:48:08-07:00">Nov '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-11-03T12:48:08-07:00">Nov '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>531</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/b1b6b86b1b58905a4db0416f4e406cf6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10313/uendelflavio" class="user-moderator-N"><span itemprop="name">uendelflavio</span></a></span>
+                <span class="karma">724</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17223" href="#C17223">
+        <time class="action-date">Nov '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I would like to put together a complete crud with relationships:
+Groups Users and Proposals</p>
+<p>This does not save on GroupUsers.  [UsuariosGrupos]</p>
+<p>I am sorry for my english</p>
+<p>My database relationship</p>
+<pre><code class="language-html">link
+ https://ibb.co/jMZavw</code></pre>
+<pre><code class="language-php">
+&lt;?php
+
+namespace Some;
+
+use Phalcon\DI,
+    Phalcon\Db\Column,
+    Phalcon\Db\RawValue,
+    Phalcon\Mvc\Model,
+    Phalcon\Events\Manager as EventsManager,
+    Phalcon\Db\Adapter\Pdo\MySQL as Connection,
+    Phalcon\Mvc\Model\Manager as ModelsManager,
+    Phalcon\Mvc\Model\Metadata\Memory as ModelsMetaData;
+
+$eventsManager = new EventsManager();
+
+$di = new DI();
+
+$connection = new Connection(array(
+    "host"     =&gt; "localhost",
+    "username" =&gt; "jan",
+    "password" =&gt; "1817698",
+    "dbname"   =&gt; "socius",
+));
+
+$connection-&gt;setEventsManager($eventsManager);
+
+$eventsManager-&gt;attach('db1',
+function ($event, $connection) {
+        switch ($event-&gt;getType()) {
+            case 'beforeQuery':
+                echo $connection-&gt;getSqlStatement(), "\n";
+                print_r($connection-&gt;getSqlVariables());
+                break;
+        }
+    }
+);
+
+$modelsManager = new ModelsManager();
+$modelsManager-&gt;setDi($di);
+$di['db1'] = $connection;
+$di['modelsManager'] = $modelsManager;
+$di['modelsMetadata'] = new ModelsMetadata();
+
+//Model Proposals
+
+class Propostas extends Model {
+
+    public $id;
+    public $proposta;
+    public $vinculada;
+    public $aceitada;
+    public $rejeitada;
+
+    public function initialize() {
+        $this-&gt;setConnectionService('db1');
+        //auto-relacionamento
+        $this-&gt;belongsTo('propostas_id', 'Propostas', 'id', ['alias' =&gt; 'proposta']);
+        $this-&gt;belongsTo('usuarios_id', 'Usuarios', 'id');
+        $this-&gt;belongsTo('grupos_id', 'Grupos', 'id');
+    }
+
+}
+
+//Model UsersGroups
+
+class UsuariosGrupos extends Model {
+
+    public $id;
+    public $usuarios_id;
+    public $grupos_id;
+    public $status_admin;
+
+    public function beforeCreate() {
+        $this-&gt;status_admin = true;
+    }
+    public function initialize() {
+        $this-&gt;setConnectionService('db1');
+        $this-&gt;belongsTo('usuarios_id', 'Usuarios', 'id', ['alias' =&gt; 'Usuario']);
+        $this-&gt;belongsTo('grupos_id', 'Grupos', 'id', ['alias' =&gt; 'Grupo']);
+    }
+}
+
+//Model Groups
+
+class Grupos extends Model {
+    public $id;
+    public $nome;
+    public $tema;
+    public function initialize() {
+        $this-&gt;setConnectionService('db1');
+        $this-&gt;useDynamicUpdate(true); 
+        $this-&gt;hasMany('id', 'Propostas', 'grupos_id');
+        $this-&gt;hasMany('id', 'UsuariosGrupos', 'grupos_id', ['alias' =&gt; 'UsuariosGrupos']);
+        $this-&gt;hasManyToMany('id','UsuariosGrupos', 'grupos_id', 'usuarios_id', 'Usuarios','id', ['alias' =&gt; 'Usuarios']);
+    }
+}
+
+//Model Users
+
+class Usuarios extends Model {
+
+    public $id;
+    public $email;
+    public $nome;
+    public $senha;
+    public function initialize() {
+    $this-&gt;setConnectionService('db1');
+    $this-&gt;useDynamicUpdate(true); 
+        $this-&gt;hasMany('id', 'Propostas', 'usuarios_id');
+        $this-&gt;hasMany('id', 'UsuariosGrupos', 'usuarios_id', ['alias' =&gt; 'UsuariosGrupos']);
+        $this-&gt;hasManyToMany('id', 'UsuariosGrupos','usuarios_id', 'grupos_id', 'Grupos', 'id',['alias' =&gt; 'Grupos']);
+    }
+
+}
+
+$usuarios = Usuarios::findById(1);
+$grupos= new Grupos();
+$grupos-&gt;nome = "grupo do x";
+$grupos-&gt;tema = "tema";
+$grupos-&gt;Usuarios = array($usuarios);
+$grupos-&gt;save();
+
+//example update, delete, find with Group [Grupos]  , Users [Usuarios] and Proposals [Propostas] 
+// in which it saves in UsersGroups "UsuariosGrupos"
+</code></pre>
+<p>Thanks in advance</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-4eb9b014959b003c71272fd1-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-4eb9b014959b003c71272fd1-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="52047" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '17</span>
+              </span><br/><a name="C52047" href="#C52047">
+                <time itemprop="dateCreated" datetime="2017-11-03T19:42:16-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi<a href="https://forum.phalcon.io/user/0/uendelflavio"> @uendelflavio</a> </p>
+<p>First Propostas table don't have <code>propostas_id</code> column and your model have this</p>
+<p>Second, try this</p>
+<pre><code class="language-php">if ($grupos-&gt;save()) {
+    echo "nice!!! group saved!";
+} else {
+    echo "wrong! group didn't save. Details: ". implode(' ', $grupos-&gt;getMessages());
+}</code></pre>
+<p>If didn't save you can get some explanations about</p>
+<p>I hope its helps you. Good luck</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52047" data-cf-modified-4eb9b014959b003c71272fd1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52047" data-cf-modified-4eb9b014959b003c71272fd1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b1b6b86b1b58905a4db0416f4e406cf6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10313/uendelflavio" class="user-moderator-N"><span itemprop="name">uendelflavio</span></a>        </span>
+        <br>
+
+        <span class="karma">724</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="52049" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '17</span>
+              </span><br/><a name="C52049" href="#C52049">
+                <time itemprop="dateCreated" datetime="2017-11-04T05:14:35-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi Degiovanni Emilio
+thanks for answering</p>
+<p>ok,you are right and  proposals contain self-relationship.</p>
+<p>this and the new structure of my database:</p>
+<p>link:  <a href="https://ibb.co/gbpyyG">https://ibb.co/gbpyyG</a></p>
+<p>I need to assemble the entire structure of the models correctly in phalcon, but it does not work, or it works wrong</p>
+<pre><code class="language-php">&lt;?php
+//my test
+
+$usuarios = new Usuarios();
+$usuarios-&gt;nome = 'ufsm';
+$usuarios-&gt;email = '<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="1f6a796c725f6b7a6c6b7a317c7072">[email&#160;protected]</a>';
+$usuarios-&gt;senha = '12345';
+
+$grupos = new Grupos();
+$grupos-&gt;nome = "grupo do x";
+$grupos-&gt;tema = "tema";
+$grupos-&gt;Usuarios = array($usuarios);
+$grupos-&gt;save();
+
+//error
+
+PHP Fatal error:  Uncaught exception 'Phalcon\Mvc\Model\Exception' with message 'Model 'UsuariosGrupos' could not be loaded' in /home/uendel/teste_hasmanytomany_phalcon.php:122
+Stack trace:
+#0 [internal function]: Phalcon\Mvc\Model\Manager-&gt;load('UsuariosGrupos', true)
+#1 [internal function]: Phalcon\Mvc\Model-&gt;_postSaveRelatedRecords(Object(Phalcon\Db\Adapter\Pdo\Mysql), Array)
+#2 /home/uendel/teste_hasmanytomany_phalcon.php(122): Phalcon\Mvc\Model-&gt;save()
+#3 {main}
+  thrown in /home/uendel/teste_hasmanytomany_phalcon.php on line 122
+</code></pre>
+<p>I believe that the table 'UsuariosGrupos' should write in the fields usuario_id and groups_id automatically</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52049" data-cf-modified-4eb9b014959b003c71272fd1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52049" data-cf-modified-4eb9b014959b003c71272fd1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b59fecbff6d1afabf8da316028330df4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2619/emiliodeg" class="user-moderator-N"><span itemprop="name">Emilio Degiovanni</span></a>        </span>
+        <br>
+
+        <span class="karma">32.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52051" href="#C52051">
+                <time itemprop="dateCreated" datetime="2017-11-04T07:06:04-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>well to prevent any dummy error always use alias in all relationships</p>
+<p>you have an error in your loader, because don't find UsuariosGrupos class check the <a href="https://docs.phalcon.io/en/3.2/loader">loader docs</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52051" data-cf-modified-4eb9b014959b003c71272fd1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52051" data-cf-modified-4eb9b014959b003c71272fd1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b1b6b86b1b58905a4db0416f4e406cf6?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/10313/uendelflavio" class="user-moderator-N"><span itemprop="name">uendelflavio</span></a>        </span>
+        <br>
+
+        <span class="karma">724</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C52085" href="#C52085">
+                <time itemprop="dateCreated" datetime="2017-11-06T04:34:56-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>yes now the tables Usuarios, Grupos and UsuariosGrupos are working perfectly with the following change:</p>
+<pre><code class="language-php">class Propostas extends Model {
+
+    public $id;
+    public $proposta;
+    public $vinculada;
+    public $aceitada;
+    public $rejeitada;
+
+    public function initialize() {
+        $this-&gt;setConnectionService('db1');
+        //auto-relacionamento
+        $this-&gt;belongsTo('propostas_id', Propostas::class, 'id', ['alias' =&gt; 'proposta']);
+        $this-&gt;belongsTo('usuarios_id', Usuarios::class, 'id');
+        $this-&gt;belongsTo('grupos_id', Grupos::class, 'id');
+    }
+
+}
+
+class UsuariosGrupos extends Model {
+
+    public $id;
+    public $usuarios_id;
+    public $grupos_id;
+    public $status_admin;
+
+    public function beforeCreate() {
+        $this-&gt;status_admin = true;
+    }
+    public function initialize() {
+        $this-&gt;setConnectionService('db1'); 
+        $this-&gt;belongsTo('usuarios_id', Usuarios::class, 'id', ['alias' =&gt; 'Usuario']);
+        $this-&gt;belongsTo('grupos_id', Grupos::class, 'id', ['alias' =&gt; 'Grupo']);
+    }
+}
+
+class Grupos extends Model {
+    public $id;
+    public $nome;
+    public $tema;
+    public function initialize() {
+        $this-&gt;setConnectionService('db1');
+    $this-&gt;useDynamicUpdate(true); 
+        $this-&gt;hasMany('id', Propostas::class, 'grupos_id');
+        $this-&gt;hasMany('id', UsuariosGrupos::class, 'grupos_id', ['alias' =&gt; 'UsuariosGrupos']);
+        $this-&gt;hasManyToMany('id',UsuariosGrupos::class, 'grupos_id', 'usuarios_id', Usuarios::class,'id', ['alias' =&gt; 'Usuarios', 'foreignKey' =&gt; true]);
+    }
+}
+
+class Usuarios extends Model {
+
+    public $id;
+    public $email;
+    public $nome;
+    public $senha;
+    public function initialize() {
+        $this-&gt;setConnectionService('db1');
+    $this-&gt;useDynamicUpdate(true); 
+        $this-&gt;hasMany('id', Propostas::class, 'usuarios_id');
+        $this-&gt;hasMany('id', UsuariosGrupos::class, 'usuarios_id', ['alias' =&gt; 'UsuariosGrupos']);
+        $this-&gt;hasManyToMany('id', UsuariosGrupos::class,'usuarios_id', 'grupos_id', Grupos::class, 'id',['alias' =&gt; 'Grupos', 'foreignKey' =&gt; true]);
+    }
+</code></pre>
+<p>Using syntax &quot;Usuarios::class&quot; and loaded automatically.</p>
+<p>but still need to test the self-relationship of the table Propostas</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52085" data-cf-modified-4eb9b014959b003c71272fd1-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52085" data-cf-modified-4eb9b014959b003c71272fd1-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17223" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

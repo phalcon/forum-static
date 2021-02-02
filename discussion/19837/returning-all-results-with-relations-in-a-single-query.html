@@ -1,0 +1,184 @@
+---
+layout: default
+title: 'Returning all results with relations in a single query - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Returning all results with relations in a single query</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/12629/tradeouts" class="user-moderator-N"><span itemprop="name">tradeouts</span></a></span>
+            <time itemprop="dateCreated" datetime="2019-07-11T16:12:19-07:00">Jul '19</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2019-07-11T16:12:19-07:00">Jul '19</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '19</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>610</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/a57a85224aceeb10541fc2c14842482f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/12629/tradeouts" class="user-moderator-N"><span itemprop="name">tradeouts</span></a></span>
+                <span class="karma">740</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C19837" href="#C19837">
+        <time class="action-date">Jul '19</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Imagine I have the following database structure, with the relevant foreign keys defined.</p>
+<p>Manufacturer  (1 to many)</p>
+<p>--  Product  (1 to many)</p>
+<p>------ Model</p>
+<p>ie. a manufacturer can have many products, and a product can have many models</p>
+<p>In MySQL to select all manufacturers, their products and their models in a single, indexed query I would do: </p>
+<p>select * from Manufacturer
+LEFT JOIN Product ON (Product.manufacturer_id = Manufacturer_id)
+LEFT JOIN Model ON (Model.Product_id = Product.Product_id)</p>
+<p>What query would I need to perform to extract every Manufacturer-&gt;Product-&gt;Model in a single object, that only uses a single database query ?   (In Laravel/Eloquent this is known as eager loading)</p>
+<p>Forgive what may appear to be a common question, but the answers I find in the forums seem to date back to 2016, so I don't know if they're still relevant (and they indicate it can't be done)</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-a041e2e9065e5ae7e8bda012-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-a041e2e9065e5ae7e8bda012-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1eb2415bda000b22fd1f801bb9e8c003?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2/niden" class="user-moderator-Y"><span itemprop="name">Nikolaos Dimopoulos</span></a>        </span>
+        <br>
+
+        <span class="karma">39.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="60337" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '19</span>
+              </span><br/><a name="C60337" href="#C60337">
+                <time itemprop="dateCreated" datetime="2019-07-11T20:04:24-07:00" class="action-date">Jul '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><pre><code class="language-php">&lt;?php
+
+use Phalcon\Mvc\Query\Builder;
+
+$results = (new Builder())
+    -&gt;columns(
+        [
+            'manufacturerId' =&gt; 'man.manufacturer_id',
+            'productId'      =&gt; 'prd.product_id',
+        ]
+    )
+    -&gt;addFrom(Manufacturer::class, 'man')
+    -&gt;innerJoin(Products::class, 'prd.manufacturer_id = man.manufacturer_id', 'prd')
+    -&gt;innerJoin(Models::class, 'mod.product_id = prd.product_id', 'mod')
+    -&gt;getQuery()
+    -&gt;execute()
+;</code></pre>
+<p>Then you will have in your results a collection where you can do <code>echo $record-&gt;manufacturerId</code> etc. Note the keys in the <code>columns</code> array are the aliases and the values the actual fields. The last parameter on <code>addFrom</code> as well as <code>innerJoin</code> is the alias. You can of course use <code>join</code>, <code>outerJoin</code> etc. depending on your needs.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60337" data-cf-modified-a041e2e9065e5ae7e8bda012-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60337" data-cf-modified-a041e2e9065e5ae7e8bda012-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a57a85224aceeb10541fc2c14842482f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/12629/tradeouts" class="user-moderator-N"><span itemprop="name">tradeouts</span></a>        </span>
+        <br>
+
+        <span class="karma">740</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="60345" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jul '19</span>
+              </span><br/><a name="C60345" href="#C60345">
+                <time itemprop="dateCreated" datetime="2019-07-12T00:24:04-07:00" class="action-date">Jul '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you Nikolaos for the detailed reply.</p>
+<p>Am i right in saying that will return “flat” rows (i.e all columns together). </p>
+<p>How would I retrieve them in a nested object (models as an array inside products, and products as an array inside manufacturers)</p>
+<p>How would i retrieve all columns in each table ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60345" data-cf-modified-a041e2e9065e5ae7e8bda012-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60345" data-cf-modified-a041e2e9065e5ae7e8bda012-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1eb2415bda000b22fd1f801bb9e8c003?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2/niden" class="user-moderator-Y"><span itemprop="name">Nikolaos Dimopoulos</span></a>        </span>
+        <br>
+
+        <span class="karma">39.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C60349" href="#C60349">
+                <time itemprop="dateCreated" datetime="2019-07-12T08:46:28-07:00" class="action-date">Jul '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Phalcon does not support eager loading but it does have the ability to cache related data. So in your example assuming that you have set  relationships and you have supplied the <code>reusable</code> flag to true like so:</p>
+<pre><code class="language-php">$this-&gt;hasMany(
+    'manufacturer_id', 
+    Products::class,
+    'manufacturer_id,
+    [
+        'reusable' =&gt; true,
+        'alias'       =&gt; 'products'
+    ]</code></pre>
+<p>Then you find your manufacturers</p>
+<pre><code class="language-php">$manufacturers = Manufacturers::find()`</code></pre>
+<p>and then use the relationships in a loop:</p>
+<pre><code class="language-php">foreach ($manufacturers in $manufacturer) {
+    $products = $manufacturer-&gt;getRelated('products');
+    .....
+}</code></pre>
+<p>Now the above will give you a collection of objects and call the database only when you call <code>getRelated</code>. That result will be cached so if there is a second call to <code>getRelated</code> for the same relationship with the same conditions, the cached results will be returned.</p>
+<p>As you can see the above implementation suffers from the N+1 query, meaning that you will have a ton of queries just for displaying a list of manufacturers.</p>
+<p>You can always create an array yourself with the data from the loop(s) and send it back to the caller. This way you will achieve what you are looking for.</p>
+<p>I would suggest against eager loading though since you do get a lot more data than you really need. A flat query such as the one in the previous answer will definitely solve the N+1 problem and give you the data you need. In the vast majority of cases, in applications that I have worked on, there is no need to use eager loading since all you need is to show <em>joined</em> data vs getting the whole record. So really a flat join just works. Now I don't know your application needs but if you cannot or do not want to use the flat query with joins, you will have to either fall in the N+1 trap, or create a multidimentional array of objects that will have the eager loading you require.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60349" data-cf-modified-a041e2e9065e5ae7e8bda012-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60349" data-cf-modified-a041e2e9065e5ae7e8bda012-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="19837" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

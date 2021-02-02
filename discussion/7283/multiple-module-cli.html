@@ -1,0 +1,243 @@
+---
+layout: default
+title: 'Multiple module CLI - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/24/show-community">Show to Community</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Multiple module CLI</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3944/attozk" class="user-moderator-N"><span itemprop="name">attozk</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-06-24T14:14:56-07:00">Jun '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-06-24T14:14:56-07:00">Jun '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1701</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">4</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/12dc9e5f97ea8e3cba415ec471c2346b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3944/attozk" class="user-moderator-N"><span itemprop="name">attozk</span></a></span>
+                <span class="karma">4.8k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C7283" href="#C7283">
+        <time class="action-date">Jun '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I posted a <a href="https://forum.phalcon.io/discussion/6923/cli-for-multiple-applicationmodules-setup">question</a> about how to handle CLI for multiple applications and today I found the solution.</p>
+<p>I have two applications and wanted a common cli to execute tasks from them.</p>
+<ul>
+<li>v1 -&gt; path: apps/kapi/v1</li>
+<li>admin -&gt; path: apps/kapi/admi</li>
+</ul>
+<p>The solution I have uses <a href="https://github.com/docopt/docopt.php">docopt</a> but it is not required.</p>
+<p>Examples:</p>
+<pre><code># Execute v1's MainTask::mainAction()
+php cli.php v1 main main --env=local
+
+# Execute admin's MailTask::specialAction($params)
+php cli.php admin mail special param1 param2 param3 --env=local</code></pre>
+<p>Code as shown below:</p>
+<pre><code class="language-php">&lt;?php
+// how to use composer with phalcon http://stackoverflow.com/a/25662855
+$loader = require_once(__DIR__ . '/../vendor/autoload.php');
+
+// namespace to module mapping
+$moduleNamespaces = array(
+    'admin' =&gt; 'Kapi\Admin\Tasks',
+    'v1'  =&gt; 'Kapi\V1\Tasks'
+);
+
+$doc = &lt;&lt;&lt;DOC
+Phalcon CLI.
+
+Usage:
+  cli.php &lt;module&gt; &lt;task&gt; &lt;action&gt; [&lt;params&gt; ...]  [--env=&lt;env&gt;]
+  cli.php (-h | --help)
+
+Options:
+  -h --help             Show this screen.
+  --env=&lt;env&gt;           Set environment [default: local]
+DOC;
+
+$module = $task = $action = $env = '';
+$params = array();
+
+$docpot = new Docopt();
+$args = $docpot-&gt;handle($doc);
+foreach($args as $k =&gt; $v)
+{
+    if ($k == '--env')
+        $env = $v;
+    else if (preg_match('/&lt;(.*?)&gt;/', $k, $match))
+    {
+        $k = array_pop($match);
+        $$k = $v;
+    }
+}
+
+// used in other places of application
+define('APP_ENV', $env);
+
+// build arguments for CLI
+$arguments['module'] = $module;
+$arguments['task'] = $task;
+$arguments['action'] = $action;
+$arguments['params'] = $params;
+
+class Console extends \Phalcon\CLI\Console
+{
+    public function __construct()
+    {
+        $loader = new \Phalcon\Loader();
+        $namespaces = require_once(__DIR__ . '/../boot/autoload_namespaces.php');
+        $loader-&gt;registerNamespaces($namespaces['base']);
+
+        // register the installed modules
+        $this-&gt;registerModules(array(
+            'v1' =&gt; array(
+                'className' =&gt; 'Kapi\V1\Module',
+                'path' =&gt; __DIR__  . '/../apps/kapi/v1/Module.php'
+            ),
+            'admin' =&gt; array(
+                'className' =&gt; 'Kapi\Admin\Module',
+                'path' =&gt; __DIR__ . '/../apps/kapi/admin/Module.php'
+            ),
+        ));
+
+        $loader-&gt;register();
+    }
+
+    public function main()
+    {
+        $di = new \Phalcon\DI\FactoryDefault\CLI();
+
+        // registering a router
+        $di-&gt;set('router', function(){
+            $router = new \Phalcon\CLI\Router();
+
+            return $router;
+        });
+
+        // registering a dispatcher
+        $di-&gt;set('dispatcher', function () use($di) {
+
+            // obtain the standard eventsManager from the DI
+            $eventsManager = $di-&gt;getShared('eventsManager');
+
+            $eventsManager-&gt;attach("dispatch:beforeDispatchLoop", function($event, $dispatcher) {
+                $dispatcher-&gt;setActionName(\Phalcon\Text::camelize($dispatcher-&gt;getActionName()));
+            });
+
+            $dispatcher = new \Phalcon\CLI\Dispatcher();
+            // bind the EventsManager to the Dispatcher
+            $dispatcher-&gt;setEventsManager($eventsManager);
+
+            return $dispatcher;
+        });
+
+        $this-&gt;setDI($di);
+    }
+}
+
+$console = new Console();
+$console-&gt;main();
+$di = $console-&gt;getDI();
+
+/** @var $dispatcher \Phalcon\CLI\Dispatcher */
+$dispatcher = $di['dispatcher'];
+
+// https://forum.phalcon.io/discussion/4573/cli-task-not-found-when-in-namespace#C15319
+$dispatcher-&gt;setDefaultNamespace($moduleNamespaces[$module]);
+$dispatcher-&gt;setNamespaceName($moduleNamespaces[$module]);
+
+try {
+    $console-&gt;handle($arguments);
+}
+catch (\Phalcon\Exception $e) {
+    echo $e-&gt;getMessage();
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-782beb3f3a097f1dcba70616-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-782beb3f3a097f1dcba70616-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">4</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/877a54304e07c8cb38c47b43e1d6b6b3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2828/sergeyklay" class="user-moderator-Y"><span itemprop="name">Serghei Iakovlev</span></a>        </span>
+        <br>
+
+        <span class="karma">39.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C21815" href="#C21815">
+                <time itemprop="dateCreated" datetime="2015-08-12T22:43:49-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/attozk">@attozk</a> Can you please add solution to <a href="http://phalcontip.com/">Phalcon Tips</a>?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21815" data-cf-modified-782beb3f3a097f1dcba70616-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21815" data-cf-modified-782beb3f3a097f1dcba70616-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/97cfdb3586f82c3e1e4fe562bda688b8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/571/duythien" class="user-moderator-Y"><span itemprop="name">Thien Tran</span></a>        </span>
+        <br>
+
+        <span class="karma">58.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C21821" href="#C21821">
+                <time itemprop="dateCreated" datetime="2015-08-13T01:15:12-07:00" class="action-date">Aug '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/sergeyklay">@sergeyklay</a> :+1</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="21821" data-cf-modified-782beb3f3a097f1dcba70616-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="21821" data-cf-modified-782beb3f3a097f1dcba70616-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="7283" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

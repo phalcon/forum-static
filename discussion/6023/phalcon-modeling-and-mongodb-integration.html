@@ -1,0 +1,232 @@
+---
+layout: default
+title: 'Phalcon Modeling and MongoDB integration - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Phalcon Modeling and MongoDB integration</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3004/benzhanghf" class="user-moderator-N"><span itemprop="name">Ben Zhang</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-02-25T18:37:20-07:00">Feb '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-02-25T18:37:20-07:00">Feb '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>939</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/856c5a1acba3910ddb0fdb973c83e9fd?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3004/benzhanghf" class="user-moderator-N"><span itemprop="name">Ben Zhang</span></a></span>
+                <span class="karma">2.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6023" href="#C6023">
+        <time class="action-date">Feb '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi Phalcon Expert,</p>
+<p>I am working on my own project try to rebuild Magento 1 and 2 framework into Phalcon framework and make it as fast as possible and replacing the Product Catalog using MongoDB instead of mysql, but I found the modeling in Phalcon is not very flexible and I would like to get some help from the framework builder.</p>
+<p>Firstly, in Phalcon for performance we need to predefine all the object attribute as properties like</p>
+<pre><code class="language-php">    &lt;?php
+    namespace Company\Catalog;
+
+    class Product extends \Phalcon\Mvc\Model
+    {
+        public $id;
+        public $data;
+
+        public function initialize()
+        {
+            //do other setSource to change table name and define behavior
+        }
+
+        //other userful mapping function but I don't know when it was called
+        public function columnMap()
+        {
+            return array(
+                'id' =&gt; 'entity_id',
+                'name' =&gt; 'name',
+                'sku' =&gt; 'sku'
+            );
+        }
+
+        //map the mysql table name or mongodb collection name
+        public function getSource()
+        {
+            return "product_entity";
+        }
+    }</code></pre>
+<p>Is there any way that I could do an associated array for all the attributes of the model like this</p>
+<pre><code class="language-php">    &lt;?php
+    namespace Company\Catalog;
+
+    class Product extends \Phalcon\Mvc\Model
+    {
+        //it is impossible to list all properties as our model is dynamic document or EAV database
+        public $name;
+        public $attributeSet;
+        public $sku;
+        pulbic $productType;
+
+        public function initialize()
+        {
+            //do other setSource to change table name and define behavior
+        }
+
+        //other userful mapping function but I don't know when it was called
+        public function columnMap()
+        {
+            return array(
+                'local_name' =&gt; 'table_column_name',
+                'local_name_2' =&gt; 'table_column_name_2'
+            );
+        }
+
+        //map the mysql table name or mongodb collection name
+        public function getSource()
+        {
+            return "product_entity";
+        }
+
+        public function getData($key = '')
+        {
+            if (isset($this-&gt;data[$key])) {
+                return $this-&gt;data[$key];
+            }
+            return null;
+        }
+
+        public function setData($key, $value = null)
+        {
+            if (!array_key_exists($key, $this-&gt;data) || $this-&gt;data[$key] !== $value) {
+                $this-&gt;hasDataChanges = true;
+            }
+            $this-&gt;data[$key] = $value;     
+        }
+
+        public function __call($method, $args)
+        {
+            switch (substr($method, 0, 3)) {
+            case 'get':
+                $key = $this-&gt;_underscore(substr($method, 3));
+                $index = isset($args[0]) ? $args[0] : null;
+                return $this-&gt;getData($key, $index);
+            case 'set':
+                $key = $this-&gt;_underscore(substr($method, 3));
+                $value = isset($args[0]) ? $args[0] : null;
+                return $this-&gt;setData($key, $value);
+            case 'uns':
+                $key = $this-&gt;_underscore(substr($method, 3));
+                return $this-&gt;unsetData($key);
+            case 'has':
+                $key = $this-&gt;_underscore(substr($method, 3));
+                return isset($this-&gt;data[$key]);
+            }
+            throw new Exception(
+                sprintf('Invalid method %s::%s(%s)', get_class($this), $method, print_r($args, 1))
+            );
+        }
+    }</code></pre>
+<p>I know there is good ODM implementation of Phalcon to MongoDB but it is not documented well and it is very hard to find example. and Now PHP already has MongoClient and it has all the function I need to do complex query like mapReduce and custom javascript filter, but I could not find any in Phalcon, please help, as I need to make it fast in Phalcon so I need to do it in Phalcon way. Thank you very much</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-5b7b7f32cf27c5b99e86be84-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-5b7b7f32cf27c5b99e86be84-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/856c5a1acba3910ddb0fdb973c83e9fd?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3004/benzhanghf" class="user-moderator-N"><span itemprop="name">Ben Zhang</span></a>        </span>
+        <br>
+
+        <span class="karma">2.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16212" href="#C16212">
+                <time itemprop="dateCreated" datetime="2015-02-27T00:14:19-07:00" class="action-date">Feb '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I could do this to assign whatever attributes I want for the model but I am not sure is this the fastest way or good way as I find out I am not leverage the framework much and if I don't use the C language code then it will be as slow as pure PHP code</p>
+<pre><code class="language-php">    &lt;?php
+    class Product extends \Phalcon\Mvc\Model
+    {
+        public function beforeSave()
+        {
+            $this-&gt;assign(array(
+                'sku' =&gt; 'ABCD123',
+                'name' =&gt; 'LG Smart 3D',
+                'attributeSet' =&gt; TV,
+                'size' =&gt; '56 inch'
+            ));
+        }
+    }</code></pre>
+<p>I also want to know when the validation function was called as I might need to write the custom validation for each model. As I will have a attribute model to control product model attributes, so I need to know how you map the columns in database and in mongoDB when Phalcon talk to the databases. Thanks</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16212" data-cf-modified-5b7b7f32cf27c5b99e86be84-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16212" data-cf-modified-5b7b7f32cf27c5b99e86be84-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/95f1355571ac8f3ad167bf1896d39e39?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8871/namanbansal45" class="user-moderator-N"><span itemprop="name">namanbansal45</span></a>        </span>
+        <br>
+
+        <span class="karma">66</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="44443" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '16</span>
+              </span><br/><a name="C44443" href="#C44443">
+                <time itemprop="dateCreated" datetime="2016-12-29T20:27:02-07:00" class="action-date">Dec '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hey Ben!</p>
+<p>I am too curious about phalcon framework. Being a Java developer couldnt get muh hands on php frameworks. Could u pls help me understand phalon. It seems one of the best design available (work is still going on). I am also looking phalcon with MoongoDB. How efficient and scalable the combination is, when we talk about migrating magento DB or to design a scalable application.
+Help is appreciated! :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="44443" data-cf-modified-5b7b7f32cf27c5b99e86be84-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="44443" data-cf-modified-5b7b7f32cf27c5b99e86be84-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6023" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

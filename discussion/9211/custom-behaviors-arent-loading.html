@@ -1,0 +1,368 @@
+---
+layout: default
+title: 'Custom Behaviors Aren&#039;t Loading - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Custom Behaviors Aren&#039;t Loading</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2901/radean0909" class="user-moderator-N"><span itemprop="name">radean0909</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-10-28T14:29:15-07:00">Oct '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-10-28T14:29:15-07:00">Oct '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">4</span>
+                </td>
+                <td>
+                    <label>Views</label><br>468</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/8742806dd39255fa7b8c836efbe0fd20?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2901/radean0909" class="user-moderator-N"><span itemprop="name">radean0909</span></a></span>
+                <span class="karma">1.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C9211" href="#C9211">
+        <time class="action-date">Oct '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p><strong>TL;DR: I have created a custom behavior and done everything I can think of to properly load the class, but I cannot add the behavior to a model due to a classnotfound exception. Where/How should I be loading this custom Behavior?</strong></p>
+<p>I am attempting to create a custom behavior -&gt; commentable, to clean up the code project wide for a fairly simple web app.</p>
+<p>My thought was to take our currently implemented system (using an endpoint system) to pull comments (our comments table contains all comments, not sepcific to a particular model, so model relationships won't work, unless I am mistaken and a model can have a relationship to something on specific field values -ie the resourceId field matches the class name of the model..)</p>
+<p>I have done the following:</p>
+<ul>
+<li>Began migrating the code</li>
+<li>Created a directory in my project /app/behaviors</li>
+<li>Created a file called CommentableBehavior.php to said directory with the following code:</li>
+</ul>
+<pre><code>&lt;?php
+namespace Phalcon\Mvc\Model\Behavior;
+
+use Phalcon\Mvc\Model\Behavior;
+use Phalcon\Mvc\Model\BehaviorInterface;
+use Phalcon\Mvc\ModelInterface;
+
+class Commentable extends Behavior implements BehaviorInterface
+{
+
+    private $idField = "id";
+
+    public function notify( $eventType, $model ) {
+
+        switch($eventType) {
+            case 'afterUpdate':
+                // change all the comments for this resource if ID changed
+
+                // change all the comments to deleted if this resource is softdeleted
+        }
+
+    }
+
+    public function getComments(ModelInterface $model) {
+        $resource_type = get_class($model);
+        $resource_id = $mode-&gt;readAttribute($this-&gt;idField);
+
+         $comments = Comments::find([
+        "conditions" =&gt; "resource_id=:r_id: AND resource_type=:r_type: AND lft=1",
+        "bind" =&gt; [
+          "r_id" =&gt; $resourceId,
+          "r_type" =&gt; $resourceType
+        ]
+      ]);
+
+    // Get the comment ordering
+    $ordered_comments = Comments::find([
+        "conditions" =&gt; "resource_id=:r_id: AND resource_type=:r_type:",
+        "bind" =&gt; [
+          "r_id" =&gt; $resourceId,
+          "r_type" =&gt; $resourceType
+        ]
+      ]);
+
+    $num = 0;
+    foreach($ordered_comments as $oc) {
+      $comments_order[$oc-&gt;id] = ++$num;
+
+    }
+
+    $comments_tree = array();
+    foreach ($comments as $comment) {
+      $desc = $comment-&gt;descendants(null, true);
+      array_push($comments_tree, $this-&gt;createTree($desc));
+    }
+    $comments_out-&gt;tree = $comments_tree;
+    $comments_out-&gt;order = $comments_order;
+
+    return $comments_out;
+
+    }
+
+  private function createTree($tree) {
+    //same as before
+    $currDepth = -1;
+
+    //initilialize result
+    $result = array();
+
+    //create path structure for depths
+    $path = array();
+
+    //create 'root' node
+    $olditem = array('children'=&gt; &amp;$result);
+
+    foreach($tree as $item){
+        $item = $item-&gt;toAssocArray();
+        if($item['lvl'] &gt; $currDepth){
+            //remove possible old reference (old depth of other branch
+            if(isset($path[$item['lvl']])) unset($path[$item['lvl']]);
+
+            //make sure we have an array entry
+            if(!isset($olditem['children'])) $olditem['children'] = array();
+
+            //acquire target
+            $path[$item['lvl']] = &amp;$olditem['children'];
+        }
+        if($item['lvl'] != $currDepth) unset($olditem);
+        //set correct target
+        $currDepth = $item['lvl'];
+        //add item
+        $path[$currDepth][] = &amp;$item;
+        //copy &amp; remove reference
+        $olditem = &amp;$item;
+        unset($item);
+    }
+    //always nice to clean up reference bombs:
+    unset($path);
+    unset($olditem);
+
+    return $result;
+  }
+
+}</code></pre>
+<ul>
+<li>Added the directory to my config-&gt;application as &quot;behaviorsDir&quot;</li>
+<li>Added the directory to the loader ($loader-&gt;registerDirs( ... ) );</li>
+<li>Updated a model to include: </li>
+</ul>
+<pre><code>use Phalcon\Mvc\Model\Behavior\Commentable;
+
+...
+
+  public function initialize()
+  {
+    $this-&gt;setConnectionService('newsdb');
+    $this-&gt;setSource('wp_posts');
+    $this-&gt;belongsTo("post_author", "NewsAuthor", "ID");
+    $this-&gt;hasMany("ID", "NewsMeta", "post_id");
+    $this-&gt;belongsTo("ID", "NewsTermsRelationships", "object_id");
+
+    $this-&gt;addBehavior(new Commentable());
+
+    }</code></pre>
+<p>The problem that I am running into is that the behavior isn't adding because of a class not found exception:</p>
+<pre><code> PHP Fatal error:  Class 'Phalcon\\Mvc\\Model\\Behavior\\Commentable' not found in</code></pre>
+<p>So, my question is <strong>Where should I be saving custom behaviors so they can be used in my app</strong></p>
+<p>I have searched the documentation/web and haven't been able to determine where I am going wrong!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-95ed024d38f6873da4266b28-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-95ed024d38f6873da4266b28-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5915f25e654c4f9e60fe51700cdee683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4769/Izopi4a" class="user-moderator-Y"><span itemprop="name">Izo</span></a>        </span>
+        <br>
+
+        <span class="karma">85.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C25323" href="#C25323">
+                <time itemprop="dateCreated" datetime="2015-10-28T14:43:30-07:00" class="action-date">Oct '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>i hope this will help you</p>
+<p><a href="https://forum.phalcon.io/discussion/9193/dynamic-registration-namespaces">https://forum.phalcon.io/discussion/9193/dynamic-registration-namespaces</a></p>
+<p>i am going to sleep, hopefully if i didnt help you some else will.</p>
+<p>Cheers</p>
+<p>and my app is multi moduled. </p>
+<p>so in my mobules i have &quot;extra&quot; folder called libs, inside i create my helper classes, where I put the &quot;long logic&quot;</p>
+<p>and please forgive if i doidnt understand you corretcly</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="25323" data-cf-modified-95ed024d38f6873da4266b28-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="25323" data-cf-modified-95ed024d38f6873da4266b28-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8742806dd39255fa7b8c836efbe0fd20?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2901/radean0909" class="user-moderator-N"><span itemprop="name">radean0909</span></a>        </span>
+        <br>
+
+        <span class="karma">1.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C25323"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/5915f25e654c4f9e60fe51700cdee683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Izo                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C25325" href="#C25325">
+                <time itemprop="dateCreated" datetime="2015-10-28T15:02:11-07:00" class="action-date">Oct '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks for the reply. However, though namespaces are &quot;part&quot; of this issue here (and this helped, sort of, it got rid of some errors in the log, but the class still wasn't being loaded and now the log isn't reporting any errors). The larger part is why isn't the Class being loaded?</p>
+<blockquote>
+<p>i hope this will help you</p>
+<p><a href="https://forum.phalcon.io/discussion/9193/dynamic-registration-namespaces">https://forum.phalcon.io/discussion/9193/dynamic-registration-namespaces</a></p>
+<p>i am going to sleep, hopefully if i didnt help you some else will.</p>
+<p>Cheers</p>
+<p>and my app is multi moduled. </p>
+<p>so in my mobules i have &quot;extra&quot; folder called libs, inside i create my helper classes, where I put the &quot;long logic&quot;</p>
+<p>and please forgive if i doidnt understand you corretcly</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="25325" data-cf-modified-95ed024d38f6873da4266b28-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="25325" data-cf-modified-95ed024d38f6873da4266b28-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/48f79beb571fbd84d28ca0d8723bb490?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3052/mikeamarkey" class="user-moderator-N"><span itemprop="name">Michael Markey</span></a>        </span>
+        <br>
+
+        <span class="karma">635</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C25327" href="#C25327">
+                <time itemprop="dateCreated" datetime="2015-10-28T17:40:08-07:00" class="action-date">Oct '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Sorry if this is a repeat of the reply above, but I think the problem must be this:  <code>namespace Phalcon\Mvc\Model\Behavior</code>  I think there is a conflict of namespaces unless you have specifically setup your app to allow using the Phalcon namespace in custom classes.  </p>
+<p>Either way, since behaviors are related to models, how about creating 'Behavior' subdirectory in your models folder?  Then you should be able to namespace your behavior as <em>YourModelsNamespace</em>\Behavior without any extra config/worrying about namespacing.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="25327" data-cf-modified-95ed024d38f6873da4266b28-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="25327" data-cf-modified-95ed024d38f6873da4266b28-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8742806dd39255fa7b8c836efbe0fd20?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2901/radean0909" class="user-moderator-N"><span itemprop="name">radean0909</span></a>        </span>
+        <br>
+
+        <span class="karma">1.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C25327"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/48f79beb571fbd84d28ca0d8723bb490?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Michael Markey                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C25337" href="#C25337">
+                <time itemprop="dateCreated" datetime="2015-10-28T19:02:48-07:00" class="action-date">Oct '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It was exactly that, and that is exactly what I did to resolve.</p>
+<blockquote>
+<p>Sorry if this is a repeat of the reply above, but I think the problem must be this:  <code>namespace Phalcon\Mvc\Model\Behavior</code>  I think there is a conflict of namespaces unless you have specifically setup your app to allow using the Phalcon namespace in custom classes.  </p>
+<p>Either way, since behaviors are related to models, how about creating 'Behavior' subdirectory in your models folder?  Then you should be able to namespace your behavior as <em>YourModelsNamespace</em>\Behavior without any extra config/worrying about namespacing.</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="25337" data-cf-modified-95ed024d38f6873da4266b28-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="25337" data-cf-modified-95ed024d38f6873da4266b28-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/48f79beb571fbd84d28ca0d8723bb490?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3052/mikeamarkey" class="user-moderator-N"><span itemprop="name">Michael Markey</span></a>        </span>
+        <br>
+
+        <span class="karma">635</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C25337"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/8742806dd39255fa7b8c836efbe0fd20?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        radean0909                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C25347" href="#C25347">
+                <time itemprop="dateCreated" datetime="2015-10-28T20:26:41-07:00" class="action-date">Oct '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Ok glad to hear it worked out</p>
+<blockquote>
+<p>It was exactly that, and that is exactly what I did to resolve.</p>
+<blockquote>
+<p>Sorry if this is a repeat of the reply above, but I think the problem must be this:  <code>namespace Phalcon\Mvc\Model\Behavior</code>  I think there is a conflict of namespaces unless you have specifically setup your app to allow using the Phalcon namespace in custom classes.  </p>
+<p>Either way, since behaviors are related to models, how about creating 'Behavior' subdirectory in your models folder?  Then you should be able to namespace your behavior as <em>YourModelsNamespace</em>\Behavior without any extra config/worrying about namespacing.</p>
+</blockquote>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="25347" data-cf-modified-95ed024d38f6873da4266b28-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="25347" data-cf-modified-95ed024d38f6873da4266b28-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="25413" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '15</span>
+              </span><br/><a name="C25413" href="#C25413">
+                <time itemprop="dateCreated" datetime="2015-10-29T11:49:49-07:00" class="action-date">Oct '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You cant use namespaces from phalcon i think. Also im NOT SURE, but files should be called same as class name.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="25413" data-cf-modified-95ed024d38f6873da4266b28-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="25413" data-cf-modified-95ed024d38f6873da4266b28-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="9211" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

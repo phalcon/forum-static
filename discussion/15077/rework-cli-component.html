@@ -1,0 +1,171 @@
+---
+layout: default
+title: 'Rework CLI component - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/24/show-community">Show to Community</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Rework CLI component</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a></span>
+            <time itemprop="dateCreated" datetime="2016-12-19T14:42:34-07:00">Dec '16</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2016-12-19T14:42:34-07:00">Dec '16</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Dec '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>461</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">2</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a></span>
+                <span class="karma">77.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C15077" href="#C15077">
+        <time class="action-date">Dec '16</time>
+    </a>
+</div>
+<div class="post-content"><div><p>The CLI part of Phalcon has been neglected i dare say, there isn't even any category for it on the forums x)
+Routing and parameter handling are the most crucial part that should be reworked imho.</p>
+<h1>Routing:</h1>
+<p>This is the current scheme for routing:</p>
+<pre><code> $ php app/console.php [&lt;task&gt; [&lt;action&gt; [...&lt;params&gt;]]]</code></pre>
+<p>Arguments are linearly limited, you cannot have params without a task and action. I propose to use Symfony style task names, such as <code>app:status</code>. It may seem trivial, but with that you can redefine the command as</p>
+<pre><code>$ php app/console.php [&lt;route&gt;] [...&lt;params&gt;]</code></pre>
+<p>where <em>route</em> can be optional regardless of <em>params</em> if you allow the default route to be dispatched in such a case.</p>
+<p>Also, when executing</p>
+<pre><code class="language-php">$router-&gt;add('add:status:watch',[
+    'task' =&gt; 'app',
+    'action' =&gt; 'status-loop',
+])</code></pre>
+<p>a corresponding <code>AppTask::statusLoopAction()</code> will be called.</p>
+<p>Examples:</p>
+<pre><code># AppTask:statusAction()
+$ php app/console.php app:status
+
+# AppTask:indexAction()
+$ php app/console.php app
+
+# MainTask:indexAction()
+$ php app/console.php --foo bar</code></pre>
+<p>(Currently, the router tries to dispatch the last example as <code>--fooTask::barAction</code>)</p>
+<h1>Parameters:</h1>
+<p>Parameters are not interpreted by the router, they are passed along blindly.
+If you pass in <code>--my=option</code> and <code>--my option</code>, they result in <code>["--my=option"]</code> and <code>["--my","option"]</code> respectively. I see no reason why Phalcon shouldn't be extend it so they both result in <code>["my"=&gt;"option"]</code>. Here is a <a href="https://gist.github.com/lajosbencz/c87b33a3fb7fe6467340">simple parameters class</a> which can explain what I'm after:</p>
+<pre><code class="language-php">$p = new ConsoleParameters();
+$p-&gt;fromString('--opt1=foo arg1 -flag2 --opt2 "bar baz ..." arg2 "arg3 ..." -flag1 arg4');
+var_dump($p-&gt;getArguments());
+// ['arg1', 'arg2' ,'arg3 ...', 'arg4']
+var_dump($p-&gt;getOptions());
+// ['opt1'=&gt;'foo', 'opt2'=&gt;'bar baz ...']
+var_dump($p-&gt;getFlags());
+// ['flag1','flag2']</code></pre>
+<p>I'm planning to create two separate feature requests on github, but i would like to hear some input if such thing is welcome at all, so any feedback/idea is welcome!</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-a9bfe73ec3f924144e22c636-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-a9bfe73ec3f924144e22c636-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8da15621865643112c6e3243f2ce4ebe?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3812/Jurigag" class="user-moderator-Y"><span itemprop="name">Wojciech Ślawski</span></a>        </span>
+        <br>
+
+        <span class="karma">145.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="44147" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '16</span>
+              </span><br/><a name="C44147" href="#C44147">
+                <time itemprop="dateCreated" datetime="2016-12-19T14:54:43-07:00" class="action-date">Dec '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Shouldn't <code>--param</code> be something like switch, true only, meaning do something like for example <code>--force-clean</code> or something, and <code>-param</code> contain some value ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="44147" data-cf-modified-a9bfe73ec3f924144e22c636-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="44147" data-cf-modified-a9bfe73ec3f924144e22c636-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="44149" data-toggle="modal" data-target="#historyModal">
+                edited <span>Dec '16</span>
+              </span><br/><a name="C44149" href="#C44149">
+                <time itemprop="dateCreated" datetime="2016-12-19T14:58:01-07:00" class="action-date">Dec '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The example class differentiates between <code>--</code>: option as key+value pair and <code>-</code>: flag without value.</p>
+<p><code>--</code> also means that either <code>\s</code> or <code>=</code> could be used between key and value as glue character.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="44149" data-cf-modified-a9bfe73ec3f924144e22c636-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="44149" data-cf-modified-a9bfe73ec3f924144e22c636-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/877a54304e07c8cb38c47b43e1d6b6b3?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2828/sergeyklay" class="user-moderator-Y"><span itemprop="name">Serghei Iakovlev</span></a>        </span>
+        <br>
+
+        <span class="karma">39.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C44151" href="#C44151">
+                <time itemprop="dateCreated" datetime="2016-12-19T17:16:24-07:00" class="action-date">Dec '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Did you see <a href="https://github.com/vegas-cmf/core/blob/master/src/Cli/OptionParser.php">https://github.com/vegas-cmf/core/blob/master/src/Cli/OptionParser.php</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="44151" data-cf-modified-a9bfe73ec3f924144e22c636-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="44151" data-cf-modified-a9bfe73ec3f924144e22c636-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="15077" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

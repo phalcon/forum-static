@@ -1,0 +1,158 @@
+---
+layout: default
+title: 'Sub collection access in MongoCollection vs. Collection - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/23/odm">ODM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Sub collection access in MongoCollection vs. Collection</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/4529/tkroll" class="user-moderator-N"><span itemprop="name">Ty Kroll</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-01-09T22:26:19-07:00">Jan '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-01-09T22:26:19-07:00">Jan '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Feb '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>746</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/e05a71a3c55b7800771353f025c8fd03?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/4529/tkroll" class="user-moderator-N"><span itemprop="name">Ty Kroll</span></a></span>
+                <span class="karma">8.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C15261" href="#C15261">
+        <time class="action-date">Jan '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,</p>
+<p>I'm migrating to Phalcon 3 on PHP 7. I'm using the Incubator classes for the current mongodb driver (vs old mongo drive.)</p>
+<p>With the old Collection class, I accessed sub collection as arrays:</p>
+<p><code>SomeCollection: {</code>
+<code>"prop": {</code>
+<code>"subprop": 1,</code>
+<code>"other_prop": 2</code>
+<code>}</code>
+<code>}</code></p>
+<pre><code class="language-php">&lt;?php
+$c = SomeCollection::findFirst();
+$val = $c-&gt;prop['subprop'];</code></pre>
+<p>With MongCollection it seems to give me a StdClass instead of an array. I get <code>PHP Fatal error:  Uncaught Error: Cannot use object of type stdClass as array</code> when trying to access the subcollection as an array.</p>
+<p>How do I change this behavior back? I literally have thousands of places I use this.</p>
+<p>Thanks</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-dd38dfdd66662d6c24ef8c13-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-dd38dfdd66662d6c24ef8c13-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/e05a71a3c55b7800771353f025c8fd03?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4529/tkroll" class="user-moderator-N"><span itemprop="name">Ty Kroll</span></a>        </span>
+        <br>
+
+        <span class="karma">8.7k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C44763" href="#C44763">
+                <time itemprop="dateCreated" datetime="2017-01-10T00:10:57-07:00" class="action-date">Jan '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Found it!</p>
+<p>Line 303 in <a href="https://github.com/phalcon/incubator/blob/master/Library/Phalcon/Mvc/MongoCollection.php">https://github.com/phalcon/incubator/blob/master/Library/Phalcon/Mvc/MongoCollection.php</a></p>
+<p><code>$cursor-&gt;setTypeMap(["root"=&gt;get_called_class(),"document"=&gt;"object"]);</code></p>
+<p>I changed to:</p>
+<p><code>$cursor-&gt;setTypeMap(["root"=&gt;get_called_class(),"document"=&gt;"array"]);</code></p>
+<p>Solved my problem and returned behavior to behavior. Will check if it breaks anything else.</p>
+<p>Learned a bit about Type Maps. Here is more info if anyone is interested:
+<a href="http://php.net/manual/en/mongodb.persistence.deserialization.php#mongodb.persistence.typemaps">http://php.net/manual/en/mongodb.persistence.deserialization.php#mongodb.persistence.typemaps</a></p>
+<p>Hope this helps someone.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="44763" data-cf-modified-dd38dfdd66662d6c24ef8c13-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="44763" data-cf-modified-dd38dfdd66662d6c24ef8c13-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c0ce8f5e133750a4dfea4712e533a178?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/15/le51" class="user-moderator-N"><span itemprop="name">le51</span></a>        </span>
+        <br>
+
+        <span class="karma">43.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C44827" href="#C44827">
+                <time itemprop="dateCreated" datetime="2017-01-11T09:38:33-07:00" class="action-date">Jan '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi,</p>
+<p>you may submit a pull request on github in the 3.0.x branch.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="44827" data-cf-modified-dd38dfdd66662d6c24ef8c13-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="44827" data-cf-modified-dd38dfdd66662d6c24ef8c13-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2d7c901bd70351fec83f7fbb2a73b994?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3774/aloveless" class="user-moderator-N"><span itemprop="name">Andrew</span></a>        </span>
+        <br>
+
+        <span class="karma">1.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C45607" href="#C45607">
+                <time itemprop="dateCreated" datetime="2017-02-01T03:55:56-07:00" class="action-date">Feb '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Just migrated to Phalcon 3 &amp; PHP 7 and ran into this exception. This fix worked for me as well. </p>
+<p>Thank you.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="45607" data-cf-modified-dd38dfdd66662d6c24ef8c13-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="45607" data-cf-modified-dd38dfdd66662d6c24ef8c13-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="15261" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

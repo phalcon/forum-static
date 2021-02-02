@@ -1,0 +1,263 @@
+---
+layout: default
+title: 'Get info after create relationship between tables - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Get info after create relationship between tables</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2679/EnvySky" class="user-moderator-N"><span itemprop="name">Envy</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-11-18T04:15:50-07:00">Nov '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-11-18T04:15:50-07:00">Nov '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>844</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/98f3ee86a76e50af0500a9469eacc54f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2679/EnvySky" class="user-moderator-N"><span itemprop="name">Envy</span></a></span>
+                <span class="karma">6.0k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4001" href="#C4001">
+        <time class="action-date">Nov '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm just a newbie and finding out PhalconPHP.</p>
+<p>In one example, I have three tables with <strong>MyISAM</strong> engine:</p>
+<p><img src="http://s10.postimg.org/j0hhbg14p/phalcon.png" alt="" /></p>
+<p>In /model/Teams.php</p>
+<pre><code class="language-php">
+public function initialize()
+{
+    $this-&gt;hasMany("teamID","TeamsLeagues","teamID");
+}
+</code></pre>
+<p>In /model/Leagues.php</p>
+<pre><code class="language-php">
+public function initialize()
+{
+    $this-&gt;hasMany("leagueID","TeamsLeagues","leagueID");
+}
+</code></pre>
+<p>In /model/TeamsLeagues.php</p>
+<pre><code class="language-php">
+public function initialize()
+{
+    $this-&gt;belongsTo("teamID","Teams","teamID");
+    $this-&gt;belongsTo("leagueID","Leagues","leagueID");
+}
+</code></pre>
+<p><strong>I want to show more the column League when display the Teams, how can I do that?</strong></p>
+<p>I try this but not succeed:</p>
+<p>In /controllers/TeamsController.php</p>
+<pre><code class="language-php">
+    public function searchAction()
+    {
+
+        $numberPage = 1;
+        if ($this-&gt;request-&gt;isPost()) {
+            $query = Criteria::fromInput($this-&gt;di, "Teams", $_POST);
+            $this-&gt;persistent-&gt;parameters = $query-&gt;getParams();
+        } else {
+            $numberPage = $this-&gt;request-&gt;getQuery("page", "int");
+        }
+
+        $parameters = $this-&gt;persistent-&gt;parameters;
+        if (!is_array($parameters)) {
+            $parameters = array();
+        }
+        $parameters["order"] = "teamID";
+
+        $teams = Teams::find($parameters);
+        if (count($teams) == 0) {
+            $this-&gt;flash-&gt;notice("The search did not find any teams");
+
+            return $this-&gt;dispatcher-&gt;forward(array(
+                "controller" =&gt; "teams",
+                "action" =&gt; "index"
+            ));
+        }
+
+        $paginator = new Paginator(array(
+            "data" =&gt; $teams,
+            "limit"=&gt; 25,
+            "page" =&gt; $numberPage
+        ));
+
+        $this-&gt;view-&gt;page = $paginator-&gt;getPaginate();
+    }
+</code></pre>
+<p>In /view/teams/search.phtml</p>
+<pre><code class="language-html">
+        &lt;tr&gt;
+            &lt;td&gt;&lt;?php echo $team-&gt;teamID ?&gt;&lt;/td&gt;
+            &lt;td&gt;&lt;?php echo $team-&gt;name ?&gt;&lt;/td&gt;
+
+            &lt;td&gt;&lt;?php echo $team-&gt;teamsLeagues-&gt;name ?&gt;&lt;/td&gt;
+
+            &lt;td&gt;&lt;?php echo $team-&gt;shortName ?&gt;&lt;/td&gt;
+            &lt;td&gt;&lt;?php echo $team-&gt;logo ?&gt;&lt;/td&gt;
+            &lt;td&gt;&lt;?php echo $team-&gt;description ?&gt;&lt;/td&gt;
+            &lt;td&gt;&lt;?php echo $this-&gt;tag-&gt;linkTo(array("teams/edit/" . $team-&gt;teamID, "Edit")); ?&gt;&lt;/td&gt;
+            &lt;td&gt;&lt;?php echo $this-&gt;tag-&gt;linkTo(array("teams/delete/" . $team-&gt;teamID, "Delete")); ?&gt;&lt;/td&gt;
+        &lt;/tr&gt;
+</code></pre>
+<p>It show notice:
+Notice: Undefined property: Phalcon\Mvc\Model\Resultset\Simple::$name in E:\xampp\htdocs\football\app\views\teams\search.phtml on line 32</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-cff31b24412733429aba1b2e-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-cff31b24412733429aba1b2e-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9eafe1dbabc0c116138b0aff7e8f3670?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2335/skollro" class="user-moderator-N"><span itemprop="name">skollro</span></a>        </span>
+        <br>
+
+        <span class="karma">6.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C13320" href="#C13320">
+                <time itemprop="dateCreated" datetime="2014-11-18T04:27:54-07:00" class="action-date">Nov '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You can use a many-to-many relation here.</p>
+<pre><code class="language-php">$this-&gt;hasManyToMany(
+            "teamID",
+            "TeamsLeagues",
+            "teamID", "leagueID",
+            "Leagues",
+            "leagueID",
+            array(
+                "alias" =&gt; "teamsLeagues"
+            )
+        );</code></pre>
+<p>I think this should work and you can access your property as shown in your example.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13320" data-cf-modified-cff31b24412733429aba1b2e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13320" data-cf-modified-cff31b24412733429aba1b2e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/98f3ee86a76e50af0500a9469eacc54f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2679/EnvySky" class="user-moderator-N"><span itemprop="name">Envy</span></a>        </span>
+        <br>
+
+        <span class="karma">6.0k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C13320"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/9eafe1dbabc0c116138b0aff7e8f3670?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        skollro                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C13322" href="#C13322">
+                <time itemprop="dateCreated" datetime="2014-11-18T04:43:39-07:00" class="action-date">Nov '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I tried to add that relationship into Teams models but nothing else happen.</p>
+<p>Beside, do i have to use tables with InnoDDB engine (I just want to use MyISAM engine)?</p>
+<blockquote>
+<p>You can use a many-to-many relation here.</p>
+<pre><code class="language-php">$this-&gt;hasManyToMany(
+           "teamID",
+           "TeamsLeagues",
+           "teamID", "leagueID",
+           "Leagues",
+           "leagueID",
+          array(
+              "alias" =&gt; "teamsLeagues"
+          )
+       );</code></pre>
+<p>I think this should work and you can access your property as shown in your example.</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13322" data-cf-modified-cff31b24412733429aba1b2e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13322" data-cf-modified-cff31b24412733429aba1b2e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9eafe1dbabc0c116138b0aff7e8f3670?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2335/skollro" class="user-moderator-N"><span itemprop="name">skollro</span></a>        </span>
+        <br>
+
+        <span class="karma">6.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C13323" href="#C13323">
+                <time itemprop="dateCreated" datetime="2014-11-18T04:47:00-07:00" class="action-date">Nov '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Did you declare all the attributes (inclusive primary, foreign keys) in your models?</p>
+<p>InnoDB is faster and it supports transactions. It's recommended to use InnoDB in new projects ;)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13323" data-cf-modified-cff31b24412733429aba1b2e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13323" data-cf-modified-cff31b24412733429aba1b2e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/98f3ee86a76e50af0500a9469eacc54f?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2679/EnvySky" class="user-moderator-N"><span itemprop="name">Envy</span></a>        </span>
+        <br>
+
+        <span class="karma">6.0k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C13362" href="#C13362">
+                <time itemprop="dateCreated" datetime="2014-11-18T19:53:17-07:00" class="action-date">Nov '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I refered the website <strong>INVO</strong> by Phalcon but do not see they create the foreign keys in db, when I change the InnoDB engine to MyISAM, website stil runs normally.</p>
+<p>As I know, InnoDB is not faster than MyISAM when you just need selected records.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="13362" data-cf-modified-cff31b24412733429aba1b2e-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="13362" data-cf-modified-cff31b24412733429aba1b2e-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4001" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

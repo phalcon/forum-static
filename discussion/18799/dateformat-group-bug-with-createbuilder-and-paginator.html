@@ -1,0 +1,114 @@
+---
+layout: default
+title: 'DATE_FORMAT group bug with createBuilder and Paginator - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">DATE_FORMAT group bug with createBuilder and Paginator</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/10697/hisune" class="user-moderator-N"><span itemprop="name">Hisune</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-09-13T03:08:29-07:00">Sep '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-09-13T03:08:29-07:00">Sep '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>381</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/5dcc56aae5aec0a9ee6abed034220161?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/10697/hisune" class="user-moderator-N"><span itemprop="name">Hisune</span></a></span>
+                <span class="karma">2.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C18799" href="#C18799">
+        <time class="action-date">Sep '18</time>
+    </a>
+</div>
+<div class="post-content"><div><pre><code class="language-php">        $model = new StatReport();
+        $builder = $model-&gt;getModelsManager()-&gt;createBuilder()-&gt;from(get_class($model));
+//        $results = $builder-&gt;columns('report_at')
+        $results = $builder-&gt;columns('DATE_FORMAT(report_at,"%x%v") AS test')
+            -&gt;where('report_at&gt; "2018-09-08"')
+            -&gt;groupBy('test')
+//            -&gt;groupBy('report_at')
+            -&gt;getQuery()-&gt;execute();
+        $paginator = new \Phalcon\Paginator\Adapter\QueryBuilder(array(
+            "builder" =&gt; $builder,
+            "limit"=&gt; 10,
+            "page" =&gt; 1,
+        ));
+        var_dump($paginator-&gt;getPaginate()-&gt;items-&gt;toArray());</code></pre>
+<p>throw:</p>
+<pre><code>Column 'test' doesn't belong to any of the selected models (1), when preparing: SELECT COUNT(DISTINCT test) AS [rowcount] FROM [StatReport] WHERE report_at&gt; "2018-09-08"</code></pre>
+<p>if not use paginate or not use DATA_FORMAT, it work</p>
+<p>how can i fix this problem?</p>
+<p>my phalcon version is 3.3.1</p>
+<p>thx</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-39b7984f9d25624fe631e8e0-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-39b7984f9d25624fe631e8e0-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/857b8420e1d5fe37fa3324badf149743?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3921/Skymidt" class="user-moderator-N"><span itemprop="name">Skymidt</span></a>        </span>
+        <br>
+
+        <span class="karma">3.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C57309" href="#C57309">
+                <time itemprop="dateCreated" datetime="2018-09-13T20:14:30-07:00" class="action-date">Sep '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>A pagninator needs to count how many rows you're looking for.
+To do this, he changes the select clause to do a count.
+This will returns how many row match your where clause.
+You can't use terms like (group by) or filtering (having) in the query if you want to paginate, because in count, this doesn't exist anymore.</p>
+<pre><code class="language-sql">SELECT COUNT(DISTINCT test) AS [rowcount] FROM [StatReport] WHERE report_at&gt; "2018-09-08"</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57309" data-cf-modified-39b7984f9d25624fe631e8e0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57309" data-cf-modified-39b7984f9d25624fe631e8e0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="18799" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

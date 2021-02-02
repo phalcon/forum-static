@@ -1,0 +1,132 @@
+---
+layout: default
+title: 'How to select all columns of a Many to Many relationship model - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">How to select all columns of a Many to Many relationship model</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1036/sn0opr" class="user-moderator-N"><span itemprop="name">sn0opr</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-03-21T09:43:59-07:00">Mar '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-03-21T09:43:59-07:00">Mar '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>984</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/5bbb425f8e19108846052385446c371c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1036/sn0opr" class="user-moderator-N"><span itemprop="name">sn0opr</span></a></span>
+                <span class="karma">22.9k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1866" href="#C1866">
+        <time class="action-date">Mar '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have a 3 models/tables:</p>
+<p>Articles (id, title, content)</p>
+<p>Categories(id, name, parent_id),</p>
+<p>AriclesHasCategories(articlesId, categories Id)</p>
+<p>I did all the relationships, and it work good when I do a simple findFirst, or find.</p>
+<p>but it doesn't work when I for example Articles::find('category.name = 'Movies')</p>
+<p>but  I don't know how I can do to filter my articles results with e.g(WHERE categoryName = 'Programming')</p>
+<p>Should I only use PHQL for that so I do a normal SQL query, I mean the ORM don't manage conditions like that ?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-5d1fc6628f9f04930fa377fa-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-5d1fc6628f9f04930fa377fa-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/533985d102feef881f5c41933bd43bfb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/283/calinrada" class="user-moderator-N"><span itemprop="name">Calin Rada</span></a>        </span>
+        <br>
+
+        <span class="karma">51.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C6451" href="#C6451">
+                <time itemprop="dateCreated" datetime="2014-03-22T06:24:40-07:00" class="action-date">Mar '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This is what I do. But i use category_slug from a category_translation table,  instead of category name: </p>
+<pre><code class="language-php">    public static function findByCategorySlug($categorySlug, $itemsPerPage = 10, $currentPage = 1, $limit = 100)
+    {
+        $ct = CategoryTranslation::findFirst(array(
+            "slug = :slug:",
+            "bind" =&gt; array(
+                "slug" =&gt; $categorySlug
+            )
+        ));
+
+        if (!$ct) {
+            throw new \Exception(ErrorCode::ERR_OBJECT_NOT_FOUND, 404);
+        }
+
+        $result = $ct
+        -&gt;getCategory(array("is_active = 1"))
+        -&gt;getPosts(array(
+            "is_active = 1",
+            "order" =&gt; "created_at DESC",
+            "limit" =&gt; $limit &gt; 0 &amp;&amp; $limit &lt;= 100 ? $limit : 100
+        ))
+        -&gt;filter(function($post){
+            return $post-&gt;toArray();
+        });
+
+        $paginator = new \Phalcon\Paginator\Adapter\NativeArray(
+            array(
+                "data" =&gt; $result,
+                "limit"=&gt; $itemsPerPage,
+                "page" =&gt; $currentPage
+            )
+        );
+
+        return $paginator-&gt;getPaginate();
+    }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="6451" data-cf-modified-5d1fc6628f9f04930fa377fa-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="6451" data-cf-modified-5d1fc6628f9f04930fa377fa-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1866" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

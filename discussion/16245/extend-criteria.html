@@ -1,0 +1,361 @@
+---
+layout: default
+title: 'Extend Criteria? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Extend Criteria?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/9137/zachleigh" class="user-moderator-N"><span itemprop="name">Zach Leigh</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-06-01T04:58:34-07:00">Jun '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-06-01T04:58:34-07:00">Jun '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jun '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>509</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/246ad49bed5e214e3ae0c0de4896a399?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/9137/zachleigh" class="user-moderator-N"><span itemprop="name">Zach Leigh</span></a></span>
+                <span class="karma">5.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C16245" href="#C16245">
+        <time class="action-date">Jun '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I would love to be able to extend the Criteria class and do something like this:</p>
+<pre><code class="language-php">User::query
+    -&gt;where('id &gt; 100')
+    -&gt;myCustomMethod()
+    -&gt;orderBy('username')
+    -&gt;execute();</code></pre>
+<p>Is this currently possible? Any way at all to do this?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-74bb0a7910a5fddf4ed3973a-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-74bb0a7910a5fddf4ed3973a-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/246ad49bed5e214e3ae0c0de4896a399?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9137/zachleigh" class="user-moderator-N"><span itemprop="name">Zach Leigh</span></a>        </span>
+        <br>
+
+        <span class="karma">5.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C48541" href="#C48541">
+                <time itemprop="dateCreated" datetime="2017-06-01T05:42:15-07:00" class="action-date">Jun '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>So a little ghetto, but if you override Model::query() you can hijack the the criteria class with your you own implementation:</p>
+<pre><code class="language-php">    public static function query(\Phalcon\DiInterface $dependencyInjector = null)
+    {
+        /**
+         * Use the global dependency injector if there is no one defined
+         */
+        if (!is_object($dependencyInjector)) {
+            $dependencyInjector = \Phalcon\Di::getDefault();
+        }
+
+        $criteria = new \App\Somewhere\Criteria();
+        $criteria-&gt;setDI($dependencyInjector);
+        $criteria-&gt;setModelName(get_called_class());
+
+        return $criteria;
+    }</code></pre>
+<p>\App\Somewhere\Criteria</p>
+<pre><code class="language-php">namespace App\Somewhere\Model;
+
+use Phalcon\Mvc\Model\Criteria as PhalconCriteria;
+
+class Criteria extends PhalconCriteria
+{
+    public function myCustomMethod($param)
+    {      
+        return $this-&gt;where("crazy long query you dont want to write every where");
+    }
+}</code></pre>
+<p>I don't undesrtand why in the Model class they hardcode the Criteria namespace:</p>
+<pre><code class="language-php">    public static function query(&lt;DiInterface&gt; dependencyInjector = null) -&gt; &lt;Criteria&gt;
+    {
+        var criteria;
+
+        /**
+         * Use the global dependency injector if there is no one defined
+         */
+        if typeof dependencyInjector != "object" {
+            let dependencyInjector = Di::getDefault();
+        }
+
+        /**
+         * Gets Criteria instance from DI container
+         */
+        if dependencyInjector instanceof DiInterface {
+            // **HERE** WHY IS THIS HARDCODED?
+            let criteria = &lt;CriteriaInterface&gt; dependencyInjector-&gt;get("Phalcon\\Mvc\\Model\\Criteria");
+        } else {
+            let criteria = new Criteria();
+            criteria-&gt;setDI(dependencyInjector);
+        }
+
+        criteria-&gt;setModelName(get_called_class());
+
+        return criteria;
+}</code></pre>
+<p><a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/model.zep#L974">https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/model.zep#L974</a></p>
+<p>Would make more sense to check for a custom implementation before falling back to the Phalcon implementation.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48541" data-cf-modified-74bb0a7910a5fddf4ed3973a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48541" data-cf-modified-74bb0a7910a5fddf4ed3973a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4363/lajosbencz" class="user-moderator-N"><span itemprop="name">Lajos Bencz</span></a>        </span>
+        <br>
+
+        <span class="karma">77.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="48545" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '17</span>
+              </span><br/><a name="C48545" href="#C48545">
+                <time itemprop="dateCreated" datetime="2017-06-01T06:32:42-07:00" class="action-date">Jun '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I'd reverse the approach, and create a &quot;criteria manager&quot; class:</p>
+<pre><code class="language-php">class CriteriaManager {
+    protected $_criteria;
+    public function attach(CriteriaInterface $criteria) {
+        $this-&gt;_criteria = $criteria;
+    }
+
+    public function myCustomMethod() {
+        $this-&gt;_criteria-&gt;andWhere("1=1 AND column='value'");
+    }
+
+    public function execute() {
+        return $this-&gt;_criteria-&gt;execute();
+    }
+}</code></pre>
+<p>Maybe not with this exact layout, but I'm sure you get the concept ;]</p>
+<p>The real pro about this approach is that you don't have to hack into existing classes.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48545" data-cf-modified-74bb0a7910a5fddf4ed3973a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48545" data-cf-modified-74bb0a7910a5fddf4ed3973a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c897fab3d4f3e07ca673337a1efa9cbf?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/6133/corentin-begne" class="user-moderator-N"><span itemprop="name">corentin-begne</span></a>        </span>
+        <br>
+
+        <span class="karma">12.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="48549" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '17</span>
+              </span><br/><a name="C48549" href="#C48549">
+                <time itemprop="dateCreated" datetime="2017-06-01T08:20:06-07:00" class="action-date">Jun '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You can also use Phalcon\Db\Dialect\MySQL to create custom function.<br />
+Example :  </p>
+<pre><code>use Phalcon\Db\Dialect\MySQL as SqlDialect;
+use Manager\User as UserManager;
+$di-&gt;set('db', function () use ($config) {  
+    $dialect = new SqlDialect();
+    $dialect-&gt;registerCustomFunction('GET_YEARDIFF', function($dialect, $expression) {
+            return sprintf(
+                'TIMESTAMPDIFF(YEAR, %s, %s)',
+                $dialect-&gt;getSqlExpression($expression['arguments'][0]),
+                $dialect-&gt;getSqlExpression($expression['arguments'][1])
+             );
+        }
+    );
+    $dialect-&gt;registerCustomFunction('GROUP_AGE', function($dialect, $expression) {
+            return str_replace('[age]', $dialect-&gt;getSqlExpression($expression['arguments'][0]),
+                'CASE 
+                    WHEN [age] &lt;= 17 THEN \''.UserManager::$ageGroup[0]['name'].'\'
+                    WHEN [age] &lt;= 25 THEN \''.UserManager::$ageGroup[1]['name'].'\'
+                    WHEN [age] &lt;= 35 THEN \''.UserManager::$ageGroup[2]['name'].'\'
+                    WHEN [age] &lt;= 50 THEN \''.UserManager::$ageGroup[3]['name'].'\'
+                    WHEN [age] &gt; 50 THEN \''.UserManager::$ageGroup[4]['name'].'\'
+                    ELSE \''.UserManager::$ageGroup[5]['name'].'\'
+                END'           
+            );
+        }
+    );
+
+    return new Mysql([
+        'host' =&gt; $config[ENV]-&gt;database-&gt;host,
+        'username' =&gt; $config[ENV]-&gt;database-&gt;username,
+        'password' =&gt; $config[ENV]-&gt;database-&gt;password,
+        'dbname' =&gt; $config[ENV]-&gt;database-&gt;dbname,
+        'charset' =&gt; $config[ENV]-&gt;database-&gt;charset,
+        'dialectClass' =&gt; $dialect
+    ]);
+});
+
+User::find(['columns'=&gt;'*, GROUP_AGE(GET_YEARDIFF(us_birthday_date, current_date())) as groupAgeName']);</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48549" data-cf-modified-74bb0a7910a5fddf4ed3973a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48549" data-cf-modified-74bb0a7910a5fddf4ed3973a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/246ad49bed5e214e3ae0c0de4896a399?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9137/zachleigh" class="user-moderator-N"><span itemprop="name">Zach Leigh</span></a>        </span>
+        <br>
+
+        <span class="karma">5.3k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C48545"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/660e8c9b157b0029b6e0ba24c0ea3eba?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Lajos Bencz                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C48553" href="#C48553">
+                <time itemprop="dateCreated" datetime="2017-06-01T13:44:11-07:00" class="action-date">Jun '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thats probably a better idea. How would you then hook this into your model? I still want to be able to call Model::query() so that I don't break the existing api.</p>
+<blockquote>
+<p>I'd reverse the approach, and create a &quot;criteria manager&quot; class:</p>
+<pre><code class="language-php">class CriteriaManager {
+   protected $_criteria;
+  public function attach(CriteriaInterface $criteria) {
+      $this-&gt;_criteria = $criteria;
+  }
+
+  public function myCustomMethod() {
+      $this-&gt;_criteria-&gt;andWhere("1=1 AND column='value'");
+  }
+
+  public function execute() {
+      return $this-&gt;_criteria-&gt;execute();
+  }
+}</code></pre>
+<p>Maybe not with this exact layout, but I'm sure you get the concept ;]</p>
+<p>The real pro about this approach is that you don't have to hack into existing classes.</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48553" data-cf-modified-74bb0a7910a5fddf4ed3973a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48553" data-cf-modified-74bb0a7910a5fddf4ed3973a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/246ad49bed5e214e3ae0c0de4896a399?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/9137/zachleigh" class="user-moderator-N"><span itemprop="name">Zach Leigh</span></a>        </span>
+        <br>
+
+        <span class="karma">5.3k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C48549"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/c897fab3d4f3e07ca673337a1efa9cbf?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        corentin-begne                    </a>
+                </div><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="48555" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jun '17</span>
+              </span><br/><a name="C48555" href="#C48555">
+                <time itemprop="dateCreated" datetime="2017-06-01T13:48:36-07:00" class="action-date">Jun '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes, dialects are also part of what I want to do. Wouldnt it be great to do this?</p>
+<pre><code class="language-php">$ageGroups = User::query()-&gt;groupByAge()-&gt;execute();</code></pre>
+<p>Code doesnt come much cleaner than that.</p>
+<blockquote>
+<p>You can also use Phalcon\Db\Dialect\MySQL to create custom function.<br />
+Example :  </p>
+<pre><code>use Phalcon\Db\Dialect\MySQL as SqlDialect;
+use Manager\User as UserManager;
+$di-&gt;set('db', function () use ($config) {  
+   $dialect = new SqlDialect();
+   $dialect-&gt;registerCustomFunction('GET_YEARDIFF', function($dialect, $expression) {
+           return sprintf(
+               'TIMESTAMPDIFF(YEAR, %s, %s)',
+               $dialect-&gt;getSqlExpression($expression['arguments'][0]),
+               $dialect-&gt;getSqlExpression($expression['arguments'][1])
+            );
+       }
+   );
+   $dialect-&gt;registerCustomFunction('GROUP_AGE', function($dialect, $expression) {
+           return str_replace('[age]', $dialect-&gt;getSqlExpression($expression['arguments'][0]),
+               'CASE 
+                   WHEN [age] &lt;= 17 THEN \''.UserManager::$ageGroup[0]['name'].'\'
+                   WHEN [age] &lt;= 25 THEN \''.UserManager::$ageGroup[1]['name'].'\'
+                   WHEN [age] &lt;= 35 THEN \''.UserManager::$ageGroup[2]['name'].'\'
+                   WHEN [age] &lt;= 50 THEN \''.UserManager::$ageGroup[3]['name'].'\'
+                   WHEN [age] &gt; 50 THEN \''.UserManager::$ageGroup[4]['name'].'\'
+                   ELSE \''.UserManager::$ageGroup[5]['name'].'\'
+               END'           
+           );
+       }
+   );
+
+   return new Mysql([
+       'host' =&gt; $config[ENV]-&gt;database-&gt;host,
+       'username' =&gt; $config[ENV]-&gt;database-&gt;username,
+       'password' =&gt; $config[ENV]-&gt;database-&gt;password,
+       'dbname' =&gt; $config[ENV]-&gt;database-&gt;dbname,
+       'charset' =&gt; $config[ENV]-&gt;database-&gt;charset,
+       'dialectClass' =&gt; $dialect
+   ]);
+});
+
+User::find(['columns'=&gt;'*, GROUP_AGE(GET_YEARDIFF(us_birthday_date, current_date())) as groupAgeName']);</code></pre>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="48555" data-cf-modified-74bb0a7910a5fddf4ed3973a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="48555" data-cf-modified-74bb0a7910a5fddf4ed3973a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="16245" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

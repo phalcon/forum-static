@@ -1,0 +1,319 @@
+---
+layout: default
+title: 'Poor ViewInterface::render - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Poor ViewInterface::render</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/76/Sirian" class="user-moderator-N"><span itemprop="name">Sirian</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-02-13T04:04:35-07:00">Feb '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-02-13T04:04:35-07:00">Feb '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Feb '13</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">5</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1148</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">3</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/5869f3455680a6a77f7e5dcda8a5f162?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/76/Sirian" class="user-moderator-N"><span itemprop="name">Sirian</span></a></span>
+                <span class="karma">1.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C54" href="#C54">
+        <time class="action-date">Feb '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I think \Phalcon\Mvc\View::render method is vendor-locked now. Look:</p>
+<pre><code class="language-php">public function render($controllerName, $actionName, $params=null){ }</code></pre>
+<p>View component should not know about controllers and actions. View component should only render template with data. Dispatcher should perform some magic and bind controllers with views. </p>
+<p>I think method render should looks like</p>
+<pre><code class="language-php">public function render($name, $params=null){}</code></pre>
+<p>Where $name is logical name (it maybe a filepath, or a cache key, or smth else - depends on engine realization).
+Side effect of current realization - It's impossible to render custom file in standalone mode, because you should provide at least 2 arguments to render function. And you can't even do smth like</p>
+<pre><code class="language-php">$view-&gt;getEngine('twig')-&gt;render();</code></pre>
+<p>because View hasn't getter's for engines. Also I don't understand how to render picked view now</p>
+<pre><code class="language-php">$view-&gt;pick('path/to/file');
+$view-&gt;render('', ''); //only this call works, but I think it's silly</code></pre>
+<p>Look at Symfony2 Templating component. It has really cool architecture: <a href="https://github.com/symfony/Templating">https://github.com/symfony/Templating</a></p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-a5cff9b35e00c928919ec5c7-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-a5cff9b35e00c928919ec5c7-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">3</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8fcad302d31f7f007b93f0395701e112?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/56/jeffreycahyono" class="user-moderator-N"><span itemprop="name">jeffreycahyono</span></a>        </span>
+        <br>
+
+        <span class="karma">27.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C248" href="#C248">
+                <time itemprop="dateCreated" datetime="2013-02-13T06:43:37-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi Sirian
+Phalcon view can be used as standalone mode. Look at the <a href="http://docs.phalcon.io/en/latest/reference/models.html#stand-alone-component">http://docs.phalcon.io/en/latest/reference/models.html#stand-alone-component</a>. For stand alone mode, you shold assign the $controllerName with the folder containing your template and the $actionName is the file name of the template.<br />
+I use the view engine for my Elements class, a ui elements that is used by many controllers. Here is the example of elements class that render using view engine.</p>
+<pre><code class="language-php">/**
+ * Elements
+ *
+ * Helps to build UI elements for the application
+ */
+class Elements extends \Phalcon\Mvc\User\Component
+{
+    protected function tmplRender($tmpl){
+        $this-&gt;view-&gt;start();
+        //render $tmpl.volt stored in /views/elements/$tmpl.vol 
+        $this-&gt;view-&gt;render('elements',$tmpl);
+        $this-&gt;view-&gt;finish();
+        return $this-&gt;view-&gt;getContent();       
+    }
+
+    public function getSearchBar(){
+        $this-&gt;view-&gt;setVar('categories',\Models\Categories::find());
+        //render searchbar.volt
+        return $this-&gt;tmplRender('searchbar');  
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="248" data-cf-modified-a5cff9b35e00c928919ec5c7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="248" data-cf-modified-a5cff9b35e00c928919ec5c7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8fcad302d31f7f007b93f0395701e112?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/56/jeffreycahyono" class="user-moderator-N"><span itemprop="name">jeffreycahyono</span></a>        </span>
+        <br>
+
+        <span class="karma">27.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C249" href="#C249">
+                <time itemprop="dateCreated" datetime="2013-02-13T06:50:14-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Sorry wrong link. the correct link for stand alone view: <a href="http://docs.phalcon.io/en/latest/reference/views.html#stand-alone-component">http://docs.phalcon.io/en/latest/reference/views.html#stand-alone-component</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="249" data-cf-modified-a5cff9b35e00c928919ec5c7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="249" data-cf-modified-a5cff9b35e00c928919ec5c7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5869f3455680a6a77f7e5dcda8a5f162?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/76/Sirian" class="user-moderator-N"><span itemprop="name">Sirian</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C250" href="#C250">
+                <time itemprop="dateCreated" datetime="2013-02-13T06:52:04-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You can render this way if you has filestructure like 'views_root_dir/subfolder/file.volt`'
+But try to render: 'views_root_dir/file.volt'</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="250" data-cf-modified-a5cff9b35e00c928919ec5c7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="250" data-cf-modified-a5cff9b35e00c928919ec5c7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5869f3455680a6a77f7e5dcda8a5f162?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/76/Sirian" class="user-moderator-N"><span itemprop="name">Sirian</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C251" href="#C251">
+                <time itemprop="dateCreated" datetime="2013-02-13T06:53:53-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>and what if i want to render 'views_root_dir/sub1/sub2/file.volt'?</p>
+<pre><code class="language-php">$view-&gt;render('sub1/sub2', 'file')
+or
+$view-&gt;render('sub1', 'sub2/file')</code></pre>
+<p>I think render function now is ambiguous</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="251" data-cf-modified-a5cff9b35e00c928919ec5c7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="251" data-cf-modified-a5cff9b35e00c928919ec5c7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C265" href="#C265">
+                <time itemprop="dateCreated" datetime="2013-02-14T00:33:18-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You could add a method 'render' to your base controller and implement a similar behavior to the one you're expecting:</p>
+<pre><code class="language-php">&lt;?php
+
+class ControllerBase extends Phalcon\Mvc\Controller
+{
+
+    public function render($path, $variables=null)
+    {
+        $this-&gt;view-&gt;disable();     
+        echo $this-&gt;twig-&gt;render($path, $variables);                
+    }
+
+}</code></pre>
+<p>Render views in your controller:</p>
+<pre><code class="language-php">&lt;?php
+
+class RobotsController extends ControllerBase
+{
+    public function showAction()
+    {
+        $this-&gt;render('sub-dir/sub-dir/template.twig');
+    }
+}</code></pre>
+<p>Register the Twig service this way:</p>
+<pre><code class="language-php">$di['twig'] = function(){
+    $loader = new \Twig_Loader_Filesystem('../app/views/');
+    $twig = new \Twig_Environment($loader);
+    return $twig;    
+};</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="265" data-cf-modified-a5cff9b35e00c928919ec5c7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="265" data-cf-modified-a5cff9b35e00c928919ec5c7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5869f3455680a6a77f7e5dcda8a5f162?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/76/Sirian" class="user-moderator-N"><span itemprop="name">Sirian</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C266" href="#C266">
+                <time itemprop="dateCreated" datetime="2013-02-14T00:52:30-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yes, now i use this approach. But what if I want to use multiple engines simultaneously? Of course I can implement own DelegationEngine, or use Symfony Templating component. But in this case I will loose performance and don't understand why should I use phalcon? only for DI and dispatching?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="266" data-cf-modified-a5cff9b35e00c928919ec5c7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="266" data-cf-modified-a5cff9b35e00c928919ec5c7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C267" href="#C267">
+                <time itemprop="dateCreated" datetime="2013-02-14T01:13:27-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Phalcon\Mvc\View uses a different strategy, which is more related to convention rather than explicitness, it uses a hierarchical view model where views are included in a hierarchy according to the controller and view that was executed, very different from what you mention where inheritance between views is explicitly defined by the developer in each request. </p>
+<p>You could force Phalcon\Mvc\View to work in the way you're expecting, but keeping in mind that it's designed to work with a different approach.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="267" data-cf-modified-a5cff9b35e00c928919ec5c7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="267" data-cf-modified-a5cff9b35e00c928919ec5c7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5869f3455680a6a77f7e5dcda8a5f162?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/76/Sirian" class="user-moderator-N"><span itemprop="name">Sirian</span></a>        </span>
+        <br>
+
+        <span class="karma">1.5k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C268" href="#C268">
+                <time itemprop="dateCreated" datetime="2013-02-14T01:22:17-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>So maybe you should create a delegation layer between engines and current View?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="268" data-cf-modified-a5cff9b35e00c928919ec5c7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="268" data-cf-modified-a5cff9b35e00c928919ec5c7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C269" href="#C269">
+                <time itemprop="dateCreated" datetime="2013-02-14T01:34:41-07:00" class="action-date">Feb '13</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I do not know what exactly idea you have in mind, if you want you can add that functionality to the incubator and then we can port it somewhat similar way to C</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="269" data-cf-modified-a5cff9b35e00c928919ec5c7-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="269" data-cf-modified-a5cff9b35e00c928919ec5c7-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="54" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

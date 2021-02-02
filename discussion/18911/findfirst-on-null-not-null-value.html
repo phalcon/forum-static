@@ -1,0 +1,200 @@
+---
+layout: default
+title: 'Findfirst on null / not null value - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Findfirst on null / not null value</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/4627/Johngtrs" class="user-moderator-N"><span itemprop="name">Jonathan Vandal</span></a></span>
+            <time itemprop="dateCreated" datetime="2018-10-22T03:12:55-07:00">Oct '18</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2018-10-22T03:12:55-07:00">Oct '18</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '18</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>412</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/6003c6340c95be89eb57aa50a7cf5beb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/4627/Johngtrs" class="user-moderator-N"><span itemprop="name">Jonathan Vandal</span></a></span>
+                <span class="karma">41.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C18911" href="#C18911">
+        <time class="action-date">Oct '18</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm using Phalcon 3 and I have a problem with my query. I want to find if the row already exist. </p>
+<pre><code>    $colA = $data['columnA'] ?? null;
+    $colB = $data['columnB'] ?? null;
+    $colC = $data['columnC'] ?? null;
+
+    $robot = Robots::findFirst(array(
+        "columnA = :columnA: AND columnB = :columnB: AND columnC = :columnC:",
+        "bind" =&gt; array("columnA" =&gt; $colA, "columnB" =&gt; $colB, "columnC" =&gt; $colC)
+    ));</code></pre>
+<p>The problem is that if one of these variable is null I need to replace my conditon by <code>IS NULL</code> else my query will not work because the query will use <code>colA = null</code>.</p>
+<p>Does Phalcon can resolve this problem ?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-1c0e28ad81e52cc437ea32ef-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-1c0e28ad81e52cc437ea32ef-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6221c81c81cd357c818daec1bb8b17ff?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4153/nikolay-mihaylov" class="user-moderator-N"><span itemprop="name">Nikolay Mihaylov</span></a>        </span>
+        <br>
+
+        <span class="karma">93.7k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="57623" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '18</span>
+              </span><br/><a name="C57623" href="#C57623">
+                <time itemprop="dateCreated" datetime="2018-10-22T05:22:25-07:00" class="action-date">Oct '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I'm not 100% sure I understood the question, but something simple like?</p>
+<pre><code class="language-php">$bind = [];
+$conditions = [];
+
+// Values
+$collection = [
+    'columnA' =&gt; $data['columnA'] ?? null,
+    'columnB' =&gt; $data['columnB'] ?? null,
+    'columnC' =&gt; $data['columnC'] ?? null,
+];
+
+// Create conditions
+foreach ($collection as $column =&gt; $value) {
+    if (is_null($value)) {
+        $conditions[] = $column . ' IS NULL';
+    } else {
+        $conditions[] = $column . ' = :' . $column . ':';
+        $bind[$column] = $value;
+    }   
+}
+
+// Query
+$robot = Robots::findFirst(array(
+    'conditions' =&gt; implode(' AND ', $conditions),
+    'bind' =&gt; $bind
+));</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57623" data-cf-modified-1c0e28ad81e52cc437ea32ef-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57623" data-cf-modified-1c0e28ad81e52cc437ea32ef-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6003c6340c95be89eb57aa50a7cf5beb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4627/Johngtrs" class="user-moderator-N"><span itemprop="name">Jonathan Vandal</span></a>        </span>
+        <br>
+
+        <span class="karma">41.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C57625" href="#C57625">
+                <time itemprop="dateCreated" datetime="2018-10-22T05:54:18-07:00" class="action-date">Oct '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Yep it's that. I aksed if there is something in the ORM who can skip this step :</p>
+<pre><code>foreach ($collection as $column =&gt; $value) {
+    if (is_null($value)) {
+        $conditions[] = $column . ' IS NULL';
+    } else {
+        $conditions[] = $column . ' = :' . $column . ':';
+        $bind[$column] = $value;
+    }   
+}</code></pre>
+<p>I just want to know if Phalcon can help to skip that. For example if I do : <code>findFirst('colA = ' . null)</code> it will replace automatically <code>=</code> by <code>is</code></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57625" data-cf-modified-1c0e28ad81e52cc437ea32ef-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57625" data-cf-modified-1c0e28ad81e52cc437ea32ef-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6221c81c81cd357c818daec1bb8b17ff?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4153/nikolay-mihaylov" class="user-moderator-N"><span itemprop="name">Nikolay Mihaylov</span></a>        </span>
+        <br>
+
+        <span class="karma">93.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C57627" href="#C57627">
+                <time itemprop="dateCreated" datetime="2018-10-22T06:15:32-07:00" class="action-date">Oct '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Sadly, not :(</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57627" data-cf-modified-1c0e28ad81e52cc437ea32ef-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57627" data-cf-modified-1c0e28ad81e52cc437ea32ef-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6003c6340c95be89eb57aa50a7cf5beb?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4627/Johngtrs" class="user-moderator-N"><span itemprop="name">Jonathan Vandal</span></a>        </span>
+        <br>
+
+        <span class="karma">41.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C57629" href="#C57629">
+                <time itemprop="dateCreated" datetime="2018-10-22T06:18:09-07:00" class="action-date">Oct '18</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Ok ^^ thanks</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="57629" data-cf-modified-1c0e28ad81e52cc437ea32ef-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="57629" data-cf-modified-1c0e28ad81e52cc437ea32ef-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="18911" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,178 @@
+---
+layout: default
+title: '[2.0.3] Related Models are not saved - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">[2.0.3] Related Models are not saved</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/3734/alphanyx" class="user-moderator-N"><span itemprop="name">Mikel</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-07-07T01:57:47-07:00">Jul '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-07-07T01:57:47-07:00">Jul '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>376</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/0c0b3df40f737f6075ed93da22542dcf?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/3734/alphanyx" class="user-moderator-N"><span itemprop="name">Mikel</span></a></span>
+                <span class="karma">4.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C7473" href="#C7473">
+        <time class="action-date">Jul '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>In the <a href="https://docs.phalcon.io/en/latest/reference/models.html#storing-related-records">Documentation</a> it is pointed that the related attributes can be added as array</p>
+<pre><code class="language-php">&lt;?php
+
+// Get an existing artist
+$artist = Artists::findFirst('name = "Shinichi Osawa"');
+
+// Create an album
+$album          = new Albums();
+$album-&gt;name    = 'The One';
+$album-&gt;artist  = $artist;
+
+$songs = array();
+
+// Create a first song
+$songs[0]           = new Songs();
+$songs[0]-&gt;name     = 'Star Guitar';
+$songs[0]-&gt;duration = '5:54';
+
+// Create a second song
+$songs[1]           = new Songs();
+$songs[1]-&gt;name     = 'Last Days';
+$songs[1]-&gt;duration = '4:29';
+
+// Assign the songs array
+$album-&gt;songs = $songs;
+
+// Save the album + its songs
+$album-&gt;save();</code></pre>
+<p>But it seems like it does not work anymore.
+I don't know if its only in Version 2.0.3 or if this error occured earlier.</p>
+<p>I have an <code>Order</code> Entity that contains multiple related Entities.</p>
+<pre><code class="language-php">&lt;?php
+
+class Order extends \Phalcon\Mvc\Model {
+    ...
+    public function initialize()
+    {
+        parent::initialize();
+
+        $this-&gt;hasOne('id', 'Order\Address', 'order_id', array(
+            'foreignKey' =&gt; array(
+                'action' =&gt; \Phalcon\Mvc\Model\Relation::ACTION_CASCADE
+            ),
+            'alias' =&gt; 'address',
+        ));
+
+        $this-&gt;hasOne('id', 'Order\Payment', 'order_id', array(
+            'foreignKey' =&gt; array(
+                'action' =&gt; \Phalcon\Mvc\Model\Relation::ACTION_CASCADE
+            ),
+            'alias' =&gt; 'payment',
+        ));
+
+        $this-&gt;hasMany('id', 'Order\Lodging', 'order_id', array(
+            'foreignKey' =&gt; array(
+                'action' =&gt; \Phalcon\Mvc\Model\Relation::ACTION_CASCADE
+            ),
+            'alias' =&gt; 'lodging',
+        ));
+    }
+    ...
+    /**
+     * @param Lodging $lodging
+     */
+    public function addLodging(Lodging $lodging)
+    {
+        if ($lodging-&gt;getOrderId() &amp;&amp; $lodging-&gt;getOrderId() != $this-&gt;getId()) {
+            throw new \InvalidArgumentException('The Lodging belongs already to another Order');
+        }
+
+        if ($this-&gt;getId()) {
+            $lodging-&gt;setOrderId($this-&gt;getId());
+
+            $lodging-&gt;save();
+        } else {
+            if ($this-&gt;lodging instanceof \Phalcon\Mvc\Model\Resultset\Simple) {
+                $this-&gt;lodging = $this-&gt;lodging-&gt;toArray();
+            }
+
+            array_push($this-&gt;lodging, $lodging);
+        }
+    }
+    ...
+}</code></pre>
+<p>Every Entity is saved correctly (Addresses and Payments) but only the lodging is not saved if i trigger <code>$order-&gt;save()</code>.</p>
+<p>If i try and call <code>$lodging-&gt;save()</code> the Entity is saved correctly.</p>
+<p>What am i doing wrong or is it a bug?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-50b2373a88e72ab652a6a9ce-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-50b2373a88e72ab652a6a9ce-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b58ae5d515c7285229c9f07af9a11e39?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1727/Mechzeit" class="user-moderator-N"><span itemprop="name">Mitchell Macpherson</span></a>        </span>
+        <br>
+
+        <span class="karma">6.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C20337" href="#C20337">
+                <time itemprop="dateCreated" datetime="2015-07-07T17:32:01-07:00" class="action-date">Jul '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Can you also post the other 2 model definitions (for many-to-many relationship)?</p>
+<p>Also, just out of curiousity can you try using $Model-&gt;create(); instead of save()?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="20337" data-cf-modified-50b2373a88e72ab652a6a9ce-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="20337" data-cf-modified-50b2373a88e72ab652a6a9ce-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="7473" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

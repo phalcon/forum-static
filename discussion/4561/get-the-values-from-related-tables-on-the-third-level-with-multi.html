@@ -1,0 +1,373 @@
+---
+layout: default
+title: 'Get the values from related tables on the third level with multiple records - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Get the values from related tables on the third level with multiple records</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2571/paulopastoriza" class="user-moderator-N"><span itemprop="name">Paulo Pastoriza</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-01-23T11:25:20-07:00">Jan '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-01-23T11:25:20-07:00">Jan '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jan '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1124</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/2693eb37861963afc843eed7fd7d1935?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2571/paulopastoriza" class="user-moderator-N"><span itemprop="name">Paulo Pastoriza</span></a></span>
+                <span class="karma">4.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C4561" href="#C4561">
+        <time class="action-date">Jan '15</time>
+    </a>
+</div>
+<div class="post-content"><div><h2>Models</h2>
+<pre><code class="language-php">&lt;?php
+namespace Zzz\Models;
+use Phalcon\Mvc\Model;
+use Phalcon\Mvc\Model\Relation;
+use Phalcon\Mvc\Model\Validator\Uniqueness;
+
+class Rules extends Model
+{
+
+    /**
+     *
+     * @var integer
+     */
+    public $id;
+
+    /**
+     *
+     * @var integer
+     */
+    public $time;
+
+    public function initialize()
+    {
+        $this-&gt;belongsTo('time', 'Zzz\Models\AliasesTime', 'id', array(
+            'alias' =&gt; 'aliasestime'
+        ));
+    }
+
+}
+
+namespace Zzz\Models;
+
+use Phalcon\Mvc\Model;
+use Phalcon\Mvc\Model\Relation;
+use Phalcon\Mvc\Model\Validator\Uniqueness;
+
+class AliasesTime extends Model
+{
+
+    /**
+     *
+     * @var integer
+     */
+    public $id;
+
+    /**
+     *
+     * @var string
+     */
+    public $name;
+
+    public function initialize()
+    {
+        $this-&gt;hasMany("id", "Zzz\Models\AliasesTimeContent", "aliastimeId", array(
+            "alias" =&gt; "aliasestimecontent",
+            "foreignKey" =&gt; array(
+                "action" =&gt; Relation::ACTION_CASCADE
+            )
+        ));
+        $this-&gt;hasMany("id", "Zzz\Models\Rules", "ruletime", array(
+            "alias" =&gt; "rules",
+            "foreignKey" =&gt; array(
+                "message" =&gt; "The alias cannot be deleted because other internet policy rule are using it"
+            )
+        ));
+    }
+
+}
+
+namespace Zzz\Models;
+
+use Phalcon\Mvc\Model;
+use Phalcon\Mvc\Model\Relation;
+
+class AliasesTimeContent extends Model
+{
+
+    /**
+     *
+     * @var integer
+     */
+    public $id;
+
+    /**
+     *
+     * @var string
+     */
+    public $starttime;
+
+    /**
+     *
+     * @var string
+     */
+    public $endtime;
+
+    /**
+     *
+     * @var integer
+     */
+    public $aliastimeId;
+
+    public function initialize()
+    {
+        $this-&gt;belongsTo("aliastimeId", "Zzz\Models\AliasesTime", "id", array(
+            "alias" =&gt; "aliasestime",
+            "foreignKey" =&gt; true
+        ));
+    }
+}</code></pre>
+<h2>Code</h2>
+<pre><code class="language-php">....
+$rules = Rules::find();
+if ($rules) {
+    $timeAlias = array();
+    foreach ($rules as $policy) {
+
+# Here I am required to conduct a new forearch
+# For I can not access the table values AliasesTimeContent directly by model
+# When the find returns multiple results
+# $policy-&gt;aliasestime-&gt;aliasestimecontent-&gt;starttime
+
+        foreach ($policy-&gt;aliasestime-&gt;aliasestimecontent as $content) {
+            echo $content-&gt;id;
+            echo $content-&gt;starttime;
+            echo $content-&gt;endtime;
+            echo $content-&gt;aliastimeId;
+        }
+    }
+}
+...</code></pre>
+<p>The code is works, but is logging warnings in the Apache error log to &quot; foreach ($policy-&gt;aliasestime-&gt;aliasestimecontent as $content) {&quot; </p>
+<p>[Fri Jan 23 16: 16: 54.857380 2015] [: error] [pid 27759] [client 192.168.122.1:41581] PHP Warning: Invalid argument supplied for foreach ()</p>
+<p>Perhaps there is a proper way to get these values using the model or some method of the framework, but I could not find in the documentation. Has anyone had to do that? Any tips?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-16a26c281062ddbcb453754a-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-16a26c281062ddbcb453754a-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/bdee79ea2680ec179fa34b9201fc74b7?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1873/RompePC" class="user-moderator-N"><span itemprop="name">RompePC</span></a>        </span>
+        <br>
+
+        <span class="karma">33.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C15237" href="#C15237">
+                <time itemprop="dateCreated" datetime="2015-01-23T15:27:10-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Maybe:</p>
+<pre><code>$aliasestime = $policy-&gt;aliasestime;
+
+foreach ($aliasestime-&gt;aliasestimecontent as $content)
+{
+    ...
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="15237" data-cf-modified-16a26c281062ddbcb453754a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="15237" data-cf-modified-16a26c281062ddbcb453754a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/9a998e084495cefe223e97ff0bfe2d8b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/3050/7thcubic" class="user-moderator-N"><span itemprop="name">7thcubic</span></a>        </span>
+        <br>
+
+        <span class="karma">2.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C15245" href="#C15245">
+                <time itemprop="dateCreated" datetime="2015-01-23T18:47:36-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><pre><code class="language-php"> $this-&gt;hasMany("id", "Zzz\Models\Rules", "ruletime", array( // &lt;&lt;
+            "alias" =&gt; "rules",
+            "foreignKey" =&gt; array(
+                "message" =&gt; "The alias cannot be deleted because other internet policy rule are using it"
+            )
+        ));
+
+        public $ruletime; // &lt;&lt; ??</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="15245" data-cf-modified-16a26c281062ddbcb453754a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="15245" data-cf-modified-16a26c281062ddbcb453754a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/fb35f447c5edce740bc88e405d5eb3af?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/742/cspeak" class="user-moderator-N"><span itemprop="name">Steven</span></a>        </span>
+        <br>
+
+        <span class="karma">5.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="15301" data-toggle="modal" data-target="#historyModal">
+                edited <span>Jan '15</span>
+              </span><br/><a name="C15301" href="#C15301">
+                <time itemprop="dateCreated" datetime="2015-01-25T16:00:00-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I might just be tired, but it doesn't seem like the relationships make sense.</p>
+<p>First, I don't see where there is a property named &quot;$ruletime&quot; in the Rules model. I just see $time.</p>
+<p>Second, if <code>Rules $time</code> belongs to <code>AliasesTime $id</code>, and <code>AliasTime $id</code> links to (hasMany) <code>AliasesTimeContent $aliastimeId</code>, doesn't that mean that <code>Rules $time</code> also belongs to <code>AliasesTimeContent $aliastimeId</code> (or maybe <code>AliasesTimeContent $aliastimeId</code> belongsTo <code>Rules $time</code>)?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="15301" data-cf-modified-16a26c281062ddbcb453754a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="15301" data-cf-modified-16a26c281062ddbcb453754a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2693eb37861963afc843eed7fd7d1935?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2571/paulopastoriza" class="user-moderator-N"><span itemprop="name">Paulo Pastoriza</span></a>        </span>
+        <br>
+
+        <span class="karma">4.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C15315" href="#C15315">
+                <time itemprop="dateCreated" datetime="2015-01-26T03:23:48-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Sorry, I renamed the fields to get simpler. </p>
+<pre><code class="language-php">class Rules extends Model
+{
+    /**
+     *
+     * @var integer
+     */
+    public $id;
+
+    /**
+     *
+     * @var integer
+     */
+    public $ruletime;
+
+    public function initialize()
+    {
+        $this-&gt;belongsTo('ruletime', 'Zzz\Models\AliasesTime', 'id', array(
+            'alias' =&gt; 'aliasestime'
+        ));
+    }
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="15315" data-cf-modified-16a26c281062ddbcb453754a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="15315" data-cf-modified-16a26c281062ddbcb453754a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2693eb37861963afc843eed7fd7d1935?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2571/paulopastoriza" class="user-moderator-N"><span itemprop="name">Paulo Pastoriza</span></a>        </span>
+        <br>
+
+        <span class="karma">4.1k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C15301"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/fb35f447c5edce740bc88e405d5eb3af?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        Steven                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C15316" href="#C15316">
+                <time itemprop="dateCreated" datetime="2015-01-26T03:59:02-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I believe that the relationship is correct. By posting the question I removed fields and tried to simplify to a better understanding. But I ended up leaving one of the changed relations. AliasTime is a type of content, the content thereof is registered in the AliasTimeContent. How AliasTime is a type of content, I can use it in various Rules.</p>
+<blockquote>
+<p>I might just be tired, but it doesn't seem like the relationships make sense.</p>
+<p>First, I don't see where there is a property named &quot;$ruletime&quot; in the Rules model. I just see $time.</p>
+<p>Second, if <code>Rules $time</code> belongs to <code>AliasesTime $id</code>, and <code>AliasTime $id</code> links to (hasMany) <code>AliasesTimeContent $aliastimeId</code>, doesn't that mean that <code>Rules $time</code> also belongs to <code>AliasesTimeContent $aliastimeId</code> (or maybe <code>AliasesTimeContent $aliastimeId</code> belongsTo <code>Rules $time</code>)?</p>
+</blockquote></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="15316" data-cf-modified-16a26c281062ddbcb453754a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="15316" data-cf-modified-16a26c281062ddbcb453754a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2693eb37861963afc843eed7fd7d1935?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2571/paulopastoriza" class="user-moderator-N"><span itemprop="name">Paulo Pastoriza</span></a>        </span>
+        <br>
+
+        <span class="karma">4.1k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C15346" href="#C15346">
+                <time itemprop="dateCreated" datetime="2015-01-26T13:00:55-07:00" class="action-date">Jan '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I created a separate table to store the AliasTime used by the Rules. And created a standard for the alias naming because they had duplicate alias in models.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="15346" data-cf-modified-16a26c281062ddbcb453754a-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="15346" data-cf-modified-16a26c281062ddbcb453754a-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="4561" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

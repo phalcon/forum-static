@@ -1,0 +1,276 @@
+---
+layout: default
+title: 'beforeDispatch not work - how to test it? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">beforeDispatch not work - how to test it?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/4507/deromanenko" class="user-moderator-N"><span itemprop="name">deromanenko</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-09-20T23:11:48-07:00">Sep '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-09-20T23:11:48-07:00">Sep '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>752</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/432bac455e82b820cf22737977857489?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/4507/deromanenko" class="user-moderator-N"><span itemprop="name">deromanenko</span></a></span>
+                <span class="karma">5.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C8627" href="#C8627">
+        <time class="action-date">Sep '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello!
+I am trying to implement authentification on my site due to INVO tutorial. Add EventsManager, Session, ACL. But it have no affect on any part of my application. I understand that is somewhere mistake, but I have no idea how to test it - even If put &quot;forward&quot; at start of my 'bedoreDispatch&quot;.</p>
+<p>Please, can you guide me - where can be problem? I run it on Windows with nginx+php NTS (run from binaries, not WAMP or something else). Thank you!</p>
+<p>What I have now:
+In my index.php</p>
+<pre><code class="language-php">        $di-&gt;set('dispatcher', function() {
+            $eventsManager = new EventsManager;
+            $eventsManager-&gt;attach('dispatch:beforeDispatch', new SecurityPlugin);
+            $eventsManager-&gt;attach('dispatch:beforeException', new NotFoundPlugin);
+            $dispatcher = new Dispatcher();
+            return $dispatcher;
+        }); </code></pre>
+<p>My SecurityPlugin.php</p>
+<pre><code class="language-php">&lt;?php
+
+use Phalcon\Acl;
+use Phalcon\Acl\Role;
+use Phalcon\Acl\Resource;
+use Phalcon\Acl\Adapter\Memory as AclList;
+use Phalcon\Events\Event;
+use Phalcon\Mvc\User\Plugin;
+use Phalcon\Mvc\Dispatcher;
+
+class SecurityPlugin extends Plugin
+{
+    public function getAcl()
+    {
+        if (!isset($this-&gt;persistent-&gt;acl))
+        {
+            $acl = new AclList();
+
+            $acl-&gt;setDefaultAction(Acl::DENY);
+
+            $roles = array(
+                'user' =&gt; new Role('User'),
+                'guest' =&gt; new Role('Guest')
+            );
+            foreach ($roles as $role)
+            {
+                $acl-&gt;addRole($role);
+            }
+
+            $privateResources = array(
+                'admin' =&gt; array('index')
+            );
+            foreach ($privateResources as $resource =&gt; $actions)
+            {
+                $acl-&gt;addResource(new Resource($resource), $actions);
+            }
+            foreach ($privateResources as $resource =&gt; $actions) {
+                foreach ($actions as $action){
+                    $acl-&gt;deny('Guest', $resource, $action);
+                }
+            }
+            foreach ($privateResources as $resource =&gt; $actions) {
+                foreach ($actions as $action){
+                    $acl-&gt;deny('User', $resource, $action);
+                }
+            }
+        }
+    }
+
+    public function beforeDispatch(Event $event, Dispatcher $dispatcher)
+    {
+
+        $auth = $this-&gt;session-&gt;get('auth');
+        if (!$auth)
+        {
+            $role = 'Guest';
+        }
+        else
+        {
+            $role = 'User';
+        }
+
+        $controller = $dispatcher-&gt;getControllerName();
+        $action = $dispatcher-&gt;getActionName();
+
+        $acl = $this-&gt;getAcl();
+        $allowed = $acl-&gt;isAllowed($role, $controller, $action);
+        $this-&gt;logger-&gt;log($allowed);
+        if ($allowed != ACL::ALLOW) {
+            //Redirect user without priviledges to main page
+            $dispatcher-&gt;forward(
+                array(
+                    'controller' =&gt; 'index',
+                    'action' =&gt; 'index'
+                )
+            );
+
+            return false;
+        }
+    }
+}</code></pre>
+<p>my SessionController.php</p>
+<pre><code class="language-php">&lt;?php
+
+use Phalcon\Mvc\Controller;
+
+class SessionController extends Controller
+{
+    private function _registerSession($user)
+    {
+        $this-&gt;session-&gt;set('auth', array(
+            'id'   =&gt; $user-&gt;id,
+            'name' =&gt; $user-&gt;name
+        ));
+    }
+
+    public function loginAction()
+    {
+        if ($this-&gt;request-&gt;isPost())
+        {
+            $email = $this-&gt;request-&gt;getPost('email');
+            $password = $this-&gt;request-&gt;getPost('password');
+
+            $user = User::findFirst(array(
+                "email = :email: AND password = :password:",
+                'bind' =&gt; array('email' =&gt; $email,'password' =&gt; sha1($password))
+                ));
+
+                $this-&gt;logger-&gt;log(sha1($password));
+
+            if ($user != false)
+            {
+                $this-&gt;_registerSession($user);
+                $this-&gt;logger-&gt;log('I.G.I.');
+                return $this-&gt;response-&gt;redirect('/admin', true);
+            }
+
+            return $this-&gt;response-&gt;redirect('/', true);
+
+        }
+    }
+
+    public function logoutAction()
+    {
+        $this-&gt;session-&gt;remove('auth');
+        return $this-&gt;response-&gt;redirect('/', true);
+    }
+}</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-234354eb982ba4557ad5cd82-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-234354eb982ba4557ad5cd82-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/210/andresgutierrez" class="user-moderator-Y"><span itemprop="name">Andres Gutierrez</span></a>        </span>
+        <br>
+
+        <span class="karma">34.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C23605" href="#C23605">
+                <time itemprop="dateCreated" datetime="2015-09-21T08:17:11-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>What do you want to achieve?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23605" data-cf-modified-234354eb982ba4557ad5cd82-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23605" data-cf-modified-234354eb982ba4557ad5cd82-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/432bac455e82b820cf22737977857489?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4507/deromanenko" class="user-moderator-N"><span itemprop="name">deromanenko</span></a>        </span>
+        <br>
+
+        <span class="karma">5.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C23625" href="#C23625">
+                <time itemprop="dateCreated" datetime="2015-09-21T11:11:00-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thank you for your attention!</p>
+<p>I just want to protect my backend, like it shown in INVO - for start, just close 'Admin::index' for Guests. But in my case beforeDispatch not work at all. :) And I have no idea how to debug it - it just not work, like it not attached. But I check for typos and etc.</p>
+<p>Maybe, you can push me in right direction? :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23625" data-cf-modified-234354eb982ba4557ad5cd82-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23625" data-cf-modified-234354eb982ba4557ad5cd82-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/432bac455e82b820cf22737977857489?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4507/deromanenko" class="user-moderator-N"><span itemprop="name">deromanenko</span></a>        </span>
+        <br>
+
+        <span class="karma">5.2k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C23655" href="#C23655">
+                <time itemprop="dateCreated" datetime="2015-09-21T20:53:32-07:00" class="action-date">Sep '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Opps, I am sorry, I found problem :)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="23655" data-cf-modified-234354eb982ba4557ad5cd82-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="23655" data-cf-modified-234354eb982ba4557ad5cd82-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="8627" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

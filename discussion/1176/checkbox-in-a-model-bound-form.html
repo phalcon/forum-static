@@ -1,0 +1,142 @@
+---
+layout: default
+title: 'Checkbox in a model bound form - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/5/general">General</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Checkbox in a model bound form</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/520/taehtinen" class="user-moderator-N"><span itemprop="name">Mika Tähtinen</span></a></span>
+            <time itemprop="dateCreated" datetime="2013-11-13T11:41:52-07:00">Nov '13</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2013-11-13T11:41:52-07:00">Nov '13</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '16</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1417</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/c6891e9a6c60265eaf34aa53684579ce?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/520/taehtinen" class="user-moderator-N"><span itemprop="name">Mika Tähtinen</span></a></span>
+                <span class="karma">8.5k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C1176" href="#C1176">
+        <time class="action-date">Nov '13</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I'm having trouble figuring out how to correctly use checkboxes with model bound forms. Here's basically what I have:</p>
+<pre><code class="language-php">class MyModel extends Model {
+    public $is_sent; // bool in MySQL
+}
+
+class MyModelForm extends Form {
+    public function initialize() {
+        $this-&gt;add(new Check('is_sent'));   
+    }   
+}
+
+class MyController extends Controller {
+    public function myAction($id) {
+        $model = MyModel::findFirst($id);
+        $form = new MyModelForm($model, $_POST);
+
+        if ($this-&gt;request-&gt;isPost()) {
+            if ($form-&gt;isValid($_POST, $model)) {
+                $model-&gt;save(); 
+            }
+        }
+
+        $this-&gt;view-&gt;form = $form;
+    }   
+}</code></pre>
+<p>Rendering this to HTML surely creates a checkbox which is either checked or unchecked according to the $is_sent value in the model. </p>
+<p>But also the value of the checkbox changes; it's &quot;1&quot; for true/checked and &quot;0&quot; for false/unchecked. So checking the checkbox doesn't actually change the model value since it's posted as &quot;0&quot;. A dirty fix for this is to force the value to &quot;1&quot;:</p>
+<pre><code class="language-php">class MyModelForm extends Form {
+    public function initialize() {
+        $this-&gt;add(new Check('is_sent', array('value' =&gt; 1));
+    }   
+}</code></pre>
+<p>So this fixes the problem of changing the value from unchecked to checked. But the other way round doesn't work. When I uncheck the checkbox, it's not included in $_POST and the value on the model isn't changed. Another dirty fix does the trick:</p>
+<pre><code class="language-php">class MyController extends Controller {
+    public function myAction($id) {
+        $model = MyModel::findFirst($id);
+        $form = new MyModelForm($model, $_POST);
+
+        if ($this-&gt;request-&gt;isPost()) {
+            if (!$this-&gt;request-&gt;hasPost('is_sent')) $_POST['is_sent'] = 0;
+
+            if ($form-&gt;isValid($_POST, $model)) {
+                $model-&gt;save(); 
+            }
+        }
+
+        $this-&gt;view-&gt;form = $form;
+    }   
+}</code></pre>
+<p>Am I doing something wrong or is the model-form buggy and the only solution is these dirty kludges?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-6ec4056b2824b85fcb5d2f08-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-6ec4056b2824b85fcb5d2f08-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/6e0e9cbdba0d5a5c4b322de02cf0a42d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/8317/cbichis" class="user-moderator-N"><span itemprop="name">cbichis</span></a>        </span>
+        <br>
+
+        <span class="karma">514</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C41313" href="#C41313">
+                <time itemprop="dateCreated" datetime="2016-10-05T00:15:42-07:00" class="action-date">Oct '16</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi,</p>
+<p>I suggest to check the above posted solution:</p>
+<p><a href="https://github.com/phalcon/cphalcon/issues/2890">https://github.com/phalcon/cphalcon/issues/2890</a></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="41313" data-cf-modified-6ec4056b2824b85fcb5d2f08-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="41313" data-cf-modified-6ec4056b2824b85fcb5d2f08-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="1176" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

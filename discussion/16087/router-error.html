@@ -1,0 +1,246 @@
+---
+layout: default
+title: 'Router error - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Router error</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/9553/Eiskaltereistee" class="user-moderator-N"><span itemprop="name">Eiskaltereistee</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-05-07T12:48:57-07:00">May '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-05-07T12:48:57-07:00">May '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>365</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/64ffd77d6adb45af169ae75a7e0272ea?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/9553/Eiskaltereistee" class="user-moderator-N"><span itemprop="name">Eiskaltereistee</span></a></span>
+                <span class="karma">537</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C16087" href="#C16087">
+        <time class="action-date">May '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>I tried to create my own routing. But It does not work at all.
+I have my domain: example.local</p>
+<p>That should be so:</p>
+<p>If I call &quot;example.local/client/namespace&quot; -&gt; namespace = Application\Modules\&quot;namespace&quot;\Controllers\Client</p>
+<p>If I call &quot;example.local/namespace&quot; -&gt; namespace = Application\Modules\&quot;namespace&quot;\Controllers</p>
+<p>There are also routes for &quot;/client/namespace/controller&quot; and &quot;/namespace/controller&quot; and some more.</p>
+<p>But actually if the url is &quot;example.local/client/namespace&quot; phalcon handle the following:
+-&gt; /namespace/controller instead of /client/namespace</p>
+<p>The include order is: ClientRouter first, then PageRouter</p>
+<p>Does anybody has a Idea how I can give /client (also /admin) a higer priority if it is in the url?</p>
+<p>Here is my code:</p>
+<pre><code class="language-PHP">class ClientRouter extends Phalcon\Mvc\Router\Group {
+    protected $config;
+
+    public function initialize() {
+        $this-&gt;LoadConfig();
+
+        var_dump($_SERVER['REQUEST_URI']);
+        $this-&gt;setHostname($this-&gt;config-&gt;router-&gt;clientHostname);
+        $this-&gt;setPrefix('/client');
+
+        $this-&gt;add('', $this-&gt;GetFallback());
+        $this-&gt;add('/', $this-&gt;GetFallback());
+
+        //namespace only (eg. gameserver)
+        $this-&gt;add(
+            ':namespace',
+            [
+                'namespace'     =&gt; 1,
+                'controller'    =&gt; 'Index',
+                'action'        =&gt; 'index',
+            ]
+        )-&gt;convert(
+            'namespace',
+            function ($namespace) {
+                $namespace = 'Application\\Modules\\' . ucfirst($namespace) . '\\Controllers\\Client';
+
+                return $namespace;
+            }
+        );
+
+        //namespace + controller (eg. gameserver/index
+        $this-&gt;add(
+            ':namespace/:controller',
+            [
+                'namespace'     =&gt; 1,
+                'controller'    =&gt; 2,
+                'action'        =&gt; 'index',
+            ]
+        )-&gt;convert(
+            'namespace',
+            function ($namespace) {
+                $namespace = 'Application\\Modules\\' . ucfirst($namespace) . '\\Controllers\\Client';
+
+                return $namespace;
+            }
+        );
+
+        //namespace + controller + action + params (eg. gameserver/server/edit/34)
+        $this-&gt;add(
+            ':namespace/:controller/:action/:params',
+            [
+                'namespace'     =&gt; 1,
+                'controller'    =&gt; 2,
+                'action'        =&gt; 3,
+                'params'        =&gt; 4,
+            ]
+        )-&gt;convert(
+            'namespace',
+            function ($namespace) {
+                $namespace = 'Application\\Modules\\' . ucfirst($namespace) . '\\Controllers\\Client';
+
+                return $namespace;
+            }
+        );
+
+        unset($this-&gt;config);
+    }
+
+    protected function GetFallback() {
+        return [
+            'action'        =&gt; 'index',
+            'controller'    =&gt; 'Overview',
+            'namespace'     =&gt; 'Application\\Modules\\Index\\Controllers\\Client'
+        ];
+    }
+
+    protected function LoadConfig() {
+        $this-&gt;config = \Application\Core\System::GetInstance()-&gt;GetConfig();
+    }
+}
+
+$this-&gt;router-&gt;mount(new ClientRouter());</code></pre>
+<pre><code class="language-PHP">class PageRouter extends Phalcon\Mvc\Router\Group {
+    protected $config;
+
+    public function initialize() {
+        $this-&gt;LoadConfig();
+
+        $this-&gt;setHostname($this-&gt;config-&gt;router-&gt;clientHostname);
+        $this-&gt;setPrefix('/');
+
+        //fallback regeln
+        $this-&gt;add('', $this-&gt;GetFallback());
+        $this-&gt;add('/', $this-&gt;GetFallback());
+
+        //namespace only (eg. gameserver)
+        $this-&gt;add(
+            ':namespace',
+            [
+                'namespace'     =&gt; 1,
+                'controller'    =&gt; 'Index',
+                'action'        =&gt; 'index',
+            ]
+        )-&gt;convert(
+            'namespace',
+            function ($namespace) {
+                $namespace = 'Application\\Modules\\' . ucfirst($namespace) . '\\Controllers\\Page';
+
+                return $namespace;
+            }
+        );
+
+        //namespace + controller (eg. gameserver/index
+        $this-&gt;add(
+            ':namespace/:controller',
+            [
+                'namespace'     =&gt; 1,
+                'controller'    =&gt; 2,
+                'action'        =&gt; 'index',
+            ]
+        )-&gt;convert(
+            'namespace',
+            function ($namespace) {
+                $namespace = 'Application\\Modules\\' . ucfirst($namespace) . '\\Controllers\\Page';
+
+                return $namespace;
+            }
+        );
+
+        //namespace + controller + action + params (eg. gameserver/server/edit/34)
+        $this-&gt;add(
+            ':namespace/:controller/:action/:params',
+            [
+                'namespace'     =&gt; 1,
+                'controller'    =&gt; 2,
+                'action'        =&gt; 3,
+                'params'        =&gt; 4,
+            ]
+        )-&gt;convert(
+            'namespace',
+            function ($namespace) {
+                $namespace = 'Application\\Modules\\' . ucfirst($namespace) . '\\Controllers\\Page';
+
+                return $namespace;
+            }
+        );
+
+        unset($this-&gt;config);
+    }
+
+    protected function GetFallback() {
+        return [
+            'action'        =&gt; 'index',
+            'controller'    =&gt; 'Overview',
+            'namespace'     =&gt; 'Application\\Modules\\Index\\Controllers\\Page'
+        ];
+    }
+
+    protected function LoadConfig() {
+        $this-&gt;config = \Application\Core\System::GetInstance()-&gt;GetConfig();
+    }
+}
+
+$this-&gt;router-&gt;mount(new PageRouter());</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-0e054223789b9a1ffd44a004-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-0e054223789b9a1ffd44a004-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="16087" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

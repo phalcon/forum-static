@@ -1,0 +1,130 @@
+---
+layout: default
+title: 'Possible Memory Dump...To Client Browser (very technical in depth) - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/20/internals">Internals</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Possible Memory Dump...To Client Browser (very technical in depth)</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/11377/FluidMind" class="user-moderator-N"><span itemprop="name">FluidMind</span></a></span>
+            <time itemprop="dateCreated" datetime="2019-06-21T10:37:07-07:00">Jun '19</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2019-06-21T10:37:07-07:00">Jun '19</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>None</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">0</span>
+                </td>
+                <td>
+                    <label>Views</label><br>206</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/3d0431069410c736889dc080961a8f1c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/11377/FluidMind" class="user-moderator-N"><span itemprop="name">FluidMind</span></a></span>
+                <span class="karma">1.1k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C19783" href="#C19783">
+        <time class="action-date">Jun '19</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Preface: Using Phalcon 3.4.1 (I know they're on 3.4.4, but project was started when 3.4.1 was new) on PHP 7.0.30 (because) mounted on IIS 10.0, in Windows Server 2016 (64 bit) HOWEVER, the output is system agnostic as it was copied through SVN to another dev machine with the same results below.</p>
+<p>I was testing selection methods for my models to get some JSON data from the database to the view. Suddenly, instead of the page, the response it starts sending is a phalcon error splash page informing me the controller it just processed 4 seconds ago will not load.</p>
+<p>Some triaging later, it happens in my bootstrapper when I run &quot;echo $app-&gt;handle()-&gt;getContent();&quot;. So I wrap it in a try/catch block with a constant echo message in the catch, and it instead returns (to the browser) most (except for the first ~200 bytes) of the controller code in question.</p>
+<p>Further triaging leads us to believe it's just this one controller, as login stil works, and other lists work properly.</p>
+<p>Outputting the exception message gives a generic &quot;controller could not be loaded&quot;, while the stack trace is a small section of memory dump (presumably, it's random binary data that I'm not going to try and parse), the stack code is blank, and gthe stack message is simply &quot;the X controller failed to load&quot;. The same as the phalcon error screen I get without the try/catch, just no pointers back to my bootstrapper (the handle application line above). Update since trying again just now, the exception message is also a binary dump, but smaller.</p>
+<p>Things I have tried to resolve this:</p>
+<ul>
+<li>Removed a suspected magic variable name ($objectID) from procedures in the controller did not help.</li>
+<li>Removed a simple output from the view ({% raw %}{{{% endraw %} data {% raw %}}}{% endraw %}), and replaced it with a constant test string, did not help.</li>
+<li>Commenting out the entire controller code did not help.</li>
+<li>Deleting the class contents did not help.</li>
+<li>Deleting the file itself (and then clearing the volt cache) did not help.</li>
+<li>Renaming the controller, view, action, and other variable names did not help.</li>
+<li>Increasing system RAM from 4GB to 16 GB did not help.</li>
+<li>UPDATE HERE: Turning off the volt engine did not help. This is not a volt problem.</li>
+<li>Address does use a recursive function, but var_dumps at the beginning of our Action call reveal it's not even getting that far.</li>
+<li>Manual route defined in router definitions have not helped.</li>
+<li>My dispatcher has an event listener attached to it called Permissions, and it operates normally, except for this page. This page is not forwarding through dispatcher - a die statement in my forwarded event reveals it is not even hitting this function. Created as:
+<pre><code class="language-php">$di-&gt;set('dispatcher', function () use ($di) {
+$events_manager = $di-&gt;getShared('eventsManager');
+// Custom ACL class
+$permission = new Permission();
+// Listen for events from the $permission class
+$events_manager-&gt;attach('dispatch', $permission);
+$dispatcher = new Dispatcher();
+$dispatcher-&gt;setEventsManager($events_manager);
+return $dispatcher;
+});
+public function beforeExecuteRoute(Event $event, Dispatcher $dispatcher) {
+    die('Permissions reached!');</code></pre>
+<p>(Apologies, don't know how to change the color of that block)</p></li>
+<li>This message is never displayed for my page.</li>
+</ul>
+<p>Symptoms: The view is never compiled into volt's output cache directory.</p>
+<p>What code would you need to help me resolve this? The page request needs to return something (under whatever name will work) but right now, it seems that the files simply refuses to load properly.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-f1a60106ba419e6e93525559-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-f1a60106ba419e6e93525559-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/3d0431069410c736889dc080961a8f1c?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/11377/FluidMind" class="user-moderator-N"><span itemprop="name">FluidMind</span></a>        </span>
+        <br>
+
+        <span class="karma">1.1k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C60157" href="#C60157">
+                <time itemprop="dateCreated" datetime="2019-06-24T08:13:58-07:00" class="action-date">Jun '19</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>So, here was the cause:</p>
+<p>While typing, I must have typoed a shortcut to change the encoding of the controller in question. Went from UTF-8 to UCS-2 LE BOM. Phalcon didn't handle this in it normal fashion. Even translated, the resulting strings I listed as the small memory dumps did not relate to the site at all.</p>
+<p>If this error shows up, check encoding first.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="60157" data-cf-modified-f1a60106ba419e6e93525559-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="60157" data-cf-modified-f1a60106ba419e6e93525559-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="19783" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,245 @@
+---
+layout: default
+title: 'Phalcon save method not working - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Phalcon save method not working</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/1942/andrefigueira" class="user-moderator-N"><span itemprop="name">André Figueira</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-07-16T14:58:27-07:00">Jul '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-07-16T14:58:27-07:00">Jul '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Jul '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>673</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/a93871fc7077b69587626ca90e738ece?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/1942/andrefigueira" class="user-moderator-N"><span itemprop="name">André Figueira</span></a></span>
+                <span class="karma">12.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C2851" href="#C2851">
+        <time class="action-date">Jul '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello,</p>
+<p>I'm fairly new to Phalcon, I really like it, currently working on my first project in it, however I'm currently coming across an issue with the ORM.</p>
+<p>I seem to be unable to save.</p>
+<p>My Users model currently has a simple table setup</p>
+<p>id (int, PK)
+name (string)
+username (string)
+email (string)
+active (int)
+createdDate (int)</p>
+<p>and my model has these defined as properties using the annotations strategy:</p>
+<pre><code class="language-php">    &lt;?php
+
+    /**
+     * Users class
+    *
+    * Represents Holla users
+    *
+     */
+    class Users extends Phalcon\Mvc\Model
+    {
+
+    /**
+     * @Primary
+     * @Identity
+     * @Column(type="integer", nullable=false)
+     */
+    public $id;
+
+    /**
+     * @Column(type="string", length=70, nullable=false)
+     */
+    public $name;
+
+    /**
+     * @Column(type="string", length=70, nullable=false)
+     */
+    public $username;
+
+    /**
+     * @Column(type="string", length=256, nullable=false)
+     */
+    public $password;
+
+    /**
+     * @Column(type="integer", nullable=false)
+     */
+    public $active;
+
+    /**
+     * @Column(type="integer", nullable=false)
+     */
+    public $createdDate;</code></pre>
+<p>My initialize has the following:</p>
+<pre><code class="language-php">    public function initialize()
+    {
+        $this-&gt;setSource('users');
+        $this-&gt;hasManyToMany('id', 'UsersAttributes', 'userId', 'attributeId', 'Attributes', 'id', array('alias' =&gt; 'attributes'));
+        $this-&gt;hasMany('id', 'Status', 'userId');
+        $this-&gt;hasMany('id', 'UsersNeighbors', 'userId');
+        $this-&gt;hasMany('id', 'UsersFriends', 'userId');
+        $this-&gt;hasMany('id', 'UsersNeighborhoods', 'userId');
+    }</code></pre>
+<p>I then have a simple registration form which I'm pointing to a method in one of my controllers where i do some cvalidation, then attempt to do the save:</p>
+<pre><code class="language-php">            $user = new Users();
+
+            $user-&gt;name = $name;
+            $user-&gt;username = strtolower(str_replace(' ', '', $name));
+            $user-&gt;password = $this-&gt;security-&gt;hash($password);
+
+            if($user-&gt;save())
+            {
+
+                $this-&gt;flash-&gt;success('Registered successfully!');
+
+                $this-&gt;session-&gt;set('auth', array(
+                    'id' =&gt; $user-&gt;id,
+                    'name' =&gt; $user-&gt;name
+                ));
+
+                return $this-&gt;response-&gt;redirect('user/home');
+            }
+            else
+            {
+                $this-&gt;flash-&gt;error('An error occured, unable to register');
+                return $this-&gt;response-&gt;redirect('');
+            }</code></pre>
+<p>I have setup the profiler to save to a log and all that seems to happen when I do a registration is: </p>
+<pre><code>[Wed, 16 Jul 14 21:46:44 +0000][INFO] SELECT IF(COUNT(*)&gt;0, 1 , 0) FROM `INFORMATION_SCHEMA`.`TABLES` WHERE `TABLE_NAME`='users'
+[Wed, 16 Jul 14 21:46:44 +0000][INFO] DESCRIBE `users`</code></pre>
+<p>Then It just ports me through to the main view with the flash error &quot;An error occured&quot; as I've defined above so I'm kind of stuck as to why it isn't creating the new user and just returning false on user save.</p>
+<p>Thanks in advance</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-488f26d991f4eeffdef35a48-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-488f26d991f4eeffdef35a48-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5d6f567f9109789fd9f702959768e35d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1/phalcon" class="user-moderator-Y"><span itemprop="name">Phalcon</span></a>        </span>
+        <br>
+
+        <span class="karma">98.9k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9526" href="#C9526">
+                <time itemprop="dateCreated" datetime="2014-07-16T16:42:26-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>You have to check what validation messages are generated by the ORM:</p>
+<pre><code class="language-php">if ($user-&gt;save()) {
+
+    $this-&gt;flash-&gt;success('Registered successfully!');
+
+    $this-&gt;session-&gt;set('auth', array(
+        'id' =&gt; $user-&gt;id,
+        'name' =&gt; $user-&gt;name
+    ));
+
+    return $this-&gt;response-&gt;redirect('user/home');
+} else {
+
+    $messages = '';
+    foreach ($user-&gt;getMessages() as $message) {
+        $messages .= $message-&gt;getMessage();
+    }
+
+    $this-&gt;flash-&gt;error('An error occured, unable to register. Reason: ' . $messages);
+    return $this-&gt;response-&gt;redirect('');
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9526" data-cf-modified-488f26d991f4eeffdef35a48-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9526" data-cf-modified-488f26d991f4eeffdef35a48-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a93871fc7077b69587626ca90e738ece?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1942/andrefigueira" class="user-moderator-N"><span itemprop="name">André Figueira</span></a>        </span>
+        <br>
+
+        <span class="karma">12.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9532" href="#C9532">
+                <time itemprop="dateCreated" datetime="2014-07-17T01:34:59-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I'll give it a go!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9532" data-cf-modified-488f26d991f4eeffdef35a48-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9532" data-cf-modified-488f26d991f4eeffdef35a48-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/a93871fc7077b69587626ca90e738ece?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1942/andrefigueira" class="user-moderator-N"><span itemprop="name">André Figueira</span></a>        </span>
+        <br>
+
+        <span class="karma">12.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C9533" href="#C9533">
+                <time itemprop="dateCreated" datetime="2014-07-17T01:50:52-07:00" class="action-date">Jul '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks that worked, told me I had to explicitly define the fields to save if they are defined.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="9533" data-cf-modified-488f26d991f4eeffdef35a48-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="9533" data-cf-modified-488f26d991f4eeffdef35a48-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="2851" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

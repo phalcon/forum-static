@@ -1,0 +1,251 @@
+---
+layout: default
+title: 'Form processing best-practice / best-method - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Form processing best-practice / best-method</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2108/freak4pc" class="user-moderator-N"><span itemprop="name">Shai Mishali</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-08-14T01:52:45-07:00">Aug '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-08-14T01:52:45-07:00">Aug '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Aug '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1096</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/7352b98f8ca49790d4e2ca7a53c4e35e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2108/freak4pc" class="user-moderator-N"><span itemprop="name">Shai Mishali</span></a></span>
+                <span class="karma">4.3k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3112" href="#C3112">
+        <time class="action-date">Aug '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hey All,
+I'm kind of a beginner with PhalconPHP but loving it so far.</p>
+<p>I'm having some trouble understanding one thing, even after reading the documentation I've seen no example of how to handle form submition. </p>
+<p>The two only options I thought of is </p>
+<ol>
+<li>
+<p>the form action could point to controller/add in POST which would need a addAction() method in my controller and then bind $_POST to a Model, and save that after validation. But that means I have to do some sort of &quot;if&quot; to make sure If i'm in POST (handle data) or GET (show form). </p>
+</li>
+<li>Use the Event Callbacks and perform the save on the &quot;afterValidation&quot; of a Phalcon\Mvc\Form ... but again, not sure if this makes sense, plus - I might not use Phalcon\Mvc\Form because I'm not sure how to make it print out the specific HTML structure I need.</li>
+</ol>
+<p>So those are the two options I thought of, would love to hear your pointers / opinions on this.</p>
+<p>Thank you very much
+Shai. </p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-7868dac37c778fd3795465e0-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-7868dac37c778fd3795465e0-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/17087ef97dcb9d410032900cce15c9d4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1962/arius86" class="user-moderator-N"><span itemprop="name">Arius</span></a>        </span>
+        <br>
+
+        <span class="karma">5.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C10321" href="#C10321">
+                <time itemprop="dateCreated" datetime="2014-08-14T06:56:16-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I like the classic CRUD separation so I will say that the best practice is something like this:</p>
+<pre><code>class Crud extends Controller
+{
+    protected $successMessage = 'Action has been successful.';
+
+    public function newAction()
+    {
+        $this-&gt;view-&gt;form = new MyForm();
+    }
+
+    public function createAction()
+    {
+        $this-&gt;checkRequest();
+
+        try {
+            $this-&gt;processForm($this-&gt;request-&gt;getPost());
+            $this-&gt;view-&gt;disable();
+            $this-&gt;flash-&gt;success($this-&gt;successMessage);
+            $this-&gt;redirect(); // redirect to edit or index
+        } catch (Exception $e) {
+            $this-&gt;flash-&gt;error($e-&gt;getMessage());
+        }
+
+        $this-&gt;dispatcher-&gt;forward(array('action' =&gt; 'new'));
+    }
+
+    public function editAction($id)
+    {
+        $this-&gt;view-&gt;record = MyModel::findById($id);
+        $this-&gt;view-&gt;form =  new MyForm($this-&gt;view-&gt;record);
+    }
+
+    public function updateAction($id)
+    {
+        $this-&gt;checkRequest();
+
+        try {
+            $record = MyModel::findById($id);
+            $this-&gt;processForm($this-&gt;request-&gt;getPost(), $record);
+            $this-&gt;view-&gt;disable();
+            $this-&gt;flash-&gt;success($this-&gt;successMessage);
+            $this-&gt;redirect(); // redirect to edit or index
+        } catch (Exception $e) {
+            $this-&gt;flash-&gt;error($e-&gt;getMessage());
+        }
+
+        $this-&gt;dispatcher-&gt;forward(array('action' =&gt; 'edit'));
+    }
+
+    protected function checkRequest()
+    {
+        if (!$this-&gt;request-&gt;isPost()) {
+            throw new MyPostRequiredException();
+        }
+    }
+
+    public function deleteAction($id)
+    {
+        $this-&gt;view-&gt;disable();
+
+        try {
+            $this-&gt;scaffolding-&gt;doDelete($id);
+            $this-&gt;flash-&gt;success($this-&gt;successMessage); 
+        } catch (Exception $e) {
+            $this-&gt;flash-&gt;error($e-&gt;getMessage());
+        }
+
+        $this-&gt;redirect(); // redirect to index/list action or something
+    }
+
+    private function processForm($postData, $model = null)
+    {
+         // perform your binding, saving etc., throw exceptions in case of failure or if form is not valid
+    }
+}</code></pre>
+<p>Ofcourse we have some code repetition here. some things can be done other way, but this is just simple example. Main advantage of flow like this is clear separation for each process. In newAction volt template you have form pointed to createAction and in edit volt template - pointed to update.</p>
+<p>Cheers!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10321" data-cf-modified-7868dac37c778fd3795465e0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10321" data-cf-modified-7868dac37c778fd3795465e0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/7352b98f8ca49790d4e2ca7a53c4e35e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2108/freak4pc" class="user-moderator-N"><span itemprop="name">Shai Mishali</span></a>        </span>
+        <br>
+
+        <span class="karma">4.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C10362" href="#C10362">
+                <time itemprop="dateCreated" datetime="2014-08-14T15:18:20-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>OK, That makes total sense. Thanks for writing this great example and helping!</p>
+<p>So my new.volt form action would just be with an action=&quot;/myobject/create&quot; with POST ? </p>
+<p>So why do I need the new MyForm(); ? Doesn't that create the actual HTML as well ? </p>
+<p>Thanks for clarifying.
+Shai</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10362" data-cf-modified-7868dac37c778fd3795465e0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10362" data-cf-modified-7868dac37c778fd3795465e0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/17087ef97dcb9d410032900cce15c9d4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/1962/arius86" class="user-moderator-N"><span itemprop="name">Arius</span></a>        </span>
+        <br>
+
+        <span class="karma">5.1k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="10363" data-toggle="modal" data-target="#historyModal">
+                edited <span>Aug '14</span>
+              </span><br/><a name="C10363" href="#C10363">
+                <time itemprop="dateCreated" datetime="2014-08-14T15:49:46-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Propably you are thinking about this part of Phalcon: <a href="http://docs.phalcon.io/en/latest/reference/tags.html#creating-forms">http://docs.phalcon.io/en/latest/reference/tags.html#creating-forms</a>
+but what we are using here is: <a href="http://docs.phalcon.io/en/latest/reference/forms.html">http://docs.phalcon.io/en/latest/reference/forms.html</a></p>
+<p>Especially, check this part: <a href="http://docs.phalcon.io/en/latest/reference/forms.html#forms-entities">http://docs.phalcon.io/en/latest/reference/forms.html#forms-entities</a></p>
+<p>Hope it will help, good luck!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10363" data-cf-modified-7868dac37c778fd3795465e0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10363" data-cf-modified-7868dac37c778fd3795465e0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/7352b98f8ca49790d4e2ca7a53c4e35e?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2108/freak4pc" class="user-moderator-N"><span itemprop="name">Shai Mishali</span></a>        </span>
+        <br>
+
+        <span class="karma">4.3k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C10450" href="#C10450">
+                <time itemprop="dateCreated" datetime="2014-08-17T14:20:30-07:00" class="action-date">Aug '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Ok, trying to implement this practice and i'm still having some logical issues / midunderstanding ...</p>
+<p>I'm not sure why do I even need a Form() object to begin with ,
+Couldn't I just make my form in my new.volt file as I do now, and then just point to to /element/create and have createAction() process the POST data?</p>
+<p>Or does the Form object organizes this process and lets me handle the data more easily ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="10450" data-cf-modified-7868dac37c778fd3795465e0-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="10450" data-cf-modified-7868dac37c778fd3795465e0-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3112" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

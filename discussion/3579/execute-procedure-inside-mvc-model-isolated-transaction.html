@@ -1,0 +1,192 @@
+---
+layout: default
+title: 'Execute procedure inside Mvc\Model isolated transaction - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/29/database">Database</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Execute procedure inside Mvc\Model isolated transaction</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2130/heptagono" class="user-moderator-N"><span itemprop="name">heptagono</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-09-30T08:18:05-07:00">Sep '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-09-30T08:18:05-07:00">Sep '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>803</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/2187709447a71fadc461910ee14630b4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2130/heptagono" class="user-moderator-N"><span itemprop="name">heptagono</span></a></span>
+                <span class="karma">11.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3579" href="#C3579">
+        <time class="action-date">Sep '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hello!</p>
+<p>Right now in my code i have a procedure that i need to execute followed by other ORM updates/inserts. To execute my procedure i use</p>
+<pre><code class="language-PHP">    $result = $this-&gt;getDI()-&gt;get('db')-&gt;query(
+            'SELECT * FROM procedure(:param)', 
+            array(
+                'param' =&gt; $param
+            )
+        );</code></pre>
+<p>I want to do something like</p>
+<pre><code class="language-php">    $result = $this-&gt;getDI()
+        -&gt;get('db')
+        -&gt;setTransaction($transaction)
+        -&gt;query(
+            'FOOBAR'
+        );
+    $model = new MyModel();
+    $model-&gt;setTransaction($transaction);
+    $model-&gt;save();
+
+    if ($isOk) {
+        $transaction-&gt;commit();
+    }</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-f7a658d7fda880be3c08f057-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-f7a658d7fda880be3c08f057-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b0118ac36d373acb24122c8183b087b4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/578/JREAM" class="user-moderator-N"><span itemprop="name">Jesse Boyer</span></a>        </span>
+        <br>
+
+        <span class="karma">58.6k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11755" href="#C11755">
+                <time itemprop="dateCreated" datetime="2014-09-30T10:55:36-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I haven't tried this, but I think you need your DI to use the transaction connection instead which would probably be tied to the transaction </p>
+<pre><code class="language-php">    &lt;?php
+    use Phalcon\Mvc\Model\Transaction\Manager as TransactionManager;
+
+    try {
+        $transactionManager = new TransactionManager();
+        $transaction = $transactionManager-&gt;get();
+
+        // Try This
+        $transaction-&gt;getConnection(); 
+        // See if your needed calls are here: // http://docs.phalcon.io/en/latest/api/Phalcon_Db_AdapterInterface.html
+
+        $model = new MyModel();
+        $model-&gt;setTransaction($model);
+        $model-&gt;save();
+
+        $transaction-&gt;commit();
+    }
+    catch(Phalcon\Mvc\Model\Transaction\Failed $e){
+        echo 'Failed, reason: ', $e-&gt;getMessage();
+    }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11755" data-cf-modified-f7a658d7fda880be3c08f057-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11755" data-cf-modified-f7a658d7fda880be3c08f057-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2187709447a71fadc461910ee14630b4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2130/heptagono" class="user-moderator-N"><span itemprop="name">heptagono</span></a>        </span>
+        <br>
+
+        <span class="karma">11.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11791" href="#C11791">
+                <time itemprop="dateCreated" datetime="2014-10-01T12:26:18-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p><a href="https://forum.phalcon.io/user/0/Jesse">@Jesse</a> Boyer answer helped me to find an way to do that</p>
+<pre><code class="language-php">    $txManager = new TxManager();
+    $transaction = $txManager-&gt;get();
+
+    // I am using the isolated transaction separated connection. So, implictly, this query is being executed inside the transaction
+    // Note: I am using "execute" because i am not expecting an answer from DB
+    $transaction-&gt;getConnection()
+        -&gt;execute(
+            'FOOBAR'
+        );
+
+    $model = new MyModel();
+    $model-&gt;setTransaction($transaction);
+    $model-&gt;save();
+
+    if ($isOk) {
+        $transaction-&gt;commit();
+    }</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11791" data-cf-modified-f7a658d7fda880be3c08f057-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11791" data-cf-modified-f7a658d7fda880be3c08f057-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b0118ac36d373acb24122c8183b087b4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/578/JREAM" class="user-moderator-N"><span itemprop="name">Jesse Boyer</span></a>        </span>
+        <br>
+
+        <span class="karma">58.6k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11892" href="#C11892">
+                <time itemprop="dateCreated" datetime="2014-10-04T20:11:21-07:00" class="action-date">Oct '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Awesome !!!!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11892" data-cf-modified-f7a658d7fda880be3c08f057-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11892" data-cf-modified-f7a658d7fda880be3c08f057-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3579" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

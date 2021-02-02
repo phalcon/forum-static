@@ -1,0 +1,186 @@
+---
+layout: default
+title: 'Multi Module Shared Layouts - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/3/volt">Volt</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Multi Module Shared Layouts</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/578/JREAM" class="user-moderator-N"><span itemprop="name">Jesse Boyer</span></a></span>
+            <time itemprop="dateCreated" datetime="2014-09-30T01:34:29-07:00">Sep '14</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2014-09-30T01:34:29-07:00">Sep '14</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Sep '14</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">2</span>
+                </td>
+                <td>
+                    <label>Views</label><br>1411</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/b0118ac36d373acb24122c8183b087b4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/578/JREAM" class="user-moderator-N"><span itemprop="name">Jesse Boyer</span></a></span>
+                <span class="karma">58.6k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C3574" href="#C3574">
+        <time class="action-date">Sep '14</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I've searched and played around 3 hours, so it's fair to make a post about this.
+I am trying to convert to a <a href="https://github.com/phalcon/mvc/tree/master/multiple">multiple</a> setup.</p>
+<p>So I have something like this of a<strong> directory tree</strong>:</p>
+<pre><code>/app
+    /dashboard
+        /controllers
+            IndexController.php
+        /models
+        /views
+            index.volt
+        Module.php</code></pre>
+<p>1: There a big disconnect for me to use <strong>volt</strong> views within a Module. Especially Shared Templates. For example, within the <strong>app/dashboard/views/index.volt</strong> I can extend the main layout very deep via <code>{% raw %}{%{% endraw %} extends "../../shared/views/templates/full.volt" {% raw %}%}{% endraw %}</code>. Yet if I have another extension within the <strong>full.volt</strong> it seems nearly impossible to get the path right to include a <strong>sub-view</strong> no matter how many <strong>../</strong>'s I add.</p>
+<p>2: I was under the assumption that the <strong>Volt</strong> library extended the Abstract View library, hence I tried doing: <strong>setLayoutsDir()</strong> and <strong>setTemplateAfter()</strong>, but I can't do that. That is another topic, because I can extend in point #1. So I realized I can do the following alternatively to #1:</p>
+<pre><code>$di-&gt;set('view', function () {
+    $view = new \Phalcon\Mvc\View();
+    $view-&gt;setViewsDir('../app/frontend/views/');
+
+    // Apply to the $view not $volt
+    $view-&gt;setLayoutsDir('../../shared/views/templates');
+    $view-&gt;setTemplateAfter('full');
+
+    $view-&gt;registerEngines([
+        '.volt' =&gt; function ($view, $di) {
+
+            // Volt Template Engine
+            $volt = new VoltEngine($view, $di);
+
+            $volt-&gt;setOptions([
+                'compiledPath' =&gt; '../../cache',
+                'compiledSeparator' =&gt; '_',
+
+                // For DEV, to prevent Caching annoyances
+                'compileAlways' =&gt; true
+            ]);
+
+            return $volt;
+        },
+        // Fallback
+        '.phtml' =&gt; 'Phalcon\Mvc\View\Engine\Php'
+    ]);
+
+    return $view;
+});</code></pre>
+<p>It would also appear to me that the <strong>bootstrap loader-&gt;registerDirs()</strong> has nothing to do with shared templates.</p>
+<p>So I suppose my question is #1 -- How can I extend a template from within a template using <strong>volt include</strong></p>
+<p><strong>Compliments:</strong> This multiple module system is competitive among Symfony2 and Django, and indeed very similar. Yet, Phalcon overpowering in speed and destroying the nuisances of development time in Symfony2 Standard Framework. I do wish there was more documenation and advanced use cases for these multiple modules, I only have the mvc github to go by and the docs I can up.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-ab7a9252f301fe9967c48a49-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-ab7a9252f301fe9967c48a49-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c0ce8f5e133750a4dfea4712e533a178?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/15/le51" class="user-moderator-N"><span itemprop="name">le51</span></a>        </span>
+        <br>
+
+        <span class="karma">43.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11749" href="#C11749">
+                <time itemprop="dateCreated" datetime="2014-09-30T07:10:28-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>Yet if I have another extension within the full.volt it seems nearly impossible to get the path right to include a sub-view no matter how many ../'s I add.</p>
+<p>So I suppose my question is #1 -- How can I extend a template from within a template using volt include</p>
+</blockquote>
+<p>do you mean in full.volt you want  {% raw %}{%{% endraw %} extends &quot;anotherTemplate.volt&quot; {% raw %}%}{% endraw %} ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11749" data-cf-modified-ab7a9252f301fe9967c48a49-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11749" data-cf-modified-ab7a9252f301fe9967c48a49-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/b0118ac36d373acb24122c8183b087b4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/578/JREAM" class="user-moderator-N"><span itemprop="name">Jesse Boyer</span></a>        </span>
+        <br>
+
+        <span class="karma">58.6k</span></div>
+    <div class="col-md-11"><div class="in-reply-to">
+                    <a href="#C11749"><span class="glyphicon glyphicon-chevron-up"></span> in reply to
+                        <img src="https://secure.gravatar.com/avatar/c0ce8f5e133750a4dfea4712e533a178?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" width="24" height="24" />                        le51                    </a>
+                </div><div class="posts-buttons" align="right"><a name="C11754" href="#C11754">
+                <time itemprop="dateCreated" datetime="2014-09-30T10:47:49-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><blockquote>
+<p>do you mean in full.volt you want  {% raw %}{%{% endraw %} extends &quot;anotherTemplate.volt&quot; {% raw %}%}{% endraw %} ?</p>
+</blockquote>
+<p>Yes!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11754" data-cf-modified-ab7a9252f301fe9967c48a49-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11754" data-cf-modified-ab7a9252f301fe9967c48a49-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/c0ce8f5e133750a4dfea4712e533a178?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/15/le51" class="user-moderator-N"><span itemprop="name">le51</span></a>        </span>
+        <br>
+
+        <span class="karma">43.9k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C11757" href="#C11757">
+                <time itemprop="dateCreated" datetime="2014-09-30T12:12:53-07:00" class="action-date">Sep '14</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Imho, if &quot;anotherTemplate.volt&quot; is in same directory as full.volt,  a  simple {% raw %}{%{% endraw %} extends &quot;anotherTemplate.volt&quot; {% raw %}%}{% endraw %} should do the trick.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="11757" data-cf-modified-ab7a9252f301fe9967c48a49-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="11757" data-cf-modified-ab7a9252f301fe9967c48a49-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="3574" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

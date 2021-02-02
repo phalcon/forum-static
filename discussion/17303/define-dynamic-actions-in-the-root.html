@@ -1,0 +1,241 @@
+---
+layout: default
+title: 'Define dynamic actions in the root - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/13/routing">Routing</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Define dynamic actions in the root</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/5119/salvipascual" class="user-moderator-N"><span itemprop="name">Salvi Pascual</span></a></span>
+            <time itemprop="dateCreated" datetime="2017-11-15T16:30:56-07:00">Nov '17</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2017-11-15T16:30:56-07:00">Nov '17</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '17</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>693</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">1</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/edc5d4bb1dc16e25fec01e0b97634cd8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/5119/salvipascual" class="user-moderator-N"><span itemprop="name">Salvi Pascual</span></a></span>
+                <span class="karma">1.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C17303" href="#C17303">
+        <time class="action-date">Nov '17</time>
+    </a>
+</div>
+<div class="post-content"><div><p>I have a website made in PHP Phalcon, and it has several controllers.</p>
+<p>Now I need this website to receive words in the URL (example.com/WORD) and check if they exist in the database, but I must continue to support other controllers like example.com/aboutme.</p>
+<p>After few hours of trying different methods and searching online I cannot find a way to accomplish this task. The closer intent was creating a Route to redirect non-existing actions to a new controller, but I cannot make this solution work.</p>
+<p>Can you think on a solution that may work and share the code/idea? I am not adding any code because I could not get to do anything useful.</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-f315431cbf191636dd9fb3a5-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-f315431cbf191636dd9fb3a5-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1664cd00255dfa6e438b0b5560fa1738?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5729/Ultimater" class="user-moderator-N"><span itemprop="name">Kevin Yarmak</span></a>        </span>
+        <br>
+
+        <span class="karma">4.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="52289" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '17</span>
+              </span><br/><a name="C52289" href="#C52289">
+                <time itemprop="dateCreated" datetime="2017-11-15T17:12:57-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I would suggest you define a notFound route at the very bottom of your router:  </p>
+<pre><code>$router-&gt;notFound(['controller'=&gt;'Routing','action'=&gt;'notFound']);</code></pre>
+<p>Then you'd define a controller whose sole purpose is to assist with routing within your application.   </p>
+<p>Define a controller: <code>class RoutingController extends \Phalcon\Mvc\Controller</code><br />
+Then you'd define a <code>notFoundAction</code> method inside it.</p>
+<p>Preform any database queries you need within this controller.
+Then decide after these queries where you need to route to.</p>
+<pre><code>public function notFoundAction()
+{
+    $url = filter_var(trim(urldecode(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)),'/'), FILTER_SANITIZE_URL);
+    $page = Pages::find($url); // Or whatever you decide to name the model for this
+    if(!$page){return notFoundPage();} // Display a 404. Avoid usage of exit(), so tests can test this
+    $namespace = __NAMESPACE__ . '\\';
+    $controller = $page-&gt;controller.'Controller';
+    $action = $page-&gt;action. 'Action';
+    $parameters= $page-&gt;parameters;
+    return call_user_func_array([$namespace.$controller,$action], $parameters);
+}</code></pre>
+<p>The next step is defining a Pages model and executing whatever queries you need.<br />
+In this manner you'd achieve about as perfect of an architecture that's possible with Phalcon's router.<br />
+While it's possible to extend Phalcon's router to execute queries before routing is done, I feel queries should be executed at the controller level, rather than the routing level, then simply hand control over to another controller.</p>
+<p>See also: <a href="https://docs.phalcon.io/en/3.2/dispatcher">https://docs.phalcon.io/en/3.2/dispatcher</a><br />
+<code>$this-&gt;dispatcher-&gt;forward( ... )</code> is probably a cleaner solution.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52289" data-cf-modified-f315431cbf191636dd9fb3a5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52289" data-cf-modified-f315431cbf191636dd9fb3a5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/edc5d4bb1dc16e25fec01e0b97634cd8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5119/salvipascual" class="user-moderator-N"><span itemprop="name">Salvi Pascual</span></a>        </span>
+        <br>
+
+        <span class="karma">1.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="52291" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '17</span>
+              </span><br/><a name="C52291" href="#C52291">
+                <time itemprop="dateCreated" datetime="2017-11-15T19:08:49-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Hi<a href="https://forum.phalcon.io/user/0/Ultimater"> @Ultimater</a>,</p>
+<p>Thanks for your answer. </p>
+<p>That was the first thing I tried, but I could not make the Route notFound() to work. When I use the code below, the action &quot;open&quot; is capturing all the requests from both existing or non-existing controllers. </p>
+<p>Basically if I call &quot;example.com/WORD&quot; or &quot;example.com/aboutme&quot; both go to &quot;example.com/index/open&quot;. Can you help me with a set of rules to fix this problem? </p>
+<pre><code class="language-php">$di-&gt;set('router', function() {
+    $router = new \Phalcon\Mvc\Router(false);
+    $router-&gt;add("/:controller/:action", ['controller'=&gt;1, 'action'=&gt;2]);
+    $router-&gt;notFound(['controller'=&gt;'index', 'action'=&gt;'open']);
+    $router-&gt;handle();
+    return $router;
+});</code></pre>
+<p>Thank you in advance!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52291" data-cf-modified-f315431cbf191636dd9fb3a5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52291" data-cf-modified-f315431cbf191636dd9fb3a5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1664cd00255dfa6e438b0b5560fa1738?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5729/Ultimater" class="user-moderator-N"><span itemprop="name">Kevin Yarmak</span></a>        </span>
+        <br>
+
+        <span class="karma">4.8k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="52297" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '17</span>
+              </span><br/><a name="C52297" href="#C52297">
+                <time itemprop="dateCreated" datetime="2017-11-15T19:38:04-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>The problem with your <code>/:controller/:action</code> route is that it requires two parts. You're testing this on a URL with only one part.<br />
+If you're looking to make &quot;index&quot; your default controller, you would add something like this:  </p>
+<pre><code>$router-&gt;add("/:action", ['controller'=&gt;'index', 'action'=&gt;1]); </code></pre>
+<p>Or if each page is its own controller, and you want to use a default action instead, you'd do something like this:  </p>
+<pre><code>$router-&gt;add("/:controller", ['controller'=&gt;1, 'action'=&gt;'index']);</code></pre>
+<p>You can also play with:  </p>
+<pre><code>$router-&gt;setDefaultController("index");
+$router-&gt;setDefaultAction("index");</code></pre>
+<p>but I'd recommend against using these &quot;default&quot; methods as their behavior is not obvious without doing some testing.</p>
+<p>It's also wise to write:  </p>
+<pre><code>$router-&gt;add("/", ['controller'=&gt;'index', 'action'=&gt;'index']); </code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52297" data-cf-modified-f315431cbf191636dd9fb3a5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52297" data-cf-modified-f315431cbf191636dd9fb3a5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">1</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/edc5d4bb1dc16e25fec01e0b97634cd8?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5119/salvipascual" class="user-moderator-N"><span itemprop="name">Salvi Pascual</span></a>        </span>
+        <br>
+
+        <span class="karma">1.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="52313" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '17</span>
+              </span><br/><a name="C52313" href="#C52313">
+                <time itemprop="dateCreated" datetime="2017-11-16T18:33:07-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>After all, rules did not work, so I came out with a workaround. I am catching the the exception raised when a controller don't exist and running my code there. So far the only issue is the bitter taste of contributing to spaghetti code :-(</p>
+<pre><code>try{
+    $application = new Application($di);
+    echo $application-&gt;handle()-&gt;getContent();
+}
+catch(\Phalcon\Mvc\Dispatcher\Exception $e)
+{
+    $word = substr($e-&gt;getMessage(), 0, strpos($e-&gt;getMessage(), "Controller"));
+    // RUN ESPECIFIC CODE HERE
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52313" data-cf-modified-f315431cbf191636dd9fb3a5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52313" data-cf-modified-f315431cbf191636dd9fb3a5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/1664cd00255dfa6e438b0b5560fa1738?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/5729/Ultimater" class="user-moderator-N"><span itemprop="name">Kevin Yarmak</span></a>        </span>
+        <br>
+
+        <span class="karma">4.8k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="52315" data-toggle="modal" data-target="#historyModal">
+                edited <span>Nov '17</span>
+              </span><br/><a name="C52315" href="#C52315">
+                <time itemprop="dateCreated" datetime="2017-11-16T18:43:26-07:00" class="action-date">Nov '17</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Not sure why you'd need to resort to a try-catch, probably related to your usage of <code>$router-&gt;handle();</code> when you're also doing <code>$application-&gt;handle()</code> and thus handling routing twice.   </p>
+<p>Also I'd suggest <code>$application-&gt;handle()-&gt;send();</code> rather than <code>echo $application-&gt;handle()-&gt;getContent();</code><br />
+The difference is send() also checks for headers set through Phalcon and outputs them at this point in the application as well. With getContent() you only get the HTML, and any headers you try to set through Phalcon won't be set. Setting headers this way is useful for tests so you can check for a specific header without actually sending a header response.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="52315" data-cf-modified-f315431cbf191636dd9fb3a5-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="52315" data-cf-modified-f315431cbf191636dd9fb3a5-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="17303" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

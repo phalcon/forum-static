@@ -1,0 +1,196 @@
+---
+layout: default
+title: 'sql escaping backslashes seen as a syntax error - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/2/orm">ORM</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">sql escaping backslashes seen as a syntax error</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/4825/challet" class="user-moderator-N"><span itemprop="name">Clément Hallet</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-10-05T06:00:27-07:00">Oct '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-10-05T06:00:27-07:00">Oct '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Oct '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>426</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/8c47c78cc0f15ab87de471c1724086b4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/4825/challet" class="user-moderator-N"><span itemprop="name">Clément Hallet</span></a></span>
+                <span class="karma">5.7k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C8843" href="#C8843">
+        <time class="action-date">Oct '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi,</p>
+<p>I'm trying to add a field to the request by using aliases in the <em>columns</em> function (it is not documented but seen <a href="https://github.com/phalcon/cphalcon/blob/master/phalcon/mvc/model/query/builder.zep#L1086">here</a> as available)</p>
+<pre><code>$this-&gt;modelsManager-&gt;createBuilder()
+  -&gt;addFrom('User')
+  -&gt;leftJoin('UserDisable', 'User.id = UserDisable.user_id')
+  -&gt;columns(array('User.*', 'User.disabled' =&gt; 'UserDisable.user_id IS NOT NULL'))
+  -&gt;getQuery()
+  -&gt;execute();</code></pre>
+<p>leading to an error : </p>
+<pre><code>Syntax error, unexpected token DOT, near to 'disabled FROM [User] LEFT JOIN [UserDisable] ON User.id = UserDisable.user_id', when parsing: SELECT User.*, UserDisable.user_id IS NOT NULL AS User.disabled FROM [User] LEFT JOIN [UserDisable] ON User.id = UserDisable.user_id</code></pre>
+<p>This one is perfectly expected as it would be the same from the SQL engine.</p>
+<p>Though, the right way to do it in SQL would be to add escaping backquotes :</p>
+<pre><code>$this-&gt;modelsManager-&gt;createBuilder()
+  -&gt;addFrom('User')
+  -&gt;leftJoin('UserDisable', 'User.id = UserDisable.user_id')
+  -&gt;columns(array('User.*', '`User.disabled`' =&gt; 'UserDisable.user_id IS NOT NULL'))
+  -&gt;getQuery()
+  -&gt;execute();</code></pre>
+<p>But unfortunately, it seems they are not recognized by the ORM : </p>
+<pre><code>Scanning error before 'User.disabled` F...' when parsing: SELECT User.*, UserDisable.user_id IS NOT NULL AS `User.disabled` FROM [User] LEFT JOIN [UserDisable] ON User.id = UserDisable.user_id</code></pre>
+<p>Would there be an other way to do it, or to specify the query scanner this characters are allowed ?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-e8ece4265792055773ddf473-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-e8ece4265792055773ddf473-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8c47c78cc0f15ab87de471c1724086b4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4825/challet" class="user-moderator-N"><span itemprop="name">Clément Hallet</span></a>        </span>
+        <br>
+
+        <span class="karma">5.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C24175" href="#C24175">
+                <time itemprop="dateCreated" datetime="2015-10-05T06:02:31-07:00" class="action-date">Oct '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>might be a duplicate of <a href="https://forum.phalcon.io/discussion/8673/escaping-special-keywords-in-phql">https://forum.phalcon.io/discussion/8673/escaping-special-keywords-in-phql</a>, sorry</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="24175" data-cf-modified-e8ece4265792055773ddf473-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="24175" data-cf-modified-e8ece4265792055773ddf473-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8c47c78cc0f15ab87de471c1724086b4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4825/challet" class="user-moderator-N"><span itemprop="name">Clément Hallet</span></a>        </span>
+        <br>
+
+        <span class="karma">5.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C24181" href="#C24181">
+                <time itemprop="dateCreated" datetime="2015-10-05T06:13:53-07:00" class="action-date">Oct '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>phalcon escaping chars are not working as well :</p>
+<pre><code>$this-&gt;modelsManager-&gt;createBuilder()
+  -&gt;addFrom('User')
+  -&gt;leftJoin('UserDisable', 'User.id = UserDisable.user_id')
+  -&gt;columns(array('User.*', '[User.disabled]' =&gt; 'UserDisable.user_id IS NOT NULL'))
+  -&gt;getQuery()
+  -&gt;execute();
+
+  Scanning error before 'User.disabled] F...' when parsing: SELECT User.*, UserDisable.user_id IS NOT NULL AS [User.disabled] FROM [User] LEFT JOIN [UserDisable] ON User.id = UserDisable.user_id
+
+$this-&gt;modelsManager-&gt;createBuilder()
+  -&gt;addFrom('User')
+  -&gt;leftJoin('UserDisable', 'User.id = UserDisable.user_id')
+  -&gt;columns(array('User.*', '[`]User.disabled[`]' =&gt; 'UserDisable.user_id IS NOT NULL'))
+  -&gt;getQuery()
+  -&gt;execute();
+
+  Scanning error before '`]User.disabled[...' when parsing: SELECT User.*, UserDisable.user_id IS NOT NULL AS [`]User.disabled[`] FROM [User] LEFT JOIN [UserDisable] ON User.id = UserDisable.user_id </code></pre>
+<p>So back to the question : can I use backslashes <code>`</code> as part of the sql query ?</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="24181" data-cf-modified-e8ece4265792055773ddf473-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="24181" data-cf-modified-e8ece4265792055773ddf473-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/2e0bae293948bec8ffec40de279cbe41?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/210/andresgutierrez" class="user-moderator-Y"><span itemprop="name">Andres Gutierrez</span></a>        </span>
+        <br>
+
+        <span class="karma">34.6k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><span class="action-date action-reply-edit" data-id="24281" data-toggle="modal" data-target="#historyModal">
+                edited <span>Oct '15</span>
+              </span><br/><a name="C24281" href="#C24281">
+                <time itemprop="dateCreated" datetime="2015-10-06T12:01:44-07:00" class="action-date">Oct '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>This way:</p>
+<pre><code class="language-php">[User].[disabled]</code></pre>
+<p>However, those words don't look like they need escaping, in this case if you check the generated sql you will see that all identifiers are properly escaped according to the database system used</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="24281" data-cf-modified-e8ece4265792055773ddf473-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="24281" data-cf-modified-e8ece4265792055773ddf473-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/8c47c78cc0f15ab87de471c1724086b4?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4825/challet" class="user-moderator-N"><span itemprop="name">Clément Hallet</span></a>        </span>
+        <br>
+
+        <span class="karma">5.7k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C24365" href="#C24365">
+                <time itemprop="dateCreated" datetime="2015-10-08T11:06:44-07:00" class="action-date">Oct '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Thanks, that looks the most straight way, I should have try it ;)</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="24365" data-cf-modified-e8ece4265792055773ddf473-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="24365" data-cf-modified-e8ece4265792055773ddf473-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="8843" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

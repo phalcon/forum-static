@@ -1,0 +1,520 @@
+---
+layout: default
+title: 'Is there a shorter way to make all modules use one bootstrap in Phalcon php? - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/21/beginners">Beginners</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Is there a shorter way to make all modules use one bootstrap in Phalcon php?</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/2185/ve3" class="user-moderator-N"><span itemprop="name">vee w,</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-03-22T05:10:33-07:00">Mar '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-03-22T05:10:33-07:00">Mar '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Mar '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">3</span>
+                </td>
+                <td>
+                    <label>Views</label><br>969</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/14370e4117db7d6457134b199c928358?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/2185/ve3" class="user-moderator-N"><span itemprop="name">vee w,</span></a></span>
+                <span class="karma">6.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C6218" href="#C6218">
+        <time class="action-date">Mar '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>For source code: <a href="https://github.com/OkveeNet/phalcon-begins">https://github.com/OkveeNet/phalcon-begins</a></p>
+<p>I have 2 modules.</p>
+<ol>
+<li>is core and 2. is contact</li>
+</ol>
+<p>This is the Module.php file for core module.</p>
+<pre><code class="language-php">&lt;?php
+/* 
+ * 
+ *  @author Vee W.
+ *  @license http://opensource.org/licenses/MIT
+ * 
+ */
+
+namespace Core;
+
+use Phalcon\Loader,
+    Phalcon\Mvc\Dispatcher,
+    Phalcon\Mvc\View,
+    Phalcon\Mvc\View\Engine\Volt,
+    Phalcon\Mvc\ModuleDefinitionInterface;
+
+class Module implements ModuleDefinitionInterface
+{
+
+    /**
+     * Register a specific autoloader for the module
+     */
+    public function registerAutoloaders()
+    {
+
+        $loader = new Loader();
+
+        $loader-&gt;registerNamespaces(
+            array(
+                'Core\\Controllers' =&gt; __DIR__.'/controllers/',
+                'Core\\Models'      =&gt; __DIR__.'/models/',
+            )
+        );
+
+        $loader-&gt;register();
+    }// registerAutoloaders
+
+    /**
+     * Register specific services for the module
+     */
+    public function registerServices($di)
+    {
+        $config = include APPFULLPATH.'/config/config.php';
+        $dispatcher = $di-&gt;getShared('dispatcher');
+
+        // Registering a dispatcher
+        $di-&gt;set('dispatcher', function() use($di, $dispatcher) {
+            $dispatcher-&gt;setDefaultNamespace("Core\\Controllers");
+            return $dispatcher;
+        });
+
+        // Registering the view component
+        $di-&gt;set('view', function() use ($config) {
+            $view = new View();
+            $view-&gt;setViewsDir(__DIR__.'/views/');
+            $view-&gt;registerEngines(array(
+                '.volt' =&gt; function ($view, $di) use ($config) {
+
+                    $volt = new Volt($view, $di);
+
+                    $volt-&gt;setOptions(array(
+                        'compiledPath' =&gt; $config-&gt;application-&gt;cacheDir,
+                        'compiledSeparator' =&gt; '_'
+                    ));
+
+                    return $volt;
+                },
+                '.phtml' =&gt; 'Phalcon\Mvc\View\Engine\Php',
+                '.php' =&gt; 'Phalcon\Mvc\View\Engine\Php',
+            ));
+            return $view;
+        });
+    }
+
+}</code></pre>
+<p>And this is Module.php file for contact module.</p>
+<pre><code class="language-php">&lt;?php
+/* 
+ * 
+ *  @author Vee W.
+ *  @license http://opensource.org/licenses/MIT
+ * 
+ */
+
+namespace Modules\Contact;
+
+use Phalcon\Loader,
+    Phalcon\Mvc\Dispatcher,
+    Phalcon\Mvc\View,
+    Phalcon\Mvc\View\Engine\Volt,
+    Phalcon\Mvc\ModuleDefinitionInterface;
+
+class Module implements ModuleDefinitionInterface
+{
+
+    /**
+     * Register a specific autoloader for the module
+     */
+    public function registerAutoloaders()
+    {
+
+        $loader = new Loader();
+
+        $loader-&gt;registerNamespaces(
+            array(
+                'Modules\\Contact\\Controllers' =&gt; __DIR__.'/controllers/',
+                'Modules\\Contact\\Models'      =&gt; __DIR__.'/models/',
+                'Core\\Controllers' =&gt; APPFULLPATH.'/controllers/',
+            )
+        );
+
+        $loader-&gt;register();
+    }// registerAutoloaders
+
+    /**
+     * Register specific services for the module
+     */
+    public function registerServices($di)
+    {
+        $config = include APPFULLPATH.'/config/config.php';
+
+        // Registering a dispatcher
+        $di-&gt;set('dispatcher', function() use ($di) {
+            $evManager = $di-&gt;getShared('eventsManager');
+
+            $evManager-&gt;attach('dispatch:beforeException', function($event, $dispatcher, $exception) {
+                switch ($exception-&gt;getCode()) {
+                    case PhDispatcher::EXCEPTION_HANDLER_NOT_FOUND:
+                    case PhDispatcher::EXCEPTION_ACTION_NOT_FOUND:
+                        $dispatcher-&gt;forward(
+                            array(
+                                'module' =&gt; 'core',
+                                'controller' =&gt; 'error',
+                                'action' =&gt; 'e404',
+                            )
+                        );
+                        return false;
+                }
+            }, true);
+            $dispatcher = new Dispatcher;
+            $dispatcher-&gt;setEventsManager($evManager);
+            $dispatcher-&gt;setDefaultNamespace('Modules\\Contact\\Controllers');
+            return $dispatcher;
+        });
+
+        // Registering the view component
+        $di-&gt;set('view', function() use ($config) {
+            $view = new View();
+            $view-&gt;setViewsDir(__DIR__.'/views/');
+            $view-&gt;registerEngines(array(
+                '.volt' =&gt; function ($view, $di) use ($config) {
+
+                    $volt = new Volt($view, $di);
+
+                    $volt-&gt;setOptions(array(
+                        'compiledPath' =&gt; $config-&gt;application-&gt;cacheDir,
+                        'compiledSeparator' =&gt; '_'
+                    ));
+
+                    return $volt;
+                },
+                '.phtml' =&gt; 'Phalcon\Mvc\View\Engine\Php',
+                '.php' =&gt; 'Phalcon\Mvc\View\Engine\Php',
+            ));
+            return $view;
+        });
+    }// registerServices
+
+}</code></pre>
+<p>I must register service in all modules i have which is very inconvenient and hard to make change later.
+If it uses only main bootstrap it is easier to manage. For example, make change on view component, change dispatcher settings to show 404 page.</p>
+<p>How to use shared main bootstrap in Phalcon php?</p></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-10b2fdeaf1862c1b01532e08-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-10b2fdeaf1862c1b01532e08-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/83c11918052630e4dda79206c336924d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/569/kaioken" class="user-moderator-N"><span itemprop="name">Max Castro</span></a>        </span>
+        <br>
+
+        <span class="karma">16.4k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16770" href="#C16770">
+                <time itemprop="dateCreated" datetime="2015-03-22T08:10:38-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I would </p>
+<ul>
+<li>Extend from Core or Use a Trait to share the login and use properties for the variables that change depending on the model</li>
+</ul>
+<p>Let me know what you think</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16770" data-cf-modified-10b2fdeaf1862c1b01532e08-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16770" data-cf-modified-10b2fdeaf1862c1b01532e08-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/14370e4117db7d6457134b199c928358?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2185/ve3" class="user-moderator-N"><span itemprop="name">vee w,</span></a>        </span>
+        <br>
+
+        <span class="karma">6.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16772" href="#C16772">
+                <time itemprop="dateCreated" datetime="2015-03-22T08:54:11-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>Interesting.</p>
+<p>But i don't understand why share the login? Doesn't it use cookie to check the login?
+And i'm really cannot imagine how to extend or from where.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16772" data-cf-modified-10b2fdeaf1862c1b01532e08-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16772" data-cf-modified-10b2fdeaf1862c1b01532e08-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/83c11918052630e4dda79206c336924d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/569/kaioken" class="user-moderator-N"><span itemprop="name">Max Castro</span></a>        </span>
+        <br>
+
+        <span class="karma">16.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16774" href="#C16774">
+                <time itemprop="dateCreated" datetime="2015-03-22T09:14:23-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>My bad, share The logic ^^</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16774" data-cf-modified-10b2fdeaf1862c1b01532e08-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16774" data-cf-modified-10b2fdeaf1862c1b01532e08-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/14370e4117db7d6457134b199c928358?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2185/ve3" class="user-moderator-N"><span itemprop="name">vee w,</span></a>        </span>
+        <br>
+
+        <span class="karma">6.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16779" href="#C16779">
+                <time itemprop="dateCreated" datetime="2015-03-22T16:26:34-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>I don't know what class to extend from core.</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16779" data-cf-modified-10b2fdeaf1862c1b01532e08-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16779" data-cf-modified-10b2fdeaf1862c1b01532e08-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/14370e4117db7d6457134b199c928358?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/2185/ve3" class="user-moderator-N"><span itemprop="name">vee w,</span></a>        </span>
+        <br>
+
+        <span class="karma">6.2k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16812" href="#C16812">
+                <time itemprop="dateCreated" datetime="2015-03-23T11:47:13-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>It worked!</p>
+<p>ModuleTrait.php</p>
+<pre><code class="language-php">&lt;?php
+
+namespace Extend;
+
+use Phalcon\Loader,
+    Phalcon\Mvc\Dispatcher,
+    Phalcon\Mvc\View,
+    Phalcon\Mvc\View\Engine\Volt;
+
+/**
+ * Modules trait.&lt;br&gt;&lt;br&gt;
+ * Use this file to manage register services in one place.&lt;br&gt;
+ * To use this trait, set your module like Phalcon Module.php but extend \Extend\ModulesAbstract&lt;br&gt;
+ * Setup $controller_namespace property for Module class to your default controller namespace&lt;br&gt;
+ * Set $module_full_path property to __DIR__ for easy to manage.&lt;br&gt;
+ */
+trait ModulesTrait
+{
+
+    protected $default_controller_namespace = 'Core\\Controllers';
+    protected $default_module_full_path = APPFULLPATH.'/core';
+
+    /**
+     * Register specific services for the module
+     */
+    public function registerServices($di)
+    {
+        $module_caller_name = get_called_class();
+        $module_caller = new $module_caller_name;
+        if (property_exists($module_caller, 'controller_namespace')) {
+            $default_namespace = $module_caller-&gt;controller_namespace;
+        } else {
+            $default_namespace = $this-&gt;default_controller_namespace;
+        }
+        if (property_exists($module_caller, 'module_full_path')) {
+            $module_full_path = $module_caller-&gt;module_full_path;
+        } else {
+            $module_full_path = $this-&gt;default_module_full_path;
+        }
+        unset($module_caller_name);
+
+        $config = include APPFULLPATH.'/config/config.php';
+
+        // Registering a dispatcher
+        $di-&gt;set('dispatcher', function() use ($di, $default_namespace) {
+            $evManager = $di-&gt;getShared('eventsManager');
+            $evManager-&gt;attach('dispatch:beforeException', function($event, $dispatcher, $exception) {
+                switch ($exception-&gt;getCode()) {
+                    case Dispatcher::EXCEPTION_HANDLER_NOT_FOUND:
+                    case Dispatcher::EXCEPTION_ACTION_NOT_FOUND:
+                        $dispatcher-&gt;forward(
+                            array(
+                                'namespace' =&gt; 'Core\\Controllers',
+                                'module' =&gt; 'core',
+                                'controller' =&gt; 'error',
+                                'action' =&gt; 'e404',
+                            )
+                        );
+                        return false;
+                }
+            }, true);
+
+            $dispatcher = new Dispatcher;
+            $dispatcher-&gt;setEventsManager($evManager);
+            $dispatcher-&gt;setDefaultNamespace($default_namespace);
+            return $dispatcher;
+        });
+
+        // Registering the view component
+        $di-&gt;set('view', function() use ($config, $module_full_path) {
+            $view = new View();
+            $view-&gt;setViewsDir($module_full_path.'/views/');
+            $view-&gt;registerEngines(array(
+                '.volt' =&gt; function ($view, $di) use ($config) {
+
+                    $volt = new Volt($view, $di);
+
+                    $volt-&gt;setOptions(array(
+                        'compiledPath' =&gt; $config-&gt;application-&gt;cacheDir,
+                        'compiledSeparator' =&gt; '_'
+                    ));
+
+                    return $volt;
+                },
+                '.phtml' =&gt; 'Phalcon\Mvc\View\Engine\Php',
+                '.php' =&gt; 'Phalcon\Mvc\View\Engine\Php',
+            ));
+            return $view;
+        });
+    }// registerServices
+
+}</code></pre>
+<p>ModuleAbstract.php</p>
+<pre><code class="language-php">&lt;?php
+
+namespace Extend;
+
+use Phalcon\Mvc\ModuleDefinitionInterface;
+
+/**
+ * Modules abstract class&lt;br&gt;
+ * For more information and how to use please read on ModuleTrait.php
+ */
+abstract class ModulesAbstract implements ModuleDefinitionInterface
+{
+
+    use \Extend\ModulesTrait;
+
+}</code></pre>
+<p>In each modules{module_name}\Module.php</p>
+<pre><code class="language-php">&lt;?php
+
+namespace Modules\Contact;
+
+use Phalcon\Loader;
+
+class Module extends \Extend\ModulesAbstract
+{
+
+    protected $controller_namespace = 'Modules\\Contact\\Controllers';
+    protected $module_full_path = __DIR__;
+
+    /**
+     * Register a specific autoloader for the module
+     */
+    public function registerAutoloaders()
+    {
+
+        $loader = new Loader();
+
+        $loader-&gt;registerNamespaces(
+            array(
+                $this-&gt;controller_namespace =&gt; __DIR__.'/controllers/',
+                'Modules\\Contact\\Models'      =&gt; __DIR__.'/models/',
+                'Core\\Controllers' =&gt; APPFULLPATH.'/controllers/',
+            )
+        );
+
+        $loader-&gt;register();
+    }// registerAutoloaders
+
+}</code></pre></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16812" data-cf-modified-10b2fdeaf1862c1b01532e08-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16812" data-cf-modified-10b2fdeaf1862c1b01532e08-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div itemprop="suggestedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/83c11918052630e4dda79206c336924d?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/569/kaioken" class="user-moderator-N"><span itemprop="name">Max Castro</span></a>        </span>
+        <br>
+
+        <span class="karma">16.4k</span></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C16819" href="#C16819">
+                <time itemprop="dateCreated" datetime="2015-03-23T13:10:17-07:00" class="action-date">Mar '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><p>;) nice!</p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="16819" data-cf-modified-10b2fdeaf1862c1b01532e08-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="16819" data-cf-modified-10b2fdeaf1862c1b01532e08-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="6218" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>

@@ -1,0 +1,212 @@
+---
+layout: default
+title: 'Muliti Module Project Error - Discussion'
+---
+
+    <div class="container">
+        {% include warning.html %}
+
+
+<div itemscope itemtype="http://schema.org/Question"><ol class="breadcrumb">
+    <li><a href="/">Home</a></li>
+    <li><a href="/category/1/mvc">MVC</a></li>
+</ol>
+<div class="row table-title">
+    <div class="col-lg-8 col-md-7 col-sm-6 col-xs-12 wrapper-author">
+        <h1 class="" itemprop="name">Muliti Module Project Error</h1>
+        <div class="visible-xs-block mobile-author">
+            <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="/user/5201/PenAndPapers" class="user-moderator-N"><span itemprop="name">PenAndPapers</span></a></span>
+            <time itemprop="dateCreated" datetime="2015-11-18T19:30:33-07:00">Nov '15</time>
+        </div>
+    </div>
+    <div class="col-lg-4 col-md-5 col-sm-6 hidden-xs text-right wrapper-stats">
+        <table class="table-stats" width="100%">
+            <tr style="vertical-align: top;">
+                <td>
+                    <label>Created</label><br>
+                    <time itemprop="dateCreated" datetime="2015-11-18T19:30:33-07:00">Nov '15</time>
+                </td>
+                <td>
+                    <label>Last Reply</label><br>Nov '15</td>
+                <td>
+                    <label>Replies</label><br>
+                    <span itemprop="answerCount">1</span>
+                </td>
+                <td>
+                    <label>Views</label><br>403</td>
+                <td>
+                    <label>Votes</label><br>
+                    <span itemprop="upvoteCount">0</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+<div class="discussion">
+        <div class="row reply-block">
+            <div class="col-md-1 col-sm-1 hidden-xs text-center">
+                <img src="https://secure.gravatar.com/avatar/4cd5afd39f65642140be0f2848ea787b?s=48&amp;r=pg&amp;d=identicon" class="img-rounded avatar" /><br>
+                <span itemprop="author" itemscope itemtype="http://schema.org/Person" class="avatar-name"><a href="/user/5201/PenAndPapers" class="user-moderator-N"><span itemprop="name">PenAndPapers</span></a></span>
+                <span class="karma">1.2k</span>
+            </div>
+            <div class="col-md-11 col-sm-11 col-xs-12 post-body"><div class="posts-date hidden-xs" align="right">
+        <a name="C9505" href="#C9505">
+        <time class="action-date">Nov '15</time>
+    </a>
+</div>
+<div class="post-content"><div><p>Hi guys, I'm having some issue on multimodule project on my screen it display an error</p>
+<pre><code>Fatal error: Declaration of ModuleFrontPage\Module::registerAutoloaders() must be compatible with Phalcon\Mvc\ModuleDefinitionInterface::registerAutoloaders(Phalcon\DiInterface $dependencyInjector = NULL) in /path/to/my/project/app/app-frontpage/Module.php on line 12
+</code></pre>
+<p>here is my Module.php in app/app-frontpage/Module.php</p>
+<pre><code>&lt;?php
+
+namespace ModuleFrontPage;
+
+use \Phalcon\Loader;
+use \Phalcon\Mvc\View;
+use \Phalcon\DiInterface;
+use \Phalcon\Mvc\Dispatcher;
+use \Phalcon\Mvc\ModuleDefinitionInterface;
+
+class Module implements ModuleDefinitionInterface
+{
+    /**
+     * Register a specific autoloader for the module
+     */
+    public function registerAutoloaders(DiInterface $di)
+    {
+        $loader = new Loader();
+
+        $loader-&gt;registerNamespaces(
+            array(
+                'ModuleFrontPage\Controllers' =&gt; '../app/app-frontpage/controllers/',
+                'ModuleFrontPage\Models'      =&gt; '../app/app-frontpage/models/',
+            )
+        );
+
+        $loader-&gt;register();
+    }
+
+    /**
+     * Register specific services for the module
+     */
+    public function registerServices(DiInterface $di)
+    {
+        // Registering a dispatcher
+        $di-&gt;set('dispatcher', function () {
+            $dispatcher = new Dispatcher();
+            $dispatcher-&gt;setDefaultNamespace("ModuleFrontPage\Controllers");
+            return $dispatcher;
+        });
+
+        // Registering the view component
+        $di-&gt;set('view', function () {
+            $view = new View();
+            $view-&gt;setViewsDir('../app/app-frontpage/views/');
+            return $view;
+        });
+    }
+}
+</code></pre>
+<p>and my index.php</p>
+<pre><code>&lt;?php
+
+error_reporting(E_ALL);
+define('APP_PATH', realpath('..'));
+
+use \Phalcon\Mvc\Router;
+use \Phalcon\Mvc\Application;
+use \Phalcon\DI\FactoryDefault;
+use \Phalcon\Debug;
+
+//(new Debug())-&gt;listen();
+
+$di = new FactoryDefault();
+
+try {
+
+    $config = require(APP_PATH.'/app/config/config.php');
+    require(APP_PATH.'/app/config/loader.php');
+    require(APP_PATH.'/app/config/services.php');
+    require(APP_PATH.'/app/config/router.php');
+
+    // Create an application
+    $application = new Application($di);
+
+    // Register the installed modules
+    $application-&gt;registerModules(
+        array(
+                'AppFrontPage' =&gt; array(
+                    'className' =&gt; 'ModuleFrontPage\Module',
+                    'path'      =&gt; APP_PATH.'/app/app-frontpage/Module.php'
+                )
+            )
+    );
+
+    // Handle the request
+    echo $application-&gt;handle()-&gt;getContent();
+
+} catch (\Exception $e) {
+    echo $e-&gt;getMessage();
+}
+</code></pre>
+<p>router.php</p>
+<pre><code>&lt;?php
+
+//Registering a router
+$di-&gt;set('router', function(){
+
+    $router = new \Phalcon\Mvc\Router();
+
+    $router-&gt;setDefaultModule("AppFrontPage'");
+
+    $router-&gt;add('/', array(
+        'module' =&gt; 'AppFrontPage',
+        'controller' =&gt; 'index',
+        'action' =&gt; 'index',
+    ));
+
+    return $router;
+});
+</code></pre></div>                </div>
+
+                <div class="posts-buttons text-right"><a href="#"  class="btn btn-danger btn-xs" data-cf-modified-c07afae1e22681f19dabb7c9-="">
+        <span class="glyphicon glyphicon-thumbs-down"></span></a>
+    <a href="#"  class="btn btn-success btn-xs" data-cf-modified-c07afae1e22681f19dabb7c9-="">
+        <span class="glyphicon glyphicon-thumbs-up"></span></a></div>
+            </div>
+        </div><div itemprop="suggestedAnswer acceptedAnswer" itemscope itemtype="http://schema.org/Answer" class="reply-block row reply-accepted">
+    <div class="col-md-1 small" align="center">
+        <img src="https://secure.gravatar.com/avatar/5915f25e654c4f9e60fe51700cdee683?s=48&amp;r=pg&amp;d=identicon" class="img-rounded" />        <br>
+
+        <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+            <a href="/user/4769/Izopi4a" class="user-moderator-Y"><span itemprop="name">Izo</span></a>        </span>
+        <br>
+
+        <span class="karma">85.5k</span><div class="accepted-reply">
+                <span class="glyphicon glyphicon-ok"></span>
+                Accepted<br>answer
+            </div></div>
+    <div class="col-md-11"><div class="posts-buttons" align="right"><a name="C26579" href="#C26579">
+                <time itemprop="dateCreated" datetime="2015-11-19T00:34:18-07:00" class="action-date">Nov '15</time>
+            </a>
+        </div>
+        <div class="post-content"><div itemprop="text"><pre><code class="language-php">
+public function registerAutoloaders(\Phalcon\DiInterface $di = null){
+//bla bla bla 
+}</code></pre>
+<p>add <code>= null</code></p></div></div>
+        <div class="posts-buttons" align="right"><a href="#"  class="btn btn-danger btn-xs vote-login" data-id="26579" data-cf-modified-c07afae1e22681f19dabb7c9-="">
+                    <span class="glyphicon glyphicon-thumbs-down"></span></a>
+                <a href="#"  class="btn btn-success btn-xs vote-login" data-id="26579" data-cf-modified-c07afae1e22681f19dabb7c9-="">
+                    <span class="glyphicon glyphicon-thumbs-up"></span><span itemprop="upvoteCount">2</span></a></div>
+    </div>
+</div>
+<div class="row"><div class="col-md-1 small" align="center"></div>
+        <div class="col-md-11 login-comment">
+            
+        </div></div>
+</div><input type="hidden" id="post-id" name="post-id" value="9505" /><div id="suggested-posts"></div>
+    <div id="sticky-progress" style='display:none'></div>
+</div>
+    </div>
